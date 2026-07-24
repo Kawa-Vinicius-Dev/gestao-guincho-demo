@@ -1,13 +1,116 @@
 # Fluxo de Gestão
 
-Sistema de gestão financeira para empresas de guincho. Organiza recebíveis, receitas, despesas, importações da Porto Seguro, resultado por veículo e quilometragem não remunerada. Produto desenvolvido **por ANAIV**.
+> Demo de um sistema de gestão financeira para empresas de guincho, desenvolvido pela **ANAIV**.
 
-## Demo Gestão Guincho
+O sistema centraliza recebíveis, receitas, despesas, resultado por veículo e quilometragem não remunerada. O foco é dar ao gestor uma visão simples e confiável de **quanto entrou, quanto saiu e qual foi o lucro real da operação** — sem transformar o produto em um sistema de chamados.
 
-O frontend inclui um modo de apresentação completo e persistente no navegador. Ele funciona sem iniciar o backend e mantém os dados no `localStorage`.
+## O que a demo resolve
 
-```cmd
-cd /d "C:\Users\kawav\OneDrive\Documents\GestãoAdm\frontend"
+- Organiza receitas, despesas e contas a receber;
+- Mostra lucro operacional, margem e fluxo de caixa;
+- Vincula combustível, manutenção e demais custos ao veículo;
+- Compara gastos, faturamento e lucro por veículo;
+- Controla km rodado, km remunerado e km morto;
+- Calcula o custo do km morto;
+- Consolida uma DRE mensal simplificada;
+- Permite lançamentos por funcionários com aprovação administrativa;
+- Simula importação de Excel e mantém a base preparada para relatórios da Porto Seguro.
+
+## Como o resultado é calculado
+
+```text
+Lucro operacional = total de receitas - total de despesas
+
+Margem de lucro = (lucro operacional / total de receitas) × 100
+
+Lucro por veículo =
+receitas do veículo
+- combustível
+- manutenção
+- pedágios
+- custo de km morto
+- demais despesas vinculadas ao veículo
+```
+
+A DRE da demo organiza o resultado desta forma:
+
+```text
+Receita bruta
+(-) custos variáveis
+= margem operacional
+(-) custos fixos
+= lucro operacional
+```
+
+Categorias iniciais:
+
+| Tipo | Categorias |
+| --- | --- |
+| Receitas | Serviços de guincho, Porto Seguro, outras seguradoras/parceiros, particulares e outras receitas |
+| Custos variáveis | Combustível, pedágio, alimentação em serviço, km morto, comissão/diária e outros custos operacionais |
+| Custos fixos | Manutenção, seguro, parcela de veículo, salários, contabilidade, internet/telefone e custos administrativos |
+
+## Km rodado x km morto
+
+- **Km rodado:** toda a quilometragem percorrida pelo veículo no período.
+- **Km remunerado:** quilometragem que gera faturamento direto.
+- **Km morto:** quilometragem sem faturamento direto, como deslocamento vazio ou retorno após serviço.
+
+```text
+Custo de km morto = km morto × custo por km
+
+Percentual de km morto = (km morto / km rodado) × 100
+```
+
+O dashboard destaca o custo e o percentual de km morto, além de indicar os veículos que exigem atenção.
+
+## Funcionalidades da demo
+
+- Login por e-mail e senha, troca de senha, logout e perfis de Administrador e Funcionário;
+- Dashboard com receita, despesas, lucro, margem, fluxo de caixa, contas a receber e alertas;
+- Lançamentos de receitas e despesas, com vínculo por veículo;
+- DRE mensal e resultado individual por veículo;
+- Controle de frota: quilometragem, consumo, manutenção, seguro, parcela e rentabilidade;
+- Lançamentos de combustível, manutenção, pedágio e km morto vinculados à frota;
+- Cadastro de funcionários, veículos, motoristas, contratantes, categorias e usuários;
+- Escala semanal e metas de faturamento, margem e redução de km morto;
+- Fluxo de aprovação: funcionário lança o custo e o administrador aprova antes da entrada no financeiro;
+- Importação simulada de Excel;
+- Upload, histórico e conferência de PDFs da Porto Seguro;
+- Relatórios exportáveis em CSV e visualização preparada para impressão.
+
+## Fluxo para demonstrar ao cliente
+
+1. Faça login como administrador.
+2. Abra **Lançamentos** e cadastre uma receita ou despesa vinculada a um veículo.
+3. Volte à **Visão geral** para conferir a atualização de lucro, margem, gráficos e indicadores.
+4. Abra **DRE mensal** e confira a composição do resultado.
+5. Em **Km rodado e morto**, registre a quilometragem e observe o custo ser calculado.
+6. Consulte **Frota** para comparar gastos, receitas e lucro dos veículos.
+7. Use **Importar Excel** para simular a entrada de dados.
+8. Em **Integrações**, use **Restaurar dados da demo** para reiniciar a apresentação.
+
+Telas da demo: dashboard, lançamentos, contas a receber, DRE, despesas, quilometragem, frota, funcionários, escala, metas, importação, relatórios e integrações futuras.
+
+## Integrações e próximos passos
+
+O sistema já possui a base para evoluir, mas alguns pontos dependem de dados reais da operação:
+
+- Mapear automaticamente os campos quando chegar um PDF real da Porto Seguro;
+- Adicionar OCR para PDFs que forem apenas imagem;
+- Importar extratos bancários para conciliação automática, após definir o formato;
+- Exportar documentos em PDF e Excel;
+- Armazenar comprovantes e anexos;
+- Evoluir a experiência mobile para funcionários.
+
+> Até receber uma amostra real, a importação de PDF da Porto Seguro armazena o arquivo, extrai o texto disponível e exige conferência manual. Ela não cria lançamentos fictícios.
+
+## Executar a demo
+
+O frontend possui um modo de apresentação persistente no navegador usando `localStorage`.
+
+```bash
+cd frontend
 npm install
 npm run dev
 ```
@@ -17,104 +120,52 @@ Acesse [http://localhost:5173](http://localhost:5173).
 - Administrador: `admin@fluxogestao.local` / `Admin@123`
 - Funcionário: `funcionario@gestaoguincho.demo` / `Demo@123`
 
-Fluxo sugerido para apresentação:
-
-1. Abra **Lançamentos** e cadastre uma receita ou despesa vinculada a um veículo.
-2. Volte à **Visão geral** e confira a atualização do lucro, da margem, dos gráficos e do veículo.
-3. Abra **DRE mensal** para conferir a composição do resultado.
-4. Em **Km rodado e morto**, registre quilometragem e veja o custo ser lançado automaticamente.
-5. Use **Importar Excel** para simular uma importação de três linhas.
-6. Em **Integrações**, use **Restaurar dados da demo** para recomeçar a apresentação.
-
-Telas da demo: dashboard, lançamentos, contas a receber, DRE, despesas, quilometragem, frota, funcionários, escala, metas, importação, relatórios e integrações futuras.
-
-## O que funciona
-
-- Login por e-mail e senha, BCrypt, token opaco revogável, logout, troca de senha e perfis Administrador/Funcionário.
-- Contas a receber manuais ou originadas de uma importação, atraso automático, recebimento e divergência entre previsto e recebido.
-- Receitas previstas/recebidas e despesas pendentes/pagas com aprovação administrativa.
-- Veículos, custo por quilômetro, motoristas, contratantes, categorias e usuários.
-- Quilometragem total, remunerada, km morto e custo do km morto.
-- Dashboard com filtros e dados persistidos, fluxo de caixa e resultado por veículo.
-- Upload e histórico de PDFs da Porto Seguro, leitura de texto por PDFBox, prevenção de duplicidade, conferência manual e geração das contas.
-- Nove relatórios exportáveis em CSV e visualização preparada para impressão.
-
-O mapeamento automático dos campos da Porto Seguro ainda depende de uma amostra real do PDF. Até ela ser fornecida, o sistema armazena o arquivo, extrai o texto disponível e exige conferência/cadastro complementar — não cria lançamentos fictícios. PDFs digitalizados sem texto são identificados como candidatos a OCR.
-
-## Estrutura
-
-- `backend/`: Java 21, Spring Boot, Spring Security, JPA, Bean Validation, PDFBox, Flyway e PostgreSQL.
-- `frontend/`: React, TypeScript, Vite, React Router, Vitest e Testing Library.
-- `compose.yaml`: PostgreSQL 17 com volume persistente.
-- `docs/`: arquitetura e guia de desenvolvimento.
-- `scripts/`: atalhos PowerShell para iniciar o ambiente local.
-
-Leia também [a arquitetura](docs/arquitetura.md) e [o guia de desenvolvimento](docs/desenvolvimento.md). Eles explicam a organização e a rotina antes de enviar mudanças ao GitHub.
-
-## Executar com PostgreSQL
+## Executar com backend e PostgreSQL
 
 Requisitos: Java 21, Node.js 22.12+ e Docker Desktop (ou PostgreSQL 17 local).
 
-No CMD, a partir de qualquer pasta:
-
-```cmd
-cd /d "C:\Users\kawav\OneDrive\Documents\GestãoAdm"
+```bash
 docker compose up -d postgres
-```
 
-Em outro CMD:
+cd backend
+./mvnw spring-boot:run
 
-```cmd
-cd /d "C:\Users\kawav\OneDrive\Documents\GestãoAdm\backend"
-mvnw.cmd spring-boot:run
-```
-
-Em outro CMD:
-
-```cmd
-cd /d "C:\Users\kawav\OneDrive\Documents\GestãoAdm\frontend"
+cd ../frontend
 npm install
 npm run dev
 ```
 
-Acesse [http://localhost:5173](http://localhost:5173). A API fica em `http://localhost:8080/api`.
+A API fica em `http://localhost:8080/api`.
 
-Credenciais locais iniciais:
+Para modo local sem PostgreSQL:
 
-- E-mail: `admin@fluxogestao.local`
-- Senha: `Admin@123`
-
-Troque a senha após o primeiro acesso. Em outro ambiente, defina `ADMIN_EMAIL` e `ADMIN_PASSWORD` antes da primeira inicialização.
-
-## Modo rápido sem PostgreSQL
-
-Para estudo local, o backend oferece um perfil H2 persistente:
-
-```cmd
-cd /d "C:\Users\kawav\OneDrive\Documents\GestãoAdm\backend"
-mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=local"
+```bash
+cd backend
+./mvnw spring-boot:run "-Dspring-boot.run.profiles=local"
 ```
 
-O frontend continua sendo iniciado com `npm run dev`. PostgreSQL permanece o banco padrão do projeto.
+## Tecnologias
+
+- **Backend:** Java 21, Spring Boot, Spring Security, JPA, Bean Validation, PDFBox, Flyway e PostgreSQL.
+- **Frontend:** React, TypeScript, Vite, React Router, Vitest e Testing Library.
+- **Infraestrutura:** Docker Compose e PostgreSQL 17.
 
 ## Testes e build
 
-```cmd
+```bash
 cd backend
-mvnw.cmd test
+./mvnw test
 
-cd ..\frontend
+cd ../frontend
 npm test
 npm run lint
 npm run build
 ```
 
-O cenário `frontend/e2e/fluxo_principal.py` valida o percurso real no Chromium contra backend e frontend em execução.
-
 ## Endpoints principais
 
 | Área | Endpoint |
-|---|---|
+| --- | --- |
 | Autenticação | `/api/auth` |
 | Dashboard | `/api/dashboard` |
 | Importações | `/api/importacoes` |
@@ -124,15 +175,6 @@ O cenário `frontend/e2e/fluxo_principal.py` valida o percurso real no Chromium 
 | Quilometragem | `/api/quilometragens` |
 | Cadastros | `/api/veiculos`, `/api/motoristas`, `/api/contratantes`, `/api/categorias`, `/api/usuarios` |
 | Relatórios CSV | `/api/relatorios/{tipo}.csv` |
-
-As migrations são aplicadas automaticamente. Arquivos importados são salvos em `backend/storage/importacoes` no modo local; use `STORAGE_DIR` para alterar o local.
-
-## Próximas etapas
-
-- Ajustar o mapeamento automático quando chegar um PDF real da Porto Seguro.
-- Adicionar OCR para os formatos reais que forem exclusivamente imagem.
-- Avaliar importação de extrato bancário para conciliação automática, sem simulá-la antes da definição do formato.
-- Evoluir anexos de comprovantes para armazenamento de arquivos, se necessário.
 
 ## Documentação
 
