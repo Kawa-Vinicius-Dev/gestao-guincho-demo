@@ -1,0 +1,92 @@
+import type { DemoState, LancamentoDemo } from './modelosDemo'
+
+const historico: LancamentoDemo[] = [
+  ['2026-02-25', 42600, 31800], ['2026-03-25', 45100, 33750], ['2026-04-25', 43800, 32900],
+  ['2026-05-25', 48700, 35400], ['2026-06-25', 51200, 38200],
+].flatMap(([data, receita, despesa], indice) => [
+  {
+    id: 900 + indice * 2, tipo: 'RECEITA', categoria: 'Serviços de guincho',
+    descricao: 'Faturamento consolidado do mês', valor: Number(receita), data: String(data),
+    status: 'RECEBIDO', origem: 'Banco',
+  },
+  {
+    id: 901 + indice * 2, tipo: 'DESPESA', categoria: 'Custos operacionais',
+    descricao: 'Custos consolidados do mês', valor: Number(despesa), data: String(data),
+    status: 'PAGO', origem: 'Banco', classeCusto: 'VARIAVEL',
+  },
+])
+
+export const dadosIniciais: DemoState = {
+  veiculos: [
+    { id: 1, codigo: 'G-01', placa: 'RIM-4A21', modelo: 'VW Delivery 11.180', status: 'ATIVO', quilometragemAtual: 148320, custoPorKm: 3.15, metaReceita: 22000, metaKmMorto: 12, metaMargem: 35 },
+    { id: 2, codigo: 'G-02', placa: 'OVB-9K02', modelo: 'Iveco Daily 70C17', status: 'ATIVO', quilometragemAtual: 203880, custoPorKm: 3.42, metaReceita: 21000, metaKmMorto: 14, metaMargem: 32 },
+    { id: 3, codigo: 'G-03', placa: 'RHA-7B31', modelo: 'Mercedes-Benz Accelo 815', status: 'ATIVO', quilometragemAtual: 176540, custoPorKm: 3.15, metaReceita: 18000, metaKmMorto: 12, metaMargem: 30 },
+    { id: 4, codigo: 'P-01', placa: 'SAE-2C18', modelo: 'Toyota Hilux SR', status: 'ATIVO', quilometragemAtual: 86420, custoPorKm: 1.45, metaReceita: 0, metaKmMorto: 20, metaMargem: 0 },
+    { id: 5, codigo: 'V-01', placa: 'RLD-8D44', modelo: 'Chevrolet Spin', status: 'MANUTENCAO', quilometragemAtual: 112780, custoPorKm: 1.35, metaReceita: 0, metaKmMorto: 20, metaMargem: 0 },
+  ],
+  funcionarios: [
+    { id: 1, nome: 'Anderson Ribeiro', funcao: 'Motorista de guincho', veiculoId: 1, status: 'EM_SERVICO', metaReceita: 20000, metaKmMorto: 12, metaMargem: 35 },
+    { id: 2, nome: 'Qebson', funcao: 'Motorista de guincho', veiculoId: 2, status: 'EM_SERVICO', metaReceita: 19000, metaKmMorto: 14, metaMargem: 32 },
+    { id: 3, nome: 'Ary', funcao: 'Motorista de guincho', veiculoId: 3, status: 'DISPONIVEL', metaReceita: 17000, metaKmMorto: 12, metaMargem: 30 },
+    { id: 4, nome: 'Djalminha', funcao: 'Motorista de apoio', veiculoId: 4, status: 'DISPONIVEL', metaReceita: 8000, metaKmMorto: 18, metaMargem: 25 },
+    { id: 5, nome: 'Natanael', funcao: 'Encarregado operacional', veiculoId: 5, status: 'FOLGA', metaReceita: 10000, metaKmMorto: 15, metaMargem: 28 },
+  ],
+  lancamentos: [
+    ...historico,
+    { id: 1, tipo: 'RECEITA', categoria: 'Serviços via Porto Seguro', descricao: 'Remoções Porto Seguro — lote 071', valor: 6200, data: '2026-07-02', veiculoId: 1, funcionarioId: 1, status: 'RECEBIDO', origem: 'Porto Seguro', protocolo: 'PS-071' },
+    { id: 2, tipo: 'RECEITA', categoria: 'Serviços via Porto Seguro', descricao: 'Remoções Porto Seguro — lote 074', valor: 5100, data: '2026-07-04', veiculoId: 2, funcionarioId: 2, status: 'RECEBIDO', origem: 'Porto Seguro', protocolo: 'PS-074' },
+    { id: 3, tipo: 'RECEITA', categoria: 'Serviços particulares', descricao: 'Transporte intermunicipal', valor: 3900, data: '2026-07-05', veiculoId: 3, funcionarioId: 3, status: 'RECEBIDO', origem: 'Manual', protocolo: 'PAR-188' },
+    { id: 4, tipo: 'RECEITA', categoria: 'Outras seguradoras/parceiros', descricao: 'Lote assistência 24h — Azul', valor: 4800, data: '2026-07-08', veiculoId: 1, funcionarioId: 1, status: 'RECEBIDO', origem: 'Outra seguradora', protocolo: 'AZ-218' },
+    { id: 5, tipo: 'RECEITA', categoria: 'Serviços via Porto Seguro', descricao: 'Remoções Porto Seguro — lote 081', valor: 5700, data: '2026-07-10', veiculoId: 2, funcionarioId: 2, status: 'RECEBIDO', origem: 'Porto Seguro', protocolo: 'PS-081' },
+    { id: 6, tipo: 'RECEITA', categoria: 'Serviços via Porto Seguro', descricao: 'Remoções Porto Seguro — lote 083', valor: 4500, data: '2026-07-12', veiculoId: 3, funcionarioId: 3, status: 'RECEBIDO', origem: 'Porto Seguro', protocolo: 'PS-083' },
+    { id: 7, tipo: 'RECEITA', categoria: 'Serviços particulares', descricao: 'Resgate de utilitário', valor: 5300, data: '2026-07-15', veiculoId: 1, funcionarioId: 1, status: 'RECEBIDO', origem: 'Manual', protocolo: 'PAR-207' },
+    { id: 8, tipo: 'RECEITA', categoria: 'Outras seguradoras/parceiros', descricao: 'Lote assistência 24h — HDI', valor: 4200, data: '2026-07-17', veiculoId: 2, funcionarioId: 2, status: 'A_RECEBER', origem: 'Outra seguradora', protocolo: 'HDI-092' },
+    { id: 9, tipo: 'RECEITA', categoria: 'Serviços via Porto Seguro', descricao: 'Remoções Porto Seguro — lote 088', valor: 5800, data: '2026-07-19', veiculoId: 3, funcionarioId: 3, status: 'RECEBIDO', origem: 'Porto Seguro', protocolo: 'PS-088' },
+    { id: 10, tipo: 'RECEITA', categoria: 'Serviços particulares', descricao: 'Transporte de equipamento', valor: 3500, data: '2026-07-21', veiculoId: 1, funcionarioId: 1, status: 'A_RECEBER', origem: 'Manual', protocolo: 'PAR-214' },
+    { id: 11, tipo: 'RECEITA', categoria: 'Serviços de guincho', descricao: 'Atendimentos corporativos', valor: 4950, data: '2026-07-22', veiculoId: 2, funcionarioId: 2, status: 'RECEBIDO', origem: 'Banco', protocolo: 'CORP-42' },
+
+    { id: 20, tipo: 'DESPESA', categoria: 'Combustível', descricao: 'Diesel S10 — G-01', valor: 3200, data: '2026-07-03', veiculoId: 1, funcionarioId: 1, status: 'PAGO', origem: 'Manual', classeCusto: 'VARIAVEL', litros: 515 },
+    { id: 21, tipo: 'DESPESA', categoria: 'Combustível', descricao: 'Diesel S10 — G-02', valor: 3650, data: '2026-07-04', veiculoId: 2, funcionarioId: 2, status: 'PAGO', origem: 'Manual', classeCusto: 'VARIAVEL', litros: 588 },
+    { id: 22, tipo: 'DESPESA', categoria: 'Combustível', descricao: 'Diesel S10 — G-03', valor: 2850, data: '2026-07-06', veiculoId: 3, funcionarioId: 3, status: 'PAGO', origem: 'Manual', classeCusto: 'VARIAVEL', litros: 459 },
+    { id: 23, tipo: 'DESPESA', categoria: 'Manutenção', descricao: 'Troca de filtros e lubrificantes', valor: 780, data: '2026-07-07', veiculoId: 1, status: 'PAGO', origem: 'Manual', classeCusto: 'FIXO' },
+    { id: 24, tipo: 'DESPESA', categoria: 'Manutenção', descricao: 'Correção do sistema hidráulico', valor: 2850, data: '2026-07-09', veiculoId: 2, status: 'PAGO', origem: 'Manual', classeCusto: 'FIXO' },
+    { id: 25, tipo: 'DESPESA', categoria: 'Manutenção', descricao: 'Revisão preventiva', valor: 620, data: '2026-07-10', veiculoId: 3, status: 'PAGO', origem: 'Manual', classeCusto: 'FIXO' },
+    { id: 26, tipo: 'DESPESA', categoria: 'Pedágio', descricao: 'Pedágios operacionais G-01', valor: 520, data: '2026-07-12', veiculoId: 1, status: 'PAGO', origem: 'Manual', classeCusto: 'VARIAVEL' },
+    { id: 27, tipo: 'DESPESA', categoria: 'Pedágio', descricao: 'Pedágios operacionais G-02', valor: 680, data: '2026-07-12', veiculoId: 2, status: 'PAGO', origem: 'Manual', classeCusto: 'VARIAVEL' },
+    { id: 28, tipo: 'DESPESA', categoria: 'Pedágio', descricao: 'Pedágios operacionais G-03', valor: 450, data: '2026-07-13', veiculoId: 3, status: 'PAGO', origem: 'Manual', classeCusto: 'VARIAVEL' },
+    { id: 29, tipo: 'DESPESA', categoria: 'Comissão/diária de motorista', descricao: 'Diárias operacionais — Anderson', valor: 1600, data: '2026-07-15', veiculoId: 1, funcionarioId: 1, status: 'PAGO', origem: 'Manual', classeCusto: 'VARIAVEL' },
+    { id: 30, tipo: 'DESPESA', categoria: 'Comissão/diária de motorista', descricao: 'Diárias operacionais — Qebson', valor: 1700, data: '2026-07-15', veiculoId: 2, funcionarioId: 2, status: 'PAGO', origem: 'Manual', classeCusto: 'VARIAVEL' },
+    { id: 31, tipo: 'DESPESA', categoria: 'Comissão/diária de motorista', descricao: 'Diárias operacionais — Ary', valor: 1350, data: '2026-07-15', veiculoId: 3, funcionarioId: 3, status: 'PAGO', origem: 'Manual', classeCusto: 'VARIAVEL' },
+    { id: 32, tipo: 'DESPESA', categoria: 'Seguro', descricao: 'Seguro mensal G-01', valor: 900, data: '2026-07-18', veiculoId: 1, status: 'PAGO', origem: 'Banco', classeCusto: 'FIXO' },
+    { id: 33, tipo: 'DESPESA', categoria: 'Seguro', descricao: 'Seguro mensal G-02', valor: 950, data: '2026-07-18', veiculoId: 2, status: 'PAGO', origem: 'Banco', classeCusto: 'FIXO' },
+    { id: 34, tipo: 'DESPESA', categoria: 'Seguro', descricao: 'Seguro mensal G-03', valor: 820, data: '2026-07-18', veiculoId: 3, status: 'PAGO', origem: 'Banco', classeCusto: 'FIXO' },
+    { id: 35, tipo: 'DESPESA', categoria: 'Parcela/financiamento de veículo', descricao: 'Parcela G-01', valor: 2100, data: '2026-07-20', veiculoId: 1, status: 'PAGO', origem: 'Banco', classeCusto: 'FIXO' },
+    { id: 36, tipo: 'DESPESA', categoria: 'Parcela/financiamento de veículo', descricao: 'Parcela G-02', valor: 2350, data: '2026-07-20', veiculoId: 2, status: 'PAGO', origem: 'Banco', classeCusto: 'FIXO' },
+    { id: 37, tipo: 'DESPESA', categoria: 'Parcela/financiamento de veículo', descricao: 'Parcela G-03', valor: 1980, data: '2026-07-20', veiculoId: 3, status: 'PAGO', origem: 'Banco', classeCusto: 'FIXO' },
+    { id: 38, tipo: 'DESPESA', categoria: 'Salários', descricao: 'Folha de pagamento operacional', valor: 8200, data: '2026-07-22', status: 'PAGO', origem: 'Banco', classeCusto: 'FIXO' },
+    { id: 39, tipo: 'DESPESA', categoria: 'Contabilidade', descricao: 'Honorários contábeis', valor: 950, data: '2026-07-22', status: 'PAGO', origem: 'Banco', classeCusto: 'FIXO' },
+    { id: 40, tipo: 'DESPESA', categoria: 'Internet/telefone', descricao: 'Comunicação da base e equipe', valor: 380, data: '2026-07-22', status: 'PAGO', origem: 'Banco', classeCusto: 'FIXO' },
+    { id: 41, tipo: 'DESPESA', categoria: 'Km morto', descricao: 'Custo do km morto — G-01', valor: 661.5, data: '2026-07-23', veiculoId: 1, status: 'PAGO', origem: 'Manual', classeCusto: 'VARIAVEL' },
+    { id: 42, tipo: 'DESPESA', categoria: 'Km morto', descricao: 'Custo do km morto — G-02', valor: 1778.4, data: '2026-07-23', veiculoId: 2, status: 'PAGO', origem: 'Manual', classeCusto: 'VARIAVEL' },
+    { id: 43, tipo: 'DESPESA', categoria: 'Km morto', descricao: 'Custo do km morto — G-03', valor: 393.75, data: '2026-07-23', veiculoId: 3, status: 'PAGO', origem: 'Manual', classeCusto: 'VARIAVEL' },
+    { id: 44, tipo: 'DESPESA', categoria: 'Km morto', descricao: 'Custo do km morto — P-01', valor: 130.5, data: '2026-07-23', veiculoId: 4, status: 'PAGO', origem: 'Manual', classeCusto: 'VARIAVEL' },
+  ],
+  quilometragens: [
+    { id: 1, veiculoId: 1, funcionarioId: 1, data: '2026-07-23', kmRodado: 2450, kmMorto: 210, custoPorKm: 3.15, motivo: 'Retornos após atendimento e reposicionamento' },
+    { id: 2, veiculoId: 2, funcionarioId: 2, data: '2026-07-23', kmRodado: 1890, kmMorto: 520, custoPorKm: 3.42, motivo: 'Retornos vazios fora da área de cobertura' },
+    { id: 3, veiculoId: 3, funcionarioId: 3, data: '2026-07-23', kmRodado: 1760, kmMorto: 125, custoPorKm: 3.15, motivo: 'Reposicionamento entre bases' },
+    { id: 4, veiculoId: 4, funcionarioId: 4, data: '2026-07-23', kmRodado: 420, kmMorto: 90, custoPorKm: 1.45, motivo: 'Apoio e entrega de peças' },
+  ],
+  escala: [
+    { id: 1, dia: '2026-07-20', funcionarioId: 1, veiculoId: 1, turno: 'DIURNO', status: 'CONFIRMADA' },
+    { id: 2, dia: '2026-07-20', funcionarioId: 2, veiculoId: 2, turno: 'NOTURNO', status: 'PLANTAO' },
+    { id: 3, dia: '2026-07-21', funcionarioId: 3, veiculoId: 3, turno: 'DIURNO', status: 'CONFIRMADA' },
+    { id: 4, dia: '2026-07-22', funcionarioId: 4, veiculoId: 4, turno: 'COMERCIAL', status: 'CONFIRMADA' },
+    { id: 5, dia: '2026-07-23', funcionarioId: 5, veiculoId: 5, turno: 'COMERCIAL', status: 'FOLGA' },
+    { id: 6, dia: '2026-07-24', funcionarioId: 1, veiculoId: 1, turno: 'NOTURNO', status: 'PLANTAO' },
+    { id: 7, dia: '2026-07-25', funcionarioId: 2, veiculoId: 2, turno: 'DIURNO', status: 'CONFIRMADA' },
+  ],
+  importacoes: [
+    { id: 1, arquivo: 'porto_seguro_junho_2026.xlsx', data: '2026-07-02T09:15:00', linhas: 28, status: 'IMPORTADO' },
+  ],
+}

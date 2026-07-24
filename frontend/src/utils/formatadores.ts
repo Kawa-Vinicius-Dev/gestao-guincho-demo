@@ -1,0 +1,6 @@
+const moedaBr = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
+const numeroBr = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2 })
+export const moeda = (valor:number) => moedaBr.format(valor)
+export const numero = (valor:number) => numeroBr.format(valor)
+export const data = (valor:string) => new Intl.DateTimeFormat('pt-BR').format(new Date(`${valor}T12:00:00`))
+export const dataHora = (valor:string) => new Intl.DateTimeFormat('pt-BR',{dateStyle:'short',timeStyle:'short'}).format(new Date(valor))

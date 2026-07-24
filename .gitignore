@@ -1,21 +1,39 @@
-# Dependências e builds
+# Java
+backend/target/
+*.class
+
+# Node
 node_modules/
 dist/
 build/
 .next/
 coverage/
+frontend/node_modules/
+frontend/dist/
+frontend/coverage/
+frontend/.vite/
+frontend/*.tsbuildinfo
+frontend/vite.config.js
+frontend/vite.config.d.ts
 
-# Arquivos de ambiente e segredos
-.env
-.env.*
-!.env.example
-
-# Logs e arquivos do sistema
-*.log
-.DS_Store
-Thumbs.db
-
-# IDEs
+# IDE e sistema
 .idea/
 .vscode/
 *.iml
+.DS_Store
+Thumbs.db
+
+# Ambiente local
+.env
+.env.*
+!.env.example
+.env.local
+backend/data/
+backend/storage/
+storage/
+playwright-report/
+test-results/
+frontend/test-results/
+
+# Logs
+*.log
