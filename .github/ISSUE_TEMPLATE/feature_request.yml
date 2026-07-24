@@ -1,0 +1,29 @@
+name: Funcionalidade
+description: Sugira ou registre uma melhoria para o sistema.
+title: "[Funcionalidade]: "
+labels: ["melhoria"]
+body:
+  - type: textarea
+    id: problema
+    attributes:
+      label: Problema ou necessidade
+      description: O que está difícil hoje na operação?
+    validations:
+      required: true
+  - type: textarea
+    id: proposta
+    attributes:
+      label: Proposta
+      description: O que o sistema deveria permitir fazer?
+    validations:
+      required: true
+  - type: dropdown
+    id: prioridade
+    attributes:
+      label: Prioridade
+      options:
+        - Alta
+        - Média
+        - Baixa
+    validations:
+      required: true
