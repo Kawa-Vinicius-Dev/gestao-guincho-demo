@@ -1,0 +1,22 @@
+name: Erro
+description: Registre algo que não está funcionando como deveria.
+title: "[Erro]: "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: descricao
+    attributes:
+      label: O que aconteceu?
+    validations:
+      required: true
+  - type: textarea
+    id: esperado
+    attributes:
+      label: O que deveria acontecer?
+    validations:
+      required: true
+  - type: textarea
+    id: passos
+    attributes:
+      label: Como reproduzir?
+      placeholder: "1. ...\n2. ...\n3. ..."
