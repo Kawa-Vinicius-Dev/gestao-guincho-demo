@@ -36,6 +36,12 @@ class PortoApiIntegrationTest {
     }
 
     @Test
+    void endpointsPortoExigemAutenticacao() throws Exception {
+        MockMultipartFile arquivo=new MockMultipartFile("arquivo","porto.csv","text/csv","A;B\n1;2".getBytes(StandardCharsets.UTF_8));
+        mvc.perform(multipart("/api/porto/importacoes/previa").file(arquivo)).andExpect(status().isUnauthorized());
+    }
+
+    @Test
     void importaRelatoriosIdempotentesEPreservaRecebimentoManual() throws Exception {
         String token=login();
         long previaOp=previa(token,"op.csv","""
@@ -55,13 +61,14 @@ class PortoApiIntegrationTest {
         long previaOs=previa(token,"os.csv","""
             Número da Ordem de Serviço,Valor Total,Especialidade,Sigla da Viatura,Socorrista,QRA,Data de atendimento
             <span>OS-901</span>,700.00,REMOÇÃO,,Ana,QRA-1,2026-07-30
+            OS-902,300.00,PANE,VTR-2,Bruno,QRA-2,2026-07-30
             """);
         mvc.perform(post("/api/porto/importacoes/{id}/confirmar",previaOs).header("Authorization","Bearer "+token)
                 .contentType(MediaType.APPLICATION_JSON).content("{}"))
             .andExpect(status().isBadRequest()).andExpect(jsonPath("$.detalhe").value(org.hamcrest.Matchers.containsString("OP")));
         mvc.perform(post("/api/porto/importacoes/{id}/confirmar",previaOs).header("Authorization","Bearer "+token)
                 .contentType(MediaType.APPLICATION_JSON).content("{\"ordemPagamentoId\":"+opId+"}"))
-            .andExpect(status().isOk()).andExpect(jsonPath("$.importados").value(1));
+            .andExpect(status().isOk()).andExpect(jsonPath("$.importados").value(2));
 
         long repetida=previa(token,"os-repetida.csv","""
             Número da Ordem de Serviço,Valor Total,Especialidade,Sigla da Viatura,Socorrista,QRA,Data de atendimento
@@ -83,6 +90,7 @@ class PortoApiIntegrationTest {
             .andExpect(status().isOk()).andExpect(jsonPath("$[0].especialidade").value("REMOÇÃO"))
             .andExpect(jsonPath("$[0].qra").value("QRA-2")).andExpect(jsonPath("$[0].viatura").doesNotExist());
 
+        Integer despesasAntes=jdbc.queryForObject("select count(*) from despesas",Integer.class);
         long devolucao=previa(token,"devolvidos.csv","""
             Número da Ordem de Serviço\tEspecialidade\tData de Atendimento\tData da devolução\tValor Total
             OS-901\t\t30/07/2026\t31/07/2026\t700,00
@@ -92,7 +100,7 @@ class PortoApiIntegrationTest {
             .andExpect(status().isOk()).andExpect(jsonPath("$.importados").value(1));
         mvc.perform(get("/api/porto/pendencias").header("Authorization","Bearer "+token))
             .andExpect(status().isOk()).andExpect(jsonPath("$[?(@.tipo == 'SERVICO_DEVOLVIDO')]").isNotEmpty());
-        mvc.perform(get("/api/despesas").header("Authorization","Bearer "+token)).andExpect(status().isOk()).andExpect(jsonPath("$").isEmpty());
+        assertThat(jdbc.queryForObject("select count(*) from despesas",Integer.class)).isEqualTo(despesasAntes);
 
         mvc.perform(patch("/api/porto/ordens-pagamento/{id}/receber",opId).header("Authorization","Bearer "+token)
                 .contentType(MediaType.APPLICATION_JSON).content("{\"valorRecebido\":1490.00,\"dataRecebimento\":\"2026-08-16\"}"))
