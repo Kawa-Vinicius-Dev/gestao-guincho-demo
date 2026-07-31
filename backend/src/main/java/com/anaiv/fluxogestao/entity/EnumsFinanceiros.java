@@ -9,4 +9,6 @@ public final class EnumsFinanceiros {
     public enum StatusReceita { PREVISTA, RECEBIDA, CANCELADA }
     public enum StatusDespesa { PENDENTE, PAGO, ATRASADO, REJEITADO }
     public enum StatusImportacao { PROCESSANDO, AGUARDANDO_CONFERENCIA, CONFIRMADA, CANCELADA, ERRO_LEITURA }
+    public enum TipoRelatorioPorto { PREVISAO_RECEBER, OS_VINCULADAS, SERVICOS_DEVOLVIDOS }
+    public enum StatusPendenciaPorto { ABERTA, RESOLVIDA }
 }

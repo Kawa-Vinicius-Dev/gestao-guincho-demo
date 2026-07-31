@@ -19,6 +19,8 @@ public class Importacao {
     @Column(name = "total_registros") private int totalRegistros;
     @Column(name = "criado_em") private OffsetDateTime criadoEm = OffsetDateTime.now();
     @Column(name = "confirmado_em") private OffsetDateTime confirmadoEm;
+    @Enumerated(EnumType.STRING) @Column(name = "tipo_relatorio_porto")
+    private EnumsFinanceiros.TipoRelatorioPorto tipoRelatorioPorto;
     @OneToMany(mappedBy = "importacao", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ItemImportacao> itens = new ArrayList<>();
 
@@ -28,6 +30,9 @@ public class Importacao {
         this.status = StatusImportacao.PROCESSANDO;
     }
     public void leituraConcluida(String texto) { this.textoExtraido = texto; this.status = StatusImportacao.AGUARDANDO_CONFERENCIA; }
+    public void prepararPorto(EnumsFinanceiros.TipoRelatorioPorto tipo, String conteudo) {
+        this.tipoRelatorioPorto = tipo; leituraConcluida(conteudo);
+    }
     public void falhar(String mensagem) { this.mensagemErro = mensagem; this.status = StatusImportacao.ERRO_LEITURA; }
     public void adicionar(ItemImportacao item) { itens.add(item); totalRegistros = itens.size(); }
     public void confirmar() { status = StatusImportacao.CONFIRMADA; confirmadoEm = OffsetDateTime.now(); }
@@ -43,4 +48,5 @@ public class Importacao {
     public OffsetDateTime getCriadoEm() { return criadoEm; }
     public OffsetDateTime getConfirmadoEm() { return confirmadoEm; }
     public List<ItemImportacao> getItens() { return itens; }
+    public EnumsFinanceiros.TipoRelatorioPorto getTipoRelatorioPorto() { return tipoRelatorioPorto; }
 }
