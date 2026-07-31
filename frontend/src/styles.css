@@ -86,6 +86,7 @@ button,input,select,textarea{font:inherit}button{color:inherit}a{color:inherit}:
 @media print{.dead-km-alert,.page-tabs,.demo-reset,.example-link{display:none!important}.finance-lane,.dre-hero,.vehicle-hero,.dre-final{print-color-adjust:exact;-webkit-print-color-adjust:exact}.dre-layout{grid-template-columns:1fr}.dre-explainer{display:none}}
 
 /* Ajuste de apresentação do formulário financeiro. */
-.modal-backdrop{place-items:center;padding:24px 20px}
-.modal{max-height:calc(100vh - 48px)}
+.page-enter:has(.modal-backdrop){animation:none;transform:none}
+.modal-backdrop{display:flex;align-items:center;justify-content:center;padding:32px}
+.modal{margin:auto;max-height:calc(100dvh - 64px);overflow-y:auto}
 .modal-financial{width:min(900px,100%)}

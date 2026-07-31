@@ -93,7 +93,7 @@ export default function LancamentosPage({ filtroInicial = '' }: { filtroInicial?
         })}</tbody></table></div>
     </section>
 
-    {modal ? <div className="modal-backdrop"><section className="modal modal-financial" role="dialog" aria-modal="true" aria-labelledby="titulo-lancamento"><header><div><span className="eyebrow">Novo registro financeiro</span><h2 id="titulo-lancamento">{funcionario ? 'Registrar despesa' : 'Nova entrada ou saída'}</h2></div><button aria-label="Fechar" onClick={() => setModal(false)}>×</button></header>
+    {modal ? <div className="modal-backdrop"><section className="modal modal-financial" role="dialog" aria-modal="true" aria-labelledby="titulo-lancamento"><header><div><span className="eyebrow">Novo registro financeiro</span><h2 id="titulo-lancamento">Novo lançamento</h2></div><button aria-label="Fechar" onClick={() => setModal(false)}>×</button></header>
       <form onSubmit={salvar} className="form-grid two-columns">
         {!tipoFixo && !funcionario ? <div className="segmented field-wide"><button type="button" className={tipoFormulario === 'RECEITA' ? 'active' : ''} onClick={() => mudarTipo('RECEITA')}>Receita</button><button type="button" className={tipoFormulario === 'DESPESA' ? 'active' : ''} onClick={() => mudarTipo('DESPESA')}>Despesa</button></div> : null}
         <label className="field field-wide"><span>Descrição</span><input name="descricao" placeholder="Ex.: atendimento Porto Seguro lote 092" required/></label>
