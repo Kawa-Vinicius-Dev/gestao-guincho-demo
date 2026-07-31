@@ -44,9 +44,10 @@ export interface Importacao {
   confirmadoEm?:string; itens:ItemImportacao[]
 }
 export type TipoRelatorioPorto = 'PREVISAO_RECEBER'|'OS_VINCULADAS'|'SERVICOS_DEVOLVIDOS'
-export interface LinhaPreviaPorto { dados:Record<string,string>; hashRegistro:string }
+export type AcaoLinhaPorto = 'IMPORTAR'|'IGNORAR'|'ERRO'|'DIVERGENCIA'
+export interface LinhaPreviaPorto { dados:Record<string,string>; hashRegistro:string; acao:AcaoLinhaPorto; mensagem?:string }
 export interface PreviaPorto { id:number; nomeArquivo:string; tipo:TipoRelatorioPorto; status:string; totalLinhas:number; linhas:LinhaPreviaPorto[]; erros:string[]; requerOrdemPagamento:boolean }
 export interface ConfirmacaoPorto { importacaoId:number; tipo:TipoRelatorioPorto; importados:number; ignorados:number }
-export interface OrdemPagamentoPorto { id:number; numero:string; valorTotal:number; nomeCodigo?:string; dataPagamentoProgramada?:string; valorRecebido?:number; dataRecebimento?:string; situacao:'PROGRAMADO'|'RECEBIDO' }
+export interface OrdemPagamentoPorto { id:number; numero:string; valorTotal:number; nomeCodigo?:string; dataPagamentoProgramada?:string; valorRecebido?:number; dataRecebimento?:string; situacao:'PROGRAMADO'|'RECEBIDO'; quantidadeOrdensServico?:number; valorOrdensServico?:number; divergencia?:number }
 export interface OrdemServicoPorto { id:number; ordemPagamentoId?:number; ordemPagamento?:string; numero:string; valorTotal:number; especialidade?:string; viatura?:string; socorrista?:string; qra?:string; dataAtendimento?:string; valorKmExcedente?:number; kmMortoEstimado?:number }
 export interface PendenciaPorto { tipo:'RECEBIMENTO_OP'|'SERVICO_DEVOLVIDO'; referenciaId:number; referencia:string; valor:number; data?:string; situacao:string }

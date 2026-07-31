@@ -50,6 +50,25 @@ class PortoCsvParserTest {
             .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("relatório Porto");
     }
 
+    @Test
+    void marcaValorVazioEDataInvalidaComoErroSemDescartarLinhas() {
+        var previa=parser.parse("""
+            Número da Ordem de Pagamento;Valor Total do Serviço;Nome: Código;Data de Pagamento
+            OP-ERRO-VALOR;;Sintético: Valor;31/08/2026
+            OP-ERRO-DATA;100,00;Sintético: Data;31/02/2026
+            """.getBytes(StandardCharsets.UTF_8));
+        assertThat(previa.linhas()).hasSize(2);
+        assertThat(previa.linhas()).allMatch(linha->linha.acao().name().equals("ERRO"));
+        assertThat(previa.erros()).hasSize(2);
+    }
+
+    @Test
+    void aceitaCamposOpcionaisVaziosEmOsVinculada() throws Exception {
+        var previa=parser.parse(recurso("os-vinculadas.csv"));
+        assertThat(previa.linhas().getFirst().acao().name()).isEqualTo("IMPORTAR");
+        assertThat(previa.erros()).isEmpty();
+    }
+
     private byte[] recurso(String nome) throws Exception {
         try(InputStream in=getClass().getResourceAsStream("/porto/"+nome)){return in.readAllBytes();}
     }

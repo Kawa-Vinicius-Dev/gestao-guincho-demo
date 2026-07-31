@@ -37,8 +37,9 @@ public class PortoCsvParser {
             List<String> valores=registros.get(indice); if(valores.stream().allMatch(String::isBlank))continue;
             Map<String,String> dados=new LinkedHashMap<>();
             for(int coluna=0;coluna<chaves.size();coluna++) dados.put(chaves.get(coluna),limpar(coluna<valores.size()?valores.get(coluna):""));
-            try{validar(tipo,dados);linhas.add(new LinhaPorto(Map.copyOf(dados),hash(tipo,dados)));}
-            catch(RuntimeException e){erros.add("Linha "+(indice+1)+": "+e.getMessage());}
+            String hash=hash(tipo,dados);
+            try{validar(tipo,dados);linhas.add(new LinhaPorto(Map.copyOf(dados),hash));}
+            catch(RuntimeException e){String mensagem="Linha "+(indice+1)+": "+e.getMessage();erros.add(mensagem);linhas.add(new LinhaPorto(Map.copyOf(dados),hash,AcaoLinhaPorto.ERRO,mensagem));}
         }
         return new PreviaPorto(tipo,List.copyOf(originais),List.copyOf(linhas),List.copyOf(erros));
     }
@@ -51,11 +52,20 @@ public class PortoCsvParser {
     private void validar(TipoRelatorioPorto tipo,Map<String,String> d){
         String numero=tipo==TipoRelatorioPorto.PREVISAO_RECEBER?d.get("numero_op"):d.get("numero_os");
         if(numero==null||numero.isBlank())throw new IllegalArgumentException("número da ordem vazio");
-        new LinhaPorto(d,"").decimal("valor_total");
-        if(tipo==TipoRelatorioPorto.PREVISAO_RECEBER)new LinhaPorto(d,"").data("data_pagamento");
-        else new LinhaPorto(d,"").data("data_atendimento");
-        if(tipo==TipoRelatorioPorto.SERVICOS_DEVOLVIDOS)new LinhaPorto(d,"").data("data_devolucao");
+        LinhaPorto linha=new LinhaPorto(d,"");
+        validarValor(linha);
+        if(tipo==TipoRelatorioPorto.PREVISAO_RECEBER)dataObrigatoria(linha,"data_pagamento","data de pagamento programada");
+        else if(tipo==TipoRelatorioPorto.OS_VINCULADAS){
+            if(linha.texto("especialidade")==null)throw new IllegalArgumentException("especialidade vazia");
+            dataObrigatoria(linha,"data_atendimento","data de atendimento");
+        }else{
+            dataObrigatoria(linha,"data_devolucao","data da devolução");
+            if(linha.texto("data_atendimento")!=null)dataValida(linha,"data_atendimento","data de atendimento");
+        }
     }
+    private void validarValor(LinhaPorto linha){try{var valor=linha.decimal("valor_total");if(valor==null)throw new IllegalArgumentException("valor total vazio");if(valor.signum()<0)throw new IllegalArgumentException("valor total não pode ser negativo");}catch(NumberFormatException e){throw new IllegalArgumentException("valor total inválido");}}
+    private void dataObrigatoria(LinhaPorto linha,String chave,String rotulo){if(linha.texto(chave)==null)throw new IllegalArgumentException(rotulo+" vazia");dataValida(linha,chave,rotulo);}
+    private void dataValida(LinhaPorto linha,String chave,String rotulo){try{linha.data(chave);}catch(RuntimeException e){throw new IllegalArgumentException(rotulo+" inválida");}}
     private String decodificar(byte[] bytes){
         try{return StandardCharsets.UTF_8.newDecoder().onMalformedInput(CodingErrorAction.REPORT).decode(ByteBuffer.wrap(bytes)).toString();}
         catch(CharacterCodingException e){return StandardCharsets.ISO_8859_1.decode(ByteBuffer.wrap(bytes)).toString();}

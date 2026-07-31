@@ -31,7 +31,10 @@ public class Importacao {
     }
     public void leituraConcluida(String texto) { this.textoExtraido = texto; this.status = StatusImportacao.AGUARDANDO_CONFERENCIA; }
     public void prepararPorto(EnumsFinanceiros.TipoRelatorioPorto tipo, String conteudo) {
-        this.tipoRelatorioPorto = tipo; leituraConcluida(conteudo);
+        this.tipoRelatorioPorto = tipo;
+        this.mensagemErro = null;
+        this.confirmadoEm = null;
+        leituraConcluida(conteudo);
     }
     public void falhar(String mensagem) { this.mensagemErro = mensagem; this.status = StatusImportacao.ERRO_LEITURA; }
     public void adicionar(ItemImportacao item) { itens.add(item); totalRegistros = itens.size(); }
