@@ -2,7 +2,12 @@ import { createContext, useCallback, useContext, useMemo, useState, type ReactNo
 import { dadosIniciais } from './dadosIniciais'
 import type { DemoState, FuncionarioDemo, LancamentoDemo, QuilometragemDemo, VeiculoDemo } from './modelosDemo'
 
-const STORAGE_KEY = 'gestao-guincho:demo:v3'
+const STORAGE_KEY = 'gestao-guincho:demo:v4'
+const LEGACY_STORAGE_KEYS = [
+  'gestao-guincho:demo:v1',
+  'gestao-guincho:demo:v2',
+  'gestao-guincho:demo:v3',
+]
 
 interface DemoValue {
   state: DemoState
@@ -20,6 +25,7 @@ const clonarDados = () => structuredClone(dadosIniciais)
 
 function carregar(): DemoState {
   try {
+    LEGACY_STORAGE_KEYS.forEach(chave => localStorage.removeItem(chave))
     const salvo = localStorage.getItem(STORAGE_KEY)
     return salvo ? JSON.parse(salvo) as DemoState : clonarDados()
   } catch {

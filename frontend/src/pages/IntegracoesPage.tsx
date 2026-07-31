@@ -14,12 +14,12 @@ export default function IntegracoesPage() {
   const [mensagem, setMensagem] = useState('')
   function restaurar() {
     restaurarDemo()
-    setMensagem('Dados fictícios originais restaurados. A demonstração está pronta para recomeçar.')
+    setMensagem('Todos os dados cadastrados foram removidos. O sistema está pronto para recomeçar.')
   }
   return <div className="page-enter">
     <header className="page-heading"><div><span className="eyebrow">Evolução do produto</span><h1>Integrações futuras</h1><p>A base já está organizada para receber novas fontes sem quebrar o fluxo financeiro atual.</p></div></header>
     {mensagem ? <div className="success-notice">{mensagem}</div> : null}
     <section className="integration-grid">{integracoes.map(item => <article className="panel integration-card" key={item.titulo}><span className="integration-icon">{item.sigla}</span><div><h2>{item.titulo}</h2><p>{item.descricao}</p></div><span className={item.ativo ? 'integration-ready' : ''}>{item.status}</span></article>)}</section>
-    <section className="demo-reset"><div><span className="eyebrow">Ambiente de apresentação</span><h2>Recomeçar a demonstração</h2><p>Restaura lançamentos, frota, funcionários, metas e importações fictícias para o estado original.</p></div><button className="button button-ghost" onClick={restaurar}>Restaurar dados da demo</button></section>
+    <section className="demo-reset"><div><span className="eyebrow">Ambiente de testes</span><h2>Limpar todos os dados</h2><p>Remove lançamentos, frota, funcionários, quilometragem, escala e importações cadastradas neste navegador.</p></div><button className="button button-ghost" onClick={restaurar}>Zerar sistema</button></section>
   </div>
 }

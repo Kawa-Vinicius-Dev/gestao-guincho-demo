@@ -9,7 +9,7 @@ beforeEach(() => {
   window.history.replaceState({}, '', '/')
 })
 
-test('administrador cria um lançamento e o vê no dashboard financeiro', async () => {
+test('administrador começa com a base vazia e cria o primeiro lançamento', async () => {
   const user = userEvent.setup()
   render(<App />)
 
@@ -20,7 +20,8 @@ test('administrador cria um lançamento e o vê no dashboard financeiro', async 
   await user.click(screen.getByRole('button', { name: /entrar no sistema/i }))
 
   expect(await screen.findByRole('heading', { name: /visão financeira/i })).toBeInTheDocument()
-  expect(screen.getByText(/atenção ao deslocamento improdutivo/i)).toBeInTheDocument()
+  const fluxo = screen.getByRole('region', { name: /fluxo do resultado operacional/i })
+  expect(within(fluxo).getAllByText('R$ 0,00')).toHaveLength(3)
 
   await user.click(screen.getByRole('link', { name: /^lançamentos$/i }))
   expect(await screen.findByRole('heading', { name: /^lançamentos$/i })).toBeInTheDocument()
@@ -29,7 +30,6 @@ test('administrador cria um lançamento e o vê no dashboard financeiro', async 
   const dialogo = screen.getByRole('dialog')
   await user.type(within(dialogo).getByLabelText(/descrição/i), 'Serviço particular de teste')
   await user.type(within(dialogo).getByLabelText(/^valor$/i), '300')
-  await user.selectOptions(within(dialogo).getByLabelText(/^veículo/i), '1')
   await user.click(within(dialogo).getByRole('button', { name: /salvar lançamento/i }))
 
   expect(await screen.findByText(/dashboard e a DRE já foram atualizados/i)).toBeInTheDocument()
