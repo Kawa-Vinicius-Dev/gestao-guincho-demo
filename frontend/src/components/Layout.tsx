@@ -4,20 +4,15 @@ import { useAuth } from '../auth/AuthContext'
 
 const itens = [
   ['/', 'Visão geral', true, 'financeiro'],
-  ['/lancamentos', 'Lançamentos', true, 'financeiro'],
+  ['/lancamentos', 'Entradas e saídas', true, 'financeiro'],
   ['/contas-receber', 'Contas a receber', true, 'financeiro'],
   ['/dre', 'DRE mensal', true, 'financeiro'],
   ['/despesas', 'Registrar despesas', false, 'operacao'],
   ['/quilometragem', 'Km rodado e morto', false, 'operacao'],
-  ['/veiculos', 'Frota e custos', true, 'operacao'],
+  ['/veiculos', 'Veículos e custos', true, 'operacao'],
   ['/equipe', 'Funcionários', true, 'equipe'],
-  ['/escala', 'Escala semanal', true, 'equipe'],
-  ['/metas', 'Metas mensais', true, 'equipe'],
-  ['/importacoes', 'Importar Excel', true, 'dados'],
-  ['/relatorios', 'Relatórios', true, 'dados'],
-  ['/integracoes', 'Integrações', true, 'dados'],
 ] as const
-const grupos = { financeiro: 'Financeiro', operacao: 'Operação', equipe: 'Equipe', dados: 'Dados e relatórios' } as const
+const grupos = { financeiro: 'Financeiro', operacao: 'Operação', equipe: 'Equipe' } as const
 
 export function Layout() {
   const { usuario, logout } = useAuth()

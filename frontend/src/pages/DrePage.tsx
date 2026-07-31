@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useDemo } from '../demo/DemoContext'
-import { noMes } from '../demo/calculos'
+import { entraNoResultado, noMes } from '../demo/calculos'
 import { moeda } from '../utils/formatadores'
 
 function Linha({ titulo, valor, nivel = 0, total = false, negativo = false }: { titulo: string; valor: number; nivel?: number; total?: boolean; negativo?: boolean }) {
@@ -11,7 +11,7 @@ export default function DrePage() {
   const { state } = useDemo()
   const [mes, setMes] = useState('2026-07')
   const calculo = useMemo(() => {
-    const itens = state.lancamentos.filter(item => noMes(item.data, mes))
+    const itens = state.lancamentos.filter(item => noMes(item.data, mes) && entraNoResultado(item))
     const receitas = itens.filter(item => item.tipo === 'RECEITA')
     const despesas = itens.filter(item => item.tipo === 'DESPESA')
     const agrupar = (lista: typeof itens) => [...lista.reduce((mapa, item) => mapa.set(item.categoria, (mapa.get(item.categoria) ?? 0) + item.valor), new Map<string, number>())]

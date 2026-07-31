@@ -35,16 +35,16 @@ export default function ContasReceberPage(){
       <button className="button button-primary" onClick={()=>setModal('nova')}>Nova conta</button></header>
     {erro?<div className="form-alert">{erro}</div>:null}
     <section className="panel">
-      <div className="filters"><label className="search-field"><span>Pesquisar</span><input value={pesquisa} onChange={e=>setPesquisa(e.target.value)} placeholder="Protocolo, contratante ou descrição"/></label>
-        <label className="filter-select"><span>Status</span><select value={status} onChange={e=>setStatus(e.target.value)}><option value="">Todos</option><option>PENDENTE</option><option>ATRASADO</option><option>RECEBIDO</option><option>CANCELADO</option></select></label></div>
-      {contas.length?<div className="table-scroll"><table><thead><tr><th>Protocolo / descrição</th><th>Contratante</th><th>Vencimento</th><th>Status</th><th>Previsto</th><th>Recebido</th><th/></tr></thead>
+      <div className="filters"><label className="search-field"><span>Pesquisar</span><input value={pesquisa} onChange={e=>setPesquisa(e.target.value)} placeholder="Protocolo ou referência, contratante ou descrição"/></label>
+        <label className="filter-select"><span>Situação</span><select value={status} onChange={e=>setStatus(e.target.value)}><option value="">Todos</option><option>PENDENTE</option><option>ATRASADO</option><option>RECEBIDO</option><option>CANCELADO</option></select></label></div>
+      {contas.length?<div className="table-scroll"><table><thead><tr><th>Protocolo ou referência</th><th>Contratante</th><th>Vencimento</th><th>Situação</th><th>Previsto</th><th>Recebido</th><th/></tr></thead>
         <tbody>{contas.map(c=><tr key={c.id}><td><strong>{c.protocolo||'Sem protocolo'}</strong><small>{c.descricao}</small></td><td>{c.contratante.nome}</td><td>{new Date(`${c.vencimento}T12:00:00`).toLocaleDateString('pt-BR')}</td><td><StatusBadge status={c.status}/></td><td>{moeda(c.valorPrevisto)}</td><td>{c.valorRecebido!=null?<><strong>{moeda(c.valorRecebido)}</strong>{c.diferenca?<small className="negative">Dif. {moeda(c.diferenca)}</small>:null}</>:'—'}</td><td>{c.status!=='RECEBIDO'&&c.status!=='CANCELADO'?<button className="table-action" onClick={()=>{setSelecionada(c);setModal('receber')}}>Registrar pagamento</button>:null}</td></tr>)}</tbody></table></div>
         :<Vazio titulo="Nenhuma conta encontrada" descricao="Cadastre uma conta manualmente ou confirme uma importação da Porto Seguro."/>}
     </section>
     {modal?<div className="modal-backdrop" role="presentation"><section className="modal" role="dialog" aria-modal="true"><header><div><span className="eyebrow">Contas a receber</span><h2>{modal==='nova'?'Nova conta':'Registrar recebimento'}</h2></div><button aria-label="Fechar" onClick={()=>setModal(null)}>×</button></header>
       {modal==='nova'?<form onSubmit={salvar} className="form-grid two-columns">
         <label className="field"><span>Contratante</span><select name="contratanteId" required>{contratantes.map(c=><option key={c.id} value={c.id}>{c.nome}</option>)}</select></label>
-        <label className="field"><span>Protocolo</span><input name="protocolo"/></label>
+        <label className="field"><span>Protocolo ou referência</span><input name="protocolo"/></label>
         <label className="field field-wide"><span>Descrição</span><input name="descricao" required/></label>
         <label className="field"><span>Valor previsto</span><input name="valorPrevisto" type="number" min=".01" step=".01" required/></label>
         <label className="field"><span>Veículo</span><select name="veiculoId"><option value="">Não relacionado</option>{veiculos.map(v=><option key={v.id} value={v.id}>{v.identificacao}</option>)}</select></label>

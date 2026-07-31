@@ -38,6 +38,7 @@ export interface LancamentoDemo {
   funcionarioId?: number
   status: StatusLancamento
   origem: OrigemLancamentoDemo
+  contratanteFonte?: 'Porto Seguro' | 'Outra seguradora' | 'Cliente particular' | 'Empresa contratante' | 'Outros'
   classeCusto?: ClasseCusto
   protocolo?: string
   litros?: number

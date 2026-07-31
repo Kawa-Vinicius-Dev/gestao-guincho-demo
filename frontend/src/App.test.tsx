@@ -23,9 +23,9 @@ test('administrador começa com a base vazia e cria o primeiro lançamento', asy
   const fluxo = screen.getByRole('region', { name: /fluxo do resultado operacional/i })
   expect(within(fluxo).getAllByText('R$ 0,00')).toHaveLength(3)
 
-  await user.click(screen.getByRole('link', { name: /^lançamentos$/i }))
-  expect(await screen.findByRole('heading', { name: /^lançamentos$/i })).toBeInTheDocument()
-  await user.click(screen.getByRole('button', { name: /novo lançamento/i }))
+  await user.click(screen.getByRole('link', { name: /^entradas e saídas$/i }))
+  expect(await screen.findByRole('heading', { name: /^entradas e saídas$/i })).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: /nova entrada ou saída/i }))
 
   const dialogo = screen.getByRole('dialog')
   await user.type(within(dialogo).getByLabelText(/descrição/i), 'Serviço particular de teste')

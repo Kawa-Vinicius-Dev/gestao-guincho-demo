@@ -2,9 +2,11 @@ import type { DemoState, ResultadoVeiculoDemo, ResumoMensalDemo } from './modelo
 
 export const noMes = (data: string, mes: string) => data.startsWith(mes)
 const soma = (valores: number[]) => valores.reduce((total, valor) => total + valor, 0)
+export const entraNoResultado = (item: DemoState['lancamentos'][number]) =>
+  item.tipo !== 'DESPESA' || item.status !== 'PENDENTE'
 
 export function resultadoPorVeiculo(state: DemoState, mes: string): ResultadoVeiculoDemo[] {
-  const lancamentos = state.lancamentos.filter(item => noMes(item.data, mes))
+  const lancamentos = state.lancamentos.filter(item => noMes(item.data, mes) && entraNoResultado(item))
   const kms = state.quilometragens.filter(item => noMes(item.data, mes))
 
   return state.veiculos.map(veiculo => {
@@ -37,7 +39,7 @@ export function resultadoPorVeiculo(state: DemoState, mes: string): ResultadoVei
 }
 
 export function resumoMensal(state: DemoState, mes: string): ResumoMensalDemo {
-  const lancamentos = state.lancamentos.filter(item => noMes(item.data, mes))
+  const lancamentos = state.lancamentos.filter(item => noMes(item.data, mes) && entraNoResultado(item))
   const quilometragens = state.quilometragens.filter(item => noMes(item.data, mes))
   const receita = soma(lancamentos.filter(item => item.tipo === 'RECEITA').map(item => item.valor))
   const despesas = soma(lancamentos.filter(item => item.tipo === 'DESPESA').map(item => item.valor))
@@ -61,7 +63,7 @@ export function resumoMensal(state: DemoState, mes: string): ResumoMensalDemo {
 
 export function despesasPorCategoria(state: DemoState, mes: string) {
   const mapa = new Map<string, number>()
-  state.lancamentos.filter(item => item.tipo === 'DESPESA' && noMes(item.data, mes))
+  state.lancamentos.filter(item => item.tipo === 'DESPESA' && item.status !== 'PENDENTE' && noMes(item.data, mes))
     .forEach(item => mapa.set(item.categoria, (mapa.get(item.categoria) ?? 0) + item.valor))
   return [...mapa.entries()].map(([categoria, valor]) => ({ categoria, valor })).sort((a, b) => b.valor - a.valor)
 }
@@ -69,7 +71,7 @@ export function despesasPorCategoria(state: DemoState, mes: string) {
 export function serieMensal(state: DemoState, quantidade = 6) {
   const meses = [...new Set(state.lancamentos.map(item => item.data.slice(0, 7)))].sort().slice(-quantidade)
   return meses.map(mes => {
-    const itens = state.lancamentos.filter(item => noMes(item.data, mes))
+    const itens = state.lancamentos.filter(item => noMes(item.data, mes) && entraNoResultado(item))
     return {
       mes,
       entradas: soma(itens.filter(item => item.tipo === 'RECEITA').map(item => item.valor)),

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { despesasPorCategoria, resumoMensal, serieMensal } from '../demo/calculos'
+import { despesasPorCategoria, entraNoResultado, resumoMensal, serieMensal } from '../demo/calculos'
 import { useDemo } from '../demo/DemoContext'
 import type { LancamentoDemo, ResultadoVeiculoDemo } from '../demo/modelosDemo'
 import { data, moeda, numero } from '../utils/formatadores'
@@ -65,7 +65,7 @@ function GraficoCategorias({ state, mes }: { state: ReturnType<typeof useDemo>['
 
 function LancamentosRecentes({ itens }: { itens: LancamentoDemo[] }) {
   return <article className="panel recent-card">
-    <header className="panel-title"><div><span className="eyebrow">Últimos registros</span><h2>Lançamentos recentes</h2></div><Link to="/lancamentos">Ver todos</Link></header>
+    <header className="panel-title"><div><span className="eyebrow">Últimos registros</span><h2>Entradas e saídas recentes</h2></div><Link to="/lancamentos">Ver todos</Link></header>
     <div className="recent-list">{itens.map(item => <div key={item.id}>
       <span className={`movement-icon ${item.tipo === 'RECEITA' ? 'in' : 'out'}`}>{item.tipo === 'RECEITA' ? '↙' : '↗'}</span>
       <span><strong>{item.descricao}</strong><small>{data(item.data)} · {item.categoria}</small></span>
@@ -82,13 +82,13 @@ export default function DashboardPage() {
   const maisLucrativo = [...ativos].sort((a, b) => b.lucro - a.lucro)[0]
   const maiorGasto = [...ativos].sort((a, b) => b.despesas - a.despesas)[0]
   const alertas = ativos.filter(item => item.status === 'ATENCAO_KM')
-  const recentes = state.lancamentos.filter(item => item.data.startsWith(mes)).sort((a, b) => b.data.localeCompare(a.data) || b.id - a.id).slice(0, 6)
+  const recentes = state.lancamentos.filter(item => item.data.startsWith(mes) && entraNoResultado(item)).sort((a, b) => b.data.localeCompare(a.data) || b.id - a.id).slice(0, 6)
 
   return <div className="page-enter">
     <header className="page-heading dashboard-heading">
       <div><span className="eyebrow">Central financeira · {rotuloMes(mes)}</span><h1>Visão financeira</h1><p>Quanto entrou, quanto saiu e o lucro real da operação — sem misturar faturamento com resultado.</p></div>
       <div className="heading-actions"><label className="month-picker"><span>Competência</span><input aria-label="Competência" type="month" value={mes} onChange={evento => setMes(evento.target.value)}/></label>
-        <Link className="button button-primary" to="/lancamentos?novo=1">+ Novo lançamento</Link></div>
+        <Link className="button button-primary" to="/lancamentos?novo=1">+ Nova entrada ou saída</Link></div>
     </header>
 
     {alertas.length ? <Link to="/quilometragem" className="dead-km-alert">
@@ -116,8 +116,8 @@ export default function DashboardPage() {
     <section className="analytics-grid"><GraficoMensal state={state}/><GraficoCategorias state={state} mes={mes}/></section>
 
     <section className="dashboard-grid dashboard-grid-v2">
-      <article className="panel vehicle-results vehicle-results-v2"><header className="panel-title"><div><span className="eyebrow">Resultado individual</span><h2>Lucro por veículo</h2></div><Link to="/veiculos">Abrir frota</Link></header>
-        <div className="table-scroll"><table><thead><tr><th>Veículo</th><th>Receita</th><th>Despesas</th><th>Lucro</th><th>Margem</th><th>Km rodado</th><th>Km morto</th><th>Status</th></tr></thead>
+      <article className="panel vehicle-results vehicle-results-v2"><header className="panel-title"><div><span className="eyebrow">Resultado individual</span><h2>Lucro por veículo</h2></div><Link to="/veiculos">Abrir veículos</Link></header>
+        <div className="table-scroll"><table><thead><tr><th>Veículo</th><th>Receita</th><th>Despesas</th><th>Lucro</th><th>Margem</th><th>Km rodado</th><th>Km morto</th><th>Situação</th></tr></thead>
           <tbody>{ativos.map(item => <tr key={item.veiculo.id}><td><strong>{item.veiculo.codigo}</strong><small>{item.veiculo.modelo}</small></td><td>{moeda(item.receita)}</td><td>{moeda(item.despesas)}</td><td className={item.lucro >= 0 ? 'positive' : 'negative'}><strong>{moeda(item.lucro)}</strong></td><td>{item.margem.toFixed(1)}%</td><td>{numero(item.kmRodado)} km</td><td><strong className={item.percentualKmMorto > item.veiculo.metaKmMorto ? 'negative' : ''}>{numero(item.kmMorto)} km</strong><small>{item.percentualKmMorto.toFixed(1)}%</small></td><td><span className={`vehicle-status status-${item.status.toLowerCase()}`}>{statusVeiculo[item.status]}</span></td></tr>)}</tbody>
         </table></div>
       </article>

@@ -34,10 +34,10 @@ export default function FrotasPage() {
   }
 
   return <div className="page-enter">
-    <header className="page-heading"><div><span className="eyebrow">Ativos operacionais</span><h1>Frota e custos</h1><p>Compare receita, gastos e eficiência de cada veículo em um único lugar.</p></div>
+    <header className="page-heading"><div><span className="eyebrow">Ativos operacionais</span><h1>Veículos e custos</h1><p>Compare receita, gastos e eficiência de cada veículo em um único lugar.</p></div>
       <div className="heading-actions"><label className="month-picker"><span>Competência</span><input type="month" value={mes} onChange={evento => setMes(evento.target.value)}/></label><button className="button button-primary" onClick={() => setModal(true)}>+ Cadastrar veículo</button></div></header>
-    <section className="fleet-summary"><div><span>Gasto total da frota</span><strong>{moeda(gastoFrota)}</strong><small>No período selecionado</small></div>
-      <div><span>Frota disponível</span><strong>{state.veiculos.filter(item => item.status === 'ATIVO').length}/{state.veiculos.length}</strong><small>Veículos ativos</small></div>
+    <section className="fleet-summary"><div><span>Gasto total dos veículos</span><strong>{moeda(gastoFrota)}</strong><small>No período selecionado</small></div>
+      <div><span>Veículos disponíveis</span><strong>{state.veiculos.filter(item => item.status === 'ATIVO').length}/{state.veiculos.length}</strong><small>Veículos ativos</small></div>
       <div><span>Melhor margem</span><strong>{Math.max(...resultados.map(item => item.margem), 0).toFixed(1)}%</strong><small>Entre veículos com receita</small></div></section>
 
     <section className="fleet-layout">
@@ -70,7 +70,7 @@ export default function FrotasPage() {
       </div> : null}
     </section>
 
-    {modal ? <div className="modal-backdrop"><section className="modal" role="dialog" aria-modal="true"><header><div><span className="eyebrow">Frota</span><h2>Novo veículo</h2></div><button aria-label="Fechar" onClick={() => setModal(false)}>×</button></header>
+    {modal ? <div className="modal-backdrop"><section className="modal" role="dialog" aria-modal="true"><header><div><span className="eyebrow">Veículos</span><h2>Novo veículo</h2></div><button aria-label="Fechar" onClick={() => setModal(false)}>×</button></header>
       <form onSubmit={salvar} className="form-grid two-columns">
         <label className="field"><span>Identificador</span><input name="codigo" placeholder="G-04" required/></label><label className="field"><span>Placa</span><input name="placa" placeholder="ABC-1D23" required/></label>
         <label className="field field-wide"><span>Modelo</span><input name="modelo" placeholder="Marca e modelo" required/></label>
