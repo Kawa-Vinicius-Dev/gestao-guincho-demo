@@ -39,9 +39,9 @@
 **Interfaces:**
 - Produces: `OrdemPagamentoPorto.atualizar(...)`, `confirmarRecebimento(BigDecimal, LocalDate)`, `OrdemServicoPorto.atualizar(...)`, `TipoRelatorioPorto` e repositórios por número/hash.
 
-- [ ] Escrever um teste de contexto/API que exija as tabelas `ordens_pagamento_porto`, `ordens_servico_porto`, `pendencias_financeiras_porto` e `registros_importados_porto`; executar `backend\\mvnw.cmd -f backend/pom.xml -Dtest=PortoApiIntegrationTest test` e observar RED.
-- [ ] Criar V5 com chaves únicas de OP/OS/hash, relação 1:N OP→OS, campos opcionais de viatura/km e status de recebimento/pendência; mapear entidades/repositórios e executar o teste até GREEN.
-- [ ] Commit local: `git add backend/src/main backend/src/test && git commit -m "feat: adiciona dominio Porto"`.
+- [x] Escrever um teste de contexto/API que exija as tabelas `ordens_pagamento_porto`, `ordens_servico_porto`, `pendencias_financeiras_porto` e `registros_importados_porto`; executar `backend\\mvnw.cmd -f backend/pom.xml -Dtest=PortoApiIntegrationTest test` e observar RED.
+- [x] Criar V5 com chaves únicas de OP/OS/hash, relação 1:N OP→OS, campos opcionais de viatura/km e status de recebimento/pendência; mapear entidades/repositórios e executar o teste até GREEN.
+- [x] Commit local: `git add backend/src/main backend/src/test && git commit -m "feat: adiciona dominio Porto"`.
 
 ### Task 2: Parser CSV e prévia
 
@@ -56,9 +56,9 @@
 **Interfaces:**
 - Produces: `PortoCsvParser.parse(byte[]): PreviaPorto`, com `tipo`, `cabecalhos`, `linhas`, `erros`; cada `LinhaPorto` fornece `hashRegistro()` e valores normalizados.
 
-- [ ] Escrever testes RED para detectar os três relatórios por cabeçalhos, UTF-8/BOM/ISO-8859-1, delimitadores `,`, `;`, tab, datas `dd/MM/yyyy`/ISO, moeda brasileira e remoção de HTML de OP/OS.
-- [ ] Implementar parser com `CharsetDecoder` estrito, fallback ISO-8859-1, detecção de delimitador e máquina de estados para aspas; normalizar cabeçalhos sem acentos e gerar SHA-256 canônico por linha.
-- [ ] Rodar `backend\\mvnw.cmd -f backend/pom.xml -Dtest=PortoCsvParserTest test` até GREEN e commit `test: cobre formatos CSV da Porto`.
+- [x] Escrever testes RED para detectar os três relatórios por cabeçalhos, UTF-8/BOM/ISO-8859-1, delimitadores `,`, `;`, tab, datas `dd/MM/yyyy`/ISO, moeda brasileira e remoção de HTML de OP/OS.
+- [x] Implementar parser com `CharsetDecoder` estrito, fallback ISO-8859-1, detecção de delimitador e máquina de estados para aspas; normalizar cabeçalhos sem acentos e gerar SHA-256 canônico por linha.
+- [x] Rodar `backend\\mvnw.cmd -f backend/pom.xml -Dtest=PortoCsvParserTest test` até GREEN e commit `test: cobre formatos CSV da Porto`.
 
 ### Task 3: Prévia, confirmação idempotente e consultas REST
 
@@ -73,10 +73,10 @@
 - Produces: `POST /api/porto/importacoes/previa`, `POST /api/porto/importacoes/{id}/confirmar`, `GET /api/porto/ordens-pagamento`, `GET /api/porto/ordens-servico`, `GET /api/porto/pendencias` e `PATCH /api/porto/ordens-pagamento/{id}/receber`.
 - Confirmação recebe `{ "ordemPagamentoId": number|null }`; relatório de OS exige OP, demais ignoram o campo.
 
-- [ ] Escrever testes REST RED para upload→prévia sem domínio persistido, confirmação das três modalidades, OP com várias OS, seleção obrigatória da OP, hash duplicado, merge que preserva campo existente quando CSV vier vazio e autorização de administrador.
-- [ ] Implementar armazenamento local seguro do CSV, confirmação transacional/upsert e registro de hashes; devolução abre pendência sem criar `Despesa`, e campos de km permanecem apenas no domínio Porto.
-- [ ] Escrever RED/GREEN para recebimento manual: data programada mantém `PENDENTE`; PATCH define valor/data recebidos uma única vez; listagens retornam DTOs ordenados.
-- [ ] Rodar `backend\\mvnw.cmd -f backend/pom.xml -Dtest=PortoApiIntegrationTest test` e commit `feat: expõe importação e financeiro Porto`.
+- [x] Escrever testes REST RED para upload→prévia sem domínio persistido, confirmação das três modalidades, OP com várias OS, seleção obrigatória da OP, hash duplicado, merge que preserva campo existente quando CSV vier vazio e autorização de administrador.
+- [x] Implementar armazenamento local seguro do CSV, confirmação transacional/upsert e registro de hashes; devolução abre pendência sem criar `Despesa`, e campos de km permanecem apenas no domínio Porto.
+- [x] Escrever RED/GREEN para recebimento manual: data programada mantém `PENDENTE`; PATCH define valor/data recebidos uma única vez; listagens retornam DTOs ordenados.
+- [x] Rodar `backend\\mvnw.cmd -f backend/pom.xml -Dtest=PortoApiIntegrationTest test` e commit `feat: expõe importação e financeiro Porto`.
 
 ### Task 4: Cliente e página de importação Porto
 
@@ -93,9 +93,9 @@
 - Consumes: endpoints de prévia/confirmação da Task 3.
 - Produces: rota `/porto/importacoes` com estados upload, prévia, seletor obrigatório de OP para relatório de OS e confirmação.
 
-- [ ] Escrever teste React RED que envia fixture sintética, mostra tipo/linhas/erros, exige OP para OS e confirma via API.
-- [ ] Implementar tipos e cliente direto sem barrel, iniciar chamadas independentes em paralelo, renderizar tabela mínima e mensagens de erro/carregamento.
-- [ ] Rodar `npm.cmd test -- PortoImportacoesPage.test.tsx` em `frontend` até GREEN e commit `feat: adiciona importacao Porto no frontend`.
+- [x] Escrever teste React RED que envia fixture sintética, mostra tipo/linhas/erros, exige OP para OS e confirma via API.
+- [x] Implementar tipos e cliente direto sem barrel, iniciar chamadas independentes em paralelo, renderizar tabela mínima e mensagens de erro/carregamento.
+- [x] Rodar `npm.cmd test -- PortoImportacoesPage.test.tsx` em `frontend` até GREEN e commit `feat: adiciona importacao Porto no frontend`.
 
 ### Task 5: Listagens e recebimento no frontend
 
@@ -113,9 +113,9 @@
 - Consumes: três GETs e PATCH de recebimento da Task 3.
 - Produces: rotas administrativas `/porto/ordens-pagamento`, `/porto/ordens-servico`, `/porto/pendencias` e navegação Porto.
 
-- [ ] Escrever testes RED para OP programada aparecer não recebida, modal de confirmação manual atualizar a OP, OS mostrar OP/especialidade/viatura opcional e devolução aparecer como pendência sem rótulo de despesa.
-- [ ] Implementar páginas lazy com tabelas e estados vazios existentes; manter visual atual e nenhuma alteração nas telas financeiras atuais.
-- [ ] Rodar `npm.cmd test -- PortoListagens.test.tsx` até GREEN e commit `feat: adiciona paginas operacionais Porto`.
+- [x] Escrever testes RED para OP programada aparecer não recebida, modal de confirmação manual atualizar a OP, OS mostrar OP/especialidade/viatura opcional e devolução aparecer como pendência sem rótulo de despesa.
+- [x] Implementar páginas lazy com tabelas e estados vazios existentes; manter visual atual e nenhuma alteração nas telas financeiras atuais.
+- [x] Rodar `npm.cmd test -- PortoListagens.test.tsx` até GREEN e commit `feat: adiciona paginas operacionais Porto`.
 
 ### Task 6: Verificação integral e documentação
 
@@ -126,9 +126,9 @@
 - Consumes: todos os artefatos das Tasks 1–5.
 - Produces: evidência fresca de testes/build e branch local pronta, sem integração/push.
 
-- [ ] Executar backend: `backend\\mvnw.cmd -f backend/pom.xml test` e `backend\\mvnw.cmd -f backend/pom.xml package`.
-- [ ] Executar frontend em `frontend`: `npm.cmd test`, `npm.cmd run lint`, `npm.cmd run build`.
-- [ ] Executar `git diff --check`, revisar requisitos linha a linha, confirmar ausência de dados reais/cloud/deploy e commit final apenas se o plano marcado mudar: `docs: conclui plano do MVP Porto`.
+- [x] Executar backend: `backend\\mvnw.cmd -f backend/pom.xml test` e `backend\\mvnw.cmd -f backend/pom.xml package`.
+- [x] Executar frontend em `frontend`: `npm.cmd test`, `npm.cmd run lint`, `npm.cmd run build`.
+- [x] Executar `git diff --check`, revisar requisitos linha a linha, confirmar ausência de dados reais/cloud/deploy e commit final apenas se o plano marcado mudar: `docs: conclui plano do MVP Porto`.
 
 ## Plan Review
 
