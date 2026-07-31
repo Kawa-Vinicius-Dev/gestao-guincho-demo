@@ -17,6 +17,7 @@ frontend/vite.config.js
 frontend/vite.config.d.ts
 
 # IDE e sistema
+.worktrees/
 .idea/
 .vscode/
 *.iml
