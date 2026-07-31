@@ -20,6 +20,9 @@ const Metas=lazy(()=>import('./pages/MetasPage'))
 const Integracoes=lazy(()=>import('./pages/IntegracoesPage'))
 const Relatorios=lazy(()=>import('./pages/RelatoriosPage'))
 const PortoImportacoes=lazy(()=>import('./pages/PortoImportacoesPage'))
+const PortoOps=lazy(()=>import('./pages/PortoOrdensPagamentoPage'))
+const PortoOss=lazy(()=>import('./pages/PortoOrdensServicoPage'))
+const PortoPendencias=lazy(()=>import('./pages/PortoPendenciasPage'))
 const NaoEncontrado=lazy(()=>import('./pages/NaoEncontradoPage'))
 
 export default function App(){
@@ -44,6 +47,9 @@ export default function App(){
         <Route path="/relatorios" element={<Relatorios/>}/>
         <Route path="/integracoes" element={<Integracoes/>}/>
         <Route path="/porto/importacoes" element={<PortoImportacoes/>}/>
+        <Route path="/porto/ordens-pagamento" element={<PortoOps/>}/>
+        <Route path="/porto/ordens-servico" element={<PortoOss/>}/>
+        <Route path="/porto/pendencias" element={<PortoPendencias/>}/>
         <Route path="/usuarios" element={<Equipe/>}/>
         <Route path="/configuracoes" element={<Integracoes/>}/>
       </Route>

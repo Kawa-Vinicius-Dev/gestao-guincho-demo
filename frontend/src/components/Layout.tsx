@@ -11,8 +11,12 @@ const itens = [
   ['/quilometragem', 'Km rodado e morto', false, 'operacao'],
   ['/veiculos', 'Veículos e custos', true, 'operacao'],
   ['/equipe', 'Funcionários', true, 'equipe'],
+  ['/porto/importacoes', 'Importar relatórios', true, 'porto'],
+  ['/porto/ordens-pagamento', 'Ordens de pagamento', true, 'porto'],
+  ['/porto/ordens-servico', 'Ordens de serviço', true, 'porto'],
+  ['/porto/pendencias', 'Pendências financeiras', true, 'porto'],
 ] as const
-const grupos = { financeiro: 'Financeiro', operacao: 'Operação', equipe: 'Equipe' } as const
+const grupos = { financeiro: 'Financeiro', operacao: 'Operação', equipe: 'Equipe', porto: 'Porto Seguro' } as const
 
 export function Layout() {
   const { usuario, logout } = useAuth()
