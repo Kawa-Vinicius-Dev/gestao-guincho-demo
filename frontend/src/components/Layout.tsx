@@ -11,6 +11,7 @@ const itens = [
   ['/quilometragem', 'Km rodado e morto', false, 'operacao'],
   ['/veiculos', 'Veículos e custos', true, 'operacao'],
   ['/equipe', 'Funcionários', true, 'equipe'],
+  ['/porto/dashboard', 'Dashboard Porto', true, 'porto'],
   ['/porto/importacoes', 'Importar relatórios', true, 'porto'],
   ['/porto/ordens-pagamento', 'Ordens de pagamento', true, 'porto'],
   ['/porto/ordens-servico', 'Ordens de serviço', true, 'porto'],

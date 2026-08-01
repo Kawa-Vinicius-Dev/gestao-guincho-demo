@@ -74,3 +74,32 @@ test('bloqueia erros e exige confirmação separada para divergência',async()=>
   expect(await screen.findByText(/1 registro importado/i)).toBeInTheDocument()
   expect(confirmouDivergencia).toBe(true)
 })
+
+test('cola serviços, mostra resumo da prévia e confirma somente depois da análise',async()=>{
+  let conteudoRecebido=''
+  servidor.use(
+    http.get('/api/porto/ordens-pagamento',()=>HttpResponse.json([])),
+    http.post('/api/porto/importacoes/previa-conteudo',async({request})=>{
+      conteudoRecebido=String((await request.json() as {conteudo:string}).conteudo)
+      return HttpResponse.json({id:44,nomeArquivo:'colagem-servicos-porto.txt',tipo:'SERVICOS_GERAIS',status:'AGUARDANDO_CONFERENCIA',totalLinhas:2,requerOrdemPagamento:false,erros:[],
+        resumo:{linhasAnalisadas:2,opsUnicas:0,registrosNovos:2,registrosExistentes:0,registrosAtualizados:0,duplicidades:0,erros:0,valorTotal:300.75},
+        linhas:[
+          {hashRegistro:'c1',acao:'IMPORTAR',dados:{numero_os:'OS 01/0000001-26',valor_total:'100,50',especialidade:'REMOÇÃO',data_atendimento:'2026-08-01 10:30:00'}},
+          {hashRegistro:'c2',acao:'IMPORTAR',dados:{numero_os:'OS 01/0000002-26',valor_total:'200.25',especialidade:'PANE',data_atendimento:'2026-08-01 11:00:00'}},
+        ]},{status:201})
+    }),
+    http.post('/api/porto/importacoes/44/confirmar',()=>HttpResponse.json({importacaoId:44,tipo:'SERVICOS_GERAIS',importados:2,ignorados:0,novos:2,atualizados:0})),
+  )
+  const user=userEvent.setup();render(<PortoImportacoesPage/>)
+  await user.click(screen.getByRole('button',{name:/colar serviços da porto/i}))
+  const area=screen.getByLabelText(/conteúdo copiado da porto/i)
+  await user.type(area,'Número da Ordem de Serviço\tValor Total\nOS 01/0000001-26\t100,50')
+  await user.click(screen.getByRole('button',{name:/analisar conteúdo/i}))
+  expect(await screen.findByText('OS 01/0000001-26')).toBeInTheDocument()
+  expect(screen.getByText((_,element)=>element?.tagName==='SPAN'&&element.textContent==='2 linhas analisadas')).toBeInTheDocument()
+  expect(screen.getByText((_,element)=>element?.tagName==='SPAN'&&element.textContent==='2 registros novos')).toBeInTheDocument()
+  expect(screen.getByText(/R\$\s*300,75/)).toBeInTheDocument()
+  expect(conteudoRecebido).toContain('OS 01/0000001-26')
+  await user.click(screen.getByRole('button',{name:/confirmar importação/i}))
+  expect(await screen.findByText(/2 registros importados/i)).toBeInTheDocument()
+})

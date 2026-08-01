@@ -34,6 +34,12 @@ export const servidor = setupServer(
   http.get('/api/veiculos', () => HttpResponse.json([])),
   http.get('/api/motoristas', () => HttpResponse.json([])),
   http.get('/api/categorias', () => HttpResponse.json([])),
+  http.get('/api/porto/ordens-pagamento/resumo', () => HttpResponse.json({
+    quantidadeTotalOps:0,valorTotalPrevisto:0,quantidadeSemComposicao:0,valorSemComposicao:0,quantidadeConciliadas:0,valorConciliadas:0,
+    quantidadeValorAbaixo:0,diferencaTotalAbaixo:0,quantidadeValorAcima:0,diferencaTotalAcima:0,quantidadeComDivergencia:0,valorTotalDivergencias:0,
+    quantidadePagamentoProgramado:0,valorProgramado:0,quantidadeRecebidas:0,valorRecebido:0,quantidadeAguardandoRecebimento:0,valorAguardandoRecebimento:0,
+    quantidadeVencidasNaoRecebidas:0,valorVencidoNaoRecebido:0,valorMedioPorOp:0,quantidadeOrdensServico:0,
+  })),
   http.post('/api/contas-receber', async ({ request }) => {
     const body = await request.json() as Record<string, unknown>
     const nova = { id: 2, contratante: { id: 1, nome: 'Porto Seguro', ativo: true }, status: 'PENDENTE',

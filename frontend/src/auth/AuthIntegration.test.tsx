@@ -55,6 +55,7 @@ test('requisição Porto usa Authorization Bearer com o token real', async () =>
   await user.click(await screen.findByRole('link', { name: /ordens de pagamento/i }))
 
   expect(await screen.findByRole('heading', { name: /ordens de pagamento/i })).toBeInTheDocument()
+  expect(await screen.findByText('Nenhuma OP')).toBeInTheDocument()
   expect(authorization).toBe('Bearer token-admin-teste')
 })
 

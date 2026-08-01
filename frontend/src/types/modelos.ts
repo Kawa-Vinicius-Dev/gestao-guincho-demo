@@ -43,11 +43,20 @@ export interface Importacao {
   textoExtraido?:string; mensagemErro?:string; totalRegistros:number; criadoEm:string;
   confirmadoEm?:string; itens:ItemImportacao[]
 }
-export type TipoRelatorioPorto = 'PREVISAO_RECEBER'|'OS_VINCULADAS'|'SERVICOS_DEVOLVIDOS'
-export type AcaoLinhaPorto = 'IMPORTAR'|'IGNORAR'|'ERRO'|'DIVERGENCIA'
+export type TipoRelatorioPorto = 'PREVISAO_RECEBER'|'OS_VINCULADAS'|'SERVICOS_DEVOLVIDOS'|'SERVICOS_GERAIS'
+export type AcaoLinhaPorto = 'IMPORTAR'|'ATUALIZAR'|'IGNORAR'|'ERRO'|'DIVERGENCIA'
 export interface LinhaPreviaPorto { dados:Record<string,string>; hashRegistro:string; acao:AcaoLinhaPorto; mensagem?:string }
-export interface PreviaPorto { id:number; nomeArquivo:string; tipo:TipoRelatorioPorto; status:string; totalLinhas:number; linhas:LinhaPreviaPorto[]; erros:string[]; requerOrdemPagamento:boolean }
-export interface ConfirmacaoPorto { importacaoId:number; tipo:TipoRelatorioPorto; importados:number; ignorados:number }
-export interface OrdemPagamentoPorto { id:number; numero:string; valorTotal:number; nomeCodigo?:string; dataPagamentoProgramada?:string; valorRecebido?:number; dataRecebimento?:string; situacao:'PROGRAMADO'|'RECEBIDO'; quantidadeOrdensServico?:number; valorOrdensServico?:number; divergencia?:number }
-export interface OrdemServicoPorto { id:number; ordemPagamentoId?:number; ordemPagamento?:string; numero:string; valorTotal:number; especialidade?:string; viatura?:string; socorrista?:string; qra?:string; dataAtendimento?:string; valorKmExcedente?:number; kmMortoEstimado?:number }
-export interface PendenciaPorto { tipo:'RECEBIMENTO_OP'|'SERVICO_DEVOLVIDO'; referenciaId:number; referencia:string; valor:number; data?:string; situacao:string }
+export interface ResumoPreviaPorto { linhasAnalisadas:number; opsUnicas:number; registrosNovos:number; registrosExistentes:number; registrosAtualizados:number; duplicidades:number; erros:number; valorTotal:number }
+export interface PreviaPorto { id:number; nomeArquivo:string; tipo:TipoRelatorioPorto; status:string; totalLinhas:number; linhas:LinhaPreviaPorto[]; erros:string[]; requerOrdemPagamento:boolean; resumo?:ResumoPreviaPorto }
+export interface ConfirmacaoPorto { importacaoId:number; tipo:TipoRelatorioPorto; importados:number; ignorados:number; novos?:number; atualizados?:number }
+export type StatusConciliacaoPorto='SEM_COMPOSICAO'|'CONCILIADA'|'VALOR_ABAIXO'|'VALOR_ACIMA'|'RECEBIDA_COM_DIVERGENCIA'
+export type StatusOperacionalPorto='NORMAL'|'PENDENTE_PORTO'|'DEVOLVIDO_FINALIZADO'
+export type StatusFinanceiroPorto='AGUARDANDO_OP'|'PAGAMENTO_PROGRAMADO'|'RECEBIDO'|'BLOQUEADO_PARA_PAGAMENTO'|'VALOR_DIVERGENTE'
+export interface OrdemPagamentoPorto { id:number; numero:string; valorTotal:number; nomeCodigo?:string; dataPagamentoProgramada?:string; valorRecebido?:number; dataRecebimento?:string; situacao:'PROGRAMADO'|'RECEBIDO'; quantidadeOrdensServico:number; valorOrdensServico:number; divergencia:number; statusConciliacao:StatusConciliacaoPorto }
+export interface OrdemServicoPorto { id:number; ordemPagamentoId?:number; ordemPagamento?:string; numero:string; valorTotal:number; especialidade?:string; viatura?:string; socorrista?:string; qra?:string; dataAtendimento?:string; valorKmExcedente?:number; kmMortoEstimado?:number; statusOperacional:StatusOperacionalPorto; statusFinanceiro:StatusFinanceiroPorto; dataDevolucao?:string; dataFinalizacaoDevolucao?:string }
+export interface PendenciaPorto { id?:number; tipo:'RECEBIMENTO_OP'|'SERVICO_DEVOLVIDO'|'SERVICO_PENDENTE'; referenciaId:number; referencia:string; valor:number; data?:string; situacao:string; motivo?:string; observacao?:string; responsavel?:string; prazo?:string; referenciaPorto?:string }
+export interface ResumoOpsPorto { quantidadeTotalOps:number; valorTotalPrevisto:number; quantidadeSemComposicao:number; valorSemComposicao:number; quantidadeConciliadas:number; valorConciliadas:number; quantidadeValorAbaixo:number; diferencaTotalAbaixo:number; quantidadeValorAcima:number; diferencaTotalAcima:number; quantidadeComDivergencia:number; valorTotalDivergencias:number; quantidadePagamentoProgramado:number; valorProgramado:number; quantidadeRecebidas:number; valorRecebido:number; quantidadeAguardandoRecebimento:number; valorAguardandoRecebimento:number; quantidadeVencidasNaoRecebidas:number; valorVencidoNaoRecebido:number; valorMedioPorOp:number; quantidadeOrdensServico:number }
+export interface ResumoGrupoPorto { chave:string; quantidade:number; valor:number }
+export interface DashboardPorto extends ResumoOpsPorto { quantidadeTotalServicos:number; valorTotalRealizado:number; quantidadeAguardandoOp:number; valorAguardandoOp:number; quantidadeServicosPagamentoProgramado:number; valorServicosPagamentoProgramado:number; valorPrevistoAReceber:number; valorConciliado:number; valorEfetivamenteRecebido:number; quantidadeServicosPendentes:number; valorServicosPendentes:number; quantidadeServicosDevolvidos:number; porEspecialidade:ResumoGrupoPorto[]; porSocorrista:ResumoGrupoPorto[] }
+export interface JustificativaPorto { id:number; motivo:string; observacao:string; usuario:string; criadoEm:string }
+export interface DetalheOpPorto { ordemPagamento:OrdemPagamentoPorto; ordensServico:OrdemServicoPorto[]; justificativas:JustificativaPorto[] }
