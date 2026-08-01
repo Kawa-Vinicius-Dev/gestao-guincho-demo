@@ -38,13 +38,16 @@ test('envia CSV, exige OP para relatório de OS e confirma a prévia', async () 
 test('cancela uma prévia retomada e permite corrigir o arquivo', async()=>{
   servidor.use(
     http.get('/api/porto/ordens-pagamento',()=>HttpResponse.json([])),
-    http.post('/api/porto/importacoes/previa',()=>HttpResponse.json({id:21,nomeArquivo:'retomada.csv',tipo:'PREVISAO_RECEBER',status:'AGUARDANDO_CONFERENCIA',totalLinhas:1,requerOrdemPagamento:false,erros:[],linhas:[{hashRegistro:'h21',acao:'IMPORTAR',dados:{numero_op:'OP-21',valor_total:'100,00',data_pagamento:'31/08/2026'}}]},{status:201})),
+    http.post('/api/porto/importacoes/previa',()=>HttpResponse.json({id:21,nomeArquivo:'retomada.csv',tipo:'PREVISAO_RECEBER',status:'AGUARDANDO_CONFERENCIA',totalLinhas:3,requerOrdemPagamento:false,erros:[],resumo:{linhasAnalisadas:3,opsUnicas:2,registrosNovos:1,registrosExistentes:1,registrosAtualizados:1,duplicidades:1,erros:0,valorTotal:300},linhas:[{hashRegistro:'h21',acao:'IMPORTAR',dados:{numero_op:'OP-21',valor_total:'100,00',data_pagamento:'31/08/2026'}}]},{status:201})),
     http.post('/api/porto/importacoes/21/cancelar',()=>HttpResponse.json({id:21,nomeArquivo:'retomada.csv',tipo:'PREVISAO_RECEBER',status:'CANCELADA',totalLinhas:1,requerOrdemPagamento:false,erros:[],linhas:[{hashRegistro:'h21',acao:'IMPORTAR',dados:{numero_op:'OP-21'}}]})),
   )
   const user=userEvent.setup();render(<PortoImportacoesPage/>)
   await user.upload(screen.getByLabelText(/arquivo csv/i),new File(['csv'],'retomada.csv',{type:'text/csv'}))
   await user.click(screen.getByRole('button',{name:/analisar csv/i}))
   expect(await screen.findByText('OP-21')).toBeInTheDocument()
+  expect(screen.getByText((_,element)=>element?.tagName==='SPAN'&&element.textContent==='2 OPs únicas')).toBeInTheDocument()
+  expect(screen.getByText((_,element)=>element?.tagName==='SPAN'&&element.textContent==='1 registro atualizado')).toBeInTheDocument()
+  expect(screen.getByText((_,element)=>element?.tagName==='SPAN'&&element.textContent==='0 erros')).toBeInTheDocument()
   await user.click(screen.getByRole('button',{name:/cancelar prévia/i}))
   expect(await screen.findByText(/prévia cancelada/i)).toBeInTheDocument()
   expect(screen.queryByText('OP-21')).not.toBeInTheDocument()
