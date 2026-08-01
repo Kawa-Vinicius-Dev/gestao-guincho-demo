@@ -21,7 +21,7 @@ public class PortoCsvParser {
         Map.entry("especialidade","especialidade"), Map.entry("sigla da viatura","sigla_viatura"),
         Map.entry("socorrista","socorrista"), Map.entry("qra","qra"), Map.entry("data de atendimento","data_atendimento"),
         Map.entry("data da devolucao","data_devolucao"), Map.entry("valor km excedente","valor_km_excedente"),
-        Map.entry("km morto estimado","km_morto_estimado")
+        Map.entry("data da finalizacao","data_finalizacao"), Map.entry("km morto estimado","km_morto_estimado")
     );
 
     public PreviaPorto parse(byte[] bytes) {

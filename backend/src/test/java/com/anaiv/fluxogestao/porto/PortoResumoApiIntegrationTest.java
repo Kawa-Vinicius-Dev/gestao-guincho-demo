@@ -150,6 +150,22 @@ class PortoResumoApiIntegrationTest {
             .andExpect(status().isOk()).andExpect(jsonPath("$.situacao").value("RESOLVIDA"));
     }
 
+    @Test
+    void aplicaToleranciaDeUmCentavoESeparaDivergenciaDoRecebimento() throws Exception {
+        String token=login();confirmar(token,previa(token,"op-tolerancia.csv","""
+            Número da Ordem de Pagamento;Valor Total do Serviço;Nome: Código;Data de Pagamento
+            OP-TOL-001;100,00;Sintético: Tolerância;31/12/2099
+            """),"{}");
+        long opId=idsDasOpsPorPrefixo(token,"OP-TOL-").get("OP-TOL-001");importarOs(token,"os-tolerancia.csv","OS-TOL-001",99.99,opId);
+        mvc.perform(get("/api/porto/ordens-pagamento").param("numero","OP-TOL-001").header("Authorization","Bearer "+token))
+            .andExpect(status().isOk()).andExpect(jsonPath("$[0].statusConciliacao").value("CONCILIADA"));
+        mvc.perform(patch("/api/porto/ordens-pagamento/{id}/receber",opId).header("Authorization","Bearer "+token)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"valorRecebido\":90.00,\"dataRecebimento\":\"2026-08-01\"}"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.statusConciliacao").value("RECEBIDA_COM_DIVERGENCIA"));
+        mvc.perform(get("/api/porto/ordens-pagamento/resumo").param("numero","OP-TOL-001").header("Authorization","Bearer "+token))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.quantidadeComDivergencia").value(1)).andExpect(jsonPath("$.valorTotalDivergencias").value(10.0));
+    }
+
     private void importarOs(String token,String arquivo,String numero,double valor,long opId) throws Exception {
         long id=previa(token,arquivo,"""
             Número da Ordem de Serviço,Valor Total,Especialidade,Sigla da Viatura,Socorrista,QRA,Data de atendimento

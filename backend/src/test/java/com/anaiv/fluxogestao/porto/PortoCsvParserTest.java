@@ -69,6 +69,15 @@ class PortoCsvParserTest {
         assertThat(previa.erros()).isEmpty();
     }
 
+    @Test
+    void reconheceDataDeFinalizacaoDoServicoDevolvido() {
+        var previa=parser.parse("""
+            Número da Ordem de Serviço\tEspecialidade\tData de Atendimento\tData da devolução\tData da finalização\tValor Total
+            OS-DEV-FIM-1\tPANE\t01/08/2026\t02/08/2026\t03/08/2026\t125,00
+            """.getBytes(StandardCharsets.UTF_8));
+        assertThat(previa.linhas().getFirst().data("data_finalizacao")).hasToString("2026-08-03");
+    }
+
     private byte[] recurso(String nome) throws Exception {
         try(InputStream in=getClass().getResourceAsStream("/porto/"+nome)){return in.readAllBytes();}
     }
