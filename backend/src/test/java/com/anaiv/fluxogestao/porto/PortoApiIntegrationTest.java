@@ -30,9 +30,17 @@ class PortoApiIntegrationTest {
             select count(*) from information_schema.tables
             where table_schema = 'public' and table_name in (
               'ordens_pagamento_porto', 'ordens_servico_porto',
-              'pendencias_financeiras_porto', 'registros_importados_porto')
+              'pendencias_financeiras_porto', 'registros_importados_porto',
+              'justificativas_conciliacao_porto')
             """, Integer.class);
-        assertThat(tabelas).isEqualTo(4);
+        assertThat(tabelas).isEqualTo(5);
+        Integer colunasOs = jdbc.queryForObject("""
+            select count(*) from information_schema.columns
+            where table_schema = 'public' and table_name = 'ordens_servico_porto'
+              and column_name in ('status_operacional', 'status_financeiro', 'origem_importacao',
+                                  'data_importacao', 'data_devolucao', 'data_finalizacao_devolucao')
+            """, Integer.class);
+        assertThat(colunasOs).isEqualTo(6);
     }
 
     @Test
@@ -209,7 +217,9 @@ class PortoApiIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON).content("{}"))
             .andExpect(status().isOk()).andExpect(jsonPath("$.importados").value(1));
         mvc.perform(get("/api/porto/pendencias").header("Authorization","Bearer "+token))
-            .andExpect(status().isOk()).andExpect(jsonPath("$[?(@.tipo == 'SERVICO_DEVOLVIDO')]").isNotEmpty());
+            .andExpect(status().isOk()).andExpect(jsonPath("$[?(@.tipo == 'SERVICO_DEVOLVIDO')]").isEmpty());
+        assertThat(jdbc.queryForObject("select status_operacional from ordens_servico_porto where numero='OS-901'",String.class))
+            .isEqualTo("DEVOLVIDO_FINALIZADO");
         assertThat(jdbc.queryForObject("select count(*) from despesas",Integer.class)).isEqualTo(despesasAntes);
 
         mvc.perform(patch("/api/porto/ordens-pagamento/{id}/receber",opId).header("Authorization","Bearer "+token)

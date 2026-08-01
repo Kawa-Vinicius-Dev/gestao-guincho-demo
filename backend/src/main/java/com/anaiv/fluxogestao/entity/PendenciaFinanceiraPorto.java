@@ -19,6 +19,7 @@ public class PendenciaFinanceiraPorto {
         this.ordemServico=os;this.valor=valor;this.dataDevolucao=data;this.importacao=importacao;
     }
     public void atualizar(BigDecimal valor, LocalDate data, Importacao origem){if(valor!=null)this.valor=valor;if(data!=null)dataDevolucao=data;if(origem!=null)importacao=origem;}
+    public void resolver(){status=EnumsFinanceiros.StatusPendenciaPorto.RESOLVIDA;}
     public Long getId(){return id;} public OrdemServicoPorto getOrdemServico(){return ordemServico;} public String getTipo(){return tipo;}
     public BigDecimal getValor(){return valor;} public LocalDate getDataDevolucao(){return dataDevolucao;}
     public EnumsFinanceiros.StatusPendenciaPorto getStatus(){return status;}
