@@ -2,6 +2,10 @@ import { useState, type FormEvent } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 
+const credencialLocal = import.meta.env.DEV
+  ? { email: 'admin@fluxogestao.local', senha: 'Admin@123' }
+  : null
+
 export default function LoginPage(){
   const {usuario,login}=useAuth()
   const [erro,setErro]=useState('')
@@ -25,12 +29,12 @@ export default function LoginPage(){
     <section className="login-panel">
       <form onSubmit={entrar}>
         <span className="eyebrow">Acesso seguro</span><h2>Entre na sua conta</h2>
-        <p>Use o acesso de administrador ou experimente a visão restrita do funcionário.</p>
+        <p>{credencialLocal?'Use o acesso administrativo do ambiente local.':'Informe suas credenciais para acessar o sistema.'}</p>
         {erro?<div className="form-alert" role="alert">{erro}</div>:null}
-        <label className="field"><span>E-mail</span><input name="email" type="email" autoComplete="username" required defaultValue="admin@fluxogestao.local"/></label>
-        <label className="field"><span>Senha</span><input name="senha" type="password" autoComplete="current-password" required defaultValue="Admin@123"/></label>
+        <label className="field"><span>E-mail</span><input name="email" type="email" autoComplete="username" required defaultValue={credencialLocal?.email}/></label>
+        <label className="field"><span>Senha</span><input name="senha" type="password" autoComplete="current-password" required defaultValue={credencialLocal?.senha}/></label>
         <button className="button button-primary button-block" disabled={enviando}>{enviando?'Entrando…':'Entrar no sistema'}</button>
-        <div className="demo-credentials"><span><strong>Administrador</strong>admin@fluxogestao.local · Admin@123</span><span><strong>Funcionário</strong>funcionario@gestaoguincho.demo · Demo@123</span></div>
+        {credencialLocal?<div className="demo-credentials"><span><strong>Administrador local</strong>{credencialLocal.email} · {credencialLocal.senha}</span></div>:null}
       </form>
     </section>
   </main>

@@ -8,3 +8,7 @@ spring:
       ddl-auto: validate
   flyway:
     locations: classpath:db/migration/common
+app:
+  bootstrap:
+    admin-email: admin@fluxogestao.local
+    admin-password: Admin@123

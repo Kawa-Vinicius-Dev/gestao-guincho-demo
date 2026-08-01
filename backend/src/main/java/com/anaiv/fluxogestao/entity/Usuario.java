@@ -2,6 +2,7 @@ package com.anaiv.fluxogestao.entity;
 
 import jakarta.persistence.*;
 import java.time.OffsetDateTime;
+import java.util.Locale;
 
 @Entity
 @Table(name = "usuarios")
@@ -17,8 +18,9 @@ public class Usuario {
 
     protected Usuario() {}
     public Usuario(String nome, String email, String senhaHash, PerfilUsuario perfil) {
-        this.nome = nome; this.email = email.toLowerCase(); this.senhaHash = senhaHash; this.perfil = perfil;
+        this.nome = nome; this.email = normalizarEmail(email); this.senhaHash = senhaHash; this.perfil = perfil;
     }
+    public static String normalizarEmail(String email) { return email == null ? null : email.trim().toLowerCase(Locale.ROOT); }
     public Long getId() { return id; }
     public String getNome() { return nome; }
     public String getEmail() { return email; }

@@ -105,9 +105,9 @@ O sistema já possui a base para evoluir, mas alguns pontos dependem de dados re
 
 > Até receber uma amostra real, a importação de PDF da Porto Seguro armazena o arquivo, extrai o texto disponível e exige conferência manual. Ela não cria lançamentos fictícios.
 
-## Executar a demo
+## Executar o frontend
 
-O frontend possui um modo de apresentação persistente no navegador usando `localStorage`.
+O frontend usa a autenticação real do backend. Para desenvolvimento local, inicie também a API com o perfil `local` descrito abaixo.
 
 ```bash
 cd frontend
@@ -117,8 +117,7 @@ npm run dev
 
 Acesse [http://localhost:5173](http://localhost:5173).
 
-- Administrador: `admin@fluxogestao.local` / `Admin@123`
-- Funcionário: `funcionario@gestaoguincho.demo` / `Demo@123`
+- Administrador local: `admin@fluxogestao.local` / `Admin@123`
 
 ## Executar com backend e PostgreSQL
 

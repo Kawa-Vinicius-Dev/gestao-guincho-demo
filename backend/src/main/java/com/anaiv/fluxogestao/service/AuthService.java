@@ -25,7 +25,7 @@ public class AuthService {
     }
     @Transactional
     public LoginResponse login(LoginRequest request) {
-        Usuario usuario = usuarios.findByEmailIgnoreCase(request.email())
+        Usuario usuario = usuarios.findByEmailIgnoreCase(Usuario.normalizarEmail(request.email()))
                 .filter(Usuario::isAtivo)
                 .filter(u -> encoder.matches(request.senha(), u.getSenhaHash()))
                 .orElseThrow(() -> new IllegalArgumentException("E-mail ou senha inválidos."));

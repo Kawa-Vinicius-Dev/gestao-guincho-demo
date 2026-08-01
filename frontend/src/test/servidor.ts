@@ -9,10 +9,17 @@ let contas: Record<string, unknown>[] = [{
 }]
 
 export const servidor = setupServer(
-  http.post('/api/auth/login', () => HttpResponse.json({
-    token: 'token-teste',
-    usuario: { id: 1, nome: 'Administrador', email: 'admin@fluxogestao.local', perfil: 'ADMINISTRADOR' },
-  })),
+  http.post('/api/auth/login', async ({ request }) => {
+    const { email } = await request.json() as { email: string }
+    const funcionario = email === 'funcionario@gestaoguincho.demo'
+    return HttpResponse.json({
+      token: funcionario ? 'token-funcionario-teste' : 'token-admin-teste',
+      usuario: funcionario
+        ? { id: 2, nome: 'Anderson Ribeiro', email, perfil: 'FUNCIONARIO' }
+        : { id: 1, nome: 'Administrador', email: 'admin@fluxogestao.local', perfil: 'ADMINISTRADOR' },
+    })
+  }),
+  http.post('/api/auth/logout', () => new HttpResponse(null, { status: 204 })),
   http.get('/api/auth/me', () => HttpResponse.json({
     id: 1, nome: 'Administrador', email: 'admin@fluxogestao.local', perfil: 'ADMINISTRADOR',
   })),

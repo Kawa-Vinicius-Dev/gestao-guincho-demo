@@ -2,6 +2,7 @@ package com.anaiv.fluxogestao.dto;
 
 import com.anaiv.fluxogestao.entity.EnumsFinanceiros.TipoCategoria;
 import com.anaiv.fluxogestao.entity.PerfilUsuario;
+import com.anaiv.fluxogestao.entity.Usuario;
 import jakarta.validation.constraints.*;
 import java.math.BigDecimal;
 
@@ -16,6 +17,8 @@ public final class CadastroDtos {
     public record CategoriaResponse(Long id, String nome, TipoCategoria tipo, boolean ativo) {}
     public record MotoristaRequest(@NotBlank String nome, String telefone, String documento, Long usuarioId) {}
     public record MotoristaResponse(Long id, String nome, String telefone, String documento, Long usuarioId, boolean ativo) {}
-    public record UsuarioRequest(@NotBlank String nome, @Email @NotBlank String email, @NotBlank @Size(min=8) String senha, @NotNull PerfilUsuario perfil) {}
+    public record UsuarioRequest(@NotBlank String nome, @Email @NotBlank String email, @NotBlank @Size(min=8) String senha, @NotNull PerfilUsuario perfil) {
+        public UsuarioRequest { email = Usuario.normalizarEmail(email); }
+    }
     public record UsuarioResponse(Long id, String nome, String email, PerfilUsuario perfil, boolean ativo) {}
 }

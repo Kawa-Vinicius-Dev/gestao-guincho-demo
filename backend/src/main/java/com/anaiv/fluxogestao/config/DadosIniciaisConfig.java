@@ -17,8 +17,10 @@ public class DadosIniciaisConfig {
         PasswordEncoder encoder, @Value("${app.bootstrap.admin-email}") String email,
         @Value("${app.bootstrap.admin-password}") String senha) {
         return args -> {
-            if (usuarios.findByEmailIgnoreCase(email).isEmpty()) {
-                usuarios.save(new Usuario("Administrador", email, encoder.encode(senha), PerfilUsuario.ADMINISTRADOR));
+            String emailNormalizado = Usuario.normalizarEmail(email);
+            if (emailNormalizado != null && !emailNormalizado.isBlank() && senha != null && !senha.isBlank()
+                    && usuarios.findByEmailIgnoreCase(emailNormalizado).isEmpty()) {
+                usuarios.save(new Usuario("Administrador", emailNormalizado, encoder.encode(senha), PerfilUsuario.ADMINISTRADOR));
             }
             if (categorias.count() == 0) {
                 categorias.save(new Categoria("Combustível", DESPESA));

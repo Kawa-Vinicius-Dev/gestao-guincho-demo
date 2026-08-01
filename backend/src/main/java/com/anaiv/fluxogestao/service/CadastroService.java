@@ -40,8 +40,9 @@ public class CadastroService {
     }
     public List<MotoristaResponse> motoristas() { return motoristas.findAll().stream().map(this::motorista).toList(); }
     @Transactional public UsuarioResponse criar(UsuarioRequest r) {
-        if (usuarios.findByEmailIgnoreCase(r.email()).isPresent()) throw new IllegalArgumentException("Já existe um usuário com este e-mail.");
-        return usuario(usuarios.save(new Usuario(r.nome(), r.email(), encoder.encode(r.senha()), r.perfil())));
+        String email = Usuario.normalizarEmail(r.email());
+        if (usuarios.findByEmailIgnoreCase(email).isPresent()) throw new IllegalArgumentException("Já existe um usuário com este e-mail.");
+        return usuario(usuarios.save(new Usuario(r.nome(), email, encoder.encode(r.senha()), r.perfil())));
     }
     public List<UsuarioResponse> usuarios() { return usuarios.findAll().stream().map(this::usuario).toList(); }
 
