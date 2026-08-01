@@ -24,6 +24,11 @@ public final class PortoDtos {
         int quantidadeOrdensServico,BigDecimal valorOrdensServico,BigDecimal divergencia,StatusConciliacaoPorto statusConciliacao) {}
     public record PortoFiltros(LocalDate dataInicio,LocalDate dataFim,String numero,String situacaoPagamento,
         StatusConciliacaoPorto statusConciliacao,Boolean recebida,Boolean vencida,Boolean comComposicao,Boolean comDivergencia) {}
+    public record PortoOsFiltros(LocalDate dataInicio,LocalDate dataFim,String numeroOs,String numeroOp,String especialidade,
+        String socorrista,String qra,String viatura,StatusOperacionalPorto statusOperacional,StatusFinanceiroPorto statusFinanceiro,
+        StatusConciliacaoPorto statusConciliacao) {}
+    public record ResumoGrupoResponse(String chave,long quantidade,BigDecimal valor) {}
+    public record EvolucaoResponse(String periodo,long quantidade,BigDecimal valor) {}
     public record ResumoOrdensPagamentoResponse(
         long quantidadeTotalOps,BigDecimal valorTotalPrevisto,
         long quantidadeSemComposicao,BigDecimal valorSemComposicao,
@@ -40,7 +45,11 @@ public final class PortoDtos {
         String especialidade,String viatura,String socorrista,String qra,LocalDate dataAtendimento,
         BigDecimal valorKmExcedente,BigDecimal kmMortoEstimado,StatusOperacionalPorto statusOperacional,
         StatusFinanceiroPorto statusFinanceiro,LocalDate dataDevolucao,LocalDate dataFinalizacaoDevolucao) {}
-    public record PendenciaResponse(String tipo,Long referenciaId,String referencia,BigDecimal valor,LocalDate data,String situacao) {}
+    public record PendenciaResponse(Long id,String tipo,Long referenciaId,String referencia,BigDecimal valor,LocalDate data,String situacao,
+        String motivo,String observacao,String responsavel,LocalDate prazo,String referenciaPorto) {}
+    public record PendenciaRequest(@NotBlank String numeroOs,@NotBlank String motivo,@NotNull @DecimalMin("0.00") BigDecimal valor,
+        @NotNull LocalDate dataPendencia,@NotBlank @Size(max=1000) String observacao,@NotBlank String responsavel,
+        @NotNull StatusFinanceiroPorto statusFinanceiro,LocalDate prazo,String referenciaPorto) {}
     public record RecebimentoRequest(@NotNull @DecimalMin("0.01") BigDecimal valorRecebido,@NotNull LocalDate dataRecebimento) {}
     public record JustificativaRequest(@NotNull MotivoJustificativaPorto motivo,@NotBlank @Size(max=1000) String observacao) {}
     public record JustificativaResponse(Long id,MotivoJustificativaPorto motivo,String observacao,String usuario,OffsetDateTime criadoEm) {}

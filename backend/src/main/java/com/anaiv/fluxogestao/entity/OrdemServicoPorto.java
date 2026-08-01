@@ -42,6 +42,11 @@ public class OrdemServicoPorto {
         if(origem!=null)importacao=origem;atualizadoEm=OffsetDateTime.now();
     }
     public void marcarRecebida(){statusFinanceiro=EnumsFinanceiros.StatusFinanceiroPorto.RECEBIDO;atualizadoEm=OffsetDateTime.now();}
+    public void marcarPendente(EnumsFinanceiros.StatusFinanceiroPorto financeiro){statusOperacional=EnumsFinanceiros.StatusOperacionalPorto.PENDENTE_PORTO;statusFinanceiro=financeiro;atualizadoEm=OffsetDateTime.now();}
+    public void resolverPendencia(){if(statusOperacional==EnumsFinanceiros.StatusOperacionalPorto.PENDENTE_PORTO)statusOperacional=EnumsFinanceiros.StatusOperacionalPorto.NORMAL;
+        if(statusFinanceiro==EnumsFinanceiros.StatusFinanceiroPorto.BLOQUEADO_PARA_PAGAMENTO||statusFinanceiro==EnumsFinanceiros.StatusFinanceiroPorto.VALOR_DIVERGENTE)
+            statusFinanceiro=ordemPagamento==null?EnumsFinanceiros.StatusFinanceiroPorto.AGUARDANDO_OP:ordemPagamento.getDataRecebimento()==null?EnumsFinanceiros.StatusFinanceiroPorto.PAGAMENTO_PROGRAMADO:EnumsFinanceiros.StatusFinanceiroPorto.RECEBIDO;
+        atualizadoEm=OffsetDateTime.now();}
     private boolean valido(String valor){return valor!=null&&!valor.isBlank();}
     public Long getId(){return id;} public OrdemPagamentoPorto getOrdemPagamento(){return ordemPagamento;}
     public String getNumero(){return numero;} public BigDecimal getValorTotal(){return valorTotal;}

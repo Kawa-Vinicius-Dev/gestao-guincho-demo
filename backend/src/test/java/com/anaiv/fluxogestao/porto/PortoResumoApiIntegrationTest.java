@@ -105,6 +105,51 @@ class PortoResumoApiIntegrationTest {
             .andExpect(jsonPath("$.justificativas[0].observacao").value("Registro sintético para teste"));
     }
 
+    @Test
+    void controlaPendenciaPortoSemTransformarEmDespesa() throws Exception {
+        String token=login();
+        long previa=previa(token,"servico-pendente.txt","""
+            Número da Ordem de Serviço	Valor Total	Especialidade	Sigla da Viatura	Socorrista	QRA	Data de atendimento
+            OS-PEND-001	175,00	PANE		SOCORRISTA TESTE	QRA-TESTE-001	2026-08-01 10:00:00
+            """);
+        confirmar(token,previa,"{}");
+
+        mvc.perform(post("/api/porto/pendencias").header("Authorization","Bearer "+token)
+                .contentType(MediaType.APPLICATION_JSON).content("""
+                    {"numeroOs":"OS-PEND-001","motivo":"PENDENCIA_DOCUMENTAL","valor":175.00,
+                     "dataPendencia":"2026-08-01","observacao":"Documento sintético pendente",
+                     "responsavel":"RESPONSÁVEL TESTE","statusFinanceiro":"BLOQUEADO_PARA_PAGAMENTO",
+                     "prazo":"2026-08-05","referenciaPorto":"REF-TESTE-001"}
+                    """))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.referencia").value("OS-PEND-001"))
+            .andExpect(jsonPath("$.motivo").value("PENDENCIA_DOCUMENTAL"));
+
+        String pendencias=mvc.perform(get("/api/porto/pendencias").header("Authorization","Bearer "+token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[?(@.referencia == 'OS-PEND-001')].responsavel").value("RESPONSÁVEL TESTE"))
+            .andReturn().getResponse().getContentAsString();
+        List<Map<String,Object>> encontrada=JsonPath.read(pendencias,"$[?(@.referencia == 'OS-PEND-001')]");
+        long pendenciaId=((Number)encontrada.getFirst().get("id")).longValue();
+
+        mvc.perform(get("/api/porto/ordens-servico").header("Authorization","Bearer "+token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[?(@.numero == 'OS-PEND-001')].statusOperacional").value("PENDENTE_PORTO"))
+            .andExpect(jsonPath("$[?(@.numero == 'OS-PEND-001')].statusFinanceiro").value("BLOQUEADO_PARA_PAGAMENTO"));
+
+        mvc.perform(get("/api/porto/dashboard").param("numeroOs","OS-PEND-001")
+                .header("Authorization","Bearer "+token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.quantidadeTotalServicos").value(1))
+            .andExpect(jsonPath("$.valorTotalRealizado").value(175.0))
+            .andExpect(jsonPath("$.quantidadeServicosPendentes").value(1))
+            .andExpect(jsonPath("$.valorServicosPendentes").value(175.0))
+            .andExpect(jsonPath("$.porEspecialidade[0].chave").value("PANE"));
+
+        mvc.perform(patch("/api/porto/pendencias/{id}/resolver",pendenciaId).header("Authorization","Bearer "+token))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.situacao").value("RESOLVIDA"));
+    }
+
     private void importarOs(String token,String arquivo,String numero,double valor,long opId) throws Exception {
         long id=previa(token,arquivo,"""
             Número da Ordem de Serviço,Valor Total,Especialidade,Sigla da Viatura,Socorrista,QRA,Data de atendimento
