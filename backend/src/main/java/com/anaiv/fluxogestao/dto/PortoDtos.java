@@ -5,22 +5,44 @@ import com.anaiv.fluxogestao.dto.PortoImportacaoDtos.AcaoLinhaPorto;
 import jakarta.validation.constraints.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 
 public final class PortoDtos {
     private PortoDtos() {}
     public record LinhaPreviaResponse(Map<String,String> dados,String hashRegistro,AcaoLinhaPorto acao,String mensagem) {}
+    public record ResumoPreviaResponse(int linhasAnalisadas,int opsUnicas,int registrosNovos,int registrosExistentes,
+        int registrosAtualizados,int duplicidades,int erros,BigDecimal valorTotal) {}
     public record PreviaResponse(Long id,String nomeArquivo,TipoRelatorioPorto tipo,String status,int totalLinhas,
-        List<LinhaPreviaResponse> linhas,List<String> erros,boolean requerOrdemPagamento) {}
+        List<LinhaPreviaResponse> linhas,List<String> erros,boolean requerOrdemPagamento,ResumoPreviaResponse resumo) {}
+    public record ConteudoImportacaoRequest(@NotBlank String conteudo) {}
     public record ConfirmarImportacaoRequest(Long ordemPagamentoId,Boolean confirmarDivergencias) {}
-    public record ConfirmacaoResponse(Long importacaoId,TipoRelatorioPorto tipo,int importados,int ignorados) {}
+    public record ConfirmacaoResponse(Long importacaoId,TipoRelatorioPorto tipo,int importados,int ignorados,int novos,int atualizados) {}
     public record OrdemPagamentoResponse(Long id,String numero,BigDecimal valorTotal,String nomeCodigo,
         LocalDate dataPagamentoProgramada,BigDecimal valorRecebido,LocalDate dataRecebimento,String situacao,
-        int quantidadeOrdensServico,BigDecimal valorOrdensServico,BigDecimal divergencia) {}
+        int quantidadeOrdensServico,BigDecimal valorOrdensServico,BigDecimal divergencia,StatusConciliacaoPorto statusConciliacao) {}
+    public record PortoFiltros(LocalDate dataInicio,LocalDate dataFim,String numero,String situacaoPagamento,
+        StatusConciliacaoPorto statusConciliacao,Boolean recebida,Boolean vencida,Boolean comComposicao,Boolean comDivergencia) {}
+    public record ResumoOrdensPagamentoResponse(
+        long quantidadeTotalOps,BigDecimal valorTotalPrevisto,
+        long quantidadeSemComposicao,BigDecimal valorSemComposicao,
+        long quantidadeConciliadas,BigDecimal valorConciliadas,
+        long quantidadeValorAbaixo,BigDecimal diferencaTotalAbaixo,
+        long quantidadeValorAcima,BigDecimal diferencaTotalAcima,
+        long quantidadeComDivergencia,BigDecimal valorTotalDivergencias,
+        long quantidadePagamentoProgramado,BigDecimal valorProgramado,
+        long quantidadeRecebidas,BigDecimal valorRecebido,
+        long quantidadeAguardandoRecebimento,BigDecimal valorAguardandoRecebimento,
+        long quantidadeVencidasNaoRecebidas,BigDecimal valorVencidoNaoRecebido,
+        BigDecimal valorMedioPorOp,long quantidadeOrdensServico) {}
     public record OrdemServicoResponse(Long id,Long ordemPagamentoId,String ordemPagamento,String numero,BigDecimal valorTotal,
         String especialidade,String viatura,String socorrista,String qra,LocalDate dataAtendimento,
-        BigDecimal valorKmExcedente,BigDecimal kmMortoEstimado) {}
+        BigDecimal valorKmExcedente,BigDecimal kmMortoEstimado,StatusOperacionalPorto statusOperacional,
+        StatusFinanceiroPorto statusFinanceiro,LocalDate dataDevolucao,LocalDate dataFinalizacaoDevolucao) {}
     public record PendenciaResponse(String tipo,Long referenciaId,String referencia,BigDecimal valor,LocalDate data,String situacao) {}
     public record RecebimentoRequest(@NotNull @DecimalMin("0.01") BigDecimal valorRecebido,@NotNull LocalDate dataRecebimento) {}
+    public record JustificativaRequest(@NotNull MotivoJustificativaPorto motivo,@NotBlank @Size(max=1000) String observacao) {}
+    public record JustificativaResponse(Long id,MotivoJustificativaPorto motivo,String observacao,String usuario,OffsetDateTime criadoEm) {}
+    public record OrdemPagamentoDetalheResponse(OrdemPagamentoResponse ordemPagamento,List<OrdemServicoResponse> ordensServico,List<JustificativaResponse> justificativas) {}
 }

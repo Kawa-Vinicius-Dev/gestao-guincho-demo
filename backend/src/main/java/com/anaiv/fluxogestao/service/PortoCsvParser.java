@@ -43,6 +43,9 @@ public class PortoCsvParser {
         }
         return new PreviaPorto(tipo,List.copyOf(originais),List.copyOf(linhas),List.copyOf(erros));
     }
+    public PreviaPorto parseServicosGerais(byte[] bytes){PreviaPorto previa=parse(bytes);
+        if(previa.tipo()!=TipoRelatorioPorto.OS_VINCULADAS)throw new IllegalArgumentException("O conteúdo colado não possui os cabeçalhos da lista de serviços Porto.");
+        return new PreviaPorto(TipoRelatorioPorto.SERVICOS_GERAIS,previa.cabecalhos(),previa.linhas(),previa.erros());}
     private TipoRelatorioPorto detectar(Set<String> h){
         if(h.containsAll(Set.of("numero_op","valor_total","nome_codigo","data_pagamento")))return TipoRelatorioPorto.PREVISAO_RECEBER;
         if(h.containsAll(Set.of("numero_os","especialidade","data_atendimento","data_devolucao","valor_total")))return TipoRelatorioPorto.SERVICOS_DEVOLVIDOS;
@@ -55,7 +58,7 @@ public class PortoCsvParser {
         LinhaPorto linha=new LinhaPorto(d,"");
         validarValor(linha);
         if(tipo==TipoRelatorioPorto.PREVISAO_RECEBER)dataObrigatoria(linha,"data_pagamento","data de pagamento programada");
-        else if(tipo==TipoRelatorioPorto.OS_VINCULADAS){
+        else if(tipo==TipoRelatorioPorto.OS_VINCULADAS||tipo==TipoRelatorioPorto.SERVICOS_GERAIS){
             if(linha.texto("especialidade")==null)throw new IllegalArgumentException("especialidade vazia");
             dataObrigatoria(linha,"data_atendimento","data de atendimento");
         }else{

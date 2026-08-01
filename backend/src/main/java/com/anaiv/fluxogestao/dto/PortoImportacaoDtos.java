@@ -10,7 +10,7 @@ import java.util.Map;
 
 public final class PortoImportacaoDtos {
     private PortoImportacaoDtos() {}
-    public enum AcaoLinhaPorto { IMPORTAR, IGNORAR, ERRO, DIVERGENCIA }
+    public enum AcaoLinhaPorto { IMPORTAR, ATUALIZAR, IGNORAR, ERRO, DIVERGENCIA }
     public record PreviaPorto(TipoRelatorioPorto tipo, List<String> cabecalhos, List<LinhaPorto> linhas, List<String> erros) {}
     public record LinhaPorto(Map<String,String> dados, String hashRegistro, AcaoLinhaPorto acao, String mensagem) {
         public LinhaPorto(Map<String,String> dados,String hashRegistro){this(dados,hashRegistro,AcaoLinhaPorto.IMPORTAR,null);}
@@ -20,6 +20,7 @@ public final class PortoImportacaoDtos {
             if(limpo.contains(",")&&limpo.contains("."))limpo=limpo.replace(".","").replace(',','.');
             else if(limpo.contains(","))limpo=limpo.replace(',','.');return new BigDecimal(limpo);}
         public LocalDate data(String chave){String v=texto(chave);if(v==null)return null;
-            return v.contains("/")?LocalDate.parse(v,DateTimeFormatter.ofPattern("dd/MM/uuuu").withResolverStyle(ResolverStyle.STRICT)):LocalDate.parse(v);}
+            if(v.contains("/"))return LocalDate.parse(v.substring(0,Math.min(10,v.length())),DateTimeFormatter.ofPattern("dd/MM/uuuu").withResolverStyle(ResolverStyle.STRICT));
+            return LocalDate.parse(v.substring(0,Math.min(10,v.length())));}
     }
 }
