@@ -1,3 +1,5 @@
+import { apiUrl } from './url'
+
 const TOKEN_KEY = 'fluxo-gestao:token:v1'
 
 export const tokenStorage = {
@@ -13,7 +15,7 @@ export class ApiError extends Error {
 export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   const token = tokenStorage.get()
   const isForm = init.body instanceof FormData
-  const response = await fetch(path, {
+  const response = await fetch(apiUrl(path), {
     ...init,
     headers: {
       ...(isForm ? {} : init.body ? { 'Content-Type': 'application/json' } : {}),
@@ -35,7 +37,7 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
 
 export function downloadCsv(tipo:string,inicio:string,fim:string) {
   const token=tokenStorage.get()
-  return fetch(`/api/relatorios/${tipo}.csv?inicio=${inicio}&fim=${fim}`, { headers: token ? {Authorization:`Bearer ${token}`} : {} })
+  return fetch(apiUrl(`/api/relatorios/${tipo}.csv?inicio=${inicio}&fim=${fim}`), { headers: token ? {Authorization:`Bearer ${token}`} : {} })
     .then(async response => {
       if(!response.ok) throw new ApiError('Não foi possível exportar o relatório.',response.status)
       const blob=await response.blob()
