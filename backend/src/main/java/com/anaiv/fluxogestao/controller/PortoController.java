@@ -23,8 +23,10 @@ public class PortoController {
     public PreviaResponse previa(@RequestPart("arquivo")MultipartFile arquivo){return importacoes.previa(arquivo);}
     @PostMapping("/importacoes/previa-conteudo") @ResponseStatus(HttpStatus.CREATED)
     public PreviaResponse previaConteudo(@Valid @RequestBody ConteudoImportacaoRequest request){return importacoes.previaConteudo(request);}
+    @PostMapping(value="/ordens-pagamento/{id}/composicao/previa",consumes="multipart/form-data") @ResponseStatus(HttpStatus.CREATED)
+    public PreviaResponse previaComposicao(@PathVariable Long id,@RequestPart("arquivo") MultipartFile arquivo){return importacoes.previaComposicao(id,arquivo);}
     @PostMapping("/importacoes/{id}/avaliar") public PreviaResponse avaliar(@PathVariable Long id,@RequestBody ConfirmarImportacaoRequest request){return importacoes.avaliar(id,request);}
-    @PostMapping("/importacoes/{id}/confirmar") public ConfirmacaoResponse confirmar(@PathVariable Long id,@RequestBody(required=false)ConfirmarImportacaoRequest request){return importacoes.confirmar(id,request);}
+    @PostMapping("/importacoes/{id}/confirmar") public ConfirmacaoResponse confirmar(@PathVariable Long id,@RequestBody(required=false)ConfirmarImportacaoRequest request,@AuthenticationPrincipal UsuarioPrincipal principal){return importacoes.confirmar(id,request,principal);}
     @PostMapping("/importacoes/{id}/cancelar") public PreviaResponse cancelar(@PathVariable Long id){return importacoes.cancelar(id);}
     @GetMapping("/ordens-pagamento") public List<OrdemPagamentoResponse> ops(@ModelAttribute PortoFiltros filtros){return porto.listarOps(filtros);}
     @PostMapping("/ordens-pagamento") @ResponseStatus(HttpStatus.CREATED) public OrdemPagamentoResponse criarOp(@Valid @RequestBody OrdemPagamentoRequest request){return porto.criarOpManual(request);}

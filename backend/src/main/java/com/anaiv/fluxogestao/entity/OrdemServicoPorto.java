@@ -21,6 +21,8 @@ public class OrdemServicoPorto {
     private EnumsFinanceiros.StatusOperacionalPorto statusOperacional=EnumsFinanceiros.StatusOperacionalPorto.NORMAL;
     @Enumerated(EnumType.STRING) @Column(name="status_financeiro_fluxo")
     private EnumsFinanceiros.StatusFinanceiroPorto statusFinanceiro=EnumsFinanceiros.StatusFinanceiroPorto.AGUARDANDO_OP;
+    @Column(name="status_operacional") private String statusOperacionalLegado="NORMAL";
+    @Column(name="status_financeiro") private String statusFinanceiroLegado="AGUARDANDO_OP";
     @Column(name="origem_importacao") private String origemImportacao="PORTO";
     @Column(name="data_importacao") private OffsetDateTime dataImportacao=OffsetDateTime.now();
     @Column(name="data_devolucao") private LocalDate dataDevolucao;
@@ -35,7 +37,7 @@ public class OrdemServicoPorto {
     public void atualizar(OrdemPagamentoPorto op, BigDecimal valor, String especialidade, String viatura,
                           String socorrista, String qra, LocalDate atendimento, BigDecimal kmExcedente,
                           BigDecimal kmMorto, Importacao origem) {
-        if(op!=null){ordemPagamento=op;if(statusFinanceiro!=EnumsFinanceiros.StatusFinanceiroPorto.RECEBIDO)statusFinanceiro=EnumsFinanceiros.StatusFinanceiroPorto.PAGAMENTO_PROGRAMADO;} if(valor!=null) valorTotal=valor;
+        if(op!=null){ordemPagamento=op;if(statusFinanceiro!=EnumsFinanceiros.StatusFinanceiroPorto.RECEBIDO){statusFinanceiro=EnumsFinanceiros.StatusFinanceiroPorto.PAGAMENTO_PROGRAMADO;statusFinanceiroLegado="PAGAMENTO_PROGRAMADO";}} if(valor!=null) valorTotal=valor;
         if(valido(especialidade)) this.especialidade=especialidade; if(valido(viatura)) siglaViatura=viatura;
         if(valido(socorrista)) this.socorrista=socorrista; if(valido(qra)) this.qra=qra;
         if(atendimento!=null) dataAtendimento=atendimento; if(kmExcedente!=null) valorKmExcedente=kmExcedente;
@@ -44,15 +46,23 @@ public class OrdemServicoPorto {
     public void finalizarDevolucao(BigDecimal valor,LocalDate devolucao,LocalDate finalizacao,Importacao origem){
         if(valor!=null)valorTotal=valor;if(devolucao!=null)dataDevolucao=devolucao;
         dataFinalizacaoDevolucao=finalizacao==null?devolucao:finalizacao;statusOperacional=EnumsFinanceiros.StatusOperacionalPorto.DEVOLVIDO_FINALIZADO;
+        statusOperacionalLegado="DEVOLVIDO_FINALIZADO";
         if(origem!=null)importacao=origem;atualizadoEm=OffsetDateTime.now();
     }
     public void atualizarDadosPorto(String prestador,String seguradora,String cliente,String placa,OffsetDateTime dataHora){if(valido(prestador))this.prestador=prestador;if(valido(seguradora))this.seguradora=seguradora;if(valido(cliente))this.cliente=cliente;if(valido(placa))this.placa=placa;if(dataHora!=null){dataHoraAtendimento=dataHora;dataAtendimento=dataHora.toLocalDate();}atualizadoEm=OffsetDateTime.now();}
-    public void aguardarLancamento(LocalDate previsao,Importacao origem){statusOperacional=EnumsFinanceiros.StatusOperacionalPorto.AGUARDANDO_LANCAMENTO;statusFinanceiro=EnumsFinanceiros.StatusFinanceiroPorto.AGUARDANDO_OP;if(dataPrevistaOriginal==null)dataPrevistaOriginal=previsao;if(origem!=null)importacao=origem;atualizadoEm=OffsetDateTime.now();}
-    public void marcarRecebida(){statusFinanceiro=EnumsFinanceiros.StatusFinanceiroPorto.RECEBIDO;atualizadoEm=OffsetDateTime.now();}
-    public void marcarPendente(EnumsFinanceiros.StatusFinanceiroPorto financeiro){statusOperacional=EnumsFinanceiros.StatusOperacionalPorto.PENDENTE_PORTO;statusFinanceiro=financeiro;atualizadoEm=OffsetDateTime.now();}
-    public void resolverPendencia(){if(statusOperacional==EnumsFinanceiros.StatusOperacionalPorto.PENDENTE_PORTO)statusOperacional=EnumsFinanceiros.StatusOperacionalPorto.NORMAL;
+    public void aguardarLancamento(LocalDate previsao,Importacao origem){statusOperacional=EnumsFinanceiros.StatusOperacionalPorto.AGUARDANDO_LANCAMENTO;statusFinanceiro=EnumsFinanceiros.StatusFinanceiroPorto.AGUARDANDO_OP;statusFinanceiroLegado="AGUARDANDO_OP";if(dataPrevistaOriginal==null)dataPrevistaOriginal=previsao;if(origem!=null)importacao=origem;atualizadoEm=OffsetDateTime.now();}
+    public void processarEmOp(OrdemPagamentoPorto op,int ciclos){ordemPagamento=op;dataEfetivaPagamento=op.getDataPagamentoProgramada();ciclosAtraso=Math.max(ciclos,0);
+        statusOperacional=ciclosAtraso>0?EnumsFinanceiros.StatusOperacionalPorto.LIBERADO_APOS_ANALISE:EnumsFinanceiros.StatusOperacionalPorto.PROCESSADO;
+        statusFinanceiro=op.getSituacaoFinanceira()==EnumsFinanceiros.SituacaoFinanceiraOpPorto.RECEBIDO?EnumsFinanceiros.StatusFinanceiroPorto.RECEBIDO:
+            op.getSituacaoFinanceira()==EnumsFinanceiros.SituacaoFinanceiraOpPorto.A_CONFIRMAR?EnumsFinanceiros.StatusFinanceiroPorto.A_CONFIRMAR:EnumsFinanceiros.StatusFinanceiroPorto.PAGAMENTO_PROGRAMADO;
+        if(statusFinanceiro!=EnumsFinanceiros.StatusFinanceiroPorto.A_CONFIRMAR)statusFinanceiroLegado=statusFinanceiro.name();
+        atualizadoEm=OffsetDateTime.now();}
+    public void marcarRecebida(){statusFinanceiro=EnumsFinanceiros.StatusFinanceiroPorto.RECEBIDO;statusFinanceiroLegado="RECEBIDO";atualizadoEm=OffsetDateTime.now();}
+    public void marcarPendente(EnumsFinanceiros.StatusFinanceiroPorto financeiro){statusOperacional=EnumsFinanceiros.StatusOperacionalPorto.PENDENTE_PORTO;statusOperacionalLegado="PENDENTE_PORTO";statusFinanceiro=financeiro;statusFinanceiroLegado=financeiro.name();atualizadoEm=OffsetDateTime.now();}
+    public void resolverPendencia(){if(statusOperacional==EnumsFinanceiros.StatusOperacionalPorto.PENDENTE_PORTO){statusOperacional=EnumsFinanceiros.StatusOperacionalPorto.NORMAL;statusOperacionalLegado="NORMAL";}
         if(statusFinanceiro==EnumsFinanceiros.StatusFinanceiroPorto.BLOQUEADO_PARA_PAGAMENTO||statusFinanceiro==EnumsFinanceiros.StatusFinanceiroPorto.VALOR_DIVERGENTE)
             statusFinanceiro=ordemPagamento==null?EnumsFinanceiros.StatusFinanceiroPorto.AGUARDANDO_OP:ordemPagamento.getDataRecebimento()==null?EnumsFinanceiros.StatusFinanceiroPorto.PAGAMENTO_PROGRAMADO:EnumsFinanceiros.StatusFinanceiroPorto.RECEBIDO;
+        statusFinanceiroLegado=statusFinanceiro.name();
         atualizadoEm=OffsetDateTime.now();}
     private boolean valido(String valor){return valor!=null&&!valor.isBlank();}
     public Long getId(){return id;} public OrdemPagamentoPorto getOrdemPagamento(){return ordemPagamento;}

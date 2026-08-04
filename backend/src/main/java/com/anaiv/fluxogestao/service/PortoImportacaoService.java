@@ -6,6 +6,7 @@ import com.anaiv.fluxogestao.entity.*;
 import com.anaiv.fluxogestao.entity.EnumsFinanceiros.*;
 import com.anaiv.fluxogestao.exception.RecursoNaoEncontradoException;
 import com.anaiv.fluxogestao.repository.*;
+import com.anaiv.fluxogestao.security.UsuarioPrincipal;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,6 +34,16 @@ public class PortoImportacaoService {
         String conteudo=normalizarConteudo(request.conteudo());if(conteudo.isBlank())throw new IllegalArgumentException("Cole ao menos uma linha de serviços Porto.");
         return preparar(conteudo.getBytes(StandardCharsets.UTF_8),"colagem-servicos-porto.txt",true,true);
     }
+    @Transactional public PreviaResponse previaComposicao(Long ordemPagamentoId,MultipartFile arquivo){
+        porto.obterOp(ordemPagamentoId);
+        if(arquivo.isEmpty())throw new IllegalArgumentException("Selecione o arquivo de composição da OP.");
+        String nome=arquivo.getOriginalFilename();String normalizado=nome==null?"":nome.toLowerCase(Locale.ROOT);
+        if(!normalizado.endsWith(".csv")&&!normalizado.endsWith(".txt"))throw new IllegalArgumentException("A composição aceita CSV ou TXT tabular.");
+        try{PreviaResponse criada=preparar(arquivo.getBytes(),nome,false,false);
+            if(criada.tipo()!=TipoRelatorioPorto.OS_VINCULADAS)throw new IllegalArgumentException("O arquivo não corresponde a uma composição de OP.");
+            return avaliar(criada.id(),new ConfirmarImportacaoRequest(ordemPagamentoId,false,null,null));
+        }catch(IllegalArgumentException e){throw e;}catch(Exception e){throw new IllegalArgumentException("Não foi possível preparar a composição da OP.");}
+    }
     private PreviaResponse preparar(byte[] bytes,String nome,boolean servicosGerais,boolean hashNormalizado){
         try{PreviaPorto previa=contextualizar(parse(bytes,servicosGerais));
             byte[] baseHash=hashNormalizado?normalizarConteudo(new String(bytes,StandardCharsets.UTF_8)).getBytes(StandardCharsets.UTF_8):bytes;
@@ -56,16 +67,19 @@ public class PortoImportacaoService {
             imp.prepararPorto(previa.tipo(),conteudo.substring(0,Math.min(conteudo.length(),10000)));importacoes.saveAndFlush(imp);return resposta(imp,previa);
         }catch(IllegalArgumentException e){throw e;}catch(Exception e){throw new IllegalArgumentException("Não foi possível preparar o relatório Porto.");}
     }
-    @Transactional public ConfirmacaoResponse confirmar(Long id,ConfirmarImportacaoRequest request){Importacao imp=obter(id);
+    @Transactional public ConfirmacaoResponse confirmar(Long id,ConfirmarImportacaoRequest request,UsuarioPrincipal principal){Importacao imp=obter(id);
         if(imp.getStatus()==StatusImportacao.CONFIRMADA&&imp.getTipoRelatorioPorto()!=null)return new ConfirmacaoResponse(imp.getId(),imp.getTipoRelatorioPorto(),0,0,0,0);
         if(imp.getStatus()!=StatusImportacao.AGUARDANDO_CONFERENCIA||imp.getTipoRelatorioPorto()==null)throw new IllegalArgumentException("Esta importação Porto não pode ser confirmada.");
         PreviaPorto previa;try{previa=contextualizar(reler(imp));}catch(Exception e){throw new IllegalArgumentException("Não foi possível reler o relatório Porto.");}
         if(previa.linhas().stream().anyMatch(l->l.acao()==AcaoLinhaPorto.ERRO))throw new IllegalArgumentException("A importação contém linhas com erro; corrija o arquivo e envie novamente.");
         OrdemPagamentoPorto op=null;if(previa.tipo()==TipoRelatorioPorto.OS_VINCULADAS){if(request==null||request.ordemPagamentoId()==null)throw new IllegalArgumentException("Selecione a OP vinculada antes de confirmar.");op=porto.obterOp(request.ordemPagamentoId());previa=avaliarProcessamento(previa,op);}
         if(previa.linhas().stream().anyMatch(l->l.acao()==AcaoLinhaPorto.DIVERGENCIA)&&!Boolean.TRUE.equals(request==null?null:request.confirmarDivergencias()))throw new IllegalArgumentException("Existem divergências de associação; confirme explicitamente para reassociar as OS.");
+        BigDecimal diferenca=null;if(op!=null){BigDecimal soma=previa.linhas().stream().filter(l->l.acao()!=AcaoLinhaPorto.ERRO&&l.acao()!=AcaoLinhaPorto.IGNORAR).map(l->l.decimal("valor_total")).filter(Objects::nonNull).reduce(BigDecimal.ZERO,BigDecimal::add);diferenca=op.getValorTotal().subtract(soma);
+            if(op.getStatusPorto()!=null&&diferenca.abs().compareTo(new BigDecimal("0.01"))>0&&(request==null||request.motivoDivergencia()==null||request.justificativaDivergencia()==null||request.justificativaDivergencia().isBlank()))throw new IllegalArgumentException("A soma da composição diverge do valor da OP; informe motivo e justificativa.");}
         int importados=0,ignorados=0,novos=0,atualizados=0;for(LinhaPorto linha:previa.linhas()){String chave=chaveProcessamento(previa.tipo(),linha,op);if(linha.acao()==AcaoLinhaPorto.IGNORAR||registros.existsByHashRegistro(chave)){ignorados++;continue;}
             switch(previa.tipo()){case PREVISAO_RECEBER->porto.importarOp(linha,imp);case SERVICOS_GERAIS->porto.importarOsGeral(linha,imp);case SERVICOS_AGUARDANDO_LANCAMENTO->porto.importarAguardando(linha,imp);case OS_VINCULADAS->porto.importarOs(linha,op,imp);case SERVICOS_DEVOLVIDOS->porto.importarDevolucao(linha,imp);}
             registros.save(new RegistroImportadoPorto(imp,chave,previa.tipo()));importados++;if(linha.acao()==AcaoLinhaPorto.ATUALIZAR||linha.acao()==AcaoLinhaPorto.DIVERGENCIA)atualizados++;else novos++;}
+        if(op!=null){if(diferenca!=null&&diferenca.abs().compareTo(new BigDecimal("0.01"))>0&&request!=null&&request.motivoDivergencia()!=null&&request.justificativaDivergencia()!=null&&!request.justificativaDivergencia().isBlank())porto.registrarJustificativaImportacao(op,request.motivoDivergencia(),request.justificativaDivergencia(),diferenca,principal);porto.registrarHistoricoImportacao(op,principal,importados,atualizados);}
         imp.confirmar();return new ConfirmacaoResponse(imp.getId(),previa.tipo(),importados,ignorados,novos,atualizados);
     }
     @Transactional(readOnly=true) public PreviaResponse avaliar(Long id,ConfirmarImportacaoRequest request){Importacao imp=obter(id);
@@ -102,8 +116,8 @@ public class PortoImportacaoService {
     }
     private PreviaPorto avaliarProcessamento(PreviaPorto previa,OrdemPagamentoPorto op){List<LinhaPorto> linhas=previa.linhas().stream().map(linha->{
         if(linha.acao()==AcaoLinhaPorto.ERRO)return linha;
-        if(porto.associacaoDivergente(linha.texto("numero_os"),op.getId()))return linha.comAcao(AcaoLinhaPorto.DIVERGENCIA,"A OS já está vinculada a outra OP.");
-        return registros.existsByHashRegistro(chaveProcessamento(previa.tipo(),linha,op))?linha.comAcao(AcaoLinhaPorto.IGNORAR,"Linha já processada para esta OP."):linha.comAcao(AcaoLinhaPorto.IMPORTAR,null);
+        AcaoLinhaPorto acao=porto.classificarOsComposicao(linha,op);if(acao==AcaoLinhaPorto.DIVERGENCIA)return linha.comAcao(acao,porto.associacaoDivergente(linha.texto("numero_os"),op.getId())?"A OS já está vinculada a outra OP.":"A OS existente possui dados diferentes.");
+        return registros.existsByHashRegistro(chaveProcessamento(previa.tipo(),linha,op))?linha.comAcao(AcaoLinhaPorto.IGNORAR,"Linha já processada para esta OP."):linha.comAcao(acao,null);
         }).toList();return new PreviaPorto(previa.tipo(),previa.cabecalhos(),linhas,previa.erros());}
     private String chaveProcessamento(TipoRelatorioPorto tipo,LinhaPorto linha,OrdemPagamentoPorto op){if(tipo!=TipoRelatorioPorto.OS_VINCULADAS)return linha.hashRegistro();
         try{return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest((linha.hashRegistro()+"|op="+op.getId()).getBytes(StandardCharsets.UTF_8)));}catch(Exception e){throw new IllegalStateException(e);}}

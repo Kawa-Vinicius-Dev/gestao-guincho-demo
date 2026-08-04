@@ -202,7 +202,7 @@ class PortoApiIntegrationTest {
             OS-901,700.00,REMOÇÃO,,Ana,QRA-2,2026-07-30
             """);
         mvc.perform(post("/api/porto/importacoes/{id}/confirmar",atualizacao).header("Authorization","Bearer "+token)
-                .contentType(MediaType.APPLICATION_JSON).content("{\"ordemPagamentoId\":"+opId+"}"))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"ordemPagamentoId\":"+opId+",\"confirmarDivergencias\":true}"))
             .andExpect(status().isOk()).andExpect(jsonPath("$.importados").value(1));
         mvc.perform(get("/api/porto/ordens-servico").header("Authorization","Bearer "+token))
             .andExpect(status().isOk()).andExpect(jsonPath("$[0].especialidade").value("REMOÇÃO"))
