@@ -5,8 +5,8 @@
   "outputDirectory": "frontend/dist",
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "https://gestao-guincho-demo-production.up.railway.app/api/$1"
+      "source": "/api/:path*",
+      "destination": "https://gestao-guincho-demo-production.up.railway.app/api/:path*"
     },
     {
       "source": "/(.*)",
