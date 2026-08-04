@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { expect, test, vi } from 'vitest'
@@ -19,6 +19,14 @@ test('confirma recebimento manual de OP programada', async()=>{
   await user.clear(screen.getByLabelText(/valor recebido/i));await user.type(screen.getByLabelText(/valor recebido/i),'1490')
   await user.click(screen.getByRole('button',{name:/salvar recebimento/i}))
   expect(await screen.findByText('Recebido')).toBeInTheDocument()
+})
+
+test('cria OP processada sem marcar como recebida',async()=>{
+  let payload:Record<string,unknown>={},criada:Record<string,unknown>|null=null
+  servidor.use(http.get('/api/porto/ordens-pagamento',()=>HttpResponse.json(criada?[criada]:[])),http.post('/api/porto/ordens-pagamento',async({request})=>{payload=await request.json() as Record<string,unknown>;criada={id:4,numero:payload.numero,valorTotal:payload.valorInformado,dataPagamentoProgramada:payload.dataPrevista,situacao:'A_CONFIRMAR',statusPorto:'PROCESSADO',quantidadeOrdensServico:0,valorOrdensServico:0,divergencia:payload.valorInformado,statusConciliacao:'SEM_COMPOSICAO'};return HttpResponse.json(criada,{status:201})}))
+  const user=userEvent.setup();render(<PortoOrdensPagamentoPage/>);await screen.findByText('Nenhuma OP');await user.click(screen.getByRole('button',{name:/nova ordem de pagamento/i}));const dialogo=screen.getByRole('dialog')
+  await user.type(within(dialogo).getByLabelText(/número da op/i),'OP-MANUAL-4');await user.type(within(dialogo).getByLabelText(/data prevista/i),'2026-09-16');await user.type(within(dialogo).getByLabelText(/valor informado/i),'480');await user.selectOptions(within(dialogo).getByLabelText(/status porto/i),'PROCESSADO');await user.selectOptions(within(dialogo).getByLabelText(/situação financeira/i),'A_CONFIRMAR');await user.click(within(dialogo).getByRole('button',{name:/salvar ordem/i}))
+  expect(payload.pagamentoConfirmado).toBe(false);expect(await screen.findByText('OP-MANUAL-4')).toBeInTheDocument();expect(screen.getByText('A confirmar')).toBeInTheDocument()
 })
 
 test('lista OS com OP e aceita viatura vazia',async()=>{

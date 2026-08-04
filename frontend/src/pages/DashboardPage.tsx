@@ -1,9 +1,11 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { despesasPorCategoria, entraNoResultado, resumoMensal, serieMensal } from '../demo/calculos'
 import { useDemo } from '../demo/DemoContext'
 import type { LancamentoDemo, ResultadoVeiculoDemo } from '../demo/modelosDemo'
 import { data, moeda, numero } from '../utils/formatadores'
+import { resumirOrdensPagamentoPorto } from '../api/porto'
+import type { ResumoOpsPorto } from '../types/modelos'
 
 const meses = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
 const rotuloMes = (mes: string) => {
@@ -77,12 +79,14 @@ function LancamentosRecentes({ itens }: { itens: LancamentoDemo[] }) {
 export default function DashboardPage() {
   const { state } = useDemo()
   const [mes, setMes] = useState('2026-07')
+  const [porto,setPorto]=useState<ResumoOpsPorto|null>(null)
   const resumo = useMemo(() => resumoMensal(state, mes), [state, mes])
   const ativos = resumo.resultadoVeiculos.filter(item => item.receita || item.despesas || item.kmRodado)
   const maisLucrativo = [...ativos].sort((a, b) => b.lucro - a.lucro)[0]
   const maiorGasto = [...ativos].sort((a, b) => b.despesas - a.despesas)[0]
   const alertas = ativos.filter(item => item.status === 'ATENCAO_KM')
   const recentes = state.lancamentos.filter(item => item.data.startsWith(mes) && entraNoResultado(item)).sort((a, b) => b.data.localeCompare(a.data) || b.id - a.id).slice(0, 6)
+  useEffect(()=>{const [ano,numeroMes]=mes.split('-').map(Number),inicio=`${mes}-01`,fim=new Date(ano,numeroMes,0).toISOString().slice(0,10);resumirOrdensPagamentoPorto(new URLSearchParams({dataInicio:inicio,dataFim:fim})).then(setPorto).catch(()=>setPorto(null))},[mes])
 
   return <div className="page-enter">
     <header className="page-heading dashboard-heading">
@@ -103,6 +107,8 @@ export default function DashboardPage() {
       <i className="lane-separator">=</i>
       <div className="lane-result"><span>Lucro operacional</span><strong>{moeda(resumo.lucro)}</strong><small>Margem de {resumo.margem.toFixed(1)}%</small></div>
     </section>
+
+    {porto?<section className="porto-finance-summary" aria-label="Faturamento Porto"><header><div><span className="eyebrow">Porto Seguro</span><h2>Faturamento separado do caixa</h2></div><Link to="/porto/dashboard">Abrir módulo Porto →</Link></header><div><span>Previsto<strong>{moeda(porto.valorTotalPrevisto)}</strong><small>{porto.quantidadeTotalOps} OPs</small></span><span>Programado<strong>{moeda(porto.valorProgramado)}</strong><small>Ainda não recebido</small></span><span>Recebido no banco<strong>{moeda(porto.valorRecebido)}</strong><small>Confirmação manual</small></span></div><p>Valores previstos e programados não compõem o caixa, a DRE ou o lucro até o recebimento confirmado.</p></section>:null}
 
     <section className="metric-grid metric-grid-v2">
       <CartaoMetrica titulo="Valores a receber" valor={moeda(resumo.aReceber)} apoio="Receitas ainda não liquidadas" tom="metric-warn"/>

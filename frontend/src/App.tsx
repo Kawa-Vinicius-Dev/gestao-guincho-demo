@@ -24,6 +24,8 @@ const PortoDashboard=lazy(()=>import('./pages/PortoDashboardPage'))
 const PortoOps=lazy(()=>import('./pages/PortoOrdensPagamentoPage'))
 const PortoOss=lazy(()=>import('./pages/PortoOrdensServicoPage'))
 const PortoPendencias=lazy(()=>import('./pages/PortoPendenciasPage'))
+const PortoCalendario=lazy(()=>import('./pages/PortoCalendarioPage'))
+const PortoRelatorios=lazy(()=>import('./pages/PortoRelatoriosPage'))
 const NaoEncontrado=lazy(()=>import('./pages/NaoEncontradoPage'))
 
 export default function App(){
@@ -52,6 +54,8 @@ export default function App(){
         <Route path="/porto/ordens-pagamento" element={<PortoOps/>}/>
         <Route path="/porto/ordens-servico" element={<PortoOss/>}/>
         <Route path="/porto/pendencias" element={<PortoPendencias/>}/>
+        <Route path="/porto/calendario" element={<PortoCalendario/>}/>
+        <Route path="/porto/relatorios" element={<PortoRelatorios/>}/>
         <Route path="/usuarios" element={<Equipe/>}/>
         <Route path="/configuracoes" element={<Integracoes/>}/>
       </Route>

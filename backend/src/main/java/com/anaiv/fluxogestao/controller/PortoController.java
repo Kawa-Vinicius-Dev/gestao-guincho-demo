@@ -17,8 +17,8 @@ import java.util.Map;
 
 @RestController @RequestMapping("/api/porto") @PreAuthorize("hasRole('ADMINISTRADOR')")
 public class PortoController {
-    private final PortoImportacaoService importacoes;private final PortoService porto;private final PortoRelatorioService relatorios;private final CalendarioPortoService calendario;
-    public PortoController(PortoImportacaoService i,PortoService p,PortoRelatorioService r,CalendarioPortoService calendario){importacoes=i;porto=p;relatorios=r;this.calendario=calendario;}
+    private final PortoImportacaoService importacoes;private final PortoService porto;private final PortoRelatorioService relatorios;private final CalendarioPortoService calendario;private final PortoDashboardService dashboard;
+    public PortoController(PortoImportacaoService i,PortoService p,PortoRelatorioService r,CalendarioPortoService calendario,PortoDashboardService dashboard){importacoes=i;porto=p;relatorios=r;this.calendario=calendario;this.dashboard=dashboard;}
     @PostMapping(value="/importacoes/previa",consumes="multipart/form-data") @ResponseStatus(HttpStatus.CREATED)
     public PreviaResponse previa(@RequestPart("arquivo")MultipartFile arquivo){return importacoes.previa(arquivo);}
     @PostMapping("/importacoes/previa-conteudo") @ResponseStatus(HttpStatus.CREATED)
@@ -29,10 +29,10 @@ public class PortoController {
     @PostMapping("/importacoes/{id}/confirmar") public ConfirmacaoResponse confirmar(@PathVariable Long id,@RequestBody(required=false)ConfirmarImportacaoRequest request,@AuthenticationPrincipal UsuarioPrincipal principal){return importacoes.confirmar(id,request,principal);}
     @PostMapping("/importacoes/{id}/cancelar") public PreviaResponse cancelar(@PathVariable Long id){return importacoes.cancelar(id);}
     @GetMapping("/ordens-pagamento") public List<OrdemPagamentoResponse> ops(@ModelAttribute PortoFiltros filtros){return porto.listarOps(filtros);}
-    @PostMapping("/ordens-pagamento") @ResponseStatus(HttpStatus.CREATED) public OrdemPagamentoResponse criarOp(@Valid @RequestBody OrdemPagamentoRequest request){return porto.criarOpManual(request);}
-    @PutMapping("/ordens-pagamento/{id}") public OrdemPagamentoResponse atualizarOp(@PathVariable Long id,@Valid @RequestBody OrdemPagamentoRequest request){return porto.atualizarOpManual(id,request);}
+    @PostMapping("/ordens-pagamento") @ResponseStatus(HttpStatus.CREATED) public OrdemPagamentoResponse criarOp(@Valid @RequestBody OrdemPagamentoRequest request,@AuthenticationPrincipal UsuarioPrincipal principal){return porto.criarOpManual(request,principal);}
+    @PutMapping("/ordens-pagamento/{id}") public OrdemPagamentoResponse atualizarOp(@PathVariable Long id,@Valid @RequestBody OrdemPagamentoRequest request,@AuthenticationPrincipal UsuarioPrincipal principal){return porto.atualizarOpManual(id,request,principal);}
     @GetMapping("/ordens-pagamento/resumo") public ResumoOrdensPagamentoResponse resumo(@ModelAttribute PortoFiltros filtros){return porto.resumo(filtros);}
-    @GetMapping("/dashboard") public Map<String,Object> dashboard(@ModelAttribute PortoFiltros filtros,@ModelAttribute PortoOsFiltros filtrosOs){return porto.dashboard(filtros,filtrosOs);}
+    @GetMapping("/dashboard") public Map<String,Object> dashboard(@ModelAttribute PortoDashboardFiltros filtros){return dashboard.dashboard(filtros);}
     @GetMapping("/ordens-pagamento/{id}") public OrdemPagamentoDetalheResponse detalhe(@PathVariable Long id){return porto.detalhar(id);}
     @PostMapping("/ordens-pagamento/{id}/justificativas") @ResponseStatus(HttpStatus.CREATED)
     public JustificativaResponse justificar(@PathVariable Long id,@Valid @RequestBody JustificativaRequest request,@AuthenticationPrincipal UsuarioPrincipal principal){return porto.justificar(id,request,principal);}
@@ -47,4 +47,6 @@ public class PortoController {
     @PatchMapping("/calendario/{id}/desativar") public CalendarioResponse desativarData(@PathVariable Long id){return calendario.desativar(id);}
     @GetMapping("/relatorios/excel") public ResponseEntity<byte[]> excel(@ModelAttribute PortoFiltros filtros,@ModelAttribute PortoOsFiltros filtrosOs){return ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION,"attachment; filename=relatorio-porto.xlsx").contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")).body(relatorios.excel(filtros,filtrosOs));}
     @GetMapping("/relatorios/pdf") public ResponseEntity<byte[]> pdf(@ModelAttribute PortoFiltros filtros,@ModelAttribute PortoOsFiltros filtrosOs){return ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION,"attachment; filename=relatorio-porto.pdf").contentType(MediaType.APPLICATION_PDF).body(relatorios.pdf(filtros,filtrosOs));}
+    @GetMapping("/ordens-pagamento/{id}/relatorios/excel") public ResponseEntity<byte[]> excelOp(@PathVariable Long id){return ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION,"attachment; filename=op-porto.xlsx").contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")).body(relatorios.excelOp(id));}
+    @GetMapping("/ordens-pagamento/{id}/relatorios/pdf") public ResponseEntity<byte[]> pdfOp(@PathVariable Long id){return ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION,"attachment; filename=op-porto.pdf").contentType(MediaType.APPLICATION_PDF).body(relatorios.pdfOp(id));}
 }

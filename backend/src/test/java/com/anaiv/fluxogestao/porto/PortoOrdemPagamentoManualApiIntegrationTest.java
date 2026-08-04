@@ -22,7 +22,7 @@ class PortoOrdemPagamentoManualApiIntegrationTest {
     @Test
     void criaOpProcessadaSemInferirRecebimento() throws Exception {
         String token=login();
-        mvc.perform(post("/api/porto/ordens-pagamento").header("Authorization","Bearer "+token)
+        String resposta=mvc.perform(post("/api/porto/ordens-pagamento").header("Authorization","Bearer "+token)
                 .contentType(MediaType.APPLICATION_JSON).content("""
                     {"numero":"OP-MANUAL-001","dataPrevista":"2026-08-28","valorInformado":1200.50,
                      "statusPorto":"PROCESSADO","situacaoFinanceira":"A_CONFIRMAR",
@@ -32,7 +32,11 @@ class PortoOrdemPagamentoManualApiIntegrationTest {
             .andExpect(jsonPath("$.numero").value("OP-MANUAL-001"))
             .andExpect(jsonPath("$.statusPorto").value("PROCESSADO"))
             .andExpect(jsonPath("$.situacao").value("A_CONFIRMAR"))
-            .andExpect(jsonPath("$.dataRecebimento").doesNotExist());
+            .andExpect(jsonPath("$.dataRecebimento").doesNotExist()).andReturn().getResponse().getContentAsString();
+        long id=((Number)JsonPath.read(resposta,"$.id")).longValue();
+        mvc.perform(get("/api/porto/ordens-pagamento/{id}",id).header("Authorization","Bearer "+token))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.historico[0].evento").value("OP_CRIADA_MANUALMENTE"))
+            .andExpect(jsonPath("$.historico[0].usuario").value("Administrador"));
     }
 
     @Test

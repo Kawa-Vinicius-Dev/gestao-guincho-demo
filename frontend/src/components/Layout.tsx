@@ -15,7 +15,9 @@ const itens = [
   ['/porto/importacoes', 'Importar relatórios', true, 'porto'],
   ['/porto/ordens-pagamento', 'Ordens de pagamento', true, 'porto'],
   ['/porto/ordens-servico', 'Ordens de serviço', true, 'porto'],
-  ['/porto/pendencias', 'Pendências financeiras', true, 'porto'],
+  ['/porto/pendencias', 'Pendências e devolvidos', true, 'porto'],
+  ['/porto/calendario', 'Calendário de pagamentos', true, 'porto'],
+  ['/porto/relatorios', 'Relatórios Porto', true, 'porto'],
 ] as const
 const grupos = { financeiro: 'Financeiro', operacao: 'Operação', equipe: 'Equipe', porto: 'Porto Seguro' } as const
 

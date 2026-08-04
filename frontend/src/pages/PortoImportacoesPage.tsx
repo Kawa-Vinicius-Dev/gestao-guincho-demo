@@ -3,7 +3,7 @@ import { avaliarImportacaoPorto, cancelarImportacaoPorto, confirmarImportacaoPor
 import type { OrdemPagamentoPorto, PreviaPorto } from '../types/modelos'
 import { moeda } from '../utils/formatadores'
 
-const rotulos={PREVISAO_RECEBER:'Previsão a receber',OS_VINCULADAS:'OS vinculadas à OP',SERVICOS_DEVOLVIDOS:'Serviços devolvidos',SERVICOS_GERAIS:'Serviços gerais da Porto'}
+const rotulos={PREVISAO_RECEBER:'Previsão a receber',OS_VINCULADAS:'OS vinculadas à OP',SERVICOS_DEVOLVIDOS:'Serviços devolvidos',SERVICOS_GERAIS:'Serviços gerais da Porto',SERVICOS_AGUARDANDO_LANCAMENTO:'Serviços aguardando lançamento'}
 
 export default function PortoImportacoesPage(){
   const [arquivo,setArquivo]=useState<File|null>(null),[previa,setPrevia]=useState<PreviaPorto|null>(null)

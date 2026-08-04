@@ -67,6 +67,15 @@ class PortoRelatorioApiIntegrationTest {
         }
     }
 
+    @Test void relatoriosDaOpPossuemSeteAbasEComparacaoDeValores() throws Exception {
+        String token=prepararDados();long opId=idOp(token,"OP-EXP-001");
+        byte[] excel=mvc.perform(get("/api/porto/ordens-pagamento/{id}/relatorios/excel",opId).header("Authorization","Bearer "+token)).andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
+        try(XSSFWorkbook workbook=new XSSFWorkbook(new ByteArrayInputStream(excel))){assertThat(java.util.stream.IntStream.range(0,workbook.getNumberOfSheets()).mapToObj(i->workbook.getSheetAt(i).getSheetName()).toList()).containsExactly(
+            "Resumo da OP","Serviços vinculados","Serviços regulares","Liberados após análise","Divergências","Por socorrista","Por especialidade");}
+        byte[] pdf=mvc.perform(get("/api/porto/ordens-pagamento/{id}/relatorios/pdf",opId).header("Authorization","Bearer "+token)).andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
+        try(var documento=Loader.loadPDF(pdf)){assertThat(new PDFTextStripper().getText(documento)).contains("OP-EXP-001","Valor informado","Valor calculado","Diferenca");}
+    }
+
     private String prepararDados() throws Exception {
         String token=login();
         confirmar(token,previa(token,"op-exportacao.csv","""
