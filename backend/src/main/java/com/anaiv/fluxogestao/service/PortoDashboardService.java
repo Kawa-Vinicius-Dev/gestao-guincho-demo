@@ -16,7 +16,8 @@ public class PortoDashboardService {
 
     @Transactional(readOnly=true) public Map<String,Object> dashboard(PortoDashboardFiltros filtro){
         Intervalo intervalo=intervalo(filtro);LocalDate inicio=intervalo.inicio(),fim=intervalo.fim();
-        PortoFiltros opFiltro=new PortoFiltros(inicio,fim,filtro.numeroOp(),null,filtro.statusConciliacao(),null,null,null,null);
+        String numeroOp=filtro.numeroOp()==null||filtro.numeroOp().isBlank()?filtro.numero():filtro.numeroOp();
+        PortoFiltros opFiltro=new PortoFiltros(inicio,fim,numeroOp,null,filtro.statusConciliacao(),null,null,null,null);
         PortoOsFiltros osFiltro=new PortoOsFiltros(inicio,fim,filtro.numeroOs(),filtro.numeroOp(),filtro.especialidade(),filtro.socorrista(),filtro.qra(),filtro.viatura(),filtro.statusOperacional(),filtro.statusFinanceiro(),filtro.statusConciliacao());
         Map<String,Object> resposta=new LinkedHashMap<>(porto.dashboard(opFiltro,osFiltro));
         List<OrdemPagamentoResponse> recebidas=porto.listarOps().stream().filter(x->x.dataRecebimento()!=null&&dentro(x.dataRecebimento(),inicio,fim)).toList();
