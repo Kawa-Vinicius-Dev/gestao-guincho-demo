@@ -29,6 +29,22 @@ test('cria OP processada sem marcar como recebida',async()=>{
   expect(payload.pagamentoConfirmado).toBe(false);expect(await screen.findByText('OP-MANUAL-4')).toBeInTheDocument();expect(screen.getByText('A confirmar')).toBeInTheDocument()
 })
 
+test('edita uma OP manual e oferece os relatórios individuais',async()=>{
+  let payload:Record<string,unknown>|null=null
+  const op={id:41,numero:'OP-EDIT-41',valorTotal:800,dataPagamentoProgramada:'2026-09-15',situacao:'PROGRAMADO',statusPorto:'PROCESSADO',quantidadeOrdensServico:0,valorOrdensServico:0,divergencia:800,statusConciliacao:'SEM_COMPOSICAO'}
+  servidor.use(
+    http.get('/api/porto/ordens-pagamento',()=>HttpResponse.json([op])),
+    http.get('/api/porto/ordens-pagamento/41',()=>HttpResponse.json({ordemPagamento:op,ordensServico:[],justificativas:[],historico:[]})),
+    http.put('/api/porto/ordens-pagamento/41',async({request})=>{payload=await request.json() as Record<string,unknown>;return HttpResponse.json({...op,numero:payload.numero,valorTotal:payload.valorInformado})}),
+  )
+  const user=userEvent.setup();render(<PortoOrdensPagamentoPage/>);await user.click(await screen.findByRole('button',{name:'OP-EDIT-41'}))
+  expect(await screen.findByRole('button',{name:/baixar excel da op/i})).toBeInTheDocument();expect(screen.getByRole('button',{name:/baixar pdf da op/i})).toBeInTheDocument()
+  await user.click(screen.getByRole('button',{name:/editar op/i}));const dialogo=screen.getByRole('dialog')
+  const valor=within(dialogo).getByLabelText(/valor informado/i);await user.clear(valor);await user.type(valor,'825')
+  await user.click(within(dialogo).getByRole('button',{name:/salvar alterações/i}))
+  expect(payload).toMatchObject({numero:'OP-EDIT-41',valorInformado:825,pagamentoConfirmado:false})
+})
+
 test('lista OS com OP e aceita viatura vazia',async()=>{
   servidor.use(http.get('/api/porto/ordens-servico',()=>HttpResponse.json([{id:2,ordemPagamentoId:1,ordemPagamento:'OP-100',numero:'OS-200',valorTotal:700,especialidade:'REMOÇÃO',socorrista:'Ana',qra:'QRA-1',dataAtendimento:'2026-07-30'}])))
   render(<PortoOrdensServicoPage/>);expect(await screen.findByText('OS-200')).toBeInTheDocument();expect(screen.getByText('OP-100')).toBeInTheDocument();expect(screen.getByText('Sem viatura')).toBeInTheDocument()
