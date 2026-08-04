@@ -52,7 +52,9 @@ public final class PortoDtos {
     public record OrdemServicoResponse(Long id,Long ordemPagamentoId,String ordemPagamento,String numero,BigDecimal valorTotal,
         String especialidade,String viatura,String socorrista,String qra,LocalDate dataAtendimento,
         BigDecimal valorKmExcedente,BigDecimal kmMortoEstimado,StatusOperacionalPorto statusOperacional,
-        StatusFinanceiroPorto statusFinanceiro,LocalDate dataDevolucao,LocalDate dataFinalizacaoDevolucao) {}
+        StatusFinanceiroPorto statusFinanceiro,LocalDate dataDevolucao,LocalDate dataFinalizacaoDevolucao,
+        String prestador,String seguradora,String cliente,String placa,OffsetDateTime dataHoraAtendimento,
+        LocalDate dataPrevistaOriginal,LocalDate dataEfetivaPagamento,int ciclosAtraso) {}
     public record PendenciaResponse(Long id,String tipo,Long referenciaId,String referencia,BigDecimal valor,LocalDate data,String situacao,
         String motivo,String observacao,String responsavel,LocalDate prazo,String referenciaPorto) {}
     public record PendenciaRequest(@NotBlank String numeroOs,@NotBlank String motivo,@NotNull @DecimalMin("0.00") BigDecimal valor,

@@ -20,9 +20,9 @@ import java.util.*;
 @Service
 public class PortoImportacaoService {
     private final ImportacaoRepository importacoes; private final RegistroImportadoPortoRepository registros;
-    private final PortoCsvParser parser; private final PortoService porto; private final Path pasta;
-    public PortoImportacaoService(ImportacaoRepository i,RegistroImportadoPortoRepository r,PortoCsvParser p,PortoService porto,@Value("${app.storage-dir}")String storage){
-        importacoes=i;registros=r;parser=p;this.porto=porto;pasta=Path.of(storage).toAbsolutePath().normalize().resolve("porto");}
+    private final PortoCsvParser parser;private final PortoBlocosParser blocos; private final PortoService porto; private final Path pasta;
+    public PortoImportacaoService(ImportacaoRepository i,RegistroImportadoPortoRepository r,PortoCsvParser p,PortoBlocosParser blocos,PortoService porto,@Value("${app.storage-dir}")String storage){
+        importacoes=i;registros=r;parser=p;this.blocos=blocos;this.porto=porto;pasta=Path.of(storage).toAbsolutePath().normalize().resolve("porto");}
     @Transactional public PreviaResponse previa(MultipartFile arquivo){
         if(arquivo.isEmpty())throw new IllegalArgumentException("Selecione um arquivo CSV ou TXT.");String nome=arquivo.getOriginalFilename();
         String nomeNormalizado=nome==null?"":nome.toLowerCase(Locale.ROOT);if(!nomeNormalizado.endsWith(".csv")&&!nomeNormalizado.endsWith(".txt"))throw new IllegalArgumentException("A importação Porto aceita CSV ou TXT.");
@@ -34,7 +34,7 @@ public class PortoImportacaoService {
         return preparar(conteudo.getBytes(StandardCharsets.UTF_8),"colagem-servicos-porto.txt",true,true);
     }
     private PreviaResponse preparar(byte[] bytes,String nome,boolean servicosGerais,boolean hashNormalizado){
-        try{PreviaPorto previa=contextualizar(servicosGerais?parser.parseServicosGerais(bytes):parser.parse(bytes));
+        try{PreviaPorto previa=contextualizar(parse(bytes,servicosGerais));
             byte[] baseHash=hashNormalizado?normalizarConteudo(new String(bytes,StandardCharsets.UTF_8)).getBytes(StandardCharsets.UTF_8):bytes;
             String hash=HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(baseHash));
             Optional<Importacao> existente=importacoes.findByHashArquivo(hash);
@@ -64,7 +64,7 @@ public class PortoImportacaoService {
         OrdemPagamentoPorto op=null;if(previa.tipo()==TipoRelatorioPorto.OS_VINCULADAS){if(request==null||request.ordemPagamentoId()==null)throw new IllegalArgumentException("Selecione a OP vinculada antes de confirmar.");op=porto.obterOp(request.ordemPagamentoId());previa=avaliarProcessamento(previa,op);}
         if(previa.linhas().stream().anyMatch(l->l.acao()==AcaoLinhaPorto.DIVERGENCIA)&&!Boolean.TRUE.equals(request==null?null:request.confirmarDivergencias()))throw new IllegalArgumentException("Existem divergências de associação; confirme explicitamente para reassociar as OS.");
         int importados=0,ignorados=0,novos=0,atualizados=0;for(LinhaPorto linha:previa.linhas()){String chave=chaveProcessamento(previa.tipo(),linha,op);if(linha.acao()==AcaoLinhaPorto.IGNORAR||registros.existsByHashRegistro(chave)){ignorados++;continue;}
-            switch(previa.tipo()){case PREVISAO_RECEBER->porto.importarOp(linha,imp);case SERVICOS_GERAIS->porto.importarOsGeral(linha,imp);case OS_VINCULADAS->porto.importarOs(linha,op,imp);case SERVICOS_DEVOLVIDOS->porto.importarDevolucao(linha,imp);}
+            switch(previa.tipo()){case PREVISAO_RECEBER->porto.importarOp(linha,imp);case SERVICOS_GERAIS->porto.importarOsGeral(linha,imp);case SERVICOS_AGUARDANDO_LANCAMENTO->porto.importarAguardando(linha,imp);case OS_VINCULADAS->porto.importarOs(linha,op,imp);case SERVICOS_DEVOLVIDOS->porto.importarDevolucao(linha,imp);}
             registros.save(new RegistroImportadoPorto(imp,chave,previa.tipo()));importados++;if(linha.acao()==AcaoLinhaPorto.ATUALIZAR||linha.acao()==AcaoLinhaPorto.DIVERGENCIA)atualizados++;else novos++;}
         imp.confirmar();return new ConfirmacaoResponse(imp.getId(),previa.tipo(),importados,ignorados,novos,atualizados);
     }
@@ -90,6 +90,7 @@ public class PortoImportacaoService {
                 if(numero!=null&&!vistos.add(numero)){linhas.add(linha.comAcao(AcaoLinhaPorto.IGNORAR,"Número duplicado dentro do arquivo."));continue;}
                 if(previa.tipo()==TipoRelatorioPorto.PREVISAO_RECEBER){AcaoLinhaPorto acao=porto.classificarOp(linha);linha=linha.comAcao(acao,acao==AcaoLinhaPorto.ATUALIZAR?"A OP existente será atualizada.":acao==AcaoLinhaPorto.IGNORAR?"A OP já está atualizada.":null);}
                 else if(previa.tipo()==TipoRelatorioPorto.SERVICOS_GERAIS){AcaoLinhaPorto acao=porto.classificarOsGeral(linha);linha=linha.comAcao(acao,acao==AcaoLinhaPorto.DIVERGENCIA?"A OS existente possui dados diferentes; confirme explicitamente para atualizar.":acao==AcaoLinhaPorto.IGNORAR?"A OS já está atualizada.":null);}
+                else if(previa.tipo()==TipoRelatorioPorto.SERVICOS_AGUARDANDO_LANCAMENTO){AcaoLinhaPorto acao=porto.classificarAguardando(linha);linha=linha.comAcao(acao,acao==AcaoLinhaPorto.DIVERGENCIA?"A OS existente possui dados diferentes; confirme explicitamente para revisar.":acao==AcaoLinhaPorto.ATUALIZAR?"A OS existente receberá os campos que estavam vazios.":acao==AcaoLinhaPorto.IGNORAR?"A OS já está atualizada.":null);}
             }
             if(linha.acao()!=AcaoLinhaPorto.ERRO&&previa.tipo()==TipoRelatorioPorto.SERVICOS_DEVOLVIDOS&&!porto.existeOs(linha.texto("numero_os"))){
                 String faltante=linha.texto("especialidade")==null?"especialidade":linha.texto("data_atendimento")==null?"data de atendimento":null;
@@ -106,7 +107,9 @@ public class PortoImportacaoService {
         }).toList();return new PreviaPorto(previa.tipo(),previa.cabecalhos(),linhas,previa.erros());}
     private String chaveProcessamento(TipoRelatorioPorto tipo,LinhaPorto linha,OrdemPagamentoPorto op){if(tipo!=TipoRelatorioPorto.OS_VINCULADAS)return linha.hashRegistro();
         try{return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest((linha.hashRegistro()+"|op="+op.getId()).getBytes(StandardCharsets.UTF_8)));}catch(Exception e){throw new IllegalStateException(e);}}
+    private PreviaPorto parse(byte[] bytes,boolean conteudoLivre){if(blocos.suporta(bytes))return blocos.parse(bytes);return conteudoLivre?parser.parseServicosGerais(bytes):parser.parse(bytes);}
     private PreviaPorto reler(Importacao importacao)throws Exception{byte[] bytes=Files.readAllBytes(Path.of(importacao.getCaminhoArquivo()));
+        if(importacao.getTipoRelatorioPorto()==TipoRelatorioPorto.SERVICOS_AGUARDANDO_LANCAMENTO)return blocos.parse(bytes);
         return importacao.getTipoRelatorioPorto()==TipoRelatorioPorto.SERVICOS_GERAIS?parser.parseServicosGerais(bytes):parser.parse(bytes);}
     private String normalizarConteudo(String conteudo){String semBom=conteudo==null?"":conteudo.replace("\uFEFF","").replace("\r\n","\n").replace('\r','\n');
         return String.join("\n",semBom.lines().map(String::stripTrailing).toList()).trim();}

@@ -12,6 +12,11 @@ public class OrdemServicoPorto {
     private String numero; @Column(name="valor_total") private BigDecimal valorTotal=BigDecimal.ZERO;
     private String especialidade; @Column(name="sigla_viatura") private String siglaViatura;
     private String socorrista; private String qra; @Column(name="data_atendimento") private LocalDate dataAtendimento;
+    private String prestador;private String seguradora;private String cliente;private String placa;
+    @Column(name="data_hora_atendimento") private OffsetDateTime dataHoraAtendimento;
+    @Column(name="data_prevista_original") private LocalDate dataPrevistaOriginal;
+    @Column(name="data_efetiva_pagamento") private LocalDate dataEfetivaPagamento;
+    @Column(name="ciclos_atraso") private int ciclosAtraso;
     @Enumerated(EnumType.STRING) @Column(name="status_operacional_fluxo")
     private EnumsFinanceiros.StatusOperacionalPorto statusOperacional=EnumsFinanceiros.StatusOperacionalPorto.NORMAL;
     @Enumerated(EnumType.STRING) @Column(name="status_financeiro_fluxo")
@@ -41,6 +46,8 @@ public class OrdemServicoPorto {
         dataFinalizacaoDevolucao=finalizacao==null?devolucao:finalizacao;statusOperacional=EnumsFinanceiros.StatusOperacionalPorto.DEVOLVIDO_FINALIZADO;
         if(origem!=null)importacao=origem;atualizadoEm=OffsetDateTime.now();
     }
+    public void atualizarDadosPorto(String prestador,String seguradora,String cliente,String placa,OffsetDateTime dataHora){if(valido(prestador))this.prestador=prestador;if(valido(seguradora))this.seguradora=seguradora;if(valido(cliente))this.cliente=cliente;if(valido(placa))this.placa=placa;if(dataHora!=null){dataHoraAtendimento=dataHora;dataAtendimento=dataHora.toLocalDate();}atualizadoEm=OffsetDateTime.now();}
+    public void aguardarLancamento(LocalDate previsao,Importacao origem){statusOperacional=EnumsFinanceiros.StatusOperacionalPorto.AGUARDANDO_LANCAMENTO;statusFinanceiro=EnumsFinanceiros.StatusFinanceiroPorto.AGUARDANDO_OP;if(dataPrevistaOriginal==null)dataPrevistaOriginal=previsao;if(origem!=null)importacao=origem;atualizadoEm=OffsetDateTime.now();}
     public void marcarRecebida(){statusFinanceiro=EnumsFinanceiros.StatusFinanceiroPorto.RECEBIDO;atualizadoEm=OffsetDateTime.now();}
     public void marcarPendente(EnumsFinanceiros.StatusFinanceiroPorto financeiro){statusOperacional=EnumsFinanceiros.StatusOperacionalPorto.PENDENTE_PORTO;statusFinanceiro=financeiro;atualizadoEm=OffsetDateTime.now();}
     public void resolverPendencia(){if(statusOperacional==EnumsFinanceiros.StatusOperacionalPorto.PENDENTE_PORTO)statusOperacional=EnumsFinanceiros.StatusOperacionalPorto.NORMAL;
@@ -58,4 +65,7 @@ public class OrdemServicoPorto {
     public EnumsFinanceiros.StatusFinanceiroPorto getStatusFinanceiro(){return statusFinanceiro;}
     public String getOrigemImportacao(){return origemImportacao;} public OffsetDateTime getDataImportacao(){return dataImportacao;}
     public LocalDate getDataDevolucao(){return dataDevolucao;} public LocalDate getDataFinalizacaoDevolucao(){return dataFinalizacaoDevolucao;}
+    public String getPrestador(){return prestador;} public String getSeguradora(){return seguradora;} public String getCliente(){return cliente;} public String getPlaca(){return placa;}
+    public OffsetDateTime getDataHoraAtendimento(){return dataHoraAtendimento;} public LocalDate getDataPrevistaOriginal(){return dataPrevistaOriginal;}
+    public LocalDate getDataEfetivaPagamento(){return dataEfetivaPagamento;} public int getCiclosAtraso(){return ciclosAtraso;}
 }
