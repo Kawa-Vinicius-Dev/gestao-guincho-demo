@@ -1,0 +1,12 @@
+.git
+.github
+.worktrees
+frontend
+docs
+scripts
+backend/target
+**/node_modules
+data
+storage
+*.log
+*.patch

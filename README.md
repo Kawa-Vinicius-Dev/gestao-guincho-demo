@@ -143,6 +143,25 @@ cd backend
 ./mvnw spring-boot:run "-Dspring-boot.run.profiles=local"
 ```
 
+## Deploy do backend na Railway
+
+A Railway usa o `Dockerfile` da raiz para construir o backend, que continua localizado em `backend/`. O frontend permanece publicado separadamente pelo Vercel.
+
+Configure manualmente estas variáveis no serviço da Railway, sem adicioná-las ao Git:
+
+```dotenv
+DATABASE_URL=jdbc:postgresql://host:5432/database
+DATABASE_USERNAME=usuario
+DATABASE_PASSWORD=senha-segura
+ADMIN_EMAIL=administrador@empresa.com
+ADMIN_PASSWORD=senha-forte
+CORS_ALLOWED_ORIGINS=https://projeto.vercel.app
+STORAGE_DIR=/tmp/importacoes
+SESSION_HOURS=12
+```
+
+A Railway fornece `PORT` automaticamente. Em execução local, o backend continua aceitando `SERVER_PORT` e usa a porta `8080` quando nenhuma das variáveis está definida.
+
 ## Tecnologias
 
 - **Backend:** Java 21, Spring Boot, Spring Security, JPA, Bean Validation, PDFBox, Flyway e PostgreSQL.
