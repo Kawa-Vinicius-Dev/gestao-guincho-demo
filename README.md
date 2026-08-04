@@ -181,6 +181,7 @@ npm run build
 - [Regras de negócio](docs/regras-de-negocio.md)
 - [Arquitetura](docs/arquitetura.md)
 - [Guia de desenvolvimento](docs/desenvolvimento.md)
+- [Fluxo Porto: OPs, calendário e pagamentos](docs/porto-fluxo-ops-e-pagamentos.md)
 
 ## Autor
 
