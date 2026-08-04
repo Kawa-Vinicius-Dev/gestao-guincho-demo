@@ -12,9 +12,9 @@ public class OrdemServicoPorto {
     private String numero; @Column(name="valor_total") private BigDecimal valorTotal=BigDecimal.ZERO;
     private String especialidade; @Column(name="sigla_viatura") private String siglaViatura;
     private String socorrista; private String qra; @Column(name="data_atendimento") private LocalDate dataAtendimento;
-    @Enumerated(EnumType.STRING) @Column(name="status_operacional")
+    @Enumerated(EnumType.STRING) @Column(name="status_operacional_fluxo")
     private EnumsFinanceiros.StatusOperacionalPorto statusOperacional=EnumsFinanceiros.StatusOperacionalPorto.NORMAL;
-    @Enumerated(EnumType.STRING) @Column(name="status_financeiro")
+    @Enumerated(EnumType.STRING) @Column(name="status_financeiro_fluxo")
     private EnumsFinanceiros.StatusFinanceiroPorto statusFinanceiro=EnumsFinanceiros.StatusFinanceiroPorto.AGUARDANDO_OP;
     @Column(name="origem_importacao") private String origemImportacao="PORTO";
     @Column(name="data_importacao") private OffsetDateTime dataImportacao=OffsetDateTime.now();
