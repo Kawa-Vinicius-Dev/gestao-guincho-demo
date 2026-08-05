@@ -42,7 +42,7 @@ class PortoCalendarioApiIntegrationTest {
         String token=login();
         String criada=mvc.perform(post("/api/porto/calendario").header("Authorization","Bearer "+token)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"dataPagamento\":\"2027-01-15\",\"descricao\":\"Ciclo sintético\",\"ativo\":true}"))
+                .content("{\"dataPagamento\":\"2027-01-15\",\"competenciaInicio\":\"2026-12-01\",\"competenciaFim\":\"2026-12-15\",\"descricao\":\"Ciclo sintético\",\"ativo\":true}"))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.ativo").value(true))
             .andReturn().getResponse().getContentAsString();
@@ -50,7 +50,7 @@ class PortoCalendarioApiIntegrationTest {
 
         mvc.perform(put("/api/porto/calendario/{id}",id).header("Authorization","Bearer "+token)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"dataPagamento\":\"2027-01-16\",\"descricao\":\"Ciclo revisado\",\"ativo\":true}"))
+                .content("{\"dataPagamento\":\"2027-01-16\",\"competenciaInicio\":\"2026-12-01\",\"competenciaFim\":\"2026-12-15\",\"descricao\":\"Ciclo revisado\",\"ativo\":true}"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.dataPagamento").value("2027-01-16"))
             .andExpect(jsonPath("$.descricao").value("Ciclo revisado"));

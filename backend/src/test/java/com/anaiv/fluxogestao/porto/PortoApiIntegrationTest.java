@@ -222,9 +222,8 @@ class PortoApiIntegrationTest {
             .isEqualTo("DEVOLVIDO_FINALIZADO");
         assertThat(jdbc.queryForObject("select count(*) from despesas",Integer.class)).isEqualTo(despesasAntes);
 
-        mvc.perform(patch("/api/porto/ordens-pagamento/{id}/receber",opId).header("Authorization","Bearer "+token)
-                .contentType(MediaType.APPLICATION_JSON).content("{\"valorRecebido\":1490.00,\"dataRecebimento\":\"2026-08-16\"}"))
-            .andExpect(status().isOk()).andExpect(jsonPath("$.situacao").value("RECEBIDO"));
+        mvc.perform(get("/api/porto/ordens-pagamento/{id}",opId).header("Authorization","Bearer "+token))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.ordemPagamento.situacao").value("RECEBIDO"));
     }
 
     private long previa(String token,String nome,String csv) throws Exception {

@@ -19,7 +19,8 @@ test('envia CSV, exige OP para relatório de OS e confirma a prévia', async () 
     })),
     http.post('/api/porto/importacoes/12/confirmar', async ({ request }) => {
       ordemSelecionada = Number((await request.json() as { ordemPagamentoId: number }).ordemPagamentoId)
-      return HttpResponse.json({ importacaoId: 12, tipo: 'OS_VINCULADAS', importados: 1, ignorados: 0 })
+      return HttpResponse.json({ importacaoId: 12, tipo: 'OS_VINCULADAS', importados: 1, ignorados: 0, novos: 1, atualizados: 0,
+        receitasCriadas: 1, receitasAtualizadas: 0, valorTotalRecebido: 700, quinzena: '01/07/2026 a 15/07/2026', dataPagamento: '2026-08-14', erros: [] })
     }),
   )
   const user=userEvent.setup()
@@ -32,6 +33,10 @@ test('envia CSV, exige OP para relatório de OS e confirma a prévia', async () 
   await user.selectOptions(screen.getByLabelText(/ordem de pagamento/i),'9')
   await user.click(screen.getByRole('button',{name:/confirmar importação/i}))
   expect(await screen.findByText(/1 registro importado/i)).toBeInTheDocument()
+  expect(screen.getByText(/1 receita criada/i)).toBeInTheDocument()
+  expect(screen.getByText(/R\$\s*700,00 recebidos/i)).toBeInTheDocument()
+  expect(screen.getByText(/01\/07\/2026 a 15\/07\/2026/i)).toBeInTheDocument()
+  expect(screen.getByText(/14\/08\/2026/i)).toBeInTheDocument()
   expect(ordemSelecionada).toBe(9)
 })
 

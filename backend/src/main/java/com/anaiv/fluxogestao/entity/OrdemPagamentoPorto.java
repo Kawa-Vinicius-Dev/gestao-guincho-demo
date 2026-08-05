@@ -33,6 +33,10 @@ public class OrdemPagamentoPorto {
         if(dataRecebimento!=null) throw new IllegalArgumentException("O recebimento desta OP já foi confirmado.");
         valorRecebido=valor; dataRecebimento=data;situacaoFinanceira=EnumsFinanceiros.SituacaoFinanceiraOpPorto.RECEBIDO; atualizadoEm=OffsetDateTime.now();
     }
+    public void sincronizarRecebimento(BigDecimal valor,LocalDate data,CalendarioPagamentoPorto calendario){
+        valorRecebido=valor;dataRecebimento=data;situacaoFinanceira=EnumsFinanceiros.SituacaoFinanceiraOpPorto.RECEBIDO;
+        calendarioPagamento=calendario;dataPagamentoProgramada=data;atualizadoEm=OffsetDateTime.now();
+    }
     public void atualizarManual(BigDecimal valor,LocalDate prevista,String statusPorto,EnumsFinanceiros.SituacaoFinanceiraOpPorto situacao,String observacao,CalendarioPagamentoPorto calendario){
         if(valor!=null)valorTotal=valor;if(prevista!=null)dataPagamentoProgramada=prevista;this.statusPorto=limpar(statusPorto);situacaoFinanceira=situacao;this.observacao=limpar(observacao);calendarioPagamento=calendario;atualizadoEm=OffsetDateTime.now();
     }
@@ -42,4 +46,5 @@ public class OrdemPagamentoPorto {
     public BigDecimal getValorRecebido(){return valorRecebido;} public LocalDate getDataRecebimento(){return dataRecebimento;}
     public String getStatusPorto(){return statusPorto;} public EnumsFinanceiros.SituacaoFinanceiraOpPorto getSituacaoFinanceira(){return situacaoFinanceira;}
     public String getObservacao(){return observacao;} public CalendarioPagamentoPorto getCalendarioPagamento(){return calendarioPagamento;}
+    public Importacao getImportacao(){return importacao;}
 }

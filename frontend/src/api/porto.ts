@@ -19,8 +19,9 @@ export function criarPendenciaPorto(dados:Record<string,unknown>){return api<Pen
 export function resolverPendenciaPorto(id:number){return api<PendenciaPorto>(`/api/porto/pendencias/${id}/resolver`,{method:'PATCH'})}
 export const obterDashboardPorto=(params?:URLSearchParams)=>api<DashboardPorto>(`/api/porto/dashboard${consulta(params)}`)
 export const listarCalendarioPorto=()=>api<CalendarioPorto[]>('/api/porto/calendario')
-export const criarDataCalendarioPorto=(dados:{dataPagamento:string;descricao:string;ativo:boolean})=>api<CalendarioPorto>('/api/porto/calendario',{method:'POST',body:JSON.stringify(dados)})
-export const atualizarDataCalendarioPorto=(id:number,dados:{dataPagamento:string;descricao:string;ativo:boolean})=>api<CalendarioPorto>(`/api/porto/calendario/${id}`,{method:'PUT',body:JSON.stringify(dados)})
+type DadosCalendarioPorto={dataPagamento:string;competenciaInicio:string;competenciaFim:string;descricao:string;ativo:boolean}
+export const criarDataCalendarioPorto=(dados:DadosCalendarioPorto)=>api<CalendarioPorto>('/api/porto/calendario',{method:'POST',body:JSON.stringify(dados)})
+export const atualizarDataCalendarioPorto=(id:number,dados:DadosCalendarioPorto)=>api<CalendarioPorto>(`/api/porto/calendario/${id}`,{method:'PUT',body:JSON.stringify(dados)})
 export const desativarDataCalendarioPorto=(id:number)=>api<CalendarioPorto>(`/api/porto/calendario/${id}/desativar`,{method:'PATCH'})
 export const detalharOrdemPagamentoPorto=(id:number)=>api<DetalheOpPorto>(`/api/porto/ordens-pagamento/${id}`)
 export const justificarOrdemPagamentoPorto=(id:number,motivo:string,observacao:string)=>api<JustificativaPorto>(`/api/porto/ordens-pagamento/${id}/justificativas`,{method:'POST',body:JSON.stringify({motivo,observacao})})

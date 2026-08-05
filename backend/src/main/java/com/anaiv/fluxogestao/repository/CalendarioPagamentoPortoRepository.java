@@ -8,6 +8,8 @@ import java.util.Optional;
 
 public interface CalendarioPagamentoPortoRepository extends JpaRepository<CalendarioPagamentoPorto,Long> {
     Optional<CalendarioPagamentoPorto> findByDataPagamento(LocalDate dataPagamento);
+    Optional<CalendarioPagamentoPorto> findFirstByAtivoTrueAndCompetenciaInicioLessThanEqualAndCompetenciaFimGreaterThanEqualOrderByDataPagamento(LocalDate inicio,LocalDate fim);
+    Optional<CalendarioPagamentoPorto> findByCompetenciaInicioAndCompetenciaFim(LocalDate inicio,LocalDate fim);
     Optional<CalendarioPagamentoPorto> findFirstByAtivoTrueAndDataPagamentoAfterOrderByDataPagamento(LocalDate dataPagamento);
     List<CalendarioPagamentoPorto> findByAtivoTrueAndDataPagamentoAfterAndDataPagamentoLessThanEqualOrderByDataPagamento(LocalDate inicio,LocalDate fim);
     List<CalendarioPagamentoPorto> findAllByOrderByDataPagamento();

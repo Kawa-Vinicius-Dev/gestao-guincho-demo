@@ -19,7 +19,8 @@ public final class PortoDtos {
     public record ConteudoImportacaoRequest(@NotBlank String conteudo) {}
     public record ConfirmarImportacaoRequest(Long ordemPagamentoId,Boolean confirmarDivergencias,
         MotivoJustificativaPorto motivoDivergencia,String justificativaDivergencia) {}
-    public record ConfirmacaoResponse(Long importacaoId,TipoRelatorioPorto tipo,int importados,int ignorados,int novos,int atualizados) {}
+    public record ConfirmacaoResponse(Long importacaoId,TipoRelatorioPorto tipo,int importados,int ignorados,int novos,int atualizados,
+        int receitasCriadas,int receitasAtualizadas,BigDecimal valorTotalRecebido,String quinzena,LocalDate dataPagamento,List<String> erros) {}
     public record OrdemPagamentoResponse(Long id,String numero,BigDecimal valorTotal,String nomeCodigo,
         LocalDate dataPagamentoProgramada,BigDecimal valorRecebido,LocalDate dataRecebimento,String situacao,
         int quantidadeOrdensServico,BigDecimal valorOrdensServico,BigDecimal divergencia,StatusConciliacaoPorto statusConciliacao,
@@ -28,8 +29,9 @@ public final class PortoDtos {
         @NotNull @DecimalMin("0.00") BigDecimal valorInformado,@NotBlank String statusPorto,
         @NotNull SituacaoFinanceiraOpPorto situacaoFinanceira,@NotNull Boolean pagamentoConfirmado,
         LocalDate dataRecebimento,@Size(max=1000) String observacao) {}
-    public record CalendarioRequest(@NotNull LocalDate dataPagamento,@NotBlank String descricao,boolean ativo) {}
-    public record CalendarioResponse(Long id,LocalDate dataPagamento,String descricao,boolean ativo,
+    public record CalendarioRequest(@NotNull LocalDate dataPagamento,@NotNull LocalDate competenciaInicio,
+        @NotNull LocalDate competenciaFim,@NotBlank String descricao,boolean ativo) {}
+    public record CalendarioResponse(Long id,LocalDate dataPagamento,LocalDate competenciaInicio,LocalDate competenciaFim,String descricao,boolean ativo,
         OffsetDateTime criadoEm,OffsetDateTime atualizadoEm) {}
     public record PortoFiltros(LocalDate dataInicio,LocalDate dataFim,String numero,String situacaoPagamento,
         StatusConciliacaoPorto statusConciliacao,Boolean recebida,Boolean vencida,Boolean comComposicao,Boolean comDivergencia) {}

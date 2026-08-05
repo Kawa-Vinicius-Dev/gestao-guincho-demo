@@ -48,10 +48,13 @@ public class PortoService {
         return conflito?AcaoLinhaPorto.DIVERGENCIA:AcaoLinhaPorto.ATUALIZAR;}).orElse(AcaoLinhaPorto.IMPORTAR);}
     public void importarOp(LinhaPorto l,Importacao i){String numero=l.texto("numero_op");OrdemPagamentoPorto op=ops.findByNumero(numero).orElseGet(()->new OrdemPagamentoPorto(numero,i));
         op.atualizar(l.decimal("valor_total"),l.texto("nome_codigo"),l.data("data_pagamento"),i);ops.save(op);}
-    public void importarOs(LinhaPorto l,OrdemPagamentoPorto op,Importacao i){String numero=l.texto("numero_os");OrdemServicoPorto os=oss.findByNumero(numero).orElseGet(()->new OrdemServicoPorto(numero,i));
+    public OrdemServicoPorto importarOs(LinhaPorto l,OrdemPagamentoPorto op,Importacao i){String numero=l.texto("numero_os");OrdemServicoPorto os=oss.findByNumero(numero).orElseGet(()->new OrdemServicoPorto(numero,i));
         os.atualizar(op,l.decimal("valor_total"),l.texto("especialidade"),l.texto("sigla_viatura"),l.texto("socorrista"),l.texto("qra"),
             l.data("data_atendimento"),l.decimal("valor_km_excedente"),l.decimal("km_morto_estimado"),i);
-        int ciclos=calendarioService.ciclosUltrapassados(os.getDataPrevistaOriginal(),op.getDataPagamentoProgramada());os.processarEmOp(op,ciclos);oss.save(os);}
+        int ciclos=calendarioService.ciclosUltrapassados(os.getDataPrevistaOriginal(),op.getDataPagamentoProgramada());os.processarEmOp(op,ciclos);return oss.save(os);}
+    public OrdemServicoPorto obterOs(String numero){return oss.findByNumero(numero).orElseThrow(()->new RecursoNaoEncontradoException("Ordem de serviço não encontrada."));}
+    public List<OrdemServicoPorto> ossDaImportacao(Importacao importacao){return oss.findByImportacao(importacao);}
+    public List<OrdemServicoPorto> ossDaOp(OrdemPagamentoPorto op){return oss.findByOrdemPagamento(op);}
     public void importarOsGeral(LinhaPorto l,Importacao i){String numero=l.texto("numero_os");OrdemServicoPorto os=oss.findByNumero(numero).orElseGet(()->new OrdemServicoPorto(numero,i));
         os.atualizar(null,l.decimal("valor_total"),l.texto("especialidade"),l.texto("sigla_viatura"),l.texto("socorrista"),l.texto("qra"),
             l.data("data_atendimento"),l.decimal("valor_km_excedente"),l.decimal("km_morto_estimado"),i);oss.save(os);}
@@ -114,7 +117,7 @@ public class PortoService {
     @Transactional public void registrarHistoricoImportacao(OrdemPagamentoPorto op,UsuarioPrincipal principal,int importados,int atualizados){historicos.save(new HistoricoPorto(op,null,usuario(principal),"COMPOSICAO_IMPORTADA","Composição confirmada: "+importados+" registro(s), "+atualizados+" atualizado(s)."));}
     private OrdemPagamentoResponse op(OrdemPagamentoPorto x){List<OrdemServicoPorto> vinculadas=oss.findByOrdemPagamento(x);BigDecimal soma=vinculadas.stream().map(OrdemServicoPorto::getValorTotal).filter(Objects::nonNull).reduce(BigDecimal.ZERO,BigDecimal::add);BigDecimal diferenca=x.getValorTotal().subtract(soma);
         EnumsFinanceiros.StatusConciliacaoPorto status=vinculadas.isEmpty()?EnumsFinanceiros.StatusConciliacaoPorto.SEM_COMPOSICAO:diferenca.abs().compareTo(new BigDecimal("0.01"))<=0?EnumsFinanceiros.StatusConciliacaoPorto.CONCILIADA:diferenca.signum()>0?EnumsFinanceiros.StatusConciliacaoPorto.VALOR_ABAIXO:EnumsFinanceiros.StatusConciliacaoPorto.VALOR_ACIMA;
-        if(x.getValorRecebido()!=null&&x.getValorRecebido().compareTo(x.getValorTotal())!=0)status=EnumsFinanceiros.StatusConciliacaoPorto.RECEBIDA_COM_DIVERGENCIA;
+        if(x.getValorRecebido()!=null&&x.getValorRecebido().subtract(x.getValorTotal()).abs().compareTo(new BigDecimal("0.01"))>0)status=EnumsFinanceiros.StatusConciliacaoPorto.RECEBIDA_COM_DIVERGENCIA;
         return new OrdemPagamentoResponse(x.getId(),x.getNumero(),x.getValorTotal(),x.getNomeCodigo(),x.getDataPagamentoProgramada(),x.getValorRecebido(),x.getDataRecebimento(),x.getSituacaoFinanceira().name(),vinculadas.size(),soma,diferenca,status,x.getStatusPorto(),x.getObservacao());}
     private OrdemServicoResponse os(OrdemServicoPorto x){OrdemPagamentoPorto op=x.getOrdemPagamento();return new OrdemServicoResponse(x.getId(),op==null?null:op.getId(),op==null?null:op.getNumero(),x.getNumero(),x.getValorTotal(),x.getEspecialidade(),x.getSiglaViatura(),x.getSocorrista(),x.getQra(),x.getDataAtendimento(),x.getValorKmExcedente(),x.getKmMortoEstimado(),x.getStatusOperacional(),x.getStatusFinanceiro(),x.getDataDevolucao(),x.getDataFinalizacaoDevolucao(),x.getPrestador(),x.getSeguradora(),x.getCliente(),x.getPlaca(),x.getDataHoraAtendimento(),x.getDataPrevistaOriginal(),x.getDataEfetivaPagamento(),x.getCiclosAtraso());}
     private boolean filtrar(OrdemPagamentoResponse x,PortoFiltros f){LocalDate hoje=LocalDate.now();boolean vencida=x.dataRecebimento()==null&&x.dataPagamentoProgramada()!=null&&x.dataPagamentoProgramada().isBefore(hoje);

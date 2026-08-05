@@ -28,6 +28,7 @@ public class DashboardService {
         var receitas=financeiro.receitasEntidades().stream()
             .filter(r->entre(r.getDataRecebimento()!=null?r.getDataRecebimento():r.getDataCompetencia(),inicio,fim))
             .filter(r->veiculoId==null||(r.getVeiculo()!=null&&r.getVeiculo().getId().equals(veiculoId)))
+            .filter(r->motoristaId==null||(r.getMotorista()!=null&&r.getMotorista().getId().equals(motoristaId)))
             .filter(r->categoriaId==null||(r.getCategoria()!=null&&r.getCategoria().getId().equals(categoriaId)))
             .filter(r->contratanteId==null||(r.getContratante()!=null&&r.getContratante().getId().equals(contratanteId)))
             .filter(r->status==null||r.getStatus().name().equals(status)).toList();

@@ -38,11 +38,6 @@ class PortoResumoApiIntegrationTest {
         importarOs(token,"os-metrica-b.csv","OS-MET-B",200,ids.get("OP-MET-B"));
         importarOs(token,"os-metrica-c.csv","OS-MET-C",250,ids.get("OP-MET-C"));
         importarOs(token,"os-metrica-d.csv","OS-MET-D",450,ids.get("OP-MET-D"));
-        mvc.perform(patch("/api/porto/ordens-pagamento/{id}/receber",ids.get("OP-MET-B"))
-                .header("Authorization","Bearer "+token).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"valorRecebido\":200.00,\"dataRecebimento\":\"2026-08-01\"}"))
-            .andExpect(status().isOk());
-
         mvc.perform(get("/api/porto/dashboard").param("numero","OP-MET-").header("Authorization","Bearer "+token))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.quantidadeTotalOps").value(4))
@@ -51,16 +46,16 @@ class PortoResumoApiIntegrationTest {
             .andExpect(jsonPath("$.valorSemComposicao").value(100.0))
             .andExpect(jsonPath("$.quantidadeConciliadas").value(1))
             .andExpect(jsonPath("$.valorConciliadas").value(200.0))
-            .andExpect(jsonPath("$.quantidadeValorAbaixo").value(1))
-            .andExpect(jsonPath("$.diferencaTotalAbaixo").value(50.0))
-            .andExpect(jsonPath("$.quantidadeValorAcima").value(1))
-            .andExpect(jsonPath("$.diferencaTotalAcima").value(50.0))
+            .andExpect(jsonPath("$.quantidadeValorAbaixo").value(0))
+            .andExpect(jsonPath("$.diferencaTotalAbaixo").value(0.0))
+            .andExpect(jsonPath("$.quantidadeValorAcima").value(0))
+            .andExpect(jsonPath("$.diferencaTotalAcima").value(0.0))
             .andExpect(jsonPath("$.quantidadeComDivergencia").value(2))
             .andExpect(jsonPath("$.valorTotalDivergencias").value(100.0))
-            .andExpect(jsonPath("$.quantidadeRecebidas").value(1))
-            .andExpect(jsonPath("$.valorRecebido").value(200.0))
-            .andExpect(jsonPath("$.quantidadeVencidasNaoRecebidas").value(1))
-            .andExpect(jsonPath("$.valorVencidoNaoRecebido").value(300.0))
+            .andExpect(jsonPath("$.quantidadeRecebidas").value(3))
+            .andExpect(jsonPath("$.valorRecebido").value(900.0))
+            .andExpect(jsonPath("$.quantidadeVencidasNaoRecebidas").value(0))
+            .andExpect(jsonPath("$.valorVencidoNaoRecebido").value(0.0))
             .andExpect(jsonPath("$.valorMedioPorOp").value(250.0))
             .andExpect(jsonPath("$.quantidadeOrdensServico").value(3));
 
@@ -99,7 +94,7 @@ class PortoResumoApiIntegrationTest {
         mvc.perform(get("/api/porto/ordens-pagamento/{id}",opId).header("Authorization","Bearer "+token))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.ordemPagamento.numero").value("OP-DET-001"))
-            .andExpect(jsonPath("$.ordemPagamento.statusConciliacao").value("VALOR_ABAIXO"))
+            .andExpect(jsonPath("$.ordemPagamento.statusConciliacao").value("RECEBIDA_COM_DIVERGENCIA"))
             .andExpect(jsonPath("$.ordensServico",org.hamcrest.Matchers.hasSize(1)))
             .andExpect(jsonPath("$.justificativas",org.hamcrest.Matchers.hasSize(1)))
             .andExpect(jsonPath("$.justificativas[0].observacao").value("Registro sintético para teste"));
@@ -159,11 +154,8 @@ class PortoResumoApiIntegrationTest {
         long opId=idsDasOpsPorPrefixo(token,"OP-TOL-").get("OP-TOL-001");importarOs(token,"os-tolerancia.csv","OS-TOL-001",99.99,opId);
         mvc.perform(get("/api/porto/ordens-pagamento").param("numero","OP-TOL-001").header("Authorization","Bearer "+token))
             .andExpect(status().isOk()).andExpect(jsonPath("$[0].statusConciliacao").value("CONCILIADA"));
-        mvc.perform(patch("/api/porto/ordens-pagamento/{id}/receber",opId).header("Authorization","Bearer "+token)
-                .contentType(MediaType.APPLICATION_JSON).content("{\"valorRecebido\":90.00,\"dataRecebimento\":\"2026-08-01\"}"))
-            .andExpect(status().isOk()).andExpect(jsonPath("$.statusConciliacao").value("RECEBIDA_COM_DIVERGENCIA"));
         mvc.perform(get("/api/porto/ordens-pagamento/resumo").param("numero","OP-TOL-001").header("Authorization","Bearer "+token))
-            .andExpect(status().isOk()).andExpect(jsonPath("$.quantidadeComDivergencia").value(1)).andExpect(jsonPath("$.valorTotalDivergencias").value(10.0));
+            .andExpect(status().isOk()).andExpect(jsonPath("$.quantidadeComDivergencia").value(0)).andExpect(jsonPath("$.valorTotalDivergencias").value(0.0));
     }
 
     private void importarOs(String token,String arquivo,String numero,double valor,long opId) throws Exception {

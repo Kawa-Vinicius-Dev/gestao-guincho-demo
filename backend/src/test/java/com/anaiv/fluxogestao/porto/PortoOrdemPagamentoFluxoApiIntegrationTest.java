@@ -76,7 +76,7 @@ class PortoOrdemPagamentoFluxoApiIntegrationTest {
 
         mvc.perform(get("/api/porto/ordens-pagamento/{id}",op).header("Authorization","Bearer "+token))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.ordemPagamento.situacao").value("A_CONFIRMAR"))
+            .andExpect(jsonPath("$.ordemPagamento.situacao").value("RECEBIDO"))
             .andExpect(jsonPath("$.justificativas[0].motivo").value("DESCONTO"))
             .andExpect(jsonPath("$.justificativas[0].valorDiferenca").value(50.0))
             .andExpect(jsonPath("$.justificativas[0].usuario").value("Administrador"))

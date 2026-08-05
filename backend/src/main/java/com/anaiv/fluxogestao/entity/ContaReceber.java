@@ -23,6 +23,9 @@ public class ContaReceber {
     private String observacoes;
     @Enumerated(EnumType.STRING) private OrigemLancamento origem;
     @ManyToOne @JoinColumn(name = "importacao_id") private Importacao importacao;
+    @OneToOne @JoinColumn(name = "ordem_servico_porto_id") private OrdemServicoPorto ordemServicoPorto;
+    @ManyToOne @JoinColumn(name = "ordem_pagamento_porto_id") private OrdemPagamentoPorto ordemPagamentoPorto;
+    @ManyToOne @JoinColumn(name = "motorista_id") private Motorista motorista;
     @Column(name = "criado_em") private OffsetDateTime criadoEm = OffsetDateTime.now();
 
     protected ContaReceber() {}
@@ -34,6 +37,16 @@ public class ContaReceber {
         this.veiculo = veiculo; this.observacoes = observacoes; this.origem = origem; this.importacao = importacao;
     }
     public void receber(BigDecimal valor, LocalDate data) { valorRecebido = valor; dataRecebimento = data; status = StatusContaReceber.RECEBIDO; }
+    public void sincronizarPorto(Contratante contratante,String protocolo,String descricao,BigDecimal valor,
+        LocalDate competencia,LocalDate pagamento,Veiculo veiculo,Motorista motorista,Importacao importacao,
+        OrdemServicoPorto os,OrdemPagamentoPorto op) {
+        this.contratante=contratante;if(preenchido(protocolo))this.protocolo=protocolo;this.descricao=descricao;
+        this.valorPrevisto=valor;this.dataCompetencia=competencia;this.vencimento=pagamento;
+        if(veiculo!=null)this.veiculo=veiculo;if(motorista!=null)this.motorista=motorista;
+        this.origem=OrigemLancamento.IMPORTADA;this.importacao=importacao;this.ordemServicoPorto=os;this.ordemPagamentoPorto=op;
+        receber(valor,pagamento);
+    }
+    private boolean preenchido(String valor){return valor!=null&&!valor.isBlank();}
     public void atualizarAtraso(LocalDate hoje) { if (status == StatusContaReceber.PENDENTE && vencimento.isBefore(hoje)) status = StatusContaReceber.ATRASADO; }
     public void cancelar() { status = StatusContaReceber.CANCELADO; }
     public Long getId() { return id; }
@@ -50,5 +63,8 @@ public class ContaReceber {
     public String getObservacoes() { return observacoes; }
     public OrigemLancamento getOrigem() { return origem; }
     public Importacao getImportacao() { return importacao; }
+    public OrdemServicoPorto getOrdemServicoPorto(){return ordemServicoPorto;}
+    public OrdemPagamentoPorto getOrdemPagamentoPorto(){return ordemPagamentoPorto;}
+    public Motorista getMotorista(){return motorista;}
     public BigDecimal diferenca() { return valorRecebido == null ? null : valorRecebido.subtract(valorPrevisto); }
 }

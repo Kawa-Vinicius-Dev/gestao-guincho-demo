@@ -15,7 +15,13 @@ O TXT em blocos reconhece cada serviço pelo número da OS e extrai prestador, d
 
 ## Calendário e ciclos
 
-As datas do calendário são configuráveis. Um serviço aguardando lançamento recebe a primeira data ativa posterior ao atendimento. Quando sua OP usa uma data posterior, o sistema preserva a previsão original, registra a data efetiva e conta os ciclos ultrapassados. Atrasos ficam como `LIBERADO_APOS_ANALISE`.
+As datas do calendário são configuráveis e cada pagamento informa explicitamente a quinzena de competência atendida. Um serviço aguardando lançamento recebe a primeira data ativa posterior ao atendimento. Quando sua OP usa uma data posterior, o sistema preserva a previsão original, registra a data efetiva e conta os ciclos ultrapassados. Atrasos ficam como `LIBERADO_APOS_ANALISE`.
+
+## OP paga e fluxo financeiro
+
+A confirmação de `OS_VINCULADAS` representa uma OP já paga. Antes de gravar, o sistema valida que todas as OS pertencem a uma única quinzena ativa do calendário. Para cada OS, cria ou atualiza uma única conta a receber `RECEBIDO` e uma única receita `RECEBIDA`: a competência é a data do atendimento e o recebimento é a data configurada no calendário. Os vínculos por OS, OP e importação tornam a operação idempotente e impedem uma receita total duplicada por OP.
+
+Importações `SERVICOS_AGUARDANDO_LANCAMENTO` permanecem operacionais e não geram conta, receita ou caixa. Para completar uma composição paga confirmada antes desta regra, um administrador autenticado pode executar `POST /api/porto/importacoes/{id}/reprocessar-financeiro`; a ação aceita somente importações confirmadas de `OS_VINCULADAS` e pode ser repetida com segurança.
 
 ## OP manual e conciliação
 

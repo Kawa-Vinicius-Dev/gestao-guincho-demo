@@ -57,7 +57,8 @@ public class OrdemServicoPorto {
             op.getSituacaoFinanceira()==EnumsFinanceiros.SituacaoFinanceiraOpPorto.A_CONFIRMAR?EnumsFinanceiros.StatusFinanceiroPorto.A_CONFIRMAR:EnumsFinanceiros.StatusFinanceiroPorto.PAGAMENTO_PROGRAMADO;
         if(statusFinanceiro!=EnumsFinanceiros.StatusFinanceiroPorto.A_CONFIRMAR)statusFinanceiroLegado=statusFinanceiro.name();
         atualizadoEm=OffsetDateTime.now();}
-    public void marcarRecebida(){statusFinanceiro=EnumsFinanceiros.StatusFinanceiroPorto.RECEBIDO;statusFinanceiroLegado="RECEBIDO";atualizadoEm=OffsetDateTime.now();}
+    public void marcarRecebida(LocalDate dataPagamento){statusFinanceiro=EnumsFinanceiros.StatusFinanceiroPorto.RECEBIDO;statusFinanceiroLegado="RECEBIDO";dataEfetivaPagamento=dataPagamento;atualizadoEm=OffsetDateTime.now();}
+    public void marcarRecebida(){marcarRecebida(dataEfetivaPagamento);}
     public void marcarPendente(EnumsFinanceiros.StatusFinanceiroPorto financeiro){statusOperacional=EnumsFinanceiros.StatusOperacionalPorto.PENDENTE_PORTO;statusOperacionalLegado="PENDENTE_PORTO";statusFinanceiro=financeiro;statusFinanceiroLegado=financeiro.name();atualizadoEm=OffsetDateTime.now();}
     public void resolverPendencia(){if(statusOperacional==EnumsFinanceiros.StatusOperacionalPorto.PENDENTE_PORTO){statusOperacional=EnumsFinanceiros.StatusOperacionalPorto.NORMAL;statusOperacionalLegado="NORMAL";}
         if(statusFinanceiro==EnumsFinanceiros.StatusFinanceiroPorto.BLOQUEADO_PARA_PAGAMENTO||statusFinanceiro==EnumsFinanceiros.StatusFinanceiroPorto.VALOR_DIVERGENTE)
@@ -78,4 +79,5 @@ public class OrdemServicoPorto {
     public String getPrestador(){return prestador;} public String getSeguradora(){return seguradora;} public String getCliente(){return cliente;} public String getPlaca(){return placa;}
     public OffsetDateTime getDataHoraAtendimento(){return dataHoraAtendimento;} public LocalDate getDataPrevistaOriginal(){return dataPrevistaOriginal;}
     public LocalDate getDataEfetivaPagamento(){return dataEfetivaPagamento;} public int getCiclosAtraso(){return ciclosAtraso;}
+    public Importacao getImportacao(){return importacao;}
 }

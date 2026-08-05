@@ -28,6 +28,7 @@ public class PortoController {
     @PostMapping("/importacoes/{id}/avaliar") public PreviaResponse avaliar(@PathVariable Long id,@RequestBody ConfirmarImportacaoRequest request){return importacoes.avaliar(id,request);}
     @PostMapping("/importacoes/{id}/confirmar") public ConfirmacaoResponse confirmar(@PathVariable Long id,@RequestBody(required=false)ConfirmarImportacaoRequest request,@AuthenticationPrincipal UsuarioPrincipal principal){return importacoes.confirmar(id,request,principal);}
     @PostMapping("/importacoes/{id}/cancelar") public PreviaResponse cancelar(@PathVariable Long id){return importacoes.cancelar(id);}
+    @PostMapping("/importacoes/{id}/reprocessar-financeiro") public ConfirmacaoResponse reprocessarFinanceiro(@PathVariable Long id){return importacoes.reprocessarFinanceiro(id);}
     @GetMapping("/ordens-pagamento") public List<OrdemPagamentoResponse> ops(@ModelAttribute PortoFiltros filtros){return porto.listarOps(filtros);}
     @PostMapping("/ordens-pagamento") @ResponseStatus(HttpStatus.CREATED) public OrdemPagamentoResponse criarOp(@Valid @RequestBody OrdemPagamentoRequest request,@AuthenticationPrincipal UsuarioPrincipal principal){return porto.criarOpManual(request,principal);}
     @PutMapping("/ordens-pagamento/{id}") public OrdemPagamentoResponse atualizarOp(@PathVariable Long id,@Valid @RequestBody OrdemPagamentoRequest request,@AuthenticationPrincipal UsuarioPrincipal principal){return porto.atualizarOpManual(id,request,principal);}
