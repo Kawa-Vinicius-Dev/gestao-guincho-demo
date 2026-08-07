@@ -20,20 +20,24 @@ const detalheAnterior={...detalheAtual,veiculosUtilizados:['VTR-99'],totalServic
 beforeEach(()=>{localStorage.clear();sessionStorage.clear();window.history.replaceState({},'','/equipe')})
 
 function configurarAdmin(){
+  let confirmarConsultaMotoristas!:()=>void
+  const consultaMotoristas=new Promise<void>(resolve=>{confirmarConsultaMotoristas=resolve})
   sessionStorage.setItem(TOKEN_KEY,'token-admin')
   servidor.use(
     http.get('/api/auth/me',()=>HttpResponse.json({id:1,nome:'Administrador',email:'admin@local.test',perfil:'ADMINISTRADOR'})),
-    http.get('/api/motoristas',()=>HttpResponse.json([{id:4,nome:'Ana Motorista',telefone:'(85) 99999-1234',qra:'QRA-ANA',usuarioId:8,ativo:true}])),
+    http.get('/api/motoristas',()=>{confirmarConsultaMotoristas();return HttpResponse.json([{id:4,nome:'Ana Motorista',telefone:'(85) 99999-1234',qra:'QRA-ANA',usuarioId:8,ativo:true}])}),
     http.get('/api/comissoes/periodos',()=>HttpResponse.json(periodos)),
     http.get('/api/equipe/4/detalhes',({request})=>HttpResponse.json(new URL(request.url).searchParams.get('calendarioPagamentoId')==='6'?detalheAnterior:detalheAtual)),
   )
+  return consultaMotoristas
 }
 
 test('administrador abre o funcionário pela Equipe e consulta composição oficial e período anterior',async()=>{
-  configurarAdmin()
+  const consultaMotoristas=configurarAdmin()
   const user=userEvent.setup()
   render(<App/>)
 
+  await consultaMotoristas
   const cartao=(await screen.findByText('Ana Motorista')).closest('article')
   expect(cartao).not.toBeNull()
   await user.click(within(cartao!).getByRole('link',{name:/ver detalhes/i}))
