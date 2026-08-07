@@ -3,7 +3,7 @@ export interface Usuario { id: number; nome: string; email: string; perfil: Perf
 export interface Veiculo { id: number; identificacao: string; placa: string; modelo?: string; custoPorKm: number; ativo: boolean }
 export interface Contratante { id: number; nome: string; documento?: string; ativo: boolean }
 export interface Categoria { id: number; nome: string; tipo: 'RECEITA' | 'DESPESA'; ativo: boolean }
-export interface Motorista { id: number; nome: string; telefone?: string; documento?: string; usuarioId?: number; ativo: boolean }
+export interface Motorista { id: number; nome: string; telefone?: string; documento?: string; qra?:string; usuarioId?: number; ativo: boolean }
 export interface ContaReceber {
   id: number; contratante: Contratante; protocolo?: string; descricao: string; valorPrevisto: number;
   valorRecebido?: number; diferenca?: number; dataCompetencia: string; vencimento: string;
@@ -13,7 +13,7 @@ export interface ContaReceber {
 export interface Receita {
   id:number; descricao:string; valor:number; dataCompetencia:string; dataRecebimento?:string;
   status:'PREVISTA'|'RECEBIDA'|'CANCELADA'; recorrente:boolean; contratante?:string;
-  categoria?:string; veiculo?:string; contaReceberId?:number
+  contratanteId?:number; categoria?:string; categoriaId?:number; veiculo?:string; veiculoId?:number; contaReceberId?:number; observacoes?:string; manual:boolean
 }
 export interface Despesa {
   id:number; descricao:string; categoria:string; valor:number; data:string; vencimento?:string;
@@ -52,8 +52,8 @@ export interface ConfirmacaoPorto { importacaoId:number; tipo:TipoRelatorioPorto
 export type StatusConciliacaoPorto='SEM_COMPOSICAO'|'CONCILIADA'|'VALOR_ABAIXO'|'VALOR_ACIMA'|'RECEBIDA_COM_DIVERGENCIA'
 export type StatusOperacionalPorto='NORMAL'|'AGUARDANDO_LANCAMENTO'|'PROCESSADO'|'LIBERADO_APOS_ANALISE'|'PENDENTE_PORTO'|'DEVOLVIDO_FINALIZADO'
 export type StatusFinanceiroPorto='AGUARDANDO_OP'|'PAGAMENTO_PROGRAMADO'|'A_CONFIRMAR'|'RECEBIDO'|'BLOQUEADO_PARA_PAGAMENTO'|'VALOR_DIVERGENTE'
-export interface OrdemPagamentoPorto { id:number; numero:string; valorTotal:number; nomeCodigo?:string; dataPagamentoProgramada?:string; valorRecebido?:number; dataRecebimento?:string; situacao:'PROGRAMADO'|'A_CONFIRMAR'|'RECEBIDO'; quantidadeOrdensServico:number; valorOrdensServico:number; divergencia:number; statusConciliacao:StatusConciliacaoPorto; statusPorto?:string; observacao?:string }
-export interface OrdemServicoPorto { id:number; ordemPagamentoId?:number; ordemPagamento?:string; numero:string; valorTotal:number; especialidade?:string; viatura?:string; socorrista?:string; qra?:string; dataAtendimento?:string; valorKmExcedente?:number; kmMortoEstimado?:number; statusOperacional:StatusOperacionalPorto; statusFinanceiro:StatusFinanceiroPorto; dataDevolucao?:string; dataFinalizacaoDevolucao?:string; prestador?:string; seguradora?:string; cliente?:string; placa?:string; dataHoraAtendimento?:string; dataPrevistaOriginal?:string; dataEfetivaPagamento?:string; ciclosAtraso:number }
+export interface OrdemPagamentoPorto { id:number; numero:string; valorTotal:number; nomeCodigo?:string; dataPagamentoProgramada?:string; valorRecebido?:number; dataRecebimento?:string; situacao:'PROGRAMADO'|'A_CONFIRMAR'|'RECEBIDO'; quantidadeOrdensServico:number; valorOrdensServico:number; divergencia:number; statusConciliacao:StatusConciliacaoPorto; statusPorto?:string; observacao?:string; calendarioPagamentoId?:number; periodoFinanceiro?:string }
+export interface OrdemServicoPorto { id:number; ordemPagamentoId?:number; ordemPagamento?:string; numero:string; valorTotal:number; especialidade?:string; viatura?:string; socorrista?:string; qra?:string; dataAtendimento?:string; valorKmExcedente?:number; kmMortoEstimado?:number; statusOperacional:StatusOperacionalPorto; statusFinanceiro:StatusFinanceiroPorto; dataDevolucao?:string; dataFinalizacaoDevolucao?:string; prestador?:string; seguradora?:string; cliente?:string; placa?:string; dataHoraAtendimento?:string; dataPrevistaOriginal?:string; dataEfetivaPagamento?:string; ciclosAtraso:number; motoristaId?:number; motorista?:string }
 export interface PendenciaPorto { id?:number; tipo:'RECEBIMENTO_OP'|'SERVICO_DEVOLVIDO'|'SERVICO_PENDENTE'; referenciaId:number; referencia:string; valor:number; data?:string; situacao:string; motivo?:string; observacao?:string; responsavel?:string; prazo?:string; referenciaPorto?:string }
 export interface ResumoOpsPorto { quantidadeTotalOps:number; valorTotalPrevisto:number; quantidadeSemComposicao:number; valorSemComposicao:number; quantidadeConciliadas:number; valorConciliadas:number; quantidadeValorAbaixo:number; diferencaTotalAbaixo:number; quantidadeValorAcima:number; diferencaTotalAcima:number; quantidadeComDivergencia:number; valorTotalDivergencias:number; quantidadePagamentoProgramado:number; valorProgramado:number; quantidadeRecebidas:number; valorRecebido:number; quantidadeAguardandoRecebimento:number; valorAguardandoRecebimento:number; quantidadeVencidasNaoRecebidas:number; valorVencidoNaoRecebido:number; valorMedioPorOp:number; quantidadeOrdensServico:number }
 export interface ResumoGrupoPorto { chave:string; quantidade:number; valor:number }
@@ -62,3 +62,7 @@ export interface JustificativaPorto { id:number; motivo:string; observacao:strin
 export interface HistoricoPorto { id:number; evento:string; descricao:string; usuario?:string; criadoEm:string }
 export interface DetalheOpPorto { ordemPagamento:OrdemPagamentoPorto; ordensServico:OrdemServicoPorto[]; justificativas:JustificativaPorto[]; historico?:HistoricoPorto[] }
 export interface CalendarioPorto { id:number; dataPagamento:string; competenciaInicio:string; competenciaFim:string; descricao:string; ativo:boolean; criadoEm:string; atualizadoEm:string }
+export interface AlimentacaoComissao { id:number; motoristaId:number; data:string; valor:number; situacao:string; aprovada:boolean; observacoes?:string }
+export interface ServicoComissao { id:number; numeroOs:string; especialidade?:string; dataAtendimento:string; numeroOp:string; valorServico:number; comissaoServico:number }
+export interface Comissao { calendarioPagamentoId:number; periodo:string; funcionario:string; motoristaId:number; quantidadeServicosPagos:number; producaoPaga:number; percentualComissao:number; comissaoBruta:number; alimentacaoAprovada:number; alimentacaoPendente:number; liquido:number; aguardandoOp:boolean; servicos:ServicoComissao[]; alimentacoes:AlimentacaoComissao[] }
+export interface ResumoComissao { motoristaId:number; funcionario:string; quantidadeServicosPagos:number; producaoPaga:number; comissaoBruta:number; alimentacaoAprovada:number; liquido:number }

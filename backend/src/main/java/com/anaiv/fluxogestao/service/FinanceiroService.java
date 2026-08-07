@@ -52,6 +52,9 @@ public class FinanceiroService {
         return resposta(receitas.save(receita));
     }
     public List<ReceitaResponse> listarReceitas() { return receitas.findAll().stream().map(this::resposta).toList(); }
+    @Transactional public ReceitaResponse atualizarReceita(Long id,ReceitaRequest r){Receita receita=receita(id);receita.atualizarManual(
+        r.contratanteId()==null?null:cadastros.obterContratante(r.contratanteId()),cadastros.obterCategoria(r.categoriaId()),r.descricao(),r.valor(),r.dataCompetencia(),r.dataRecebimento(),r.status(),r.recorrente(),cadastros.obterVeiculo(r.veiculoId()),r.observacoes());return resposta(receita);}
+    @Transactional public void excluirReceita(Long id){Receita receita=receita(id);if(!receita.isManual())throw new IllegalArgumentException("Receitas originadas da Porto ou de importação não podem ser excluídas manualmente.");receitas.delete(receita);}
     @Transactional public DespesaResponse criarDespesa(DespesaRequest r, UsuarioPrincipal principal) {
         Categoria categoria=cadastros.obterCategoria(r.categoriaId());
         if(categoria.getTipo()!=TipoCategoria.DESPESA) throw new IllegalArgumentException("Selecione uma categoria de despesa.");
@@ -77,14 +80,15 @@ public class FinanceiroService {
     public List<Despesa> despesasEntidades() { return despesas.findAll(); }
     private ContaReceber conta(Long id){return contas.findById(id).orElseThrow(()->new RecursoNaoEncontradoException("Conta a receber não encontrada."));}
     private Despesa despesa(Long id){return despesas.findById(id).orElseThrow(()->new RecursoNaoEncontradoException("Despesa não encontrada."));}
+    private Receita receita(Long id){return receitas.findById(id).orElseThrow(()->new RecursoNaoEncontradoException("Receita não encontrada."));}
     public ContaResponse resposta(ContaReceber c){return new ContaResponse(c.getId(),cadastros.contratante(c.getContratante()),c.getProtocolo(),
         c.getDescricao(),c.getValorPrevisto(),c.getValorRecebido(),c.diferenca(),c.getDataCompetencia(),c.getVencimento(),
         c.getDataRecebimento(),c.getStatus(),c.getVeiculo()==null?null:cadastros.veiculo(c.getVeiculo()),c.getObservacoes(),
         c.getOrigem(),c.getImportacao()==null?null:c.getImportacao().getId());}
     private ReceitaResponse resposta(Receita r){return new ReceitaResponse(r.getId(),r.getDescricao(),r.getValor(),r.getDataCompetencia(),
-        r.getDataRecebimento(),r.getStatus(),r.isRecorrente(),r.getContratante()==null?null:r.getContratante().getNome(),
-        r.getCategoria()==null?null:r.getCategoria().getNome(),r.getVeiculo()==null?null:r.getVeiculo().getIdentificacao(),
-        r.getContaReceber()==null?null:r.getContaReceber().getId());}
+        r.getDataRecebimento(),r.getStatus(),r.isRecorrente(),r.getContratante()==null?null:r.getContratante().getNome(),r.getContratante()==null?null:r.getContratante().getId(),
+        r.getCategoria()==null?null:r.getCategoria().getNome(),r.getCategoria()==null?null:r.getCategoria().getId(),r.getVeiculo()==null?null:r.getVeiculo().getIdentificacao(),r.getVeiculo()==null?null:r.getVeiculo().getId(),
+        r.getContaReceber()==null?null:r.getContaReceber().getId(),r.getObservacoes(),r.isManual());}
     private DespesaResponse resposta(Despesa d){return new DespesaResponse(d.getId(),d.getDescricao(),d.getCategoria().getNome(),d.getValor(),
         d.getData(),d.getVencimento(),d.getDataPagamento(),d.getFormaPagamento(),d.getVeiculo()==null?null:d.getVeiculo().getIdentificacao(),
         d.getMotorista()==null?null:d.getMotorista().getNome(),d.getProtocolo(),d.getComprovante(),d.getObservacoes(),d.getStatus(),

@@ -12,6 +12,8 @@ public class OrdemServicoPorto {
     private String numero; @Column(name="valor_total") private BigDecimal valorTotal=BigDecimal.ZERO;
     private String especialidade; @Column(name="sigla_viatura") private String siglaViatura;
     private String socorrista; private String qra; @Column(name="data_atendimento") private LocalDate dataAtendimento;
+    @ManyToOne @JoinColumn(name="motorista_id") private Motorista motorista;
+    @Column(name="motorista_vinculo_manual") private boolean motoristaVinculoManual;
     private String prestador;private String seguradora;private String cliente;private String placa;
     @Column(name="data_hora_atendimento") private OffsetDateTime dataHoraAtendimento;
     @Column(name="data_prevista_original") private LocalDate dataPrevistaOriginal;
@@ -59,6 +61,9 @@ public class OrdemServicoPorto {
         atualizadoEm=OffsetDateTime.now();}
     public void marcarRecebida(LocalDate dataPagamento){statusFinanceiro=EnumsFinanceiros.StatusFinanceiroPorto.RECEBIDO;statusFinanceiroLegado="RECEBIDO";dataEfetivaPagamento=dataPagamento;atualizadoEm=OffsetDateTime.now();}
     public void marcarRecebida(){marcarRecebida(dataEfetivaPagamento);}
+    public void vincularMotoristaAutomaticamente(Motorista motorista){if(!motoristaVinculoManual){this.motorista=motorista;atualizadoEm=OffsetDateTime.now();}}
+    public void vincularMotoristaManual(Motorista motorista){this.motorista=motorista;this.motoristaVinculoManual=true;atualizadoEm=OffsetDateTime.now();}
+    public void limparVinculoAutomatico(){if(!motoristaVinculoManual){motorista=null;atualizadoEm=OffsetDateTime.now();}}
     public void marcarPendente(EnumsFinanceiros.StatusFinanceiroPorto financeiro){statusOperacional=EnumsFinanceiros.StatusOperacionalPorto.PENDENTE_PORTO;statusOperacionalLegado="PENDENTE_PORTO";statusFinanceiro=financeiro;statusFinanceiroLegado=financeiro.name();atualizadoEm=OffsetDateTime.now();}
     public void resolverPendencia(){if(statusOperacional==EnumsFinanceiros.StatusOperacionalPorto.PENDENTE_PORTO){statusOperacional=EnumsFinanceiros.StatusOperacionalPorto.NORMAL;statusOperacionalLegado="NORMAL";}
         if(statusFinanceiro==EnumsFinanceiros.StatusFinanceiroPorto.BLOQUEADO_PARA_PAGAMENTO||statusFinanceiro==EnumsFinanceiros.StatusFinanceiroPorto.VALOR_DIVERGENTE)
@@ -70,6 +75,8 @@ public class OrdemServicoPorto {
     public String getNumero(){return numero;} public BigDecimal getValorTotal(){return valorTotal;}
     public String getEspecialidade(){return especialidade;} public String getSiglaViatura(){return siglaViatura;}
     public String getSocorrista(){return socorrista;} public String getQra(){return qra;}
+    public Motorista getMotorista(){return motorista;}
+    public boolean isMotoristaVinculoManual(){return motoristaVinculoManual;}
     public LocalDate getDataAtendimento(){return dataAtendimento;} public BigDecimal getValorKmExcedente(){return valorKmExcedente;}
     public BigDecimal getKmMortoEstimado(){return kmMortoEstimado;}
     public EnumsFinanceiros.StatusOperacionalPorto getStatusOperacional(){return statusOperacional;}

@@ -18,13 +18,14 @@ public final class PortoDtos {
         List<LinhaPreviaResponse> linhas,List<String> erros,boolean requerOrdemPagamento,ResumoPreviaResponse resumo) {}
     public record ConteudoImportacaoRequest(@NotBlank String conteudo) {}
     public record ConfirmarImportacaoRequest(Long ordemPagamentoId,Boolean confirmarDivergencias,
+        Long calendarioPagamentoId,
         MotivoJustificativaPorto motivoDivergencia,String justificativaDivergencia) {}
     public record ConfirmacaoResponse(Long importacaoId,TipoRelatorioPorto tipo,int importados,int ignorados,int novos,int atualizados,
         int receitasCriadas,int receitasAtualizadas,BigDecimal valorTotalRecebido,String quinzena,LocalDate dataPagamento,List<String> erros) {}
     public record OrdemPagamentoResponse(Long id,String numero,BigDecimal valorTotal,String nomeCodigo,
         LocalDate dataPagamentoProgramada,BigDecimal valorRecebido,LocalDate dataRecebimento,String situacao,
         int quantidadeOrdensServico,BigDecimal valorOrdensServico,BigDecimal divergencia,StatusConciliacaoPorto statusConciliacao,
-        String statusPorto,String observacao) {}
+        String statusPorto,String observacao,Long calendarioPagamentoId,String periodoFinanceiro) {}
     public record OrdemPagamentoRequest(@NotBlank String numero,@NotNull LocalDate dataPrevista,
         @NotNull @DecimalMin("0.00") BigDecimal valorInformado,@NotBlank String statusPorto,
         @NotNull SituacaoFinanceiraOpPorto situacaoFinanceira,@NotNull Boolean pagamentoConfirmado,
@@ -60,13 +61,14 @@ public final class PortoDtos {
         BigDecimal valorKmExcedente,BigDecimal kmMortoEstimado,StatusOperacionalPorto statusOperacional,
         StatusFinanceiroPorto statusFinanceiro,LocalDate dataDevolucao,LocalDate dataFinalizacaoDevolucao,
         String prestador,String seguradora,String cliente,String placa,OffsetDateTime dataHoraAtendimento,
-        LocalDate dataPrevistaOriginal,LocalDate dataEfetivaPagamento,int ciclosAtraso) {}
+        LocalDate dataPrevistaOriginal,LocalDate dataEfetivaPagamento,int ciclosAtraso,Long motoristaId,String motorista) {}
+    public record AssociarMotoristaRequest(@NotNull Long motoristaId) {}
     public record PendenciaResponse(Long id,String tipo,Long referenciaId,String referencia,BigDecimal valor,LocalDate data,String situacao,
         String motivo,String observacao,String responsavel,LocalDate prazo,String referenciaPorto) {}
     public record PendenciaRequest(@NotBlank String numeroOs,@NotBlank String motivo,@NotNull @DecimalMin("0.00") BigDecimal valor,
         @NotNull LocalDate dataPendencia,@NotBlank @Size(max=1000) String observacao,@NotBlank String responsavel,
         @NotNull StatusFinanceiroPorto statusFinanceiro,LocalDate prazo,String referenciaPorto) {}
-    public record RecebimentoRequest(@NotNull @DecimalMin("0.01") BigDecimal valorRecebido,@NotNull LocalDate dataRecebimento) {}
+    public record RecebimentoRequest(@NotNull @DecimalMin("0.01") BigDecimal valorRecebido,@NotNull LocalDate dataRecebimento,Long calendarioPagamentoId) {}
     public record JustificativaRequest(@NotNull MotivoJustificativaPorto motivo,@NotBlank @Size(max=1000) String observacao) {}
     public record JustificativaResponse(Long id,MotivoJustificativaPorto motivo,String observacao,BigDecimal valorDiferenca,String usuario,OffsetDateTime criadoEm) {}
     public record HistoricoResponse(Long id,String evento,String descricao,String usuario,OffsetDateTime criadoEm) {}

@@ -19,9 +19,13 @@ As datas do calendário são configuráveis e cada pagamento informa explicitame
 
 ## OP paga e fluxo financeiro
 
-A confirmação de `OS_VINCULADAS` representa uma OP já paga. Antes de gravar, o sistema valida que todas as OS pertencem a uma única quinzena ativa do calendário. Para cada OS, cria ou atualiza uma única conta a receber `RECEBIDO` e uma única receita `RECEBIDA`: a competência é a data do atendimento e o recebimento é a data configurada no calendário. Os vínculos por OS, OP e importação tornam a operação idempotente e impedem uma receita total duplicada por OP.
+A confirmação de `OS_VINCULADAS` representa uma OP já paga. O ciclo financeiro vem do calendário associado à OP ou do período selecionado explicitamente pelo administrador; datas de atendimento antigas ou pertencentes a competências distintas não bloqueiam a OP. Para cada OS, cria ou atualiza uma única conta a receber `RECEBIDO` e uma única receita `RECEBIDA`: a competência operacional preserva a data do atendimento e o recebimento usa a data configurada no calendário. Os vínculos por OS, OP e importação tornam a operação idempotente e impedem uma receita total duplicada por OP.
 
-Importações `SERVICOS_AGUARDANDO_LANCAMENTO` permanecem operacionais e não geram conta, receita ou caixa. Para completar uma composição paga confirmada antes desta regra, um administrador autenticado pode executar `POST /api/porto/importacoes/{id}/reprocessar-financeiro`; a ação aceita somente importações confirmadas de `OS_VINCULADAS` e pode ser repetida com segurança.
+Importações `SERVICOS_AGUARDANDO_LANCAMENTO` permanecem operacionais e não geram conta, receita ou caixa. Para completar uma composição paga confirmada antes desta regra, um administrador autenticado pode executar `POST /api/porto/importacoes/{id}/reprocessar-financeiro`; a ação aceita somente importações confirmadas de `OS_VINCULADAS`, aceita o calendário quando a OP histórica ainda não o possui e pode ser repetida com segurança.
+
+## Comissão
+
+Somente OS recebidas dentro de OP recebida geram comissão. O fechamento agrupa todas as OPs do mesmo calendário por motorista, sem mover serviços antigos para a data de atendimento e sem persistir total paralelo. A regra e os endpoints estão detalhados em [comissoes-funcionarios.md](comissoes-funcionarios.md).
 
 ## OP manual e conciliação
 

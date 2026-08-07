@@ -64,14 +64,14 @@ class PortoFluxoFinanceiroApiIntegrationTest {
     }
 
     @Test
-    void bloqueiaPeriodoSemCalendarioAntesDeQualquerPersistencia() throws Exception {
+    void exigePeriodoFinanceiroExplicitoAntesDeQualquerPersistencia() throws Exception {
         String token=login();long op=criarOp(token,"OP-FIN-SEM-CAL",300,"2027-01-30");
         long previa=previaComposicao(token,op,"sem-calendario.txt",linha("OS-FIN-VALIDA",100,"10/11/2026")+linha("OS-FIN-SEM-CAL",200,"20/12/2026"));
 
         mvc.perform(post("/api/porto/importacoes/{id}/confirmar",previa).header("Authorization","Bearer "+token)
                 .contentType(MediaType.APPLICATION_JSON).content("{\"ordemPagamentoId\":"+op+"}"))
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.detalhe").value(containsString("16/12/2026 a 31/12/2026")));
+            .andExpect(jsonPath("$.detalhe").value(containsString("Selecione o período financeiro")));
 
         assertThat(jdbc.queryForObject("select count(*) from ordens_servico_porto where numero in ('OS-FIN-VALIDA','OS-FIN-SEM-CAL')",Integer.class)).isZero();
         assertThat(jdbc.queryForObject("select count(*) from contas_receber where ordem_pagamento_porto_id=?",Integer.class,op)).isZero();

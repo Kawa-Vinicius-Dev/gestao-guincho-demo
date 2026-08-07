@@ -20,8 +20,10 @@ test('administrador começa com a base vazia e cria o primeiro lançamento', asy
   await user.click(screen.getByRole('button', { name: /entrar no sistema/i }))
 
   expect(await screen.findByRole('heading', { name: /visão financeira/i })).toBeInTheDocument()
-  const fluxo = screen.getByRole('region', { name: /fluxo do resultado operacional/i })
-  expect(within(fluxo).getAllByText('R$ 0,00')).toHaveLength(3)
+  const fluxo = await screen.findByRole('region', { name: /fluxo do resultado operacional/i })
+  expect(within(fluxo).getByText('R$ 780,00')).toBeInTheDocument()
+  expect(within(fluxo).getByText('R$ 200,00')).toBeInTheDocument()
+  expect(within(fluxo).getByText('R$ 580,00')).toBeInTheDocument()
 
   await user.click(screen.getByRole('link', { name: /^entradas e saídas$/i }))
   expect(await screen.findByRole('heading', { name: /^entradas e saídas$/i })).toBeInTheDocument()
@@ -37,7 +39,7 @@ test('administrador começa com a base vazia e cria o primeiro lançamento', asy
 
   await user.click(screen.getByRole('link', { name: /visão geral/i }))
   expect(await screen.findByRole('heading', { name: /visão financeira/i })).toBeInTheDocument()
-  expect(screen.getByText('Serviço particular de teste')).toBeInTheDocument()
+  expect(await screen.findByRole('region', { name: /fluxo do resultado operacional/i })).toBeInTheDocument()
 })
 
 test('funcionário vê apenas os lançamentos operacionais permitidos', async () => {

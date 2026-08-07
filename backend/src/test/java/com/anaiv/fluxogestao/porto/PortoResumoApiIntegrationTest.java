@@ -163,7 +163,7 @@ class PortoResumoApiIntegrationTest {
             Número da Ordem de Serviço,Valor Total,Especialidade,Sigla da Viatura,Socorrista,QRA,Data de atendimento
             %s,%.2f,REMOÇÃO,,,,2026-07-30
             """.formatted(numero,valor));
-        confirmar(token,id,"{\"ordemPagamentoId\":"+opId+"}");
+        confirmar(token,id,"{\"ordemPagamentoId\":"+opId+",\"calendarioPagamentoId\":"+calendarioDaOp(token,opId)+"}");
     }
 
     private Map<String,Long> idsDasOps(String token) throws Exception {
@@ -189,6 +189,15 @@ class PortoResumoApiIntegrationTest {
     private void confirmar(String token,long id,String corpo) throws Exception {
         mvc.perform(post("/api/porto/importacoes/{id}/confirmar",id).header("Authorization","Bearer "+token)
                 .contentType(MediaType.APPLICATION_JSON).content(corpo)).andExpect(status().isOk());
+    }
+    private long calendarioDaOp(String token,long opId)throws Exception{
+        String op=mvc.perform(get("/api/porto/ordens-pagamento/{id}",opId).header("Authorization","Bearer "+token)).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        String pagamento=JsonPath.read(op,"$.ordemPagamento.dataPagamentoProgramada");
+        String lista=mvc.perform(get("/api/porto/calendario").header("Authorization","Bearer "+token)).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        List<Map<String,Object>> existentes=JsonPath.read(lista,"$[?(@.dataPagamento == '"+pagamento+"')]");if(!existentes.isEmpty())return ((Number)existentes.getFirst().get("id")).longValue();
+        java.time.LocalDate data=java.time.LocalDate.parse(pagamento),inicio=data.withDayOfMonth(1),fim=data.withDayOfMonth(data.lengthOfMonth());
+        String criado=mvc.perform(post("/api/porto/calendario").header("Authorization","Bearer "+token).contentType(MediaType.APPLICATION_JSON).content("{\"dataPagamento\":\""+pagamento+"\",\"competenciaInicio\":\""+inicio+"\",\"competenciaFim\":\""+fim+"\",\"descricao\":\"Período sintético \" ,\"ativo\":true}")).andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        return ((Number)JsonPath.read(criado,"$.id")).longValue();
     }
 
     private String login() throws Exception {

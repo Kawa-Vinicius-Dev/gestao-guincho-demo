@@ -15,8 +15,8 @@ public final class CadastroDtos {
     public record ContratanteResponse(Long id, String nome, String documento, boolean ativo) {}
     public record CategoriaRequest(@NotBlank String nome, @NotNull TipoCategoria tipo) {}
     public record CategoriaResponse(Long id, String nome, TipoCategoria tipo, boolean ativo) {}
-    public record MotoristaRequest(@NotBlank String nome, String telefone, String documento, Long usuarioId) {}
-    public record MotoristaResponse(Long id, String nome, String telefone, String documento, Long usuarioId, boolean ativo) {}
+    public record MotoristaRequest(@NotBlank String nome, String telefone, String documento, String qra, Long usuarioId) {}
+    public record MotoristaResponse(Long id, String nome, String telefone, String documento, String qra, Long usuarioId, boolean ativo) {}
     public record UsuarioRequest(@NotBlank String nome, @Email @NotBlank String email, @NotBlank @Size(min=8) String senha, @NotNull PerfilUsuario perfil) {
         public UsuarioRequest { email = Usuario.normalizarEmail(email); }
     }

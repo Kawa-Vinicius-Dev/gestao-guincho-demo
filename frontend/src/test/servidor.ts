@@ -40,6 +40,7 @@ export const servidor = setupServer(
     quantidadePagamentoProgramado:0,valorProgramado:0,quantidadeRecebidas:0,valorRecebido:0,quantidadeAguardandoRecebimento:0,valorAguardandoRecebimento:0,
     quantidadeVencidasNaoRecebidas:0,valorVencidoNaoRecebido:0,valorMedioPorOp:0,quantidadeOrdensServico:0,
   })),
+  http.get('/api/porto/calendario',()=>HttpResponse.json([{id:1,dataPagamento:'2026-08-14',competenciaInicio:'2026-07-01',competenciaFim:'2026-07-15',descricao:'1ª quinzena',ativo:true}])),
   http.post('/api/contas-receber', async ({ request }) => {
     const body = await request.json() as Record<string, unknown>
     const nova = { id: 2, contratante: { id: 1, nome: 'Porto Seguro', ativo: true }, status: 'PENDENTE',

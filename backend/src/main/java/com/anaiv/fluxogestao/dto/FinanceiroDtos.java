@@ -22,8 +22,8 @@ public final class FinanceiroDtos {
         @NotNull @DecimalMin("0.01") BigDecimal valor, @NotNull LocalDate dataCompetencia,
         LocalDate dataRecebimento, @NotNull StatusReceita status, boolean recorrente, Long veiculoId, String observacoes) {}
     public record ReceitaResponse(Long id, String descricao, BigDecimal valor, LocalDate dataCompetencia,
-        LocalDate dataRecebimento, StatusReceita status, boolean recorrente, String contratante,
-        String categoria, String veiculo, Long contaReceberId) {}
+        LocalDate dataRecebimento, StatusReceita status, boolean recorrente, String contratante,Long contratanteId,
+        String categoria,Long categoriaId,String veiculo,Long veiculoId,Long contaReceberId,String observacoes,boolean manual) {}
 
     public record DespesaRequest(@NotBlank String descricao, @NotNull Long categoriaId,
         @NotNull @DecimalMin("0.01") BigDecimal valor, @NotNull LocalDate data, LocalDate vencimento,

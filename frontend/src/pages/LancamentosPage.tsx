@@ -1,5 +1,5 @@
 import { useMemo, useState, type FormEvent } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link,useSearchParams } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import { useDemo } from '../demo/DemoContext'
 import type { ClasseCusto, TipoLancamento } from '../demo/modelosDemo'
@@ -72,7 +72,7 @@ export default function LancamentosPage({ filtroInicial = '' }: { filtroInicial?
     <header className="page-heading"><div><span className="eyebrow">{tipoFixo === 'RECEITA' ? 'Entradas' : tipoFixo === 'DESPESA' ? 'Saídas' : 'Financeiro operacional'}</span>
       <h1>{tipoFixo === 'RECEITA' ? 'Receitas' : tipoFixo === 'DESPESA' ? 'Despesas' : 'Entradas e saídas'}</h1>
       <p>{funcionario ? 'Registre despesas e custos do veículo; o administrador fará a conferência.' : 'Cadastre uma vez, vincule à operação e acompanhe o efeito em todo o sistema.'}</p></div>
-      <div className="heading-total-with-action"><span><small>Saldo filtrado</small><strong className={total >= 0 ? 'positive' : 'negative'}>{moeda(total)}</strong></span>
+      <div className="heading-total-with-action"><span><small>Saldo filtrado</small><strong className={total >= 0 ? 'positive' : 'negative'}>{moeda(total)}</strong></span>{!funcionario&&tipoFixo!=='DESPESA'?<Link className="button button-ghost" to="/receitas">Gerenciar receitas reais</Link>:null}
         <button className="button button-primary" onClick={() => setModal(true)}>+ {tipoFixo === 'DESPESA' ? 'Registrar despesa' : tipoFixo === 'RECEITA' ? 'Nova receita' : 'Nova entrada ou saída'}</button></div>
     </header>
     {mensagem ? <div className="success-notice">{mensagem}</div> : null}

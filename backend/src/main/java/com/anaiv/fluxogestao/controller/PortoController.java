@@ -28,7 +28,7 @@ public class PortoController {
     @PostMapping("/importacoes/{id}/avaliar") public PreviaResponse avaliar(@PathVariable Long id,@RequestBody ConfirmarImportacaoRequest request){return importacoes.avaliar(id,request);}
     @PostMapping("/importacoes/{id}/confirmar") public ConfirmacaoResponse confirmar(@PathVariable Long id,@RequestBody(required=false)ConfirmarImportacaoRequest request,@AuthenticationPrincipal UsuarioPrincipal principal){return importacoes.confirmar(id,request,principal);}
     @PostMapping("/importacoes/{id}/cancelar") public PreviaResponse cancelar(@PathVariable Long id){return importacoes.cancelar(id);}
-    @PostMapping("/importacoes/{id}/reprocessar-financeiro") public ConfirmacaoResponse reprocessarFinanceiro(@PathVariable Long id){return importacoes.reprocessarFinanceiro(id);}
+    @PostMapping("/importacoes/{id}/reprocessar-financeiro") public ConfirmacaoResponse reprocessarFinanceiro(@PathVariable Long id,@RequestBody(required=false) ConfirmarImportacaoRequest request){return importacoes.reprocessarFinanceiro(id,request==null?null:request.calendarioPagamentoId());}
     @GetMapping("/ordens-pagamento") public List<OrdemPagamentoResponse> ops(@ModelAttribute PortoFiltros filtros){return porto.listarOps(filtros);}
     @PostMapping("/ordens-pagamento") @ResponseStatus(HttpStatus.CREATED) public OrdemPagamentoResponse criarOp(@Valid @RequestBody OrdemPagamentoRequest request,@AuthenticationPrincipal UsuarioPrincipal principal){return porto.criarOpManual(request,principal);}
     @PutMapping("/ordens-pagamento/{id}") public OrdemPagamentoResponse atualizarOp(@PathVariable Long id,@Valid @RequestBody OrdemPagamentoRequest request,@AuthenticationPrincipal UsuarioPrincipal principal){return porto.atualizarOpManual(id,request,principal);}
@@ -38,6 +38,7 @@ public class PortoController {
     @PostMapping("/ordens-pagamento/{id}/justificativas") @ResponseStatus(HttpStatus.CREATED)
     public JustificativaResponse justificar(@PathVariable Long id,@Valid @RequestBody JustificativaRequest request,@AuthenticationPrincipal UsuarioPrincipal principal){return porto.justificar(id,request,principal);}
     @GetMapping("/ordens-servico") public List<OrdemServicoResponse> oss(@ModelAttribute PortoOsFiltros filtros){return porto.listarOss(filtros);}
+    @PatchMapping("/ordens-servico/{id}/motorista") public OrdemServicoResponse associarMotorista(@PathVariable Long id,@Valid @RequestBody AssociarMotoristaRequest request){return porto.associarMotorista(id,request);}
     @GetMapping("/pendencias") public List<PendenciaResponse> pendencias(){return porto.listarPendencias();}
     @PostMapping("/pendencias") @ResponseStatus(HttpStatus.CREATED) public PendenciaResponse criarPendencia(@Valid @RequestBody PendenciaRequest request){return porto.criarPendencia(request);}
     @PatchMapping("/pendencias/{id}/resolver") public PendenciaResponse resolverPendencia(@PathVariable Long id){return porto.resolverPendencia(id);}

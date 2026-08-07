@@ -10,7 +10,7 @@ import { servidor } from '../test/servidor'
 test('confirma recebimento manual de OP programada', async()=>{
   let recebida=false
   servidor.use(
-    http.get('/api/porto/ordens-pagamento',()=>HttpResponse.json([{id:1,numero:'OP-100',valorTotal:1500,dataPagamentoProgramada:'2026-08-15',situacao:recebida?'RECEBIDO':'PROGRAMADO',...(recebida&&{valorRecebido:1490,dataRecebimento:'2026-08-16'})}])),
+    http.get('/api/porto/ordens-pagamento',()=>HttpResponse.json([{id:1,numero:'OP-100',valorTotal:1500,dataPagamentoProgramada:'2026-08-15',calendarioPagamentoId:1,situacao:recebida?'RECEBIDO':'PROGRAMADO',...(recebida&&{valorRecebido:1490,dataRecebimento:'2026-08-16'})}])),
     http.patch('/api/porto/ordens-pagamento/1/receber',()=>{recebida=true;return HttpResponse.json({id:1,numero:'OP-100',valorTotal:1500,valorRecebido:1490,dataRecebimento:'2026-08-16',situacao:'RECEBIDO'})}),
   )
   const user=userEvent.setup();render(<PortoOrdensPagamentoPage/>)

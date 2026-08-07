@@ -39,9 +39,11 @@ As responsabilidades são separadas em `controller`, `service`, `repository`, `d
 
 O domínio financeiro usa os nomes em português para refletir o vocabulário de negócio: `ContaReceber`, `Receita`, `Despesa`, `Veiculo`, `Motorista`, `Contratante` e `Quilometragem`.
 
+O módulo de comissões não mantém um agregado próprio: `ComissaoService` deriva o resultado de `OrdemPagamentoPorto` recebida, `OrdemServicoPorto` vinculada ao `Motorista` e alimentações aprovadas. O período financeiro é uma relação da OP com `CalendarioPagamentoPorto`, enquanto a data da OS continua sendo o eixo operacional.
+
 ## Frontend
 
-As páginas representam os módulos que aparecem no menu. Componentes transversais e autenticação ficam fora das páginas para evitar duplicação. A API é concentrada em `src/api/http.ts`, mantendo o contrato HTTP em um ponto conhecido.
+As páginas representam os módulos que aparecem no menu. Componentes transversais e autenticação ficam fora das páginas para evitar duplicação. A API é concentrada em `src/api/http.ts`, mantendo o contrato HTTP em um ponto conhecido. As telas `/minha-comissao` e `/comissoes` compartilham os contratos de `src/api/comissoes.ts`; indicadores financeiros da Visão Geral e da DRE vêm de `/api/dashboard`.
 
 ## Dados e ambientes
 

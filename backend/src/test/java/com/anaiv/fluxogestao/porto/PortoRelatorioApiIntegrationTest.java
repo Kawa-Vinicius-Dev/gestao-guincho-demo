@@ -83,11 +83,12 @@ class PortoRelatorioApiIntegrationTest {
             OP-EXP-001;300,00;Sintético: Exportação;31/12/2099
             """),"{}");
         long opId=idOp(token,"OP-EXP-001");
+        long calendario=criarCalendario(token,"2099-12-31","2099-12-01","2099-12-31");
         confirmar(token,previa(token,"os-exportacao.csv","""
             Número da Ordem de Serviço,Valor Total,Especialidade,Sigla da Viatura,Socorrista,QRA,Data de atendimento
             OS-EXP-001,100.00,=2+2,,SOCORRISTA TESTE,QRA-TESTE-001,2026-08-01
             OS-EXP-002,200.00,PANE,VTR-TESTE,SOCORRISTA TESTE,QRA-TESTE-002,2026-08-01
-            """),"{\"ordemPagamentoId\":"+opId+"}");
+            """),"{\"ordemPagamentoId\":"+opId+",\"calendarioPagamentoId\":"+calendario+"}");
         return token;
     }
 
@@ -98,5 +99,6 @@ class PortoRelatorioApiIntegrationTest {
     }
     private long previa(String token,String nome,String csv) throws Exception {MockMultipartFile arquivo=new MockMultipartFile("arquivo",nome,"text/csv",csv.getBytes(StandardCharsets.UTF_8));String corpo=mvc.perform(multipart("/api/porto/importacoes/previa").file(arquivo).header("Authorization","Bearer "+token)).andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();return ((Number)JsonPath.read(corpo,"$.id")).longValue();}
     private void confirmar(String token,long id,String corpo)throws Exception{mvc.perform(post("/api/porto/importacoes/{id}/confirmar",id).header("Authorization","Bearer "+token).contentType(MediaType.APPLICATION_JSON).content(corpo)).andExpect(status().isOk());}
+    private long criarCalendario(String token,String pagamento,String inicio,String fim)throws Exception{String lista=mvc.perform(get("/api/porto/calendario").header("Authorization","Bearer "+token)).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();List<Map<String,Object>> existentes=JsonPath.read(lista,"$[?(@.dataPagamento == '"+pagamento+"')]");if(!existentes.isEmpty())return ((Number)existentes.getFirst().get("id")).longValue();String corpo=mvc.perform(post("/api/porto/calendario").header("Authorization","Bearer "+token).contentType(MediaType.APPLICATION_JSON).content("{\"dataPagamento\":\""+pagamento+"\",\"competenciaInicio\":\""+inicio+"\",\"competenciaFim\":\""+fim+"\",\"descricao\":\"Período sintético de relatório\",\"ativo\":true}")).andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();return ((Number)JsonPath.read(corpo,"$.id")).longValue();}
     private String login()throws Exception{String corpo=mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content("{\"email\":\"admin@fluxogestao.local\",\"senha\":\"Admin@123\"}")).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();return JsonPath.read(corpo,"$.token");}
 }

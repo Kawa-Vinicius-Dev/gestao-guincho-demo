@@ -185,7 +185,7 @@ class PortoApiIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON).content("{}"))
             .andExpect(status().isBadRequest()).andExpect(jsonPath("$.detalhe").value(org.hamcrest.Matchers.containsString("OP")));
         mvc.perform(post("/api/porto/importacoes/{id}/confirmar",previaOs).header("Authorization","Bearer "+token)
-                .contentType(MediaType.APPLICATION_JSON).content("{\"ordemPagamentoId\":"+opId+"}"))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"ordemPagamentoId\":"+opId+",\"calendarioPagamentoId\":"+calendarioId("2026-08-14")+"}"))
             .andExpect(status().isOk()).andExpect(jsonPath("$.importados").value(2));
 
         long repetida=previa(token,"os-repetida.csv","""
@@ -255,4 +255,5 @@ class PortoApiIntegrationTest {
             .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
         return JsonPath.read(json,"$.token");
     }
+    private long calendarioId(String data){return jdbc.queryForObject("select id from calendario_pagamentos_porto where data_pagamento=?",Long.class,java.sql.Date.valueOf(data));}
 }

@@ -19,6 +19,9 @@ const Escala=lazy(()=>import('./pages/EscalaPage'))
 const Metas=lazy(()=>import('./pages/MetasPage'))
 const Integracoes=lazy(()=>import('./pages/IntegracoesPage'))
 const Relatorios=lazy(()=>import('./pages/RelatoriosPage'))
+const Receitas=lazy(()=>import('./pages/ReceitasPage'))
+const MinhaComissao=lazy(()=>import('./pages/MinhaComissaoPage'))
+const Comissoes=lazy(()=>import('./pages/ComissoesPage'))
 const PortoImportacoes=lazy(()=>import('./pages/PortoImportacoesPage'))
 const PortoDashboard=lazy(()=>import('./pages/PortoDashboardPage'))
 const PortoOps=lazy(()=>import('./pages/PortoOrdensPagamentoPage'))
@@ -34,12 +37,13 @@ export default function App(){
     <Route element={<RotaProtegida/>}><Route element={<Layout/>}>
       <Route path="/despesas" element={<Lancamentos filtroInicial="DESPESA"/>}/>
       <Route path="/quilometragem" element={<Quilometragem/>}/>
+      <Route path="/minha-comissao" element={<MinhaComissao/>}/>
       <Route element={<RotaAdministrador/>}>
         <Route index element={<Dashboard/>}/>
         <Route path="/lancamentos" element={<Lancamentos/>}/>
         <Route path="/importacoes" element={<Importacoes/>}/>
         <Route path="/contas-receber" element={<Contas/>}/>
-        <Route path="/receitas" element={<Lancamentos filtroInicial="RECEITA"/>}/>
+        <Route path="/receitas" element={<Receitas/>}/>
         <Route path="/fluxo-caixa" element={<Lancamentos/>}/>
         <Route path="/dre" element={<Dre/>}/>
         <Route path="/veiculos" element={<Frotas/>}/>
@@ -48,6 +52,7 @@ export default function App(){
         <Route path="/escala" element={<Escala/>}/>
         <Route path="/metas" element={<Metas/>}/>
         <Route path="/relatorios" element={<Relatorios/>}/>
+        <Route path="/comissoes" element={<Comissoes/>}/>
         <Route path="/integracoes" element={<Integracoes/>}/>
         <Route path="/porto/importacoes" element={<PortoImportacoes/>}/>
         <Route path="/porto/dashboard" element={<PortoDashboard/>}/>

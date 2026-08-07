@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import static com.anaiv.fluxogestao.entity.EnumsFinanceiros.StatusDespesa;
+import static com.anaiv.fluxogestao.entity.EnumsFinanceiros.NaturezaDespesa;
 
 @Entity
 @Table(name = "despesas")
@@ -23,6 +24,7 @@ public class Despesa {
     private String comprovante;
     private String observacoes;
     @Enumerated(EnumType.STRING) private StatusDespesa status;
+    @Enumerated(EnumType.STRING) private NaturezaDespesa natureza=NaturezaDespesa.GERAL;
     private boolean aprovada;
     @ManyToOne(optional = false) @JoinColumn(name = "criado_por_id") private Usuario criadoPor;
     @ManyToOne @JoinColumn(name = "aprovado_por_id") private Usuario aprovadoPor;
@@ -38,6 +40,7 @@ public class Despesa {
         this.observacoes = observacoes; this.status = status; this.criadoPor = criadoPor;
     }
     public void aprovar(Usuario usuario) { this.aprovada = true; this.aprovadoPor = usuario; }
+    public void marcarComoAlimentacao(){this.natureza=NaturezaDespesa.ALIMENTACAO_FUNCIONARIO;}
     public void rejeitar(Usuario usuario) { this.aprovada = false; this.aprovadoPor = usuario; this.status = StatusDespesa.REJEITADO; }
     public void atualizarAtraso(LocalDate hoje) { if (status == StatusDespesa.PENDENTE && vencimento != null && vencimento.isBefore(hoje)) status = StatusDespesa.ATRASADO; }
     public Long getId() { return id; }
@@ -56,4 +59,5 @@ public class Despesa {
     public StatusDespesa getStatus() { return status; }
     public boolean isAprovada() { return aprovada; }
     public Usuario getCriadoPor() { return criadoPor; }
+    public NaturezaDespesa getNatureza(){return natureza;}
 }

@@ -28,6 +28,8 @@ public class FinanceiroController {
     @GetMapping("/receitas") @PreAuthorize("hasRole('ADMINISTRADOR')") public List<ReceitaResponse> receitas(){return financeiro.listarReceitas();}
     @PostMapping("/receitas") @ResponseStatus(HttpStatus.CREATED) @PreAuthorize("hasRole('ADMINISTRADOR')")
     public ReceitaResponse receita(@Valid @RequestBody ReceitaRequest r){return financeiro.criarReceita(r);}
+    @PutMapping("/receitas/{id}") @PreAuthorize("hasRole('ADMINISTRADOR')") public ReceitaResponse atualizarReceita(@PathVariable Long id,@Valid @RequestBody ReceitaRequest r){return financeiro.atualizarReceita(id,r);}
+    @DeleteMapping("/receitas/{id}") @ResponseStatus(HttpStatus.NO_CONTENT) @PreAuthorize("hasRole('ADMINISTRADOR')") public void excluirReceita(@PathVariable Long id){financeiro.excluirReceita(id);}
     @GetMapping("/despesas") @PreAuthorize("hasRole('ADMINISTRADOR')") public List<DespesaResponse> despesas(){return financeiro.listarDespesas();}
     @PostMapping("/despesas") @ResponseStatus(HttpStatus.CREATED)
     public DespesaResponse despesa(@Valid @RequestBody DespesaRequest r,@AuthenticationPrincipal UsuarioPrincipal p){return financeiro.criarDespesa(r,p);}

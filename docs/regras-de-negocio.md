@@ -28,7 +28,16 @@ Estas regras orientam a primeira implementação e podem ser refinadas após val
 - Campo vazio nunca apaga um valor existente e conflitos exigem confirmação explícita.
 - Um serviço aguardando lançamento recebe a próxima data ativa do calendário Porto.
 - Processar uma OP programa o pagamento, mas não confirma entrada no banco.
-- Somente a confirmação manual de recebimento muda a situação para `RECEBIDO`.
+- Uma previsão ou OP programada não entra no caixa. A confirmação de uma composição `OS_VINCULADAS` já paga ou a confirmação bancária explícita muda a situação para `RECEBIDO`.
 - Serviço devolvido é finalizado sem criar despesa ou pendência aberta automaticamente.
 - Km excedente é receita; km morto estimado não cria despesa automática.
 - Faturamento produzido, valor programado e valor recebido são linhas financeiras distintas.
+
+## Comissões e alimentação
+
+- Comissão bruta é 20% da soma das OS recebidas do motorista em OPs recebidas do mesmo período financeiro Porto.
+- O período da comissão vem do calendário da OP, não da data de atendimento da OS.
+- QRA único identifica o motorista; nome normalizado único é apenas fallback. Ambiguidade exige associação administrativa.
+- Alimentação é registrada pelo próprio usuário vinculado ao motorista. Somente valores aprovados reduzem o fechamento e o líquido pode ficar negativo.
+- Reimportar ou reprocessar uma OP não duplica serviço, receita nem comissão.
+- Receita manual pode ser editada ou excluída por administrador após confirmação; receita Porto/importada permanece imutável pela tela financeira.

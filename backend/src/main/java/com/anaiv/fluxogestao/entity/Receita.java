@@ -34,6 +34,13 @@ public class Receita {
         this.status = status; this.recorrente = recorrente; this.veiculo = veiculo; this.observacoes = observacoes;
     }
     public Long getId() { return id; }
+    public void atualizarManual(Contratante contratante,Categoria categoria,String descricao,BigDecimal valor,LocalDate competencia,
+        LocalDate recebimento,StatusReceita status,boolean recorrente,Veiculo veiculo,String observacoes){
+        if(!isManual())throw new IllegalArgumentException("Receitas originadas da Porto ou de importação não podem ser alteradas manualmente.");
+        this.contratante=contratante;this.categoria=categoria;this.descricao=descricao;this.valor=valor;this.dataCompetencia=competencia;
+        this.dataRecebimento=recebimento;this.status=status;this.recorrente=recorrente;this.veiculo=veiculo;this.observacoes=observacoes;
+    }
+    public boolean isManual(){return contaReceber==null&&ordemServicoPorto==null&&ordemPagamentoPorto==null&&importacao==null;}
     public void sincronizarPorto(ContaReceber conta,Contratante contratante,Categoria categoria,String descricao,
         BigDecimal valor,LocalDate competencia,LocalDate recebimento,Veiculo veiculo,Motorista motorista,
         Importacao importacao,OrdemServicoPorto os,OrdemPagamentoPorto op) {

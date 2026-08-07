@@ -40,21 +40,22 @@ class PortoOrdemPagamentoManualApiIntegrationTest {
     }
 
     @Test
-    void pagamentoConfirmadoExigeDataEOpPermaneceUnica() throws Exception {
+    void pagamentoConfirmadoSemComposicaoEhRejeitadoEOpPermaneceUnica() throws Exception {
         String token=login();
         String corpo="""
             {"numero":"OP-MANUAL-UNICA","dataPrevista":"2026-09-16","valorInformado":500.00,
-             "statusPorto":"PROCESSADO","situacaoFinanceira":"RECEBIDO","pagamentoConfirmado":true}
+             "statusPorto":"PROCESSADO","situacaoFinanceira":"RECEBIDO","pagamentoConfirmado":true,
+             "dataRecebimento":"2026-09-16"}
             """;
         mvc.perform(post("/api/porto/ordens-pagamento").header("Authorization","Bearer "+token)
                 .contentType(MediaType.APPLICATION_JSON).content(corpo))
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.detalhe").value(org.hamcrest.Matchers.containsString("data")));
+            .andExpect(jsonPath("$.detalhe").value(org.hamcrest.Matchers.containsString("composição")));
 
-        String valido=corpo.replace("}",",\"dataRecebimento\":\"2026-09-16\"}");
+        String valido=corpo.replace("\"RECEBIDO\",\"pagamentoConfirmado\":true", "\"PROGRAMADO\",\"pagamentoConfirmado\":false");
         mvc.perform(post("/api/porto/ordens-pagamento").header("Authorization","Bearer "+token)
                 .contentType(MediaType.APPLICATION_JSON).content(valido))
-            .andExpect(status().isCreated()).andExpect(jsonPath("$.situacao").value("RECEBIDO"));
+            .andExpect(status().isCreated()).andExpect(jsonPath("$.situacao").value("PROGRAMADO"));
         mvc.perform(post("/api/porto/ordens-pagamento").header("Authorization","Bearer "+token)
                 .contentType(MediaType.APPLICATION_JSON).content(valido))
             .andExpect(status().isBadRequest());
