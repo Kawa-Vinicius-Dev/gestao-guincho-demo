@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.util.*;
 
 import static com.anaiv.fluxogestao.entity.EnumsFinanceiros.*;
@@ -32,6 +33,25 @@ public class ComissaoService {
 
     @Transactional(readOnly=true) public ComissaoResponse minha(Long calendarioPagamentoId,UsuarioPrincipal principal){return calcular(calendarioPagamentoId,motoristaDoUsuario(principal));}
     @Transactional(readOnly=true) public ComissaoResponse detalhe(Long calendarioPagamentoId,Long motoristaId){return calcular(calendarioPagamentoId,obterMotorista(motoristaId));}
+    @Transactional(readOnly=true) public DetalheFuncionarioResponse detalheFuncionario(Long calendarioPagamentoId,Long motoristaId){
+        Motorista motorista=obterMotorista(motoristaId);
+        CalendarioPagamentoPorto periodo=calendarios.obterPeriodo(calendarioPagamentoId);
+        ComissaoResponse comissao=calcular(calendarioPagamentoId,motorista);
+        Map<Long,ServicoComissaoResponse> pagos=new LinkedHashMap<>();
+        comissao.servicos().forEach(servico->pagos.put(servico.id(),servico));
+        Map<Long,OrdemServicoPorto> selecionados=new LinkedHashMap<>();
+        List<OrdemServicoPorto> todos=oss.findByMotorista(motorista);
+        todos.stream().filter(os->pagos.containsKey(os.getId())).forEach(os->selecionados.put(os.getId(),os));
+        todos.stream().filter(os->estaNoPeriodo(os.getDataAtendimento(),periodo)).forEach(os->selecionados.putIfAbsent(os.getId(),os));
+        List<ServicoFuncionarioResponse> servicos=selecionados.values().stream()
+            .sorted(Comparator.comparing(OrdemServicoPorto::getDataAtendimento,Comparator.nullsLast(Comparator.reverseOrder())))
+            .map(os->servicoFuncionario(os,pagos.get(os.getId()))).toList();
+        List<String> veiculos=servicos.stream().map(ServicoFuncionarioResponse::viatura).filter(Objects::nonNull)
+            .filter(viatura->!viatura.isBlank()).distinct().toList();
+        Usuario usuario=motorista.getUsuario();
+        return new DetalheFuncionarioResponse(motorista.getId(),motorista.getNome(),motorista.isAtivo(),motorista.getTelefone(),
+            usuario==null?null:usuario.getEmail(),motorista.getQra(),veiculos,servicos.size(),comissao,servicos);
+    }
     @Transactional(readOnly=true) public List<ResumoComissaoResponse> resumo(Long calendarioPagamentoId,Long motoristaId){
         return motoristas.findAll().stream().filter(Motorista::isAtivo).filter(m->motoristaId==null||m.getId().equals(motoristaId))
             .map(m->calcular(calendarioPagamentoId,m)).map(c->new ResumoComissaoResponse(c.motoristaId(),c.funcionario(),c.quantidadeServicosPagos(),c.producaoPaga(),c.comissaoBruta(),c.alimentacaoAprovada(),c.liquido())).toList();
@@ -57,6 +77,14 @@ public class ComissaoService {
     }
     private Motorista motoristaDoUsuario(UsuarioPrincipal principal){if(principal==null)throw new IllegalArgumentException("Usuário autenticado não identificado.");Usuario usuario=usuarios.findById(principal.id()).orElseThrow(()->new RecursoNaoEncontradoException("Usuário autenticado não encontrado."));return motoristas.findByUsuario(usuario).orElseThrow(()->new IllegalArgumentException("Seu usuário ainda não está vinculado a um motorista."));}
     private Motorista obterMotorista(Long id){return motoristas.findById(id).orElseThrow(()->new RecursoNaoEncontradoException("Motorista não encontrado."));}
+    private boolean estaNoPeriodo(LocalDate data,CalendarioPagamentoPorto periodo){return data!=null&&!data.isBefore(periodo.getCompetenciaInicio())&&!data.isAfter(periodo.getCompetenciaFim());}
+    private ServicoFuncionarioResponse servicoFuncionario(OrdemServicoPorto os,ServicoComissaoResponse pago){
+        boolean pagoNoPeriodo=pago!=null;
+        String status=pagoNoPeriodo?"PAGO":os.getStatusFinanceiro()==StatusFinanceiroPorto.RECEBIDO?"PAGO_EM_OUTRO_PERIODO":"AGUARDANDO_PAGAMENTO";
+        return new ServicoFuncionarioResponse(os.getId(),os.getNumero(),os.getDataAtendimento(),os.getEspecialidade(),os.getSiglaViatura(),
+            os.getOrdemPagamento()==null?null:os.getOrdemPagamento().getNumero(),os.getValorTotal(),status,pagoNoPeriodo,
+            pagoNoPeriodo?pago.comissaoServico():null);
+    }
     private AlimentacaoResponse alimentacao(Despesa d){return new AlimentacaoResponse(d.getId(),d.getMotorista().getId(),d.getData(),d.getValor(),d.getStatus().name(),d.isAprovada(),d.getObservacoes());}
     private BigDecimal soma(Collection<BigDecimal> valores){return valores.stream().filter(Objects::nonNull).reduce(BigDecimal.ZERO,BigDecimal::add);}
     private String campo(Object valor){return "\""+Objects.toString(valor,"").replace("\"","\"\"")+"\"";}

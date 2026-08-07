@@ -31,7 +31,10 @@ A alimentação é criada como despesa pendente de natureza `ALIMENTACAO_FUNCION
 - `POST /api/minha-comissao/alimentacoes`: alimentação do funcionário autenticado.
 - `GET /api/comissoes/resumo?calendarioPagamentoId=`: resumo administrativo.
 - `GET /api/comissoes/{motoristaId}?calendarioPagamentoId=`: auditoria administrativa.
+- `GET /api/equipe/{motoristaId}/detalhes?calendarioPagamentoId=`: ficha administrativa com cadastro, histórico operacional, viaturas utilizadas e a mesma composição oficial de comissão e alimentação.
 - `GET /api/comissoes/relatorio.csv?calendarioPagamentoId=`: relatório administrativo.
+
+O detalhe administrativo é restrito a `ADMINISTRADOR`. O histórico do período une, sem duplicar, as OS efetivamente pagas no fechamento selecionado às OS identificadas para o funcionário cuja data de atendimento pertence à competência selecionada. Assim, uma OS executada mas ainda sem OP paga aparece com comissão aguardando pagamento; os 20% continuam vindo somente do cálculo oficial das OS pagas. As viaturas exibidas são as registradas nessas OS, e não um vínculo de “veículo atual”.
 
 ## Integração financeira
 

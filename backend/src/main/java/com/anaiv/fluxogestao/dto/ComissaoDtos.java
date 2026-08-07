@@ -13,10 +13,14 @@ public final class ComissaoDtos {
     public record AlimentacaoResponse(Long id,Long motoristaId,LocalDate data,BigDecimal valor,String situacao,boolean aprovada,String observacoes) {}
     public record ServicoComissaoResponse(Long id,String numeroOs,String especialidade,LocalDate dataAtendimento,String numeroOp,
         BigDecimal valorServico,BigDecimal comissaoServico) {}
+    public record ServicoFuncionarioResponse(Long id,String numeroOs,LocalDate dataAtendimento,String especialidade,String viatura,
+        String numeroOp,BigDecimal valorServico,String statusPagamento,boolean pagoNoPeriodo,BigDecimal comissaoGerada) {}
     public record ComissaoResponse(Long calendarioPagamentoId,String periodo,String funcionario,Long motoristaId,
         int quantidadeServicosPagos,BigDecimal producaoPaga,BigDecimal percentualComissao,BigDecimal comissaoBruta,
         BigDecimal alimentacaoAprovada,BigDecimal alimentacaoPendente,BigDecimal liquido,boolean aguardandoOp,
         List<ServicoComissaoResponse> servicos,List<AlimentacaoResponse> alimentacoes) {}
+    public record DetalheFuncionarioResponse(Long id,String nome,boolean ativo,String telefone,String email,String qra,
+        List<String> veiculosUtilizados,int totalServicosPrestados,ComissaoResponse comissao,List<ServicoFuncionarioResponse> servicos) {}
     public record ResumoComissaoResponse(Long motoristaId,String funcionario,int quantidadeServicosPagos,BigDecimal producaoPaga,
         BigDecimal comissaoBruta,BigDecimal alimentacaoAprovada,BigDecimal liquido) {}
 }

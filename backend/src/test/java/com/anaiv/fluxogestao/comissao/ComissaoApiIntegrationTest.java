@@ -14,7 +14,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.nio.charset.StandardCharsets;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -156,7 +156,75 @@ class ComissaoApiIntegrationTest {
             .andExpect(status().isOk()).andExpect(jsonPath("$[0].comissaoBruta").value(60d));
     }
 
+    @Test
+    void detalheAdministrativoReutilizaCalculoOficialEIncluiServicosAindaNaoPagosPorPeriodo() throws Exception {
+        String admin=login("admin@fluxogestao.local","Admin@123");
+        long usuario=criarUsuario(admin,"Detalhe Funcionário","detalhe.funcionario@local.test");
+        long motorista=id(postJson(admin,"/api/motoristas","{\"nome\":\"Detalhe Funcionário\",\"telefone\":\"(85) 99999-1234\",\"qra\":\"QRA-DET\",\"usuarioId\":"+usuario+"}"));
+        long agosto=criarCalendario(admin,"2027-09-05","2027-08-01","2027-08-31","Fechamento agosto detalhes");
+        long julho=criarCalendario(admin,"2027-08-05","2027-07-01","2027-07-31","Fechamento julho detalhes");
+        long op=criarOp(admin,"OP-DET-PAGA",500,"2027-09-05");
+        confirmarComposicao(admin,op,agosto,"detalhe-paga.txt",
+            linhaComViatura("OS-DET-PAGA",500,"GUINCHO","VTR-PAGA","QRA-DET","15/06/2027"));
+
+        jdbc.update("insert into ordens_servico_porto(numero,valor_total,especialidade,sigla_viatura,qra,data_atendimento,motorista_id) values(?,?,?,?,?,?,?)",
+            "OS-DET-PEND",300,"REMOÇÃO","VTR-PENDENTE","QRA-DET","2027-08-20",motorista);
+        jdbc.update("insert into ordens_servico_porto(numero,valor_total,especialidade,sigla_viatura,qra,data_atendimento,motorista_id) values(?,?,?,?,?,?,?)",
+            "OS-DET-JUL",200,"PANE","VTR-ANTIGA","QRA-DET","2027-07-10",motorista);
+
+        String funcionario=login("detalhe.funcionario@local.test","Funcionario@123");
+        String alimentacao=mvc.perform(post("/api/minha-comissao/alimentacoes").header("Authorization","Bearer "+funcionario)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"data\":\"2027-08-21\",\"valor\":30.00}"))
+            .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        long despesa=((Number)JsonPath.read(alimentacao,"$.id")).longValue();
+        mvc.perform(patch("/api/despesas/{id}/aprovar",despesa).header("Authorization","Bearer "+admin))
+            .andExpect(status().isOk());
+
+        mvc.perform(get("/api/equipe/{id}/detalhes",motorista).header("Authorization","Bearer "+admin)
+                .param("calendarioPagamentoId",String.valueOf(agosto)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value(motorista))
+            .andExpect(jsonPath("$.nome").value("Detalhe Funcionário"))
+            .andExpect(jsonPath("$.ativo").value(true))
+            .andExpect(jsonPath("$.telefone").value("(85) 99999-1234"))
+            .andExpect(jsonPath("$.email").value("detalhe.funcionario@local.test"))
+            .andExpect(jsonPath("$.qra").value("QRA-DET"))
+            .andExpect(jsonPath("$.totalServicosPrestados").value(2))
+            .andExpect(jsonPath("$.veiculosUtilizados",containsInAnyOrder("VTR-PAGA","VTR-PENDENTE")))
+            .andExpect(jsonPath("$.comissao.quantidadeServicosPagos").value(1))
+            .andExpect(jsonPath("$.comissao.producaoPaga").value(500d))
+            .andExpect(jsonPath("$.comissao.comissaoBruta").value(100d))
+            .andExpect(jsonPath("$.comissao.alimentacaoAprovada").value(30d))
+            .andExpect(jsonPath("$.comissao.liquido").value(70d))
+            .andExpect(jsonPath("$.servicos[?(@.numeroOs == 'OS-DET-PAGA')].viatura",hasItem("VTR-PAGA")))
+            .andExpect(jsonPath("$.servicos[?(@.numeroOs == 'OS-DET-PAGA')].numeroOp",hasItem("OP-DET-PAGA")))
+            .andExpect(jsonPath("$.servicos[?(@.numeroOs == 'OS-DET-PAGA')].comissaoGerada",hasItem(100d)))
+            .andExpect(jsonPath("$.servicos[?(@.numeroOs == 'OS-DET-PEND')].viatura",hasItem("VTR-PENDENTE")))
+            .andExpect(jsonPath("$.servicos[?(@.numeroOs == 'OS-DET-PEND')].statusPagamento",hasItem("AGUARDANDO_PAGAMENTO")));
+
+        mvc.perform(get("/api/comissoes/{id}",motorista).header("Authorization","Bearer "+admin)
+                .param("calendarioPagamentoId",String.valueOf(agosto)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.comissaoBruta").value(100d))
+            .andExpect(jsonPath("$.alimentacaoAprovada").value(30d))
+            .andExpect(jsonPath("$.liquido").value(70d));
+
+        mvc.perform(get("/api/equipe/{id}/detalhes",motorista).header("Authorization","Bearer "+admin)
+                .param("calendarioPagamentoId",String.valueOf(julho)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.totalServicosPrestados").value(1))
+            .andExpect(jsonPath("$.veiculosUtilizados",contains("VTR-ANTIGA")))
+            .andExpect(jsonPath("$.comissao.quantidadeServicosPagos").value(0))
+            .andExpect(jsonPath("$.comissao.comissaoBruta").value(0d))
+            .andExpect(jsonPath("$.comissao.alimentacaoAprovada").value(0d));
+
+        mvc.perform(get("/api/equipe/{id}/detalhes",motorista).header("Authorization","Bearer "+funcionario)
+                .param("calendarioPagamentoId",String.valueOf(agosto)))
+            .andExpect(status().isForbidden());
+    }
+
     private String linha(String os,int valor,String especialidade,String qra,String data){return linhaComSocorrista(os,valor,especialidade,"",qra,data);}
+    private String linhaComViatura(String os,int valor,String especialidade,String viatura,String qra,String data){return "%s\t%d,00\t%s\t%s\t\t%s\t%s\n".formatted(os,valor,especialidade,viatura,qra,data);}
     private String linhaComSocorrista(String os,int valor,String especialidade,String socorrista,String qra,String data){return "%s\t%d,00\t%s\t\t%s\t%s\t%s\n".formatted(os,valor,especialidade,socorrista,qra,data);}
     private long confirmarComposicao(String token,long op,long calendario,String nome,String linhas) throws Exception {
         String csv="Número da Ordem de Serviço\tValor Total\tEspecialidade\tSigla da Viatura\tSocorrista\tQRA\tData de atendimento\n"+linhas;

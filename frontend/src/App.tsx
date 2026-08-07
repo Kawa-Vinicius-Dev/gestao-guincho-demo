@@ -15,6 +15,7 @@ const Quilometragem=lazy(()=>import('./pages/QuilometragemPage'))
 const Frotas=lazy(()=>import('./pages/FrotasPage'))
 const Dre=lazy(()=>import('./pages/DrePage'))
 const Equipe=lazy(()=>import('./pages/EquipePage'))
+const EquipeDetalhe=lazy(()=>import('./pages/EquipeDetalhePage'))
 const Escala=lazy(()=>import('./pages/EscalaPage'))
 const Metas=lazy(()=>import('./pages/MetasPage'))
 const Integracoes=lazy(()=>import('./pages/IntegracoesPage'))
@@ -49,6 +50,7 @@ export default function App(){
         <Route path="/veiculos" element={<Frotas/>}/>
         <Route path="/motoristas" element={<Equipe/>}/>
         <Route path="/equipe" element={<Equipe/>}/>
+        <Route path="/equipe/:id" element={<EquipeDetalhe/>}/>
         <Route path="/escala" element={<Escala/>}/>
         <Route path="/metas" element={<Metas/>}/>
         <Route path="/relatorios" element={<Relatorios/>}/>
