@@ -26,6 +26,9 @@ public class ComissaoController {
     @GetMapping("/comissoes/periodos") public List<CalendarioResponse> periodos(){return calendarios.listar();}
     @GetMapping("/comissoes/resumo") @PreAuthorize("hasRole('ADMINISTRADOR')") public List<ResumoComissaoResponse> resumo(@RequestParam Long calendarioPagamentoId,@RequestParam(required=false) Long motoristaId){return comissoes.resumo(calendarioPagamentoId,motoristaId);}
     @GetMapping("/comissoes/{motoristaId}") @PreAuthorize("hasRole('ADMINISTRADOR')") public ComissaoResponse detalhe(@PathVariable Long motoristaId,@RequestParam Long calendarioPagamentoId){return comissoes.detalhe(calendarioPagamentoId,motoristaId);}
+    @PostMapping("/comissoes/{motoristaId}/pagamentos") @PreAuthorize("hasRole('ADMINISTRADOR')")
+    public PagamentoComissaoResponse pagar(@PathVariable Long motoristaId,@RequestParam Long calendarioPagamentoId,
+        @Valid @RequestBody PagamentoComissaoRequest request,@AuthenticationPrincipal UsuarioPrincipal principal){return comissoes.pagar(calendarioPagamentoId,motoristaId,request,principal);}
     @GetMapping("/equipe/{motoristaId}/detalhes") @PreAuthorize("hasRole('ADMINISTRADOR')") public DetalheFuncionarioResponse detalheFuncionario(@PathVariable Long motoristaId,@RequestParam Long calendarioPagamentoId){return comissoes.detalheFuncionario(calendarioPagamentoId,motoristaId);}
     @GetMapping("/comissoes/relatorio.csv") @PreAuthorize("hasRole('ADMINISTRADOR')") public ResponseEntity<byte[]> relatorio(@RequestParam Long calendarioPagamentoId){return ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION,"attachment; filename=relatorio-comissoes.csv").contentType(new MediaType("text","csv",StandardCharsets.UTF_8)).body(comissoes.csv(calendarioPagamentoId).getBytes(StandardCharsets.UTF_8));}
 }

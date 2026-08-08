@@ -1,83 +1,34 @@
-import { useMemo, useState, type FormEvent } from 'react'
-import { resultadoPorVeiculo } from '../demo/calculos'
-import { useDemo } from '../demo/DemoContext'
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
+import { api } from '../api/http'
+import { Vazio } from '../components/EstadoPagina'
+import type { Dashboard, LancamentoFinanceiro, Veiculo } from '../types/modelos'
 import { data, moeda, numero } from '../utils/formatadores'
 
-const rotulosStatus = { SAUDAVEL: 'Saudável', MONITORAR: 'Monitorar', ATENCAO_KM: 'Km morto alto', PREJUIZO: 'Prejuízo' }
+const mesAtual=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`}
+const intervalo=(mes:string)=>{const [ano,m]=mes.split('-').map(Number);return {inicio:`${mes}-01`,fim:`${mes}-${String(new Date(ano,m,0).getDate()).padStart(2,'0')}`}}
 
-export default function FrotasPage() {
-  const { state, adicionarVeiculo } = useDemo()
-  const [mes, setMes] = useState('2026-07')
-  const [selecionado, setSelecionado] = useState(1)
-  const [modal, setModal] = useState(false)
-  const resultados = useMemo(() => resultadoPorVeiculo(state, mes), [state, mes])
-  const resultado = resultados.find(item => item.veiculo.id === selecionado) ?? resultados[0]
-  const gastoFrota = resultados.reduce((soma, item) => soma + item.despesas, 0)
-  const historico = state.lancamentos.filter(item => item.veiculoId === resultado?.veiculo.id && item.data.startsWith(mes)).sort((a, b) => b.data.localeCompare(a.data))
-  const consumo = resultado?.litros ? resultado.kmRodado / resultado.litros : 0
+export default function FrotasPage(){
+  const [mes,setMes]=useState(mesAtual),[veiculos,setVeiculos]=useState<Veiculo[]>([]),[financeiro,setFinanceiro]=useState<Dashboard|null>(null)
+  const [lancamentos,setLancamentos]=useState<LancamentoFinanceiro[]>([]),[selecionado,setSelecionado]=useState(0),[modal,setModal]=useState(false),[mensagem,setMensagem]=useState('')
+  const carregar=useCallback(async()=>{const {inicio,fim}=intervalo(mes);try{const [v,d,l]=await Promise.all([api<Veiculo[]>('/api/veiculos'),api<Dashboard>(`/api/dashboard?inicio=${inicio}&fim=${fim}`),api<LancamentoFinanceiro[]>(`/api/lancamentos?inicio=${inicio}&fim=${fim}`)]);setVeiculos(v);setFinanceiro(d);setLancamentos(l);setSelecionado(atual=>v.some(x=>x.id===atual)?atual:(v[0]?.id??0))}catch(e){setMensagem((e as Error).message)}},[mes])
+  useEffect(()=>{void carregar()},[carregar])
+  const veiculo=veiculos.find(v=>v.id===selecionado)
+  const resultado=financeiro?.resultadoPorVeiculo.find(r=>r.veiculoId===selecionado)
+  const receitas=resultado?.receitas??0,despesas=resultado?.despesas??0,lucro=resultado?.resultado??0,margem=receitas?lucro/receitas*100:0
+  const historico=useMemo(()=>lancamentos.filter(l=>l.veiculoId===selecionado),[lancamentos,selecionado])
+  const gastoFrota=financeiro?.resultadoPorVeiculo.reduce((s,r)=>s+r.despesas,0)??0
+  const margens=financeiro?.resultadoPorVeiculo.filter(r=>r.receitas>0).map(r=>r.resultado/r.receitas*100)??[]
 
-  function salvar(evento: FormEvent<HTMLFormElement>) {
-    evento.preventDefault()
-    const form = new FormData(evento.currentTarget)
-    adicionarVeiculo({
-      codigo: String(form.get('codigo')).toUpperCase(),
-      placa: String(form.get('placa')).toUpperCase(),
-      modelo: String(form.get('modelo')),
-      status: 'ATIVO',
-      quilometragemAtual: Number(form.get('quilometragemAtual')),
-      custoPorKm: Number(form.get('custoPorKm')),
-      metaReceita: Number(form.get('metaReceita')),
-      metaKmMorto: Number(form.get('metaKmMorto')),
-      metaMargem: Number(form.get('metaMargem')),
-    })
-    setModal(false)
-  }
+  async function salvar(e:FormEvent<HTMLFormElement>){e.preventDefault();const f=new FormData(e.currentTarget);try{await api('/api/veiculos',{method:'POST',body:JSON.stringify({identificacao:f.get('identificacao'),placa:f.get('placa'),modelo:f.get('modelo'),custoPorKm:Number(f.get('custoPorKm'))})});setModal(false);setMensagem('Veículo salvo no cadastro real.');await carregar()}catch(x){setMensagem((x as Error).message)}}
 
-  return <div className="page-enter">
-    <header className="page-heading"><div><span className="eyebrow">Ativos operacionais</span><h1>Veículos e custos</h1><p>Compare receita, gastos e eficiência de cada veículo em um único lugar.</p></div>
-      <div className="heading-actions"><label className="month-picker"><span>Competência</span><input type="month" value={mes} onChange={evento => setMes(evento.target.value)}/></label><button className="button button-primary" onClick={() => setModal(true)}>+ Cadastrar veículo</button></div></header>
-    <section className="fleet-summary"><div><span>Gasto total dos veículos</span><strong>{moeda(gastoFrota)}</strong><small>No período selecionado</small></div>
-      <div><span>Veículos disponíveis</span><strong>{state.veiculos.filter(item => item.status === 'ATIVO').length}/{state.veiculos.length}</strong><small>Veículos ativos</small></div>
-      <div><span>Melhor margem</span><strong>{Math.max(...resultados.map(item => item.margem), 0).toFixed(1)}%</strong><small>Entre veículos com receita</small></div></section>
-
-    <section className="fleet-layout">
-      <aside className="fleet-list" aria-label="Lista de veículos">{resultados.map(item => <button key={item.veiculo.id} className={item.veiculo.id === resultado?.veiculo.id ? 'active' : ''} onClick={() => setSelecionado(item.veiculo.id)}>
-        <span className="vehicle-monogram">{item.veiculo.codigo}</span><span><strong>{item.veiculo.modelo}</strong><small>{item.veiculo.placa} · {item.veiculo.status === 'ATIVO' ? 'Ativo' : item.veiculo.status === 'MANUTENCAO' ? 'Em manutenção' : 'Inativo'}</small></span>
-        <span><strong className={item.lucro >= 0 ? 'positive' : 'negative'}>{moeda(item.lucro)}</strong><small>{item.margem.toFixed(1)}% margem</small></span>
-      </button>)}</aside>
-
-      {resultado ? <div className="fleet-detail">
-        <article className="vehicle-hero"><div><span className="eyebrow">{resultado.veiculo.placa}</span><h2>{resultado.veiculo.codigo} · {resultado.veiculo.modelo}</h2><p>Hodômetro atual: {numero(resultado.veiculo.quilometragemAtual)} km</p></div>
-          <span className={`vehicle-status status-${resultado.status.toLowerCase()}`}>{rotulosStatus[resultado.status]}</span></article>
-        <div className="vehicle-metrics">
-          <article><span>Receita</span><strong>{moeda(resultado.receita)}</strong><small>{resultado.veiculo.metaReceita ? `${Math.min(100, (resultado.receita / resultado.veiculo.metaReceita) * 100).toFixed(0)}% da meta` : 'Veículo de apoio'}</small></article>
-          <article><span>Despesas</span><strong>{moeda(resultado.despesas)}</strong><small>Custo vinculado</small></article>
-          <article className="focus"><span>Lucro</span><strong>{moeda(resultado.lucro)}</strong><small>{resultado.margem.toFixed(1)}% de margem</small></article>
-          <article><span>Consumo médio</span><strong>{consumo ? `${consumo.toFixed(1)} km/l` : '—'}</strong><small>{numero(resultado.litros)} litros lançados</small></article>
-        </div>
-        <article className="panel cost-breakdown"><header className="panel-title"><div><span className="eyebrow">Raio-x de custos</span><h2>Para onde foi o dinheiro</h2></div></header>
-          <div className="cost-grid">
-            <div><span>Combustível</span><strong>{moeda(resultado.combustivel)}</strong></div>
-            <div><span>Manutenção</span><strong>{moeda(resultado.manutencao)}</strong></div>
-            <div><span>Seguro</span><strong>{moeda(resultado.seguro)}</strong></div>
-            <div><span>Parcela</span><strong>{moeda(resultado.parcela)}</strong></div>
-            <div className={resultado.percentualKmMorto > resultado.veiculo.metaKmMorto ? 'danger' : ''}><span>Km morto</span><strong>{moeda(resultado.custoKmMorto)}</strong><small>{resultado.percentualKmMorto.toFixed(1)}% do percurso</small></div>
-          </div>
-        </article>
-        <article className="panel vehicle-history"><header className="panel-title"><div><span className="eyebrow">Auditoria individual</span><h2>Histórico financeiro</h2></div></header>
-          <div className="table-scroll"><table><thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th>Origem</th><th>Valor</th></tr></thead><tbody>{historico.map(item => <tr key={item.id}><td>{data(item.data)}</td><td><strong>{item.descricao}</strong></td><td>{item.categoria}</td><td>{item.origem}</td><td className={item.tipo === 'RECEITA' ? 'positive' : 'negative'}>{item.tipo === 'RECEITA' ? '+' : '−'} {moeda(item.valor)}</td></tr>)}</tbody></table></div>
-        </article>
-      </div> : null}
-    </section>
-
-    {modal ? <div className="modal-backdrop"><section className="modal" role="dialog" aria-modal="true"><header><div><span className="eyebrow">Veículos</span><h2>Novo veículo</h2></div><button aria-label="Fechar" onClick={() => setModal(false)}>×</button></header>
-      <form onSubmit={salvar} className="form-grid two-columns">
-        <label className="field"><span>Identificador</span><input name="codigo" placeholder="G-04" required/></label><label className="field"><span>Placa</span><input name="placa" placeholder="ABC-1D23" required/></label>
-        <label className="field field-wide"><span>Modelo</span><input name="modelo" placeholder="Marca e modelo" required/></label>
-        <label className="field"><span>Quilometragem atual</span><input name="quilometragemAtual" type="number" min="0" required/></label><label className="field"><span>Custo por km</span><input name="custoPorKm" type="number" min="0" step=".01" required/></label>
-        <label className="field"><span>Meta de receita</span><input name="metaReceita" type="number" min="0" defaultValue="18000" required/></label><label className="field"><span>Meta máx. de km morto (%)</span><input name="metaKmMorto" type="number" min="0" max="100" defaultValue="12" required/></label>
-        <label className="field"><span>Meta de margem (%)</span><input name="metaMargem" type="number" min="0" max="100" defaultValue="30" required/></label>
-        <div className="modal-actions field-wide"><button type="button" className="button button-ghost" onClick={() => setModal(false)}>Cancelar</button><button className="button button-primary">Salvar veículo</button></div>
-      </form></section></div> : null}
+  return <div className="page-enter"><header className="page-heading"><div><span className="eyebrow">Ativos operacionais</span><h1>Veículos e custos</h1><p>Receitas, despesas e eficiência calculadas a partir dos vínculos reais do PostgreSQL.</p></div><div className="heading-actions"><label className="month-picker"><span>Competência</span><input type="month" value={mes} onChange={e=>setMes(e.target.value)}/></label><button className="button button-primary" onClick={()=>setModal(true)}>+ Cadastrar veículo</button></div></header>
+    {mensagem?<div className="success-notice">{mensagem}</div>:null}
+    <section className="fleet-summary"><div><span>Gasto total dos veículos</span><strong>{moeda(gastoFrota)}</strong><small>Despesas pagas vinculadas</small></div><div><span>Veículos disponíveis</span><strong>{veiculos.filter(v=>v.ativo).length}/{veiculos.length}</strong><small>Cadastro oficial</small></div><div><span>Melhor margem</span><strong>{Math.max(...margens,0).toFixed(1)}%</strong><small>Entre veículos com receita</small></div></section>
+    {veiculos.length?<section className="fleet-layout"><aside className="fleet-list" aria-label="Lista de veículos">{veiculos.map(v=>{const r=financeiro?.resultadoPorVeiculo.find(item=>item.veiculoId===v.id),saldo=r?.resultado??0;return <button key={v.id} className={v.id===selecionado?'active':''} onClick={()=>setSelecionado(v.id)}><span className="vehicle-monogram">{v.identificacao}</span><span><strong>{v.modelo||v.identificacao}</strong><small>{v.placa} · {v.ativo?'Ativo':'Inativo'}</small></span><span><strong className={saldo>=0?'positive':'negative'}>{moeda(saldo)}</strong><small>Resultado real</small></span></button>})}</aside>
+      {veiculo?<div className="fleet-detail"><article className="vehicle-hero"><div><span className="eyebrow">{veiculo.placa}</span><h2>{veiculo.identificacao} · {veiculo.modelo||'Modelo não informado'}</h2><p>Custo operacional informado: {moeda(veiculo.custoPorKm)} por km.</p></div><span className={`vehicle-status ${veiculo.ativo?'status-saudavel':'status-monitorar'}`}>{veiculo.ativo?'Ativo':'Inativo'}</span></article>
+        <div className="vehicle-metrics"><article><span>Receita recebida</span><strong>{moeda(receitas)}</strong><small>Vínculo financeiro real</small></article><article><span>Despesas pagas</span><strong>{moeda(despesas)}</strong><small>Custos aprovados</small></article><article className="focus"><span>Resultado</span><strong>{moeda(lucro)}</strong><small>{margem.toFixed(1)}% de margem</small></article><article><span>Km morto</span><strong>{numero(resultado?.kmMorto??0)} km</strong><small>{moeda(resultado?.custoKmMorto??0)} improdutivos</small></article></div>
+        <article className="panel vehicle-history"><header className="panel-title"><div><span className="eyebrow">Auditoria individual</span><h2>Histórico financeiro</h2></div></header>{historico.length?<div className="table-scroll"><table><thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th>Situação</th><th>Valor</th></tr></thead><tbody>{historico.map(item=><tr key={item.id}><td>{data(item.data)}</td><td><strong>{item.descricao}</strong></td><td>{item.categoria}</td><td>{item.realizado?'Realizado':'Previsto'}</td><td className={item.tipo==='RECEITA'?'positive':'negative'}>{item.tipo==='RECEITA'?'+':'−'} {moeda(item.valor)}</td></tr>)}</tbody></table></div>:<p className="empty-inline">Nenhum movimento vinculado ao veículo nesta competência.</p>}</article>
+      </div>:null}</section>:<Vazio titulo="Nenhum veículo" descricao="Cadastre o primeiro veículo para acompanhar seus resultados reais."/>}
+    {modal?<div className="modal-backdrop"><section className="modal" role="dialog" aria-modal="true"><header><div><span className="eyebrow">Cadastro oficial</span><h2>Novo veículo</h2></div><button aria-label="Fechar" onClick={()=>setModal(false)}>×</button></header><form onSubmit={salvar} className="form-grid two-columns"><label className="field"><span>Identificador</span><input name="identificacao" required/></label><label className="field"><span>Placa</span><input name="placa" required/></label><label className="field field-wide"><span>Modelo</span><input name="modelo"/></label><label className="field"><span>Custo por km</span><input name="custoPorKm" type="number" min="0" step=".0001" defaultValue="0" required/></label><div className="modal-actions field-wide"><button type="button" className="button button-ghost" onClick={()=>setModal(false)}>Cancelar</button><button className="button button-primary">Salvar veículo</button></div></form></section></div>:null}
   </div>
 }

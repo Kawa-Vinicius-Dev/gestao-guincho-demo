@@ -40,6 +40,14 @@ public class Despesa {
         this.observacoes = observacoes; this.status = status; this.criadoPor = criadoPor;
     }
     public void aprovar(Usuario usuario) { this.aprovada = true; this.aprovadoPor = usuario; }
+    public void pagar(LocalDate dataPagamento, String formaPagamento, String comprovante, String observacoes) {
+        if (!aprovada) throw new IllegalArgumentException("A despesa precisa estar aprovada antes do pagamento.");
+        this.status = StatusDespesa.PAGO;
+        this.dataPagamento = dataPagamento;
+        this.formaPagamento = formaPagamento;
+        if (comprovante != null && !comprovante.isBlank()) this.comprovante = comprovante;
+        if (observacoes != null && !observacoes.isBlank()) this.observacoes = observacoes;
+    }
     public void marcarComoAlimentacao(){this.natureza=NaturezaDespesa.ALIMENTACAO_FUNCIONARIO;}
     public void rejeitar(Usuario usuario) { this.aprovada = false; this.aprovadoPor = usuario; this.status = StatusDespesa.REJEITADO; }
     public void atualizarAtraso(LocalDate hoje) { if (status == StatusDespesa.PENDENTE && vencimento != null && vencimento.isBefore(hoje)) status = StatusDespesa.ATRASADO; }

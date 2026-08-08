@@ -21,6 +21,10 @@ export interface Despesa {
   comprovante?:string; observacoes?:string; status:'PENDENTE'|'PAGO'|'ATRASADO'|'REJEITADO';
   aprovada:boolean; criadoPor:string
 }
+export interface LancamentoFinanceiro {
+  id:string; tipo:'RECEITA'|'DESPESA'; referenciaId:number; descricao:string; categoria:string; valor:number;
+  data:string; status:string; realizado:boolean; veiculo?:string; veiculoId?:number; motorista?:string; origem:string; protocolo?:string
+}
 export interface Quilometragem {
   id:number; data:string; veiculo:string; motorista?:string; protocolo?:string; hodometroInicial:number;
   hodometroFinal:number; quilometragemTotal:number; quilometragemRemunerada:number; kmMorto:number;
@@ -64,7 +68,8 @@ export interface DetalheOpPorto { ordemPagamento:OrdemPagamentoPorto; ordensServ
 export interface CalendarioPorto { id:number; dataPagamento:string; competenciaInicio:string; competenciaFim:string; descricao:string; ativo:boolean; criadoEm:string; atualizadoEm:string }
 export interface AlimentacaoComissao { id:number; motoristaId:number; data:string; valor:number; situacao:string; aprovada:boolean; observacoes?:string }
 export interface ServicoComissao { id:number; numeroOs:string; especialidade?:string; dataAtendimento:string; numeroOp:string; valorServico:number; comissaoServico:number }
-export interface Comissao { calendarioPagamentoId:number; periodo:string; funcionario:string; motoristaId:number; quantidadeServicosPagos:number; producaoPaga:number; percentualComissao:number; comissaoBruta:number; alimentacaoAprovada:number; alimentacaoPendente:number; liquido:number; aguardandoOp:boolean; servicos:ServicoComissao[]; alimentacoes:AlimentacaoComissao[] }
-export interface ResumoComissao { motoristaId:number; funcionario:string; quantidadeServicosPagos:number; producaoPaga:number; comissaoBruta:number; alimentacaoAprovada:number; liquido:number }
+export interface PagamentoComissao { id:number; motoristaId:number; calendarioPagamentoId:number; despesaId:number; valorPago:number; dataPagamento:string; formaPagamento?:string; observacoes?:string; pagoPor:string; criadoEm:string }
+export interface Comissao { calendarioPagamentoId:number; periodo:string; funcionario:string; motoristaId:number; quantidadeServicosPagos:number; producaoPaga:number; percentualComissao:number; comissaoBruta:number; alimentacaoAprovada:number; alimentacaoPendente:number; liquido:number; aguardandoOp:boolean; servicos:ServicoComissao[]; alimentacoes:AlimentacaoComissao[]; pagamento?:PagamentoComissao }
+export interface ResumoComissao { motoristaId:number; funcionario:string; quantidadeServicosPagos:number; producaoPaga:number; comissaoBruta:number; alimentacaoAprovada:number; liquido:number; pagamento?:PagamentoComissao }
 export interface ServicoFuncionario { id:number; numeroOs:string; dataAtendimento?:string; especialidade?:string; viatura?:string; numeroOp?:string; valorServico:number; statusPagamento:'PAGO'|'PAGO_EM_OUTRO_PERIODO'|'AGUARDANDO_PAGAMENTO'; pagoNoPeriodo:boolean; comissaoGerada?:number }
 export interface DetalheFuncionario { id:number; nome:string; ativo:boolean; telefone?:string; email?:string; qra?:string; veiculosUtilizados:string[]; totalServicosPrestados:number; comissao:Comissao; servicos:ServicoFuncionario[] }

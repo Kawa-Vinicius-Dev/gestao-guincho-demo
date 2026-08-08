@@ -37,6 +37,13 @@ public class FinanceiroController {
     public DespesaResponse aprovar(@PathVariable Long id,@AuthenticationPrincipal UsuarioPrincipal p){return financeiro.aprovar(id,p);}
     @PatchMapping("/despesas/{id}/rejeitar") @PreAuthorize("hasRole('ADMINISTRADOR')")
     public DespesaResponse rejeitar(@PathVariable Long id,@AuthenticationPrincipal UsuarioPrincipal p){return financeiro.rejeitar(id,p);}
+    @PatchMapping("/despesas/{id}/pagar") @PreAuthorize("hasRole('ADMINISTRADOR')")
+    public DespesaResponse pagar(@PathVariable Long id,@Valid @RequestBody PagamentoDespesaRequest r){return financeiro.pagar(id,r);}
+
+    @GetMapping("/lancamentos") @PreAuthorize("hasRole('ADMINISTRADOR')")
+    public List<LancamentoFinanceiroResponse> lancamentos(
+        @RequestParam @DateTimeFormat(iso=DateTimeFormat.ISO.DATE) LocalDate inicio,
+        @RequestParam @DateTimeFormat(iso=DateTimeFormat.ISO.DATE) LocalDate fim){return financeiro.listarLancamentos(inicio,fim);}
 
     @GetMapping("/dashboard") @PreAuthorize("hasRole('ADMINISTRADOR')")
     public DashboardResponse dashboard(

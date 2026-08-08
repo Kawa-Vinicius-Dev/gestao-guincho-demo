@@ -223,6 +223,69 @@ class ComissaoApiIntegrationTest {
             .andExpect(status().isForbidden());
     }
 
+    @Test
+    void pagamentoDeComissaoEhAdministrativoLiquidoAuditavelEIdempotente() throws Exception {
+        String admin=login("admin@fluxogestao.local","Admin@123");
+        long usuario=criarUsuario(admin,"Comissionado Pagamento","comissao.pagamento@local.test");
+        long motorista=criarMotorista(admin,"Comissionado Pagamento","QRA-PAGAMENTO",usuario);
+        long calendario=criarCalendario(admin,"2036-02-15","2036-01-01","2036-01-31","Fechamento pagamento auditável");
+        long op=criarOp(admin,"OP-COM-PAGAMENTO",500,"2036-02-15");
+        confirmarComposicao(admin,op,calendario,"comissao-pagamento.txt",linha("OS-COM-PAGAMENTO",500,"GUINCHO","QRA-PAGAMENTO","10/01/2036"));
+
+        String funcionario=login("comissao.pagamento@local.test","Funcionario@123");
+        String alimentacao=mvc.perform(post("/api/minha-comissao/alimentacoes").header("Authorization","Bearer "+funcionario)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"data\":\"2036-01-12\",\"valor\":30.00}"))
+            .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        long despesaAlimentacao=((Number)JsonPath.read(alimentacao,"$.id")).longValue();
+        mvc.perform(patch("/api/despesas/{id}/aprovar",despesaAlimentacao).header("Authorization","Bearer "+admin))
+            .andExpect(status().isOk());
+        jdbc.update("update despesas set status='PAGO', data_pagamento='2036-02-15' where id=?",despesaAlimentacao);
+
+        mvc.perform(get("/api/comissoes/{id}",motorista).header("Authorization","Bearer "+admin)
+                .param("calendarioPagamentoId",String.valueOf(calendario)))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.comissaoBruta").value(100d))
+            .andExpect(jsonPath("$.alimentacaoAprovada").value(30d)).andExpect(jsonPath("$.liquido").value(70d))
+            .andExpect(jsonPath("$.pagamento").doesNotExist());
+        mvc.perform(get("/api/dashboard").header("Authorization","Bearer "+admin)
+                .param("inicio","2036-02-01").param("fim","2036-02-28"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.despesasPagas").value(30d));
+
+        String corpo="{\"dataPagamento\":\"2036-02-16\",\"formaPagamento\":\"PIX\",\"observacoes\":\"Fechamento aprovado\"}";
+        mvc.perform(post("/api/comissoes/{id}/pagamentos",motorista).header("Authorization","Bearer "+funcionario)
+                .param("calendarioPagamentoId",String.valueOf(calendario)).contentType(MediaType.APPLICATION_JSON).content(corpo))
+            .andExpect(status().isForbidden());
+        String primeiro=mvc.perform(post("/api/comissoes/{id}/pagamentos",motorista).header("Authorization","Bearer "+admin)
+                .param("calendarioPagamentoId",String.valueOf(calendario)).contentType(MediaType.APPLICATION_JSON).content(corpo))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.valorPago").value(70d))
+            .andReturn().getResponse().getContentAsString();
+        String repetido=mvc.perform(post("/api/comissoes/{id}/pagamentos",motorista).header("Authorization","Bearer "+admin)
+                .param("calendarioPagamentoId",String.valueOf(calendario)).contentType(MediaType.APPLICATION_JSON).content(corpo))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+
+        assertThat(JsonPath.read(primeiro,"$.id").toString()).isEqualTo(JsonPath.read(repetido,"$.id").toString());
+        assertThat(jdbc.queryForObject("select count(*) from pagamentos_comissao where motorista_id=? and calendario_pagamento_id=?",Integer.class,motorista,calendario)).isOne();
+        assertThat(jdbc.queryForObject("select count(*) from despesas where id=(select despesa_id from pagamentos_comissao where motorista_id=? and calendario_pagamento_id=?)",Integer.class,motorista,calendario)).isOne();
+        mvc.perform(get("/api/dashboard").header("Authorization","Bearer "+admin)
+                .param("inicio","2036-02-01").param("fim","2036-02-28"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.despesasPagas").value(100d));
+
+        long usuarioNegativo=criarUsuario(admin,"Comissionado Negativo","comissao.negativo.pagamento@local.test");
+        long motoristaNegativo=criarMotorista(admin,"Comissionado Negativo","QRA-PAG-NEG",usuarioNegativo);
+        String funcionarioNegativo=login("comissao.negativo.pagamento@local.test","Funcionario@123");
+        String alimentacaoNegativa=mvc.perform(post("/api/minha-comissao/alimentacoes").header("Authorization","Bearer "+funcionarioNegativo)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"data\":\"2036-01-13\",\"valor\":50.00}"))
+            .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        long despesaNegativa=((Number)JsonPath.read(alimentacaoNegativa,"$.id")).longValue();
+        mvc.perform(patch("/api/despesas/{id}/aprovar",despesaNegativa).header("Authorization","Bearer "+admin)).andExpect(status().isOk());
+        mvc.perform(get("/api/comissoes/{id}",motoristaNegativo).header("Authorization","Bearer "+admin)
+                .param("calendarioPagamentoId",String.valueOf(calendario)))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.liquido").value(-50d));
+        mvc.perform(post("/api/comissoes/{id}/pagamentos",motoristaNegativo).header("Authorization","Bearer "+admin)
+                .param("calendarioPagamentoId",String.valueOf(calendario)).contentType(MediaType.APPLICATION_JSON).content(corpo))
+            .andExpect(status().isBadRequest());
+        assertThat(jdbc.queryForObject("select count(*) from despesas where motorista_id=? and valor<0",Integer.class,motoristaNegativo)).isZero();
+    }
+
     private String linha(String os,int valor,String especialidade,String qra,String data){return linhaComSocorrista(os,valor,especialidade,"",qra,data);}
     private String linhaComViatura(String os,int valor,String especialidade,String viatura,String qra,String data){return "%s\t%d,00\t%s\t%s\t\t%s\t%s\n".formatted(os,valor,especialidade,viatura,qra,data);}
     private String linhaComSocorrista(String os,int valor,String especialidade,String socorrista,String qra,String data){return "%s\t%d,00\t%s\t\t%s\t%s\t%s\n".formatted(os,valor,especialidade,socorrista,qra,data);}

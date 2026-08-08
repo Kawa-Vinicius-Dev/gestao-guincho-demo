@@ -7,6 +7,17 @@ let contas: Record<string, unknown>[] = [{
   dataCompetencia: '2026-07-20', vencimento: '2026-07-22', dataRecebimento: '2026-07-23',
   status: 'RECEBIDO', origem: 'MANUAL',
 }]
+let lancamentos: Record<string, unknown>[] = []
+let despesas: Record<string, unknown>[] = []
+let veiculos: Record<string, unknown>[] = []
+let quilometragens: Record<string, unknown>[] = []
+
+export function restaurarEstadoTeste() {
+  lancamentos = []
+  despesas = []
+  veiculos = []
+  quilometragens = []
+}
 
 export const servidor = setupServer(
   http.post('/api/auth/login', async ({ request }) => {
@@ -31,9 +42,16 @@ export const servidor = setupServer(
   })),
   http.get('/api/contas-receber', () => HttpResponse.json(contas)),
   http.get('/api/contratantes', () => HttpResponse.json([{ id: 1, nome: 'Porto Seguro', ativo: true }])),
-  http.get('/api/veiculos', () => HttpResponse.json([])),
+  http.get('/api/lancamentos', () => HttpResponse.json(lancamentos)),
+  http.get('/api/receitas', () => HttpResponse.json([])),
+  http.get('/api/despesas', () => HttpResponse.json(despesas)),
+  http.get('/api/quilometragens', () => HttpResponse.json(quilometragens)),
+  http.get('/api/veiculos', () => HttpResponse.json(veiculos)),
   http.get('/api/motoristas', () => HttpResponse.json([])),
-  http.get('/api/categorias', () => HttpResponse.json([])),
+  http.get('/api/categorias', () => HttpResponse.json([
+    { id: 1, nome: 'Serviços de guincho', tipo: 'RECEITA', ativo: true },
+    { id: 2, nome: 'Combustível', tipo: 'DESPESA', ativo: true },
+  ])),
   http.get('/api/porto/ordens-pagamento/resumo', () => HttpResponse.json({
     quantidadeTotalOps:0,valorTotalPrevisto:0,quantidadeSemComposicao:0,valorSemComposicao:0,quantidadeConciliadas:0,valorConciliadas:0,
     quantidadeValorAbaixo:0,diferencaTotalAbaixo:0,quantidadeValorAcima:0,diferencaTotalAcima:0,quantidadeComDivergencia:0,valorTotalDivergencias:0,
@@ -47,5 +65,54 @@ export const servidor = setupServer(
       origem: 'MANUAL', protocolo: null, dataCompetencia: '2026-07-23', vencimento: '2026-08-23', ...body }
     contas = [...contas, nova]
     return HttpResponse.json(nova, { status: 201 })
+  }),
+  http.post('/api/receitas', async ({ request }) => {
+    const body = await request.json() as Record<string, unknown>
+    const nova = { id: 11, categoria: 'Serviços de guincho', categoriaId: body.categoriaId, manual: true, ...body }
+    lancamentos = [...lancamentos, {
+      id: 'RECEITA-11', tipo: 'RECEITA', referenciaId: 11, descricao: body.descricao,
+      categoria: 'Serviços de guincho', valor: body.valor, data: body.dataRecebimento ?? body.dataCompetencia,
+      status: body.status, realizado: body.status === 'RECEBIDA', origem: 'RECEITA_MANUAL',
+    }]
+    return HttpResponse.json(nova, { status: 201 })
+  }),
+  http.post('/api/despesas', async ({ request }) => {
+    const body = await request.json() as Record<string, unknown>
+    const nova = { id: 21, categoria: 'Combustível', aprovada: false, criadoPor: 'Administrador', ...body }
+    despesas = [...despesas, nova]
+    lancamentos = [...lancamentos, {
+      id: 'DESPESA-21', tipo: 'DESPESA', referenciaId: 21, descricao: body.descricao,
+      categoria: 'Combustível', valor: body.valor, data: body.dataPagamento ?? body.data,
+      status: body.status, realizado: false, origem: 'DESPESA',
+    }]
+    return HttpResponse.json(nova, { status: 201 })
+  }),
+  http.patch('/api/despesas/:id/aprovar', ({ params }) => {
+    const id = Number(params.id)
+    despesas = despesas.map(item => Number(item.id) === id ? { ...item, aprovada: true } : item)
+    lancamentos = lancamentos.map(item => Number(item.referenciaId) === id ? { ...item, realizado: item.status === 'PAGO' } : item)
+    return HttpResponse.json(despesas.find(item => Number(item.id) === id) ?? { id, aprovada: true })
+  }),
+  http.patch('/api/despesas/:id/pagar', async ({ params, request }) => {
+    const id = Number(params.id), body = await request.json() as Record<string, unknown>
+    despesas = despesas.map(item => Number(item.id) === id ? { ...item, ...body, status: 'PAGO' } : item)
+    lancamentos = lancamentos.map(item => Number(item.referenciaId) === id ? { ...item, data: body.dataPagamento, status: 'PAGO', realizado: true } : item)
+    return HttpResponse.json(despesas.find(item => Number(item.id) === id) ?? { id, ...body, status: 'PAGO', aprovada: true })
+  }),
+  http.post('/api/veiculos', async ({ request }) => {
+    const body = await request.json() as Record<string, unknown>
+    const novo = { id: 31, ativo: true, ...body }
+    veiculos = [...veiculos, novo]
+    return HttpResponse.json(novo, { status: 201 })
+  }),
+  http.post('/api/quilometragens', async ({ request }) => {
+    const body = await request.json() as Record<string, unknown>
+    const inicial = Number(body.hodometroInicial), final = Number(body.hodometroFinal), remunerada = Number(body.quilometragemRemunerada)
+    const veiculo = veiculos.find(item => Number(item.id) === Number(body.veiculoId))
+    const total = final - inicial, morto = total - remunerada, custo = Number(veiculo?.custoPorKm ?? 0)
+    const novo = { id: 41, veiculo: veiculo?.identificacao ?? 'Veículo', motorista: null, custoPorKm: custo,
+      quilometragemTotal: total, kmMorto: morto, custoKmMorto: morto * custo, ...body }
+    quilometragens = [...quilometragens, novo]
+    return HttpResponse.json(novo, { status: 201 })
   }),
 )

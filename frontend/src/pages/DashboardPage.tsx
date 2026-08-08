@@ -13,7 +13,7 @@ function CartaoMetrica({titulo,valor,apoio,tom=''}:{titulo:string;valor:string;a
 }
 
 export default function DashboardPage(){
-  const [mes,setMes]=useState('2026-07'),[porto,setPorto]=useState<ResumoOpsPorto|null>(null),[financeiro,setFinanceiro]=useState<Dashboard|null>(null),[erro,setErro]=useState('')
+  const [mes,setMes]=useState(()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`}),[porto,setPorto]=useState<ResumoOpsPorto|null>(null),[financeiro,setFinanceiro]=useState<Dashboard|null>(null),[erro,setErro]=useState('')
   useEffect(()=>{
     const [ano,numeroMes]=mes.split('-').map(Number),inicio=`${mes}-01`,fim=`${mes}-${String(new Date(ano,numeroMes,0).getDate()).padStart(2,'0')}`,params=new URLSearchParams({dataInicio:inicio,dataFim:fim})
     setErro('');setFinanceiro(null);setPorto(null)

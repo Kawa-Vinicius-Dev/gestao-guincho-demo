@@ -20,8 +20,9 @@ public class ComissaoService {
     private static final BigDecimal PERCENTUAL=new BigDecimal("0.20");
     private final MotoristaRepository motoristas;private final UsuarioRepository usuarios;private final OrdemServicoPortoRepository oss;
     private final DespesaRepository despesas;private final CategoriaRepository categorias;private final CalendarioPortoService calendarios;
+    private final PagamentoComissaoRepository pagamentos;
     public ComissaoService(MotoristaRepository motoristas,UsuarioRepository usuarios,OrdemServicoPortoRepository oss,
-        DespesaRepository despesas,CategoriaRepository categorias,CalendarioPortoService calendarios){this.motoristas=motoristas;this.usuarios=usuarios;this.oss=oss;this.despesas=despesas;this.categorias=categorias;this.calendarios=calendarios;}
+        DespesaRepository despesas,CategoriaRepository categorias,CalendarioPortoService calendarios,PagamentoComissaoRepository pagamentos){this.motoristas=motoristas;this.usuarios=usuarios;this.oss=oss;this.despesas=despesas;this.categorias=categorias;this.calendarios=calendarios;this.pagamentos=pagamentos;}
 
     @Transactional public AlimentacaoResponse registrarAlimentacao(AlimentacaoRequest request,UsuarioPrincipal principal){
         Motorista motorista=motoristaDoUsuario(principal);Usuario usuario=usuarios.findById(principal.id()).orElseThrow(()->new RecursoNaoEncontradoException("Usuário autenticado não encontrado."));
@@ -33,6 +34,24 @@ public class ComissaoService {
 
     @Transactional(readOnly=true) public ComissaoResponse minha(Long calendarioPagamentoId,UsuarioPrincipal principal){return calcular(calendarioPagamentoId,motoristaDoUsuario(principal));}
     @Transactional(readOnly=true) public ComissaoResponse detalhe(Long calendarioPagamentoId,Long motoristaId){return calcular(calendarioPagamentoId,obterMotorista(motoristaId));}
+    @Transactional public PagamentoComissaoResponse pagar(Long calendarioPagamentoId,Long motoristaId,PagamentoComissaoRequest request,UsuarioPrincipal principal){
+        if(principal==null)throw new IllegalArgumentException("Usuário autenticado não identificado.");
+        Motorista motorista=motoristas.findByIdForUpdate(motoristaId).orElseThrow(()->new RecursoNaoEncontradoException("Motorista não encontrado."));
+        CalendarioPagamentoPorto periodo=calendarios.obterPeriodo(calendarioPagamentoId);
+        Optional<PagamentoComissao> existente=pagamentos.findByMotoristaAndCalendarioPagamento(motorista,periodo);
+        if(existente.isPresent())return pagamento(existente.get());
+        ComissaoResponse comissao=calcular(calendarioPagamentoId,motorista);
+        if(comissao.liquido().signum()<=0)throw new IllegalArgumentException("Não há valor líquido positivo de comissão para pagar neste período.");
+        Usuario administrador=usuarios.findById(principal.id()).orElseThrow(()->new RecursoNaoEncontradoException("Usuário autenticado não encontrado."));
+        Categoria categoria=categorias.findFirstByNomeIgnoreCaseAndTipo("Comissão de funcionário",TipoCategoria.DESPESA)
+            .orElseThrow(()->new IllegalStateException("Categoria técnica de comissão não encontrada."));
+        String protocolo="COMISSAO-"+motorista.getId()+"-"+periodo.getId();
+        Despesa despesa=new Despesa("Comissão líquida - "+motorista.getNome(),categoria,comissao.liquido(),request.dataPagamento(),
+            request.dataPagamento(),request.dataPagamento(),request.formaPagamento(),null,motorista,protocolo,null,request.observacoes(),StatusDespesa.PAGO,administrador);
+        despesa.aprovar(administrador);despesas.save(despesa);
+        return pagamento(pagamentos.save(new PagamentoComissao(motorista,periodo,despesa,comissao.liquido(),request.dataPagamento(),
+            request.formaPagamento(),request.observacoes(),administrador)));
+    }
     @Transactional(readOnly=true) public DetalheFuncionarioResponse detalheFuncionario(Long calendarioPagamentoId,Long motoristaId){
         Motorista motorista=obterMotorista(motoristaId);
         CalendarioPagamentoPorto periodo=calendarios.obterPeriodo(calendarioPagamentoId);
@@ -54,7 +73,7 @@ public class ComissaoService {
     }
     @Transactional(readOnly=true) public List<ResumoComissaoResponse> resumo(Long calendarioPagamentoId,Long motoristaId){
         return motoristas.findAll().stream().filter(Motorista::isAtivo).filter(m->motoristaId==null||m.getId().equals(motoristaId))
-            .map(m->calcular(calendarioPagamentoId,m)).map(c->new ResumoComissaoResponse(c.motoristaId(),c.funcionario(),c.quantidadeServicosPagos(),c.producaoPaga(),c.comissaoBruta(),c.alimentacaoAprovada(),c.liquido())).toList();
+            .map(m->calcular(calendarioPagamentoId,m)).map(c->new ResumoComissaoResponse(c.motoristaId(),c.funcionario(),c.quantidadeServicosPagos(),c.producaoPaga(),c.comissaoBruta(),c.alimentacaoAprovada(),c.liquido(),c.pagamento())).toList();
     }
     @Transactional(readOnly=true) public String csv(Long calendarioPagamentoId){
         StringBuilder csv=new StringBuilder("\uFEFFFuncionário;Período;Serviços pagos;Produção paga;Comissão 20%;Alimentação;Líquido\r\n");
@@ -73,7 +92,8 @@ public class ComissaoService {
         BigDecimal aprovada=soma(alimentacoes.stream().filter(Despesa::isAprovada).filter(d->d.getStatus()!=StatusDespesa.REJEITADO).map(Despesa::getValor).toList());
         BigDecimal pendente=soma(alimentacoes.stream().filter(d->!d.isAprovada()).filter(d->d.getStatus()!=StatusDespesa.REJEITADO).map(Despesa::getValor).toList());
         List<ServicoComissaoResponse> detalhados=servicos.stream().map(os->new ServicoComissaoResponse(os.getId(),os.getNumero(),os.getEspecialidade(),os.getDataAtendimento(),os.getOrdemPagamento().getNumero(),os.getValorTotal(),os.getValorTotal().multiply(PERCENTUAL).setScale(2,RoundingMode.HALF_UP))).toList();
-        return new ComissaoResponse(periodo.getId(),calendarios.rotulo(periodo),motorista.getNome(),motorista.getId(),detalhados.size(),producao,PERCENTUAL,bruta,aprovada,pendente,bruta.subtract(aprovada),detalhados.isEmpty(),detalhados,alimentacoes.stream().map(this::alimentacao).toList());
+        PagamentoComissaoResponse pagamento=pagamentos.findByMotoristaAndCalendarioPagamento(motorista,periodo).map(this::pagamento).orElse(null);
+        return new ComissaoResponse(periodo.getId(),calendarios.rotulo(periodo),motorista.getNome(),motorista.getId(),detalhados.size(),producao,PERCENTUAL,bruta,aprovada,pendente,bruta.subtract(aprovada),detalhados.isEmpty(),detalhados,alimentacoes.stream().map(this::alimentacao).toList(),pagamento);
     }
     private Motorista motoristaDoUsuario(UsuarioPrincipal principal){if(principal==null)throw new IllegalArgumentException("Usuário autenticado não identificado.");Usuario usuario=usuarios.findById(principal.id()).orElseThrow(()->new RecursoNaoEncontradoException("Usuário autenticado não encontrado."));return motoristas.findByUsuario(usuario).orElseThrow(()->new IllegalArgumentException("Seu usuário ainda não está vinculado a um motorista."));}
     private Motorista obterMotorista(Long id){return motoristas.findById(id).orElseThrow(()->new RecursoNaoEncontradoException("Motorista não encontrado."));}
@@ -86,6 +106,9 @@ public class ComissaoService {
             pagoNoPeriodo?pago.comissaoServico():null);
     }
     private AlimentacaoResponse alimentacao(Despesa d){return new AlimentacaoResponse(d.getId(),d.getMotorista().getId(),d.getData(),d.getValor(),d.getStatus().name(),d.isAprovada(),d.getObservacoes());}
+    private PagamentoComissaoResponse pagamento(PagamentoComissao p){return new PagamentoComissaoResponse(p.getId(),p.getMotorista().getId(),
+        p.getCalendarioPagamento().getId(),p.getDespesa().getId(),p.getValorPago(),p.getDataPagamento(),p.getFormaPagamento(),
+        p.getObservacoes(),p.getPagoPor().getNome(),p.getCriadoEm());}
     private BigDecimal soma(Collection<BigDecimal> valores){return valores.stream().filter(Objects::nonNull).reduce(BigDecimal.ZERO,BigDecimal::add);}
     private String campo(Object valor){return "\""+Objects.toString(valor,"").replace("\"","\"\"")+"\"";}
 }

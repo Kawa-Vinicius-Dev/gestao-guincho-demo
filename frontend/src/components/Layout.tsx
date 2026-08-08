@@ -42,7 +42,7 @@ export function Layout() {
             </NavLink>)}</div>:null
         })}
       </nav>
-      <div className="sidebar-foot"><span>Gestão financeira para guinchos</span><small>Demo profissional · por ANAIV</small></div>
+      <div className="sidebar-foot"><span>Gestão financeira para guinchos</span><small>Sistema de gestão · ANAIV</small></div>
     </aside>
     <div className="workspace">
       <header className="topbar">

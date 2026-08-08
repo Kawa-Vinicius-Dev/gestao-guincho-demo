@@ -1,25 +1,22 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './auth/AuthContext'
 import { Carregando } from './components/EstadoPagina'
 import { Layout } from './components/Layout'
 import { RotaAdministrador, RotaProtegida } from './components/RotasProtegidas'
-import { DemoProvider } from './demo/DemoContext'
+import { removerDadosDemoLegados } from './legacyStorage'
 
 const Login=lazy(()=>import('./pages/LoginPage'))
 const Dashboard=lazy(()=>import('./pages/DashboardPage'))
-const Importacoes=lazy(()=>import('./pages/ImportacoesPage'))
-const Contas=lazy(()=>import('./pages/RecebiveisPage'))
+const Contas=lazy(()=>import('./pages/ContasReceberPage'))
 const Lancamentos=lazy(()=>import('./pages/LancamentosPage'))
+const Despesas=lazy(()=>import('./pages/DespesasPage'))
 const Quilometragem=lazy(()=>import('./pages/QuilometragemPage'))
 const Frotas=lazy(()=>import('./pages/FrotasPage'))
+const FluxoCaixa=lazy(()=>import('./pages/FluxoCaixaPage'))
 const Dre=lazy(()=>import('./pages/DrePage'))
 const Equipe=lazy(()=>import('./pages/EquipePage'))
 const EquipeDetalhe=lazy(()=>import('./pages/EquipeDetalhePage'))
-const Escala=lazy(()=>import('./pages/EscalaPage'))
-const Metas=lazy(()=>import('./pages/MetasPage'))
-const Integracoes=lazy(()=>import('./pages/IntegracoesPage'))
-const Relatorios=lazy(()=>import('./pages/RelatoriosPage'))
 const Receitas=lazy(()=>import('./pages/ReceitasPage'))
 const MinhaComissao=lazy(()=>import('./pages/MinhaComissaoPage'))
 const Comissoes=lazy(()=>import('./pages/ComissoesPage'))
@@ -33,29 +30,25 @@ const PortoRelatorios=lazy(()=>import('./pages/PortoRelatoriosPage'))
 const NaoEncontrado=lazy(()=>import('./pages/NaoEncontradoPage'))
 
 export default function App(){
-  return <BrowserRouter><AuthProvider><DemoProvider><Suspense fallback={<Carregando/>}><Routes>
+  useEffect(()=>removerDadosDemoLegados(),[])
+  return <BrowserRouter><AuthProvider><Suspense fallback={<Carregando/>}><Routes>
     <Route path="/login" element={<Login/>}/>
     <Route element={<RotaProtegida/>}><Route element={<Layout/>}>
-      <Route path="/despesas" element={<Lancamentos filtroInicial="DESPESA"/>}/>
+      <Route path="/despesas" element={<Despesas/>}/>
       <Route path="/quilometragem" element={<Quilometragem/>}/>
       <Route path="/minha-comissao" element={<MinhaComissao/>}/>
       <Route element={<RotaAdministrador/>}>
         <Route index element={<Dashboard/>}/>
         <Route path="/lancamentos" element={<Lancamentos/>}/>
-        <Route path="/importacoes" element={<Importacoes/>}/>
         <Route path="/contas-receber" element={<Contas/>}/>
         <Route path="/receitas" element={<Receitas/>}/>
-        <Route path="/fluxo-caixa" element={<Lancamentos/>}/>
+        <Route path="/fluxo-caixa" element={<FluxoCaixa/>}/>
         <Route path="/dre" element={<Dre/>}/>
         <Route path="/veiculos" element={<Frotas/>}/>
         <Route path="/motoristas" element={<Equipe/>}/>
         <Route path="/equipe" element={<Equipe/>}/>
         <Route path="/equipe/:id" element={<EquipeDetalhe/>}/>
-        <Route path="/escala" element={<Escala/>}/>
-        <Route path="/metas" element={<Metas/>}/>
-        <Route path="/relatorios" element={<Relatorios/>}/>
         <Route path="/comissoes" element={<Comissoes/>}/>
-        <Route path="/integracoes" element={<Integracoes/>}/>
         <Route path="/porto/importacoes" element={<PortoImportacoes/>}/>
         <Route path="/porto/dashboard" element={<PortoDashboard/>}/>
         <Route path="/porto/ordens-pagamento" element={<PortoOps/>}/>
@@ -64,9 +57,8 @@ export default function App(){
         <Route path="/porto/calendario" element={<PortoCalendario/>}/>
         <Route path="/porto/relatorios" element={<PortoRelatorios/>}/>
         <Route path="/usuarios" element={<Equipe/>}/>
-        <Route path="/configuracoes" element={<Integracoes/>}/>
       </Route>
       <Route path="*" element={<NaoEncontrado/>}/>
     </Route></Route>
-  </Routes></Suspense></DemoProvider></AuthProvider></BrowserRouter>
+  </Routes></Suspense></AuthProvider></BrowserRouter>
 }

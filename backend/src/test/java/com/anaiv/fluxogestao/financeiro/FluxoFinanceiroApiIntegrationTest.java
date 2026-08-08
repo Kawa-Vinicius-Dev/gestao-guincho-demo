@@ -22,6 +22,74 @@ class FluxoFinanceiroApiIntegrationTest {
     @Autowired MockMvc mvc;
 
     @Test
+    void extratoDashboardEDreCompartilhamSomenteMovimentosReais() throws Exception {
+        String token = login();
+        long categoriaReceita = id(criar(token, "/api/categorias", """
+                {"nome":"Receita arquitetura real","tipo":"RECEITA"}
+                """));
+        long categoriaDespesa = id(criar(token, "/api/categorias", """
+                {"nome":"Despesa arquitetura real","tipo":"DESPESA"}
+                """));
+
+        criar(token, "/api/receitas", """
+                {"descricao":"Receita recebida arquitetura","categoriaId":%d,"valor":300.00,
+                 "dataCompetencia":"2035-05-10","dataRecebimento":"2035-05-12","status":"RECEBIDA","recorrente":false}
+                """.formatted(categoriaReceita));
+        criar(token, "/api/receitas", """
+                {"descricao":"Receita prevista arquitetura","categoriaId":%d,"valor":700.00,
+                 "dataCompetencia":"2035-05-15","status":"PREVISTA","recorrente":false}
+                """.formatted(categoriaReceita));
+
+        long despesaPaga = id(criar(token, "/api/despesas", """
+                {"descricao":"Despesa paga arquitetura","categoriaId":%d,"valor":100.00,
+                 "data":"2035-05-13","dataPagamento":"2035-05-13","status":"PAGO"}
+                """.formatted(categoriaDespesa)));
+        mvc.perform(patch("/api/despesas/{id}/aprovar", despesaPaga).header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk());
+
+        long despesaPrevista = id(criar(token, "/api/despesas", """
+                {"descricao":"Despesa prevista arquitetura","categoriaId":%d,"valor":80.00,
+                 "data":"2035-05-14","vencimento":"2035-05-20","status":"PENDENTE"}
+                """.formatted(categoriaDespesa)));
+        mvc.perform(patch("/api/despesas/{id}/aprovar", despesaPrevista).header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk());
+
+        mvc.perform(get("/api/dashboard").header("Authorization", "Bearer " + token)
+                        .param("inicio", "2035-05-01").param("fim", "2035-05-31"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.receitaRecebida").value(300.0))
+                .andExpect(jsonPath("$.receitaPrevista").value(700.0))
+                .andExpect(jsonPath("$.despesasPagas").value(100.0))
+                .andExpect(jsonPath("$.despesasPrevistas").value(80.0))
+                .andExpect(jsonPath("$.saldoRealizado").value(200.0));
+
+        mvc.perform(get("/api/lancamentos").header("Authorization", "Bearer " + token)
+                        .param("inicio", "2035-05-01").param("fim", "2035-05-31"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.descricao == 'Receita recebida arquitetura')].realizado").value(true))
+                .andExpect(jsonPath("$[?(@.descricao == 'Receita prevista arquitetura')].realizado").value(false))
+                .andExpect(jsonPath("$[?(@.descricao == 'Despesa paga arquitetura')].realizado").value(true))
+                .andExpect(jsonPath("$[?(@.descricao == 'Despesa prevista arquitetura')].realizado").value(false));
+
+        mvc.perform(patch("/api/despesas/{id}/pagar", despesaPrevista)
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"dataPagamento":"2035-05-25","formaPagamento":"PIX"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("PAGO"))
+                .andExpect(jsonPath("$.dataPagamento").value("2035-05-25"));
+
+        mvc.perform(get("/api/dashboard").header("Authorization", "Bearer " + token)
+                        .param("inicio", "2035-05-01").param("fim", "2035-05-31"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.despesasPagas").value(180.0))
+                .andExpect(jsonPath("$.despesasPrevistas").value(0.0))
+                .andExpect(jsonPath("$.saldoRealizado").value(120.0));
+    }
+
+    @Test
     void administradorControlaFluxoFinanceiroEQuilometragem() throws Exception {
         String token = login();
 

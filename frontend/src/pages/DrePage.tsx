@@ -8,7 +8,7 @@ function Linha({ titulo, valor, nivel = 0, total = false, negativo = false }: { 
 }
 
 export default function DrePage() {
-  const [mes, setMes] = useState('2026-07')
+  const [mes, setMes] = useState(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` })
   const [financeiro,setFinanceiro]=useState<Dashboard|null>(null)
   const [erro,setErro]=useState('')
   useEffect(()=>{

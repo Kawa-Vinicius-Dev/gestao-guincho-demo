@@ -20,3 +20,19 @@ test('administrador filtra resumo e abre o detalhamento que forma a comissão',a
   servidor.use(http.get('/api/comissoes/periodos',()=>HttpResponse.json(periodos)),http.get('/api/motoristas',()=>HttpResponse.json([{id:4,nome:'Ana Motorista',qra:'ANA',ativo:true}])),http.get('/api/comissoes/resumo',()=>HttpResponse.json([{motoristaId:4,funcionario:'Ana Motorista',quantidadeServicosPagos:2,producaoPaga:1000,comissaoBruta:200,alimentacaoAprovada:250,liquido:-50}])),http.get('/api/comissoes/4',()=>HttpResponse.json(detalhe)))
   const user=userEvent.setup();render(<ComissoesPage/>);const linha=await screen.findByRole('row',{name:/ana motorista/i});expect(within(linha).getByText('-R$ 50,00')).toBeInTheDocument();await user.click(within(linha).getByRole('button',{name:/detalhar/i}));expect(await screen.findByRole('dialog')).toHaveTextContent('OS-1')
 })
+
+test('administrador registra o pagamento do líquido positivo uma única vez',async()=>{
+  const positivo={...detalhe,alimentacaoAprovada:30,liquido:170}
+  const pagamento={id:12,motoristaId:4,calendarioPagamentoId:7,despesaId:91,valorPago:170,dataPagamento:'2026-08-31',formaPagamento:'PIX',pagoPor:'Administrador',criadoEm:'2026-08-31T12:00:00Z'}
+  let chamadas=0
+  servidor.use(
+    http.get('/api/comissoes/periodos',()=>HttpResponse.json(periodos)),
+    http.get('/api/motoristas',()=>HttpResponse.json([{id:4,nome:'Ana Motorista',qra:'ANA',ativo:true}])),
+    http.get('/api/comissoes/resumo',()=>HttpResponse.json([{motoristaId:4,funcionario:'Ana Motorista',quantidadeServicosPagos:2,producaoPaga:1000,comissaoBruta:200,alimentacaoAprovada:30,liquido:170,pagamento:chamadas?pagamento:undefined}])),
+    http.get('/api/comissoes/4',()=>HttpResponse.json(chamadas?{...positivo,pagamento}:positivo)),
+    http.post('/api/comissoes/4/pagamentos',async({request})=>{chamadas++;expect(await request.json()).toEqual(expect.objectContaining({dataPagamento:'2026-08-31',formaPagamento:'PIX'}));return HttpResponse.json(pagamento,{status:201})}),
+  )
+  const user=userEvent.setup();render(<ComissoesPage/>);const linha=await screen.findByRole('row',{name:/ana motorista/i});await user.click(within(linha).getByRole('button',{name:/detalhar/i}));
+  const dialogo=await screen.findByRole('dialog');await user.type(within(dialogo).getByLabelText(/data do pagamento/i),'2026-08-31');await user.click(within(dialogo).getByRole('button',{name:/registrar pagamento/i}));
+  expect(await screen.findByText('Pagamento registrado no financeiro oficial.')).toBeInTheDocument();expect(chamadas).toBe(1);expect(within(screen.getByRole('dialog')).queryByRole('button',{name:/registrar pagamento/i})).not.toBeInTheDocument()
+})
