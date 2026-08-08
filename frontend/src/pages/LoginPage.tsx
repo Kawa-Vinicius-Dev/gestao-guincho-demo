@@ -21,7 +21,7 @@ export default function LoginPage(){
   return <main className="login-page">
     <section className="login-brand">
       <div className="login-road" aria-hidden="true"><i/><i/><i/></div>
-      <span className="eyebrow">Gestão Guincho · visão do dono</span>
+      <span className="eyebrow">J M S · visão do dono</span>
       <h1>Da estrada ao lucro, sem perder nenhum custo.</h1>
       <p>Receitas, despesas, frota e km morto no mesmo fluxo financeiro.</p>
       <small>Sistema de gestão · ANAIV</small>

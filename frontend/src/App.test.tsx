@@ -14,6 +14,7 @@ test('administrador começa com a base vazia e cria o primeiro lançamento', asy
   render(<App />)
 
   expect(await screen.findByText(/sistema de gestão · ANAIV/i)).toBeInTheDocument()
+  expect(screen.getByText(/J M S · visão do dono/i)).toBeInTheDocument()
   expect(screen.queryByText(/demo profissional/i)).not.toBeInTheDocument()
 
   await user.clear(await screen.findByLabelText(/e-mail/i))

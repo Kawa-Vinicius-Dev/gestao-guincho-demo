@@ -55,7 +55,7 @@ button,input,select,textarea{font:inherit}button{color:inherit}a{color:inherit}:
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 @media print{.sidebar,.topbar,.page-heading .button,.report-toolbar,.report-grid .button{display:none!important}.app-shell{display:block}.content{padding:0}.panel{box-shadow:none}}
 
-/* Gestão Guincho — evolução da demo */
+/* J M S — evolução da demo */
 .nav-group{display:grid;gap:3px}.nav-group+.nav-group{margin-top:15px}.nav-group>span{padding:0 12px 5px;color:#617b94;font:500 8px 'IBM Plex Mono',monospace;letter-spacing:.14em;text-transform:uppercase}
 .heading-actions,.heading-total-with-action{display:flex;align-items:end;gap:10px}.heading-total-with-action>span{text-align:right}.heading-total-with-action small,.heading-total-with-action strong{display:block}.heading-total-with-action small{color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.08em}.heading-total-with-action strong{margin-top:4px;font:600 25px 'Barlow Condensed',sans-serif}
 .month-picker{display:block;color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.08em}.month-picker>span{display:block;margin-bottom:5px}.month-picker input{height:42px;padding:0 10px;border:1px solid var(--line);border-radius:6px;background:white;color:var(--ink)}

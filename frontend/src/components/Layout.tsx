@@ -31,7 +31,7 @@ export function Layout() {
     <aside className={`sidebar ${aberto?'sidebar-open':''}`}>
       <div className="brand">
         <span className="brand-road" aria-hidden="true"><i/><i/></span>
-        <div><strong>Gestão</strong><span>Guincho</span></div>
+        <div><strong>J M S</strong></div>
       </div>
       <nav className="primary-nav" aria-label="Navegação principal">
         {(Object.keys(grupos) as Array<keyof typeof grupos>).map(grupo => {
