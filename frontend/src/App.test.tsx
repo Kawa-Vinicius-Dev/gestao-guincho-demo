@@ -13,6 +13,9 @@ test('administrador começa com a base vazia e cria o primeiro lançamento', asy
   const user = userEvent.setup()
   render(<App />)
 
+  expect(await screen.findByText(/sistema de gestão · ANAIV/i)).toBeInTheDocument()
+  expect(screen.queryByText(/demo profissional/i)).not.toBeInTheDocument()
+
   await user.clear(await screen.findByLabelText(/e-mail/i))
   await user.type(screen.getByLabelText(/e-mail/i), 'admin@fluxogestao.local')
   await user.clear(screen.getByLabelText(/senha/i))

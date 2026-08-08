@@ -24,7 +24,7 @@ export default function LoginPage(){
       <span className="eyebrow">Gestão Guincho · visão do dono</span>
       <h1>Da estrada ao lucro, sem perder nenhum custo.</h1>
       <p>Receitas, despesas, frota e km morto no mesmo fluxo financeiro.</p>
-      <small>Gestão Guincho · demo profissional por ANAIV</small>
+      <small>Sistema de gestão · ANAIV</small>
     </section>
     <section className="login-panel">
       <form onSubmit={entrar}>
