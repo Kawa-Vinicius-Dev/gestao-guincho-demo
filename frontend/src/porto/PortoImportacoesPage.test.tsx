@@ -88,19 +88,25 @@ test('bloqueia erros e exige confirmação separada para divergência',async()=>
 })
 
 test('cola serviços, mostra resumo da prévia e confirma somente depois da análise',async()=>{
-  let conteudoRecebido=''
+  let conteudoRecebido='',confirmacao:Record<string,unknown>|null=null
   servidor.use(
-    http.get('/api/porto/ordens-pagamento',()=>HttpResponse.json([])),
+    http.get('/api/porto/ordens-pagamento',()=>HttpResponse.json([{id:45,numero:'OP-GERAL-PAGA',valorTotal:300.75,situacao:'PROGRAMADO'}])),
     http.post('/api/porto/importacoes/previa-conteudo',async({request})=>{
       conteudoRecebido=String((await request.json() as {conteudo:string}).conteudo)
-      return HttpResponse.json({id:44,nomeArquivo:'colagem-servicos-porto.txt',tipo:'SERVICOS_GERAIS',status:'AGUARDANDO_CONFERENCIA',totalLinhas:2,requerOrdemPagamento:false,erros:[],
+      return HttpResponse.json({id:44,nomeArquivo:'colagem-servicos-porto.txt',tipo:'SERVICOS_GERAIS',status:'AGUARDANDO_CONFERENCIA',totalLinhas:2,requerOrdemPagamento:true,erros:[],
         resumo:{linhasAnalisadas:2,opsUnicas:0,registrosNovos:2,registrosExistentes:0,registrosAtualizados:0,duplicidades:0,erros:0,valorTotal:300.75},
         linhas:[
           {hashRegistro:'c1',acao:'IMPORTAR',dados:{numero_os:'OS 01/0000001-26',valor_total:'100,50',especialidade:'REMOÇÃO',data_atendimento:'2026-08-01 10:30:00'}},
           {hashRegistro:'c2',acao:'IMPORTAR',dados:{numero_os:'OS 01/0000002-26',valor_total:'200.25',especialidade:'PANE',data_atendimento:'2026-08-01 11:00:00'}},
         ]},{status:201})
     }),
-    http.post('/api/porto/importacoes/44/confirmar',()=>HttpResponse.json({importacaoId:44,tipo:'SERVICOS_GERAIS',importados:2,ignorados:0,novos:2,atualizados:0})),
+    http.post('/api/porto/importacoes/44/avaliar',()=>HttpResponse.json({id:44,nomeArquivo:'colagem-servicos-porto.txt',tipo:'SERVICOS_GERAIS',status:'AGUARDANDO_CONFERENCIA',totalLinhas:2,requerOrdemPagamento:true,erros:[],
+      resumo:{linhasAnalisadas:2,opsUnicas:0,registrosNovos:2,registrosExistentes:0,registrosAtualizados:0,duplicidades:0,erros:0,valorTotal:300.75},
+      linhas:[
+        {hashRegistro:'c1',acao:'IMPORTAR',dados:{numero_os:'OS 01/0000001-26',valor_total:'100,50',especialidade:'REMOÇÃO',data_atendimento:'2026-08-01 10:30:00'}},
+        {hashRegistro:'c2',acao:'IMPORTAR',dados:{numero_os:'OS 01/0000002-26',valor_total:'200.25',especialidade:'PANE',data_atendimento:'2026-08-01 11:00:00'}},
+      ]})),
+    http.post('/api/porto/importacoes/44/confirmar',async({request})=>{confirmacao=await request.json() as Record<string,unknown>;return HttpResponse.json({importacaoId:44,tipo:'SERVICOS_GERAIS',importados:2,ignorados:0,novos:2,atualizados:0,receitasCriadas:2,receitasAtualizadas:0,valorTotalRecebido:300.75,quinzena:'01/08/2026 a 15/08/2026',dataPagamento:'2026-08-14',erros:[]})}),
   )
   const user=userEvent.setup();render(<PortoImportacoesPage/>)
   await user.click(screen.getByRole('button',{name:/colar serviços da porto/i}))
@@ -112,6 +118,12 @@ test('cola serviços, mostra resumo da prévia e confirma somente depois da aná
   expect(screen.getByText((_,element)=>element?.tagName==='SPAN'&&element.textContent==='2 registros novos')).toBeInTheDocument()
   expect(screen.getAllByText(/R\$\s*300,75/)).toHaveLength(2)
   expect(conteudoRecebido).toContain('OS 01/0000001-26')
+  expect(screen.getByRole('button',{name:/confirmar importação/i})).toBeDisabled()
+  await user.selectOptions(screen.getByLabelText(/ordem de pagamento/i),'45')
+  await user.selectOptions(screen.getByLabelText(/período financeiro/i),'1')
   await user.click(screen.getByRole('button',{name:/confirmar importação/i}))
   expect(await screen.findByText(/2 registros importados/i)).toBeInTheDocument()
+  expect(screen.getByText(/2 receitas criadas/i)).toBeInTheDocument()
+  expect(screen.getByText(/R\$\s*300,75 recebidos/i)).toBeInTheDocument()
+  expect(confirmacao).toMatchObject({ordemPagamentoId:45,calendarioPagamentoId:1})
 })

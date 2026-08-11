@@ -9,6 +9,7 @@ import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import tools.jackson.databind.ObjectMapper;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -22,6 +23,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 class PortoResumoApiIntegrationTest {
     @Autowired MockMvc mvc;
+    @Autowired ObjectMapper json;
 
     @Test
     void quantificaOpsUnicasPorConciliacaoRecebimentoEVencimentoERecalculaFiltros() throws Exception {
@@ -103,36 +105,43 @@ class PortoResumoApiIntegrationTest {
     @Test
     void controlaPendenciaPortoSemTransformarEmDespesa() throws Exception {
         String token=login();
-        long previa=previa(token,"servico-pendente.txt","""
-            Número da Ordem de Serviço	Valor Total	Especialidade	Sigla da Viatura	Socorrista	QRA	Data de atendimento
-            OS-PEND-001	175,00	PANE		SOCORRISTA TESTE	QRA-TESTE-001	2026-08-01 10:00:00
+        long previa=previaConteudo(token,"""
+            01/0000097-26
+            PRESTADOR SINTÉTICO
+            01/08/2026 10:00
+            PORTO SEGURO CIA DE SEGUROS GERAIS
+            PANE
+            CLIENTE SINTÉTICO
+            ABC1D23
+            R$ 175,00
+            Aguardando Lançamento
             """);
         confirmar(token,previa,"{}");
 
         mvc.perform(post("/api/porto/pendencias").header("Authorization","Bearer "+token)
                 .contentType(MediaType.APPLICATION_JSON).content("""
-                    {"numeroOs":"OS-PEND-001","motivo":"PENDENCIA_DOCUMENTAL","valor":175.00,
+                    {"numeroOs":"01/0000097-26","motivo":"PENDENCIA_DOCUMENTAL","valor":175.00,
                      "dataPendencia":"2026-08-01","observacao":"Documento sintético pendente",
                      "responsavel":"RESPONSÁVEL TESTE","statusFinanceiro":"BLOQUEADO_PARA_PAGAMENTO",
                      "prazo":"2026-08-05","referenciaPorto":"REF-TESTE-001"}
                     """))
             .andExpect(status().isCreated())
-            .andExpect(jsonPath("$.referencia").value("OS-PEND-001"))
+            .andExpect(jsonPath("$.referencia").value("01/0000097-26"))
             .andExpect(jsonPath("$.motivo").value("PENDENCIA_DOCUMENTAL"));
 
         String pendencias=mvc.perform(get("/api/porto/pendencias").header("Authorization","Bearer "+token))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$[?(@.referencia == 'OS-PEND-001')].responsavel").value("RESPONSÁVEL TESTE"))
+            .andExpect(jsonPath("$[?(@.referencia == '01/0000097-26')].responsavel").value("RESPONSÁVEL TESTE"))
             .andReturn().getResponse().getContentAsString();
-        List<Map<String,Object>> encontrada=JsonPath.read(pendencias,"$[?(@.referencia == 'OS-PEND-001')]");
+        List<Map<String,Object>> encontrada=JsonPath.read(pendencias,"$[?(@.referencia == '01/0000097-26')]");
         long pendenciaId=((Number)encontrada.getFirst().get("id")).longValue();
 
         mvc.perform(get("/api/porto/ordens-servico").header("Authorization","Bearer "+token))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$[?(@.numero == 'OS-PEND-001')].statusOperacional").value("PENDENTE_PORTO"))
-            .andExpect(jsonPath("$[?(@.numero == 'OS-PEND-001')].statusFinanceiro").value("BLOQUEADO_PARA_PAGAMENTO"));
+            .andExpect(jsonPath("$[?(@.numero == '01/0000097-26')].statusOperacional").value("PENDENTE_PORTO"))
+            .andExpect(jsonPath("$[?(@.numero == '01/0000097-26')].statusFinanceiro").value("BLOQUEADO_PARA_PAGAMENTO"));
 
-        mvc.perform(get("/api/porto/dashboard").param("numeroOs","OS-PEND-001")
+        mvc.perform(get("/api/porto/dashboard").param("numeroOs","01/0000097-26")
                 .header("Authorization","Bearer "+token))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.quantidadeTotalServicos").value(1))
@@ -182,6 +191,15 @@ class PortoResumoApiIntegrationTest {
         MockMultipartFile arquivo=new MockMultipartFile("arquivo",nome,"text/csv",csv.getBytes(StandardCharsets.UTF_8));
         String corpo=mvc.perform(multipart("/api/porto/importacoes/previa").file(arquivo)
                 .header("Authorization","Bearer "+token)).andExpect(status().isCreated())
+            .andReturn().getResponse().getContentAsString();
+        return ((Number)JsonPath.read(corpo,"$.id")).longValue();
+    }
+
+    private long previaConteudo(String token,String conteudo) throws Exception {
+        String corpo=mvc.perform(post("/api/porto/importacoes/previa-conteudo")
+                .header("Authorization","Bearer "+token).contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(Map.of("conteudo",conteudo))))
+            .andExpect(status().isCreated()).andExpect(jsonPath("$.tipo").value("SERVICOS_AGUARDANDO_LANCAMENTO"))
             .andReturn().getResponse().getContentAsString();
         return ((Number)JsonPath.read(corpo,"$.id")).longValue();
     }

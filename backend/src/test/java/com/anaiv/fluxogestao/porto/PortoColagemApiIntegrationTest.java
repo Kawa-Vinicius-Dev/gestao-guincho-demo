@@ -111,6 +111,7 @@ class PortoColagemApiIntegrationTest {
                 .content(json.writeValueAsString(Map.of("conteudo",conteudo))))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.tipo").value("SERVICOS_GERAIS"))
+            .andExpect(jsonPath("$.requerOrdemPagamento").value(true))
             .andExpect(jsonPath("$.totalLinhas").value(2))
             .andExpect(jsonPath("$.resumo.registrosNovos").value(2))
             .andExpect(jsonPath("$.resumo.valorTotal").value(300.75))
@@ -121,15 +122,18 @@ class PortoColagemApiIntegrationTest {
             .andExpect(jsonPath("$[?(@.numero == 'OS 01/0000001-26')]").isEmpty());
 
         long id=((Number)JsonPath.read(previa,"$.id")).longValue();
+        long op=criarOp(token,"OP-COLAGEM-GERAL-PAGA",300.75,"2026-08-14");
+        long calendario=calendarioId(token,"2026-08-14");
         mvc.perform(post("/api/porto/importacoes/{id}/confirmar",id)
-                .header("Authorization","Bearer "+token).contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .header("Authorization","Bearer "+token).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"ordemPagamentoId\":"+op+",\"calendarioPagamentoId\":"+calendario+"}"))
             .andExpect(status().isOk()).andExpect(jsonPath("$.novos").value(2));
 
         mvc.perform(get("/api/porto/ordens-servico").header("Authorization","Bearer "+token))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$[?(@.numero == 'OS 01/0000001-26')].statusOperacional").value("NORMAL"))
-            .andExpect(jsonPath("$[?(@.numero == 'OS 01/0000001-26')].statusFinanceiro").value("AGUARDANDO_OP"))
-            .andExpect(jsonPath("$[?(@.numero == 'OS 01/0000001-26')].ordemPagamento").isEmpty())
+            .andExpect(jsonPath("$[?(@.numero == 'OS 01/0000001-26')].statusOperacional").value("PROCESSADO"))
+            .andExpect(jsonPath("$[?(@.numero == 'OS 01/0000001-26')].statusFinanceiro").value("RECEBIDO"))
+            .andExpect(jsonPath("$[?(@.numero == 'OS 01/0000001-26')].ordemPagamento").value("OP-COLAGEM-GERAL-PAGA"))
             .andExpect(jsonPath("$[?(@.numero == 'OS 01/0000001-26')].viatura").isEmpty())
             .andExpect(jsonPath("$[?(@.numero == 'OS 01/0000002-26')].viatura").value("VTR-TESTE"));
     }
@@ -192,6 +196,20 @@ class PortoColagemApiIntegrationTest {
         mvc.perform(post("/api/porto/importacoes/{id}/confirmar",id).header("Authorization","Bearer "+token)
                 .contentType(MediaType.APPLICATION_JSON).content("{}"))
             .andExpect(status().isOk());
+    }
+
+    private long criarOp(String token,String numero,double valor,String data) throws Exception {
+        String resposta=mvc.perform(post("/api/porto/ordens-pagamento").header("Authorization","Bearer "+token)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"numero\":\""+numero+"\",\"dataPrevista\":\""+data+"\",\"valorInformado\":"+valor+",\"statusPorto\":\"PROCESSADO\",\"situacaoFinanceira\":\"PROGRAMADO\",\"pagamentoConfirmado\":false}"))
+            .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        return ((Number)JsonPath.read(resposta,"$.id")).longValue();
+    }
+
+    private long calendarioId(String token,String dataPagamento) throws Exception {
+        String resposta=mvc.perform(get("/api/porto/calendario").header("Authorization","Bearer "+token))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        java.util.List<Map<String,Object>> encontrados=JsonPath.read(resposta,"$[?(@.dataPagamento == '"+dataPagamento+"')]");
+        return ((Number)encontrados.getFirst().get("id")).longValue();
     }
 
     private String login() throws Exception {
