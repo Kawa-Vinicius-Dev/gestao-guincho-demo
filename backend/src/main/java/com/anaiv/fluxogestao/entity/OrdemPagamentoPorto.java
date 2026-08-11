@@ -37,6 +37,7 @@ public class OrdemPagamentoPorto {
         valorRecebido=valor;dataRecebimento=data;situacaoFinanceira=EnumsFinanceiros.SituacaoFinanceiraOpPorto.RECEBIDO;
         calendarioPagamento=calendario;dataPagamentoProgramada=data;atualizadoEm=OffsetDateTime.now();
     }
+    public void recalcularComposicao(BigDecimal valor){valorTotal=valor;if(dataRecebimento!=null)valorRecebido=valor;atualizadoEm=OffsetDateTime.now();}
     public void associarCalendario(CalendarioPagamentoPorto calendario){this.calendarioPagamento=calendario;this.dataPagamentoProgramada=calendario.getDataPagamento();atualizadoEm=OffsetDateTime.now();}
     public void atualizarManual(BigDecimal valor,LocalDate prevista,String statusPorto,EnumsFinanceiros.SituacaoFinanceiraOpPorto situacao,String observacao,CalendarioPagamentoPorto calendario){
         if(valor!=null)valorTotal=valor;if(prevista!=null)dataPagamentoProgramada=prevista;this.statusPorto=limpar(statusPorto);situacaoFinanceira=situacao;this.observacao=limpar(observacao);calendarioPagamento=calendario;atualizadoEm=OffsetDateTime.now();

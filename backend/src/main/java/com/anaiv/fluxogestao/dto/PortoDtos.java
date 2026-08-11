@@ -14,12 +14,22 @@ public final class PortoDtos {
     public record LinhaPreviaResponse(Map<String,String> dados,String hashRegistro,AcaoLinhaPorto acao,String mensagem) {}
     public record ResumoPreviaResponse(int linhasAnalisadas,int opsUnicas,int registrosNovos,int registrosExistentes,
         int registrosAtualizados,int duplicidades,int erros,BigDecimal valorTotal) {}
+    public record ReassociacaoOsResponse(String numeroOs,String opAtual,String novaOp,BigDecimal valor) {}
+    public record AnaliseOrdemPagamentoResponse(String numero,boolean existente,BigDecimal valorAtual,
+        BigDecimal somaArquivo,BigDecimal diferenca,int quantidadeReassociacoes,BigDecimal valorReassociacoes,
+        List<ReassociacaoOsResponse> reassociacoes) {}
     public record PreviaResponse(Long id,String nomeArquivo,TipoRelatorioPorto tipo,String status,int totalLinhas,
-        List<LinhaPreviaResponse> linhas,List<String> erros,boolean requerOrdemPagamento,ResumoPreviaResponse resumo) {}
+        List<LinhaPreviaResponse> linhas,List<String> erros,boolean requerOrdemPagamento,ResumoPreviaResponse resumo,
+        AnaliseOrdemPagamentoResponse analiseOrdemPagamento) {}
     public record ConteudoImportacaoRequest(@NotBlank String conteudo) {}
-    public record ConfirmarImportacaoRequest(Long ordemPagamentoId,Boolean confirmarDivergencias,
-        Long calendarioPagamentoId,
-        MotivoJustificativaPorto motivoDivergencia,String justificativaDivergencia) {}
+    public record ConfirmarImportacaoRequest(Long ordemPagamentoId,String numeroOrdemPagamento,
+        Boolean confirmarDivergencias,Boolean confirmarReassociacoes,Long calendarioPagamentoId,
+        MotivoJustificativaPorto motivoDivergencia,String justificativaDivergencia) {
+        public ConfirmarImportacaoRequest(Long ordemPagamentoId,Boolean confirmarDivergencias,Long calendarioPagamentoId,
+            MotivoJustificativaPorto motivoDivergencia,String justificativaDivergencia){
+            this(ordemPagamentoId,null,confirmarDivergencias,confirmarDivergencias,calendarioPagamentoId,motivoDivergencia,justificativaDivergencia);
+        }
+    }
     public record ConfirmacaoResponse(Long importacaoId,TipoRelatorioPorto tipo,int importados,int ignorados,int novos,int atualizados,
         int receitasCriadas,int receitasAtualizadas,BigDecimal valorTotalRecebido,String quinzena,LocalDate dataPagamento,List<String> erros) {}
     public record OrdemPagamentoResponse(Long id,String numero,BigDecimal valorTotal,String nomeCodigo,

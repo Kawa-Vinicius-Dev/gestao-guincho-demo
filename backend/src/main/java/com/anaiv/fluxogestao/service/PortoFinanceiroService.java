@@ -31,6 +31,11 @@ public class PortoFinanceiroService {
         if(item==null)throw new IllegalArgumentException("Selecione o período financeiro da OP antes de confirmar o pagamento.");
         return new PeriodoFinanceiro(item,calendario.rotulo(item));
     }
+    public PeriodoFinanceiro resolverPeriodoSelecionado(OrdemPagamentoPorto op,Long calendarioPagamentoId){
+        if(calendarioPagamentoId==null)throw new IllegalArgumentException("Selecione o período financeiro da OP antes de confirmar o pagamento.");
+        CalendarioPagamentoPorto item=calendario.obterPeriodo(calendarioPagamentoId);op.associarCalendario(item);
+        return new PeriodoFinanceiro(item,calendario.rotulo(item));
+    }
 
     public ResultadoSincronizacao sincronizar(OrdemServicoPorto os,OrdemPagamentoPorto op,Importacao importacao,CalendarioPagamentoPorto ciclo){
         return sincronizar(os,op,importacao,ciclo,ciclo.getDataPagamento());

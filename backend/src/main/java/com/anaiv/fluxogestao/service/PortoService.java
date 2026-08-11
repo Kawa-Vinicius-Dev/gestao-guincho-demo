@@ -21,6 +21,9 @@ public class PortoService {
     private final PendenciaFinanceiraPortoRepository pendencias;private final JustificativaConciliacaoPortoRepository justificativas;private final UsuarioRepository usuarios;private final CalendarioPagamentoPortoRepository calendario;private final CalendarioPortoService calendarioService;private final HistoricoPortoRepository historicos;private final MotoristaRepository motoristas;private final MotoristaPortoResolver resolverMotorista;private final PortoFinanceiroService financeiro;
     public PortoService(OrdemPagamentoPortoRepository ops,OrdemServicoPortoRepository oss,PendenciaFinanceiraPortoRepository p,JustificativaConciliacaoPortoRepository j,UsuarioRepository u,CalendarioPagamentoPortoRepository calendario,CalendarioPortoService calendarioService,HistoricoPortoRepository historicos,MotoristaRepository motoristas,MotoristaPortoResolver resolverMotorista,PortoFinanceiroService financeiro){this.ops=ops;this.oss=oss;pendencias=p;justificativas=j;usuarios=u;this.calendario=calendario;this.calendarioService=calendarioService;this.historicos=historicos;this.motoristas=motoristas;this.resolverMotorista=resolverMotorista;this.financeiro=financeiro;}
     public OrdemPagamentoPorto obterOp(Long id){return ops.findById(id).orElseThrow(()->new RecursoNaoEncontradoException("Ordem de pagamento não encontrada."));}
+    public Optional<OrdemPagamentoPorto> buscarOp(String numero){return ops.findByNumero(numero.trim());}
+    public OrdemPagamentoPorto obterOuCriarOp(String numero,Importacao importacao){return buscarOp(numero).orElseGet(()->ops.save(new OrdemPagamentoPorto(numero.trim(),importacao)));}
+    public Optional<OrdemServicoPorto> buscarOs(String numero){return numero==null?Optional.empty():oss.findByNumero(numero);}
     public boolean existeOp(String numero){return numero!=null&&ops.findByNumero(numero).isPresent();}
     public boolean existeOs(String numero){return numero!=null&&oss.findByNumero(numero).isPresent();}
     public AcaoLinhaPorto classificarOp(LinhaPorto linha){return ops.findByNumero(linha.texto("numero_op")).map(op->{
@@ -46,6 +49,11 @@ public class PortoService {
         boolean conflito=diferentePreenchido(os.getValorTotal(),linha.decimal("valor_total"))||conflita(os.getEspecialidade(),linha.texto("especialidade"))
             ||conflita(os.getSiglaViatura(),linha.texto("sigla_viatura"))||conflita(os.getSocorrista(),linha.texto("socorrista"))||conflita(os.getQra(),linha.texto("qra"));
         return conflito?AcaoLinhaPorto.DIVERGENCIA:AcaoLinhaPorto.ATUALIZAR;}).orElse(AcaoLinhaPorto.IMPORTAR);}
+    public AcaoLinhaPorto classificarOsComposicao(LinhaPorto linha,String numeroOp){return oss.findByNumero(linha.texto("numero_os")).map(os->{
+        if(os.getOrdemPagamento()!=null&&!os.getOrdemPagamento().getNumero().equals(numeroOp))return AcaoLinhaPorto.DIVERGENCIA;
+        boolean conflito=diferentePreenchido(os.getValorTotal(),linha.decimal("valor_total"))||conflita(os.getEspecialidade(),linha.texto("especialidade"))
+            ||conflita(os.getSiglaViatura(),linha.texto("sigla_viatura"))||conflita(os.getSocorrista(),linha.texto("socorrista"))||conflita(os.getQra(),linha.texto("qra"));
+        return conflito?AcaoLinhaPorto.DIVERGENCIA:AcaoLinhaPorto.ATUALIZAR;}).orElse(AcaoLinhaPorto.IMPORTAR);}
     public void importarOp(LinhaPorto l,Importacao i){String numero=l.texto("numero_op");OrdemPagamentoPorto op=ops.findByNumero(numero).orElseGet(()->new OrdemPagamentoPorto(numero,i));
         LocalDate pagamento=l.data("data_pagamento");op.atualizar(l.decimal("valor_total"),l.texto("nome_codigo"),pagamento,i);if(op.getCalendarioPagamento()==null&&pagamento!=null)calendario.findByDataPagamento(pagamento).ifPresent(op::associarCalendario);ops.save(op);}
     public OrdemServicoPorto importarOs(LinhaPorto l,OrdemPagamentoPorto op,Importacao i){String numero=l.texto("numero_os");OrdemServicoPorto os=oss.findByNumero(numero).orElseGet(()->new OrdemServicoPorto(numero,i));
@@ -55,6 +63,7 @@ public class PortoService {
     public OrdemServicoPorto obterOs(String numero){return oss.findByNumero(numero).orElseThrow(()->new RecursoNaoEncontradoException("Ordem de serviço não encontrada."));}
     public List<OrdemServicoPorto> ossDaImportacao(Importacao importacao){return oss.findByImportacao(importacao);}
     public List<OrdemServicoPorto> ossDaOp(OrdemPagamentoPorto op){return oss.findByOrdemPagamento(op);}
+    public BigDecimal recalcularOp(OrdemPagamentoPorto op){BigDecimal total=ossDaOp(op).stream().map(OrdemServicoPorto::getValorTotal).filter(Objects::nonNull).reduce(BigDecimal.ZERO,BigDecimal::add);op.recalcularComposicao(total);return total;}
     public void importarOsGeral(LinhaPorto l,Importacao i){String numero=l.texto("numero_os");OrdemServicoPorto os=oss.findByNumero(numero).orElseGet(()->new OrdemServicoPorto(numero,i));
         os.atualizar(null,l.decimal("valor_total"),l.texto("especialidade"),l.texto("sigla_viatura"),l.texto("socorrista"),l.texto("qra"),
             l.data("data_atendimento"),l.decimal("valor_km_excedente"),l.decimal("km_morto_estimado"),i);vincularMotoristaSeSeguro(os);oss.save(os);}

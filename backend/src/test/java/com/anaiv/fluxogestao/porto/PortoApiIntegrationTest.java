@@ -130,7 +130,7 @@ class PortoApiIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON).content("{\"ordemPagamentoId\":"+opA+"}"))
             .andExpect(status().isOk()).andExpect(jsonPath("$.linhas[0].acao").value("IMPORTAR"));
         mvc.perform(post("/api/porto/importacoes/{id}/confirmar",id).header("Authorization","Bearer "+token)
-                .contentType(MediaType.APPLICATION_JSON).content("{\"ordemPagamentoId\":"+opA+"}"))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"ordemPagamentoId\":"+opA+",\"calendarioPagamentoId\":"+calendarioId("2026-08-14")+"}"))
             .andExpect(status().isOk());
 
         long reaberta=previa(token,"os-reassociar.csv",csv);
@@ -145,7 +145,7 @@ class PortoApiIntegrationTest {
             .andExpect(status().isOk()).andExpect(jsonPath("$[?(@.numero == 'OS-REASSOC-1')].ordemPagamento",org.hamcrest.Matchers.contains("OP-REASSOC-A")));
 
         mvc.perform(post("/api/porto/importacoes/{id}/confirmar",reaberta).header("Authorization","Bearer "+token)
-                .contentType(MediaType.APPLICATION_JSON).content("{\"ordemPagamentoId\":"+opB+",\"confirmarDivergencias\":true}"))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"ordemPagamentoId\":"+opB+",\"confirmarDivergencias\":true,\"calendarioPagamentoId\":"+calendarioId("2026-08-14")+"}"))
             .andExpect(status().isOk()).andExpect(jsonPath("$.importados").value(1));
         String ops=mvc.perform(get("/api/porto/ordens-pagamento").header("Authorization","Bearer "+token))
             .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();

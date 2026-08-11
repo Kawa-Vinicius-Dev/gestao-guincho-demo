@@ -69,19 +69,24 @@ class PortoFluxoFinanceiroApiIntegrationTest {
         long usuario=criarUsuario(token,"Motorista Importação Paga","motorista.importacao.paga@local.test");
         long motorista=criarMotorista(token,"Motorista Importação Paga","QRA-IMPORTACAO-PAGA",usuario);
         long calendario=criarCalendario(token,"2044-08-15","2044-07-01","2044-07-31","OP paga em agosto");
-        long op=criarOp(token,"OP-SERVICOS-GERAIS-PAGA",300,"2044-08-15");
+        String numeroOp="06422281";
         String linhas=linhaComQra("OS-SERVICOS-GERAIS-PAGA",300,"QRA-IMPORTACAO-PAGA","10/07/2044");
 
         long importacao=previaServicosGerais(token,"op-paga-servicos-gerais.txt",linhas);
         mvc.perform(post("/api/porto/importacoes/{id}/avaliar",importacao).header("Authorization","Bearer "+token)
-                .contentType(MediaType.APPLICATION_JSON).content("{\"ordemPagamentoId\":"+op+"}"))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"numeroOrdemPagamento\":\""+numeroOp+"\"}"))
             .andExpect(status().isOk()).andExpect(jsonPath("$.tipo").value("SERVICOS_GERAIS"))
-            .andExpect(jsonPath("$.requerOrdemPagamento").value(true));
-        String confirmacao=confirmar(token,importacao,op,calendario);
+            .andExpect(jsonPath("$.requerOrdemPagamento").value(true))
+            .andExpect(jsonPath("$.analiseOrdemPagamento.numero").value(numeroOp))
+            .andExpect(jsonPath("$.analiseOrdemPagamento.existente").value(false))
+            .andExpect(jsonPath("$.analiseOrdemPagamento.somaArquivo").value(300d));
+        String confirmacao=confirmarPorNumero(token,importacao,numeroOp,calendario);
 
         assertThat((Integer)JsonPath.read(confirmacao,"$.receitasCriadas")).isOne();
         assertThat(((Number)JsonPath.read(confirmacao,"$.valorTotalRecebido")).doubleValue()).isEqualTo(300d);
         assertThat((String)JsonPath.read(confirmacao,"$.dataPagamento")).isEqualTo("2044-08-15");
+        long op=jdbc.queryForObject("select id from ordens_pagamento_porto where numero=?",Long.class,numeroOp);
+        assertThat(jdbc.queryForObject("select count(*) from ordens_pagamento_porto where numero=?",Integer.class,numeroOp)).isOne();
         long os=osId("OS-SERVICOS-GERAIS-PAGA");
         assertThat(jdbc.queryForMap("select ordem_pagamento_id, status_financeiro_fluxo, data_efetiva_pagamento, motorista_id from ordens_servico_porto where id=?",os))
             .containsEntry("ordem_pagamento_id",op)
@@ -118,13 +123,91 @@ class PortoFluxoFinanceiroApiIntegrationTest {
             .andExpect(jsonPath("$[0].comissaoBruta").value(60d));
 
         long repetida=previaServicosGerais(token,"op-paga-servicos-gerais-repetida.txt",linhas);
-        confirmar(token,repetida,op,calendario);
+        confirmarPorNumero(token,repetida,numeroOp,calendario);
+        assertThat(jdbc.queryForObject("select count(*) from ordens_pagamento_porto where numero=?",Integer.class,numeroOp)).isOne();
         assertThat(jdbc.queryForObject("select count(*) from ordens_servico_porto where numero=?",Integer.class,"OS-SERVICOS-GERAIS-PAGA")).isOne();
         assertThat(contar("contas_receber","ordem_servico_porto_id",os)).isOne();
         assertThat(contar("receitas","ordem_servico_porto_id",os)).isOne();
         mvc.perform(get("/api/comissoes/resumo").header("Authorization","Bearer "+token)
                 .param("calendarioPagamentoId",String.valueOf(calendario)).param("motoristaId",String.valueOf(motorista)))
             .andExpect(status().isOk()).andExpect(jsonPath("$[0].quantidadeServicosPagos").value(1));
+    }
+
+    @Test
+    void exigeConfirmacaoExplicitaParaAtualizarValorDaOpExistente() throws Exception {
+        String token=login();
+        String numeroOp="OP-DIVERGENCIA-VALOR";
+        long op=criarOp(token,numeroOp,100,"2045-08-15");
+        long calendario=criarCalendario(token,"2045-08-15","2045-07-01","2045-07-31","Divergência explícita");
+        long importacao=previaServicosGerais(token,"divergencia-valor.txt",linha("OS-DIVERGENCIA-VALOR",120,"10/07/2045"));
+
+        mvc.perform(post("/api/porto/importacoes/{id}/avaliar",importacao).header("Authorization","Bearer "+token)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"numeroOrdemPagamento\":\""+numeroOp+"\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.analiseOrdemPagamento.existente").value(true))
+            .andExpect(jsonPath("$.analiseOrdemPagamento.valorAtual").value(100d))
+            .andExpect(jsonPath("$.analiseOrdemPagamento.somaArquivo").value(120d))
+            .andExpect(jsonPath("$.analiseOrdemPagamento.diferenca").value(-20d));
+
+        mvc.perform(post("/api/porto/importacoes/{id}/confirmar",importacao).header("Authorization","Bearer "+token)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"numeroOrdemPagamento\":\""+numeroOp+"\",\"calendarioPagamentoId\":"+calendario+"}"))
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.detalhe").value(containsString("confirme a divergência")));
+        assertThat(jdbc.queryForObject("select valor_total from ordens_pagamento_porto where id=?",java.math.BigDecimal.class,op)).isEqualByComparingTo("100.00");
+        assertThat(jdbc.queryForObject("select count(*) from ordens_servico_porto where numero=?",Integer.class,"OS-DIVERGENCIA-VALOR")).isZero();
+
+        mvc.perform(post("/api/porto/importacoes/{id}/confirmar",importacao).header("Authorization","Bearer "+token)
+                .contentType(MediaType.APPLICATION_JSON).content("""
+                    {"numeroOrdemPagamento":"%s","calendarioPagamentoId":%d,"confirmarDivergencias":true,
+                     "motivoDivergencia":"DIVERGENCIA_VALOR","justificativaDivergencia":"Valor conferido pelo administrador."}
+                    """.formatted(numeroOp,calendario)))
+            .andExpect(status().isOk());
+        assertThat(jdbc.queryForMap("select valor_total, valor_recebido from ordens_pagamento_porto where id=?",op))
+            .containsEntry("valor_total",new java.math.BigDecimal("120.00"))
+            .containsEntry("valor_recebido",new java.math.BigDecimal("120.00"));
+    }
+
+    @Test
+    void exigeConfirmacaoParaReassociarERecalculaAsDuasOpsSemDuplicarFinanceiro() throws Exception {
+        String token=login();
+        long calendarioOrigem=criarCalendario(token,"2046-08-14","2046-07-01","2046-07-15","Origem");
+        long calendarioDestino=criarCalendario(token,"2046-08-28","2046-07-16","2046-07-31","Destino");
+        long opOrigem=criarOp(token,"OP-ORIGEM-MOVIMENTO",150,"2046-08-14");
+        long previaOrigem=previaServicosGerais(token,"origem-movimento.txt",linha("OS-MOVIDA",150,"10/07/2046"));
+        confirmarPorNumero(token,previaOrigem,"OP-ORIGEM-MOVIMENTO",calendarioOrigem);
+        long os=osId("OS-MOVIDA");
+        long opDestino=criarOp(token,"OP-DESTINO-MOVIMENTO",150,"2046-08-28");
+        long importacao=previaServicosGerais(token,"destino-movimento.txt",linha("OS-MOVIDA",150,"10/07/2046"));
+
+        mvc.perform(post("/api/porto/importacoes/{id}/avaliar",importacao).header("Authorization","Bearer "+token)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"numeroOrdemPagamento\":\"OP-DESTINO-MOVIMENTO\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.analiseOrdemPagamento.quantidadeReassociacoes").value(1))
+            .andExpect(jsonPath("$.analiseOrdemPagamento.valorReassociacoes").value(150d))
+            .andExpect(jsonPath("$.analiseOrdemPagamento.reassociacoes[0].numeroOs").value("OS-MOVIDA"))
+            .andExpect(jsonPath("$.analiseOrdemPagamento.reassociacoes[0].opAtual").value("OP-ORIGEM-MOVIMENTO"))
+            .andExpect(jsonPath("$.analiseOrdemPagamento.reassociacoes[0].novaOp").value("OP-DESTINO-MOVIMENTO"));
+
+        mvc.perform(post("/api/porto/importacoes/{id}/confirmar",importacao).header("Authorization","Bearer "+token)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"numeroOrdemPagamento\":\"OP-DESTINO-MOVIMENTO\",\"calendarioPagamentoId\":"+calendarioDestino+"}"))
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.detalhe").value(containsString("reassociar")));
+        assertThat(jdbc.queryForObject("select ordem_pagamento_id from ordens_servico_porto where id=?",Long.class,os)).isEqualTo(opOrigem);
+
+        mvc.perform(post("/api/porto/importacoes/{id}/confirmar",importacao).header("Authorization","Bearer "+token)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"numeroOrdemPagamento\":\"OP-DESTINO-MOVIMENTO\",\"calendarioPagamentoId\":"+calendarioDestino+",\"confirmarReassociacoes\":true}"))
+            .andExpect(status().isOk());
+
+        assertThat(jdbc.queryForObject("select ordem_pagamento_id from ordens_servico_porto where id=?",Long.class,os)).isEqualTo(opDestino);
+        assertThat(jdbc.queryForMap("select valor_total, valor_recebido from ordens_pagamento_porto where id=?",opOrigem))
+            .containsEntry("valor_total",new java.math.BigDecimal("0.00"))
+            .containsEntry("valor_recebido",new java.math.BigDecimal("0.00"));
+        assertThat(jdbc.queryForMap("select valor_total, valor_recebido from ordens_pagamento_porto where id=?",opDestino))
+            .containsEntry("valor_total",new java.math.BigDecimal("150.00"))
+            .containsEntry("valor_recebido",new java.math.BigDecimal("150.00"));
+        assertThat(contar("contas_receber","ordem_servico_porto_id",os)).isOne();
+        assertThat(contar("receitas","ordem_servico_porto_id",os)).isOne();
+        assertThat(jdbc.queryForMap("select ordem_pagamento_porto_id, data_recebimento from receitas where ordem_servico_porto_id=?",os))
+            .containsEntry("ordem_pagamento_porto_id",opDestino)
+            .containsEntry("data_recebimento",java.sql.Date.valueOf("2046-08-28"));
     }
 
     @Test
@@ -213,6 +296,7 @@ class PortoFluxoFinanceiroApiIntegrationTest {
     private String confirmarComposicao(String token,long op,String nome,String linhas) throws Exception {return confirmar(token,previaComposicao(token,op,nome,linhas),op);}
     private String confirmar(String token,long importacao,long op) throws Exception {return mvc.perform(post("/api/porto/importacoes/{id}/confirmar",importacao).header("Authorization","Bearer "+token).contentType(MediaType.APPLICATION_JSON).content("{\"ordemPagamentoId\":"+op+"}" )).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();}
     private String confirmar(String token,long importacao,long op,long calendario) throws Exception {return mvc.perform(post("/api/porto/importacoes/{id}/confirmar",importacao).header("Authorization","Bearer "+token).contentType(MediaType.APPLICATION_JSON).content("{\"ordemPagamentoId\":"+op+",\"calendarioPagamentoId\":"+calendario+"}" )).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();}
+    private String confirmarPorNumero(String token,long importacao,String numero,long calendario) throws Exception {return mvc.perform(post("/api/porto/importacoes/{id}/confirmar",importacao).header("Authorization","Bearer "+token).contentType(MediaType.APPLICATION_JSON).content("{\"numeroOrdemPagamento\":\""+numero+"\",\"calendarioPagamentoId\":"+calendario+"}" )).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();}
     private long criarOp(String token,String numero,int valor,String data) throws Exception {String resposta=mvc.perform(post("/api/porto/ordens-pagamento").header("Authorization","Bearer "+token).contentType(MediaType.APPLICATION_JSON).content("""
         {"numero":"%s","dataPrevista":"%s","valorInformado":%d,"statusPorto":"PROCESSADO","situacaoFinanceira":"PROGRAMADO","pagamentoConfirmado":false,"observacao":"Sintético"}
         """.formatted(numero,data,valor))).andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();return ((Number)JsonPath.read(resposta,"$.id")).longValue();}
