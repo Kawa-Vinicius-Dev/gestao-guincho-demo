@@ -70,24 +70,35 @@ class PortoFluxoFinanceiroApiIntegrationTest {
         long motorista=criarMotorista(token,"Motorista Importação Paga","QRA-IMPORTACAO-PAGA",usuario);
         long calendario=criarCalendario(token,"2044-08-15","2044-07-01","2044-07-31","OP paga em agosto");
         String numeroOp="06422281";
-        String linhas=linhaComQra("OS-SERVICOS-GERAIS-PAGA",300,"QRA-IMPORTACAO-PAGA","10/07/2044");
+        long op=criarOp(token,numeroOp,24400,"2044-08-15");
+        StringBuilder linhas=new StringBuilder();
+        for(int indice=1;indice<=244;indice++){
+            String numeroOs="OS-SERVICOS-GERAIS-PAGA-%03d".formatted(indice);
+            jdbc.update("insert into ordens_servico_porto (numero,valor_total,especialidade,qra,data_atendimento) values (?,?,?,?,?)",
+                numeroOs,new java.math.BigDecimal("100.00"),"GUINCHO","QRA-IMPORTACAO-PAGA",java.sql.Date.valueOf("2044-07-10"));
+            linhas.append(linhaComQra(numeroOs,100,"QRA-IMPORTACAO-PAGA","10/07/2044"));
+        }
 
-        long importacao=previaServicosGerais(token,"op-paga-servicos-gerais.txt",linhas);
+        long importacao=previaServicosGerais(token,"op-paga-servicos-gerais.txt",linhas.toString());
         mvc.perform(post("/api/porto/importacoes/{id}/avaliar",importacao).header("Authorization","Bearer "+token)
-                .contentType(MediaType.APPLICATION_JSON).content("{\"numeroOrdemPagamento\":\""+numeroOp+"\"}"))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"numeroOrdemPagamento\":\""+numeroOp+"\",\"calendarioPagamentoId\":"+calendario+"}"))
             .andExpect(status().isOk()).andExpect(jsonPath("$.tipo").value("SERVICOS_GERAIS"))
             .andExpect(jsonPath("$.requerOrdemPagamento").value(true))
             .andExpect(jsonPath("$.analiseOrdemPagamento.numero").value(numeroOp))
-            .andExpect(jsonPath("$.analiseOrdemPagamento.existente").value(false))
-            .andExpect(jsonPath("$.analiseOrdemPagamento.somaArquivo").value(300d));
+            .andExpect(jsonPath("$.analiseOrdemPagamento.existente").value(true))
+            .andExpect(jsonPath("$.analiseOrdemPagamento.somaArquivo").value(24400d))
+            .andExpect(jsonPath("$.resumo.registrosExistentes").value(244))
+            .andExpect(jsonPath("$.linhas.length()").value(244));
         String confirmacao=confirmarPorNumero(token,importacao,numeroOp,calendario);
 
-        assertThat((Integer)JsonPath.read(confirmacao,"$.receitasCriadas")).isOne();
-        assertThat(((Number)JsonPath.read(confirmacao,"$.valorTotalRecebido")).doubleValue()).isEqualTo(300d);
+        assertThat((Integer)JsonPath.read(confirmacao,"$.importados")).isEqualTo(244);
+        assertThat((Integer)JsonPath.read(confirmacao,"$.atualizados")).isEqualTo(244);
+        assertThat((Integer)JsonPath.read(confirmacao,"$.receitasCriadas")).isEqualTo(244);
+        assertThat(((Number)JsonPath.read(confirmacao,"$.valorTotalRecebido")).doubleValue()).isEqualTo(24400d);
         assertThat((String)JsonPath.read(confirmacao,"$.dataPagamento")).isEqualTo("2044-08-15");
-        long op=jdbc.queryForObject("select id from ordens_pagamento_porto where numero=?",Long.class,numeroOp);
         assertThat(jdbc.queryForObject("select count(*) from ordens_pagamento_porto where numero=?",Integer.class,numeroOp)).isOne();
-        long os=osId("OS-SERVICOS-GERAIS-PAGA");
+        assertThat(jdbc.queryForObject("select count(*) from ordens_servico_porto where numero like 'OS-SERVICOS-GERAIS-PAGA-%' and ordem_pagamento_id=?",Integer.class,op)).isEqualTo(244);
+        long os=osId("OS-SERVICOS-GERAIS-PAGA-001");
         assertThat(jdbc.queryForMap("select ordem_pagamento_id, status_financeiro_fluxo, data_efetiva_pagamento, motorista_id from ordens_servico_porto where id=?",os))
             .containsEntry("ordem_pagamento_id",op)
             .containsEntry("status_financeiro_fluxo","RECEBIDO")
@@ -105,32 +116,32 @@ class PortoFluxoFinanceiroApiIntegrationTest {
         mvc.perform(get("/api/porto/dashboard").header("Authorization","Bearer "+token)
                 .param("periodo","PERSONALIZADO").param("dataInicio","2044-07-01").param("dataFim","2044-07-31"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.valorTotalRealizado").value(300d))
+            .andExpect(jsonPath("$.valorTotalRealizado").value(24400d))
             .andExpect(jsonPath("$.valorEfetivamenteRecebido").value(0d));
         mvc.perform(get("/api/porto/dashboard").header("Authorization","Bearer "+token)
                 .param("periodo","PERSONALIZADO").param("dataInicio","2044-08-01").param("dataFim","2044-08-31"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.valorTotalRealizado").value(0d))
-            .andExpect(jsonPath("$.valorEfetivamenteRecebido").value(300d));
+            .andExpect(jsonPath("$.valorEfetivamenteRecebido").value(24400d));
         mvc.perform(get("/api/dashboard").header("Authorization","Bearer "+token)
                 .param("inicio","2044-08-01").param("fim","2044-08-31"))
-            .andExpect(status().isOk()).andExpect(jsonPath("$.receitaRecebida").value(300d));
+            .andExpect(status().isOk()).andExpect(jsonPath("$.receitaRecebida").value(24400d));
         mvc.perform(get("/api/comissoes/resumo").header("Authorization","Bearer "+token)
                 .param("calendarioPagamentoId",String.valueOf(calendario)).param("motoristaId",String.valueOf(motorista)))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$[0].quantidadeServicosPagos").value(1))
-            .andExpect(jsonPath("$[0].producaoPaga").value(300d))
-            .andExpect(jsonPath("$[0].comissaoBruta").value(60d));
+            .andExpect(jsonPath("$[0].quantidadeServicosPagos").value(244))
+            .andExpect(jsonPath("$[0].producaoPaga").value(24400d))
+            .andExpect(jsonPath("$[0].comissaoBruta").value(4880d));
 
-        long repetida=previaServicosGerais(token,"op-paga-servicos-gerais-repetida.txt",linhas);
+        long repetida=previaServicosGerais(token,"op-paga-servicos-gerais-repetida.txt",linhas.toString());
         confirmarPorNumero(token,repetida,numeroOp,calendario);
         assertThat(jdbc.queryForObject("select count(*) from ordens_pagamento_porto where numero=?",Integer.class,numeroOp)).isOne();
-        assertThat(jdbc.queryForObject("select count(*) from ordens_servico_porto where numero=?",Integer.class,"OS-SERVICOS-GERAIS-PAGA")).isOne();
-        assertThat(contar("contas_receber","ordem_servico_porto_id",os)).isOne();
-        assertThat(contar("receitas","ordem_servico_porto_id",os)).isOne();
+        assertThat(jdbc.queryForObject("select count(*) from ordens_servico_porto where numero like 'OS-SERVICOS-GERAIS-PAGA-%'",Integer.class)).isEqualTo(244);
+        assertThat(jdbc.queryForObject("select count(*) from contas_receber c join ordens_servico_porto os on os.id=c.ordem_servico_porto_id where os.numero like 'OS-SERVICOS-GERAIS-PAGA-%'",Integer.class)).isEqualTo(244);
+        assertThat(jdbc.queryForObject("select count(*) from receitas r join ordens_servico_porto os on os.id=r.ordem_servico_porto_id where os.numero like 'OS-SERVICOS-GERAIS-PAGA-%'",Integer.class)).isEqualTo(244);
         mvc.perform(get("/api/comissoes/resumo").header("Authorization","Bearer "+token)
                 .param("calendarioPagamentoId",String.valueOf(calendario)).param("motoristaId",String.valueOf(motorista)))
-            .andExpect(status().isOk()).andExpect(jsonPath("$[0].quantidadeServicosPagos").value(1));
+            .andExpect(status().isOk()).andExpect(jsonPath("$[0].quantidadeServicosPagos").value(244));
     }
 
     @Test

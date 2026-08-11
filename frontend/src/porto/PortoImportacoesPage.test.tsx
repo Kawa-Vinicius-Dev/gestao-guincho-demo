@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { expect, test } from 'vitest'
@@ -35,8 +35,8 @@ test('envia CSV, exige OP para relatório de OS e confirma a prévia', async () 
   expect(screen.getByRole('button',{name:/confirmar importação/i})).toBeDisabled()
   await user.type(numero,'06422281')
   await user.tab()
-  expect(await screen.findByText(/será criada automaticamente/i)).toBeInTheDocument()
   await user.selectOptions(screen.getByLabelText(/período financeiro/i),'1')
+  expect(await screen.findByText(/será criada automaticamente/i)).toBeInTheDocument()
   const acoes=screen.getByRole('contentinfo',{name:/ações da prévia/i}),tabela=screen.getByRole('table')
   expect(acoes.compareDocumentPosition(tabela)&Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   await user.click(screen.getByRole('button',{name:/confirmar importação/i}))
@@ -150,9 +150,63 @@ test('cola serviços, mostra resumo da prévia e confirma somente depois da aná
   await user.type(screen.getByLabelText(/número da op/i),'OP-GERAL-PAGA')
   await user.tab()
   await user.selectOptions(screen.getByLabelText(/período financeiro/i),'1')
-  await user.click(screen.getByRole('button',{name:/confirmar importação/i}))
+  const botaoConfirmar=screen.getByRole('button',{name:/confirmar importação/i})
+  await waitFor(()=>expect(botaoConfirmar).toBeEnabled())
+  await user.click(botaoConfirmar)
   expect(await screen.findByText(/2 registros importados/i)).toBeInTheDocument()
   expect(screen.getByText(/2 receitas criadas/i)).toBeInTheDocument()
   expect(screen.getByText(/R\$\s*300,75 recebidos/i)).toBeInTheDocument()
   expect(confirmacao).toMatchObject({numeroOrdemPagamento:'OP-GERAL-PAGA',calendarioPagamentoId:1})
+})
+
+test('habilita e confirma automaticamente OP 06422281 com período e 244 OS existentes',async()=>{
+  const linhas=Array.from({length:244},(_,indice)=>({
+    hashRegistro:`existente-${indice+1}`,
+    acao:'IGNORAR' as const,
+    mensagem:'A OS já está atualizada.',
+    dados:{numero_os:`OS-${String(indice+1).padStart(3,'0')}`,valor_total:'100.00',especialidade:'REMOÇÃO',data_atendimento:'2026-07-10'},
+  }))
+  let avaliacao:Record<string,unknown>|null=null,confirmacao:Record<string,unknown>|null=null
+  servidor.use(
+    http.post('/api/porto/importacoes/previa',()=>HttpResponse.json({
+      id:64,nomeArquivo:'op-06422281.csv',tipo:'SERVICOS_GERAIS',status:'AGUARDANDO_CONFERENCIA',totalLinhas:244,requerOrdemPagamento:true,erros:[],linhas,
+      resumo:{linhasAnalisadas:244,opsUnicas:0,registrosNovos:0,registrosExistentes:244,registrosAtualizados:0,duplicidades:0,erros:0,valorTotal:24400},
+    },{status:201})),
+    http.post('/api/porto/importacoes/64/avaliar',async({request})=>{
+      avaliacao=await request.json() as Record<string,unknown>
+      return HttpResponse.json({
+        id:64,nomeArquivo:'op-06422281.csv',tipo:'SERVICOS_GERAIS',status:'AGUARDANDO_CONFERENCIA',totalLinhas:244,requerOrdemPagamento:true,erros:[],
+        linhas:linhas.map(linha=>({...linha,acao:'ATUALIZAR',mensagem:undefined})),
+        resumo:{linhasAnalisadas:244,opsUnicas:0,registrosNovos:0,registrosExistentes:244,registrosAtualizados:244,duplicidades:0,erros:0,valorTotal:24400},
+        analiseOrdemPagamento:{numero:'06422281',existente:true,valorAtual:24400,somaArquivo:24400,diferenca:0,quantidadeReassociacoes:0,valorReassociacoes:0,reassociacoes:[]},
+      })
+    }),
+    http.post('/api/porto/importacoes/64/confirmar',async({request})=>{
+      confirmacao=await request.json() as Record<string,unknown>
+      return HttpResponse.json({importacaoId:64,tipo:'SERVICOS_GERAIS',importados:244,ignorados:0,novos:0,atualizados:244,receitasCriadas:0,receitasAtualizadas:244,valorTotalRecebido:24400,quinzena:'01/07/2026 a 15/07/2026',dataPagamento:'2026-08-14',erros:[]})
+    }),
+  )
+  const user=userEvent.setup();render(<PortoImportacoesPage/>);await user.upload(screen.getByLabelText(/arquivo csv/i),new File(['244 OS'],'op-06422281.csv',{type:'text/csv'}));await user.click(screen.getByRole('button',{name:/analisar csv/i}))
+  expect(await screen.findByText((_,element)=>element?.tagName==='SPAN'&&element.textContent==='244 já existentes')).toBeInTheDocument()
+  await user.selectOptions(screen.getByLabelText(/período financeiro/i),'1')
+  await user.type(screen.getByLabelText(/número da op/i),'06422281')
+  const botao=screen.getByRole('button',{name:/confirmar importação/i})
+  await waitFor(()=>expect(botao).toBeEnabled())
+  expect(avaliacao).toEqual({numeroOrdemPagamento:'06422281',calendarioPagamentoId:1})
+  expect(avaliacao).not.toHaveProperty('ordemPagamentoId')
+  await user.click(botao)
+  expect(await screen.findByText(/244 registros importados/i)).toBeInTheDocument()
+  expect(confirmacao).toMatchObject({numeroOrdemPagamento:'06422281',calendarioPagamentoId:1})
+  expect(confirmacao).not.toHaveProperty('ordemPagamentoId')
+})
+
+test('mostra na tela erro retornado pela validação automática da OP',async()=>{
+  servidor.use(
+    http.post('/api/porto/importacoes/previa',()=>HttpResponse.json({id:65,nomeArquivo:'erro-op.csv',tipo:'SERVICOS_GERAIS',status:'AGUARDANDO_CONFERENCIA',totalLinhas:1,requerOrdemPagamento:true,erros:[],linhas:[{hashRegistro:'erro-1',acao:'IGNORAR',dados:{numero_os:'OS-ERRO',valor_total:'100.00'}}]},{status:201})),
+    http.post('/api/porto/importacoes/65/avaliar',()=>HttpResponse.json({detalhe:'Não foi possível validar a OP informada.'},{status:400})),
+  )
+  const user=userEvent.setup();render(<PortoImportacoesPage/>);await user.upload(screen.getByLabelText(/arquivo csv/i),new File(['OS'],'erro-op.csv',{type:'text/csv'}));await user.click(screen.getByRole('button',{name:/analisar csv/i}))
+  await user.selectOptions(await screen.findByLabelText(/período financeiro/i),'1');await user.type(screen.getByLabelText(/número da op/i),'06422281')
+  expect(await screen.findByText('Não foi possível validar a OP informada.')).toBeInTheDocument()
+  expect(screen.getByRole('button',{name:/confirmar importação/i})).toBeDisabled()
 })

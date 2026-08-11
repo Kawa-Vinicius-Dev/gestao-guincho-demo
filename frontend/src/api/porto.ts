@@ -6,9 +6,11 @@ export function criarPreviaPorto(arquivo:File){const body=new FormData();body.ap
 export function criarPreviaConteudoPorto(conteudo:string){return api<PreviaPorto>('/api/porto/importacoes/previa-conteudo',{method:'POST',body:JSON.stringify({conteudo})})}
 export function avaliarImportacaoPorto(id:number,ordemPagamentoId:number){return api<PreviaPorto>(`/api/porto/importacoes/${id}/avaliar`,{method:'POST',body:JSON.stringify({ordemPagamentoId})})}
 export function confirmarImportacaoPorto(id:number,ordemPagamentoId?:number,confirmarDivergencias=false,motivoDivergencia?:string,justificativaDivergencia?:string,calendarioPagamentoId?:number){return api<ConfirmacaoPorto>(`/api/porto/importacoes/${id}/confirmar`,{method:'POST',body:JSON.stringify({ordemPagamentoId:ordemPagamentoId??null,confirmarDivergencias,calendarioPagamentoId:calendarioPagamentoId??null,motivoDivergencia,justificativaDivergencia})})}
-export function avaliarImportacaoPortoPorNumero(id:number,numeroOrdemPagamento:string){return api<PreviaPorto>(`/api/porto/importacoes/${id}/avaliar`,{method:'POST',body:JSON.stringify({numeroOrdemPagamento})})}
+export interface AvaliarImportacaoPorNumeroPorto { numeroOrdemPagamento:string; calendarioPagamentoId:number }
+export function avaliarImportacaoPortoPorNumero(id:number,dados:AvaliarImportacaoPorNumeroPorto,signal?:AbortSignal){return api<PreviaPorto>(`/api/porto/importacoes/${id}/avaliar`,{method:'POST',body:JSON.stringify(dados),signal})}
 export interface ConfirmarImportacaoPorNumeroPorto { numeroOrdemPagamento:string; calendarioPagamentoId:number; confirmarDivergencias:boolean; confirmarReassociacoes:boolean; motivoDivergencia?:string; justificativaDivergencia?:string }
 export function confirmarImportacaoPortoPorNumero(id:number,dados:ConfirmarImportacaoPorNumeroPorto){return api<ConfirmacaoPorto>(`/api/porto/importacoes/${id}/confirmar`,{method:'POST',body:JSON.stringify(dados)})}
+export function confirmarImportacaoPortoSemOp(id:number,confirmarDivergencias=false){return api<ConfirmacaoPorto>(`/api/porto/importacoes/${id}/confirmar`,{method:'POST',body:JSON.stringify({confirmarDivergencias})})}
 export function cancelarImportacaoPorto(id:number){return api<PreviaPorto>(`/api/porto/importacoes/${id}/cancelar`,{method:'POST'})}
 const consulta=(params?:URLSearchParams)=>params?.toString()?`?${params}`:''
 export const listarOrdensPagamentoPorto=(params?:URLSearchParams)=>api<OrdemPagamentoPorto[]>(`/api/porto/ordens-pagamento${consulta(params)}`)
