@@ -145,6 +145,52 @@ class PortoFluxoFinanceiroApiIntegrationTest {
     }
 
     @Test
+    void associaSocorristaPorNomeEMantemExcecaoAntigaNaComissaoDoPeriodoDaOp() throws Exception {
+        String token=login();
+        long usuario=criarUsuario(token,"Andérson Jorge Ribeiro","anderson.excecao@local.test");
+        long motorista=criarMotorista(token,"Andérson Jorge Ribeiro","619238",usuario);
+        criarCalendario(token,"2050-07-14","2050-06-16","2050-06-30","Previsão original da exceção");
+        long calendarioOp=criarCalendario(token,"2050-08-14","2050-08-01","2050-08-15","Período financeiro da OP paga");
+        String numeroOp="OP-EXCECAO-NOME";
+        String linha="01/4148512-50\t90.50\tTECNICO\t\tANDERSON JORGE RIBEIRO\t003TT0000176zMBYAY\t2050-06-19 20:37:30\n"
+            +"01/4148513-31\t100.00\tGUINCHO\t\tANDERSON JORGE RIBEIRO\t003TT0000176zMBYAY\t2050-08-03 10:00:00\n";
+
+        long importacao=previaServicosGerais(token,"op-excecao-nome.txt",linha);
+        confirmarPorNumero(token,importacao,numeroOp,calendarioOp);
+
+        long os=osId("01/4148512-50");
+        assertThat(jdbc.queryForMap("select motorista_id, status_operacional_fluxo, data_prevista_original, data_efetiva_pagamento, ciclos_atraso from ordens_servico_porto where id=?",os))
+            .containsEntry("motorista_id",motorista)
+            .containsEntry("status_operacional_fluxo","LIBERADO_APOS_ANALISE")
+            .containsEntry("data_prevista_original",java.sql.Date.valueOf("2050-07-14"))
+            .containsEntry("data_efetiva_pagamento",java.sql.Date.valueOf("2050-08-14"))
+            .containsEntry("ciclos_atraso",1);
+        assertThat(jdbc.queryForMap("select motorista_id, status_operacional_fluxo, data_efetiva_pagamento from ordens_servico_porto where numero='01/4148513-31'"))
+            .containsEntry("motorista_id",motorista)
+            .containsEntry("status_operacional_fluxo","LIBERADO_APOS_ANALISE")
+            .containsEntry("data_efetiva_pagamento",java.sql.Date.valueOf("2050-08-14"));
+        mvc.perform(get("/api/porto/dashboard").header("Authorization","Bearer "+token)
+                .param("periodo","PERSONALIZADO").param("dataInicio","2050-06-01").param("dataFim","2050-06-30"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.valorTotalRealizado").value(90.5d))
+            .andExpect(jsonPath("$.valorEfetivamenteRecebido").value(0d));
+        mvc.perform(get("/api/porto/dashboard").header("Authorization","Bearer "+token)
+                .param("periodo","PERSONALIZADO").param("dataInicio","2050-08-01").param("dataFim","2050-08-31"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.valorTotalRealizado").value(100d))
+            .andExpect(jsonPath("$.valorEfetivamenteRecebido").value(190.5d));
+        mvc.perform(get("/api/dashboard").header("Authorization","Bearer "+token)
+                .param("inicio","2050-08-01").param("fim","2050-08-31"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.receitaRecebida").value(190.5d));
+        mvc.perform(get("/api/comissoes/resumo").header("Authorization","Bearer "+token)
+                .param("calendarioPagamentoId",String.valueOf(calendarioOp)).param("motoristaId",String.valueOf(motorista)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].quantidadeServicosPagos").value(2))
+            .andExpect(jsonPath("$[0].producaoPaga").value(190.5d))
+            .andExpect(jsonPath("$[0].comissaoBruta").value(38.1d));
+    }
+
+    @Test
     void exigeConfirmacaoExplicitaParaAtualizarValorDaOpExistente() throws Exception {
         String token=login();
         String numeroOp="OP-DIVERGENCIA-VALOR";

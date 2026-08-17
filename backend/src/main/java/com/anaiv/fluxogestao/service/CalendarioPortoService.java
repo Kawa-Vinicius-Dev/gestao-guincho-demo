@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class CalendarioPortoService {
@@ -26,6 +27,12 @@ public class CalendarioPortoService {
         return repositorio.findFirstByAtivoTrueAndCompetenciaInicioLessThanEqualAndCompetenciaFimGreaterThanEqualOrderByDataPagamento(dataServico,dataServico)
             .filter(x->periodo.inicio().equals(x.getCompetenciaInicio())&&periodo.fim().equals(x.getCompetenciaFim()))
             .orElseThrow(()->new IllegalArgumentException("Não existe data ativa no calendário Porto para o período "+periodo.rotulo()+"."));
+    }
+    @Transactional(readOnly=true) public Optional<LocalDate> previsaoDaCompetencia(LocalDate dataServico){
+        PeriodoQuinzena periodo=periodo(dataServico);
+        return repositorio.findFirstByAtivoTrueAndCompetenciaInicioLessThanEqualAndCompetenciaFimGreaterThanEqualOrderByDataPagamento(dataServico,dataServico)
+            .filter(x->periodo.inicio().equals(x.getCompetenciaInicio())&&periodo.fim().equals(x.getCompetenciaFim()))
+            .map(CalendarioPagamentoPorto::getDataPagamento);
     }
     public PeriodoQuinzena periodo(LocalDate data){if(data==null)throw new IllegalArgumentException("A data de atendimento é obrigatória para localizar o calendário Porto.");LocalDate inicio=data.getDayOfMonth()<=15?data.withDayOfMonth(1):data.withDayOfMonth(16);LocalDate fim=data.getDayOfMonth()<=15?data.withDayOfMonth(15):data.withDayOfMonth(data.lengthOfMonth());return new PeriodoQuinzena(inicio,fim);}
     @Transactional(readOnly=true) public CalendarioPagamentoPorto obterPeriodo(Long id){return obter(id);}

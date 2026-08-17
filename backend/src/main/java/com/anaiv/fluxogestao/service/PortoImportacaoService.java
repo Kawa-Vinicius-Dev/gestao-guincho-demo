@@ -88,7 +88,7 @@ public class PortoImportacaoService {
         for(LinhaPorto linha:previa.linhas()){
             String numero=linha.texto(previa.tipo()==TipoRelatorioPorto.PREVISAO_RECEBER?"numero_op":"numero_os");if(numero!=null&&!processadas.add(numero)){ignorados++;continue;}
             String chave=chaveProcessamento(previa.tipo(),linha,op);boolean jaProcessada=linha.acao()==AcaoLinhaPorto.IGNORAR;
-            if(importacaoPaga(previa.tipo())&&!jaProcessada)porto.importarOs(linha,op,imp);
+            if(importacaoPaga(previa.tipo())&&!jaProcessada)porto.importarOs(linha,op,imp,previa.tipo()==TipoRelatorioPorto.SERVICOS_GERAIS);
             if(jaProcessada){ignorados++;continue;}
             switch(previa.tipo()){case PREVISAO_RECEBER->porto.importarOp(linha,imp);case SERVICOS_GERAIS,OS_VINCULADAS->{ }case SERVICOS_AGUARDANDO_LANCAMENTO->porto.importarAguardando(linha,imp);case SERVICOS_DEVOLVIDOS->porto.importarDevolucao(linha,imp);}
             registros.save(new RegistroImportadoPorto(imp,chave,previa.tipo()));importados++;if(linha.acao()==AcaoLinhaPorto.ATUALIZAR||linha.acao()==AcaoLinhaPorto.DIVERGENCIA)atualizados++;else novos++;}

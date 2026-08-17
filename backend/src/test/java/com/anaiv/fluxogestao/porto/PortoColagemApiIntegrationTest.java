@@ -131,7 +131,7 @@ class PortoColagemApiIntegrationTest {
 
         mvc.perform(get("/api/porto/ordens-servico").header("Authorization","Bearer "+token))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$[?(@.numero == 'OS 01/0000001-26')].statusOperacional").value("PROCESSADO"))
+            .andExpect(jsonPath("$[?(@.numero == 'OS 01/0000001-26')].statusOperacional").value("LIBERADO_APOS_ANALISE"))
             .andExpect(jsonPath("$[?(@.numero == 'OS 01/0000001-26')].statusFinanceiro").value("RECEBIDO"))
             .andExpect(jsonPath("$[?(@.numero == 'OS 01/0000001-26')].ordemPagamento").value("OP-COLAGEM-GERAL-PAGA"))
             .andExpect(jsonPath("$[?(@.numero == 'OS 01/0000001-26')].viatura").isEmpty())

@@ -53,8 +53,10 @@ public class OrdemServicoPorto {
     }
     public void atualizarDadosPorto(String prestador,String seguradora,String cliente,String placa,OffsetDateTime dataHora){if(valido(prestador))this.prestador=prestador;if(valido(seguradora))this.seguradora=seguradora;if(valido(cliente))this.cliente=cliente;if(valido(placa))this.placa=placa;if(dataHora!=null){dataHoraAtendimento=dataHora;dataAtendimento=dataHora.toLocalDate();}atualizadoEm=OffsetDateTime.now();}
     public void aguardarLancamento(LocalDate previsao,Importacao origem){statusOperacional=EnumsFinanceiros.StatusOperacionalPorto.AGUARDANDO_LANCAMENTO;statusFinanceiro=EnumsFinanceiros.StatusFinanceiroPorto.AGUARDANDO_OP;statusFinanceiroLegado="AGUARDANDO_OP";if(dataPrevistaOriginal==null)dataPrevistaOriginal=previsao;if(origem!=null)importacao=origem;atualizadoEm=OffsetDateTime.now();}
-    public void processarEmOp(OrdemPagamentoPorto op,int ciclos){ordemPagamento=op;dataEfetivaPagamento=op.getDataPagamentoProgramada();ciclosAtraso=Math.max(ciclos,0);
-        statusOperacional=ciclosAtraso>0?EnumsFinanceiros.StatusOperacionalPorto.LIBERADO_APOS_ANALISE:EnumsFinanceiros.StatusOperacionalPorto.PROCESSADO;
+    public void definirPrevisaoOriginal(LocalDate previsao){if(dataPrevistaOriginal==null&&previsao!=null)dataPrevistaOriginal=previsao;}
+    public void processarEmOp(OrdemPagamentoPorto op,int ciclos){processarEmOp(op,ciclos,ciclos>0);}
+    public void processarEmOp(OrdemPagamentoPorto op,int ciclos,boolean liberadoAposAnalise){ordemPagamento=op;dataEfetivaPagamento=op.getDataPagamentoProgramada();ciclosAtraso=Math.max(ciclos,0);
+        statusOperacional=liberadoAposAnalise?EnumsFinanceiros.StatusOperacionalPorto.LIBERADO_APOS_ANALISE:EnumsFinanceiros.StatusOperacionalPorto.PROCESSADO;
         statusFinanceiro=op.getSituacaoFinanceira()==EnumsFinanceiros.SituacaoFinanceiraOpPorto.RECEBIDO?EnumsFinanceiros.StatusFinanceiroPorto.RECEBIDO:
             op.getSituacaoFinanceira()==EnumsFinanceiros.SituacaoFinanceiraOpPorto.A_CONFIRMAR?EnumsFinanceiros.StatusFinanceiroPorto.A_CONFIRMAR:EnumsFinanceiros.StatusFinanceiroPorto.PAGAMENTO_PROGRAMADO;
         if(statusFinanceiro!=EnumsFinanceiros.StatusFinanceiroPorto.A_CONFIRMAR)statusFinanceiroLegado=statusFinanceiro.name();

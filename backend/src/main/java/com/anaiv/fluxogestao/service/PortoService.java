@@ -56,10 +56,12 @@ public class PortoService {
         return conflito?AcaoLinhaPorto.DIVERGENCIA:AcaoLinhaPorto.ATUALIZAR;}).orElse(AcaoLinhaPorto.IMPORTAR);}
     public void importarOp(LinhaPorto l,Importacao i){String numero=l.texto("numero_op");OrdemPagamentoPorto op=ops.findByNumero(numero).orElseGet(()->new OrdemPagamentoPorto(numero,i));
         LocalDate pagamento=l.data("data_pagamento");op.atualizar(l.decimal("valor_total"),l.texto("nome_codigo"),pagamento,i);if(op.getCalendarioPagamento()==null&&pagamento!=null)calendario.findByDataPagamento(pagamento).ifPresent(op::associarCalendario);ops.save(op);}
-    public OrdemServicoPorto importarOs(LinhaPorto l,OrdemPagamentoPorto op,Importacao i){String numero=l.texto("numero_os");OrdemServicoPorto os=oss.findByNumero(numero).orElseGet(()->new OrdemServicoPorto(numero,i));
+    public OrdemServicoPorto importarOs(LinhaPorto l,OrdemPagamentoPorto op,Importacao i,boolean arquivoLiberadoAposAnalise){String numero=l.texto("numero_os");OrdemServicoPorto os=oss.findByNumero(numero).orElseGet(()->new OrdemServicoPorto(numero,i));
         os.atualizar(op,l.decimal("valor_total"),l.texto("especialidade"),l.texto("sigla_viatura"),l.texto("socorrista"),l.texto("qra"),
             l.data("data_atendimento"),l.decimal("valor_km_excedente"),l.decimal("km_morto_estimado"),i);
-        vincularMotoristaSeSeguro(os);int ciclos=calendarioService.ciclosUltrapassados(os.getDataPrevistaOriginal(),op.getDataPagamentoProgramada());os.processarEmOp(op,ciclos);return oss.save(os);}
+        vincularMotoristaSeSeguro(os);CalendarioPagamentoPorto periodo=op.getCalendarioPagamento();boolean periodoAnterior=periodo!=null&&os.getDataAtendimento()!=null&&os.getDataAtendimento().isBefore(periodo.getCompetenciaInicio());
+        if(periodoAnterior&&os.getDataPrevistaOriginal()==null)calendarioService.previsaoDaCompetencia(os.getDataAtendimento()).ifPresent(os::definirPrevisaoOriginal);
+        int ciclos=calendarioService.ciclosUltrapassados(os.getDataPrevistaOriginal(),op.getDataPagamentoProgramada());os.processarEmOp(op,ciclos,arquivoLiberadoAposAnalise||periodoAnterior||ciclos>0);return oss.save(os);}
     public OrdemServicoPorto obterOs(String numero){return oss.findByNumero(numero).orElseThrow(()->new RecursoNaoEncontradoException("Ordem de serviço não encontrada."));}
     public List<OrdemServicoPorto> ossDaImportacao(Importacao importacao){return oss.findByImportacao(importacao);}
     public List<OrdemServicoPorto> ossDaOp(OrdemPagamentoPorto op){return oss.findByOrdemPagamento(op);}
