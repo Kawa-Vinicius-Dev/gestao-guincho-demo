@@ -1,10 +1,19 @@
 spring:
   application:
     name: fluxo-gestao-api
+
   datasource:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/fluxo_gestao}
     username: ${DATABASE_USERNAME:fluxo}
     password: ${DATABASE_PASSWORD:fluxo}
+
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 1
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
   jpa:
     open-in-view: false
     hibernate:
@@ -13,10 +22,13 @@ spring:
       hibernate:
         jdbc:
           time_zone: UTC
+
   flyway:
     locations: classpath:db/migration/common,classpath:db/migration/postgresql
+
   jackson:
     default-property-inclusion: non_null
+
   servlet:
     multipart:
       max-file-size: 15MB
