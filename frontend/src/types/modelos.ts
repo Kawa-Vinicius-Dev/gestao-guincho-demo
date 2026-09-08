@@ -3,7 +3,7 @@ export interface Usuario { id: number; nome: string; email: string; perfil: Perf
 export interface Veiculo { id: number; identificacao: string; placa: string; modelo?: string; custoPorKm: number; ativo: boolean }
 export interface Contratante { id: number; nome: string; documento?: string; ativo: boolean }
 export interface Categoria { id: number; nome: string; tipo: 'RECEITA' | 'DESPESA'; ativo: boolean }
-export interface Motorista { id: number; nome: string; telefone?: string; documento?: string; qra?:string; usuarioId?: number; ativo: boolean }
+export interface Motorista { id: number; nome: string; telefone?: string; documento?: string; qra?:string; usuarioId?: number; ativo: boolean; veiculoId?: number; veiculo?: string }
 export interface ContaReceber {
   id: number; contratante: Contratante; protocolo?: string; descricao: string; valorPrevisto: number;
   valorRecebido?: number; diferenca?: number; dataCompetencia: string; vencimento: string;

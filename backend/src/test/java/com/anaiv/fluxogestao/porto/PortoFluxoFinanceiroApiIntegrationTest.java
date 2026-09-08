@@ -168,17 +168,17 @@ class PortoFluxoFinanceiroApiIntegrationTest {
     }
 
     @Test
-    void associaSocorristaPorNomeEMantemExcecaoAntigaNaComissaoDoPeriodoDaOp() throws Exception {
+    void associaSocorristaPeloQraEMantemExcecaoAntigaNaComissaoDoPeriodoDaOp() throws Exception {
         String token=login();
         long usuario=criarUsuario(token,"Andérson Jorge Ribeiro","anderson.excecao@local.test");
-        long motorista=criarMotorista(token,"Andérson Jorge Ribeiro","619238",usuario);
+        long motorista=criarMotorista(token,"Andérson Jorge Ribeiro","003TT0000176zMBYAY",usuario);
         criarCalendario(token,"2050-07-14","2050-06-16","2050-06-30","Previsão original da exceção");
         long calendarioOp=criarCalendario(token,"2050-08-14","2050-08-01","2050-08-15","Período financeiro da OP paga");
-        String numeroOp="OP-EXCECAO-NOME";
+        String numeroOp="OP-EXCECAO-QRA";
         String linha="01/4148512-50\t90.50\tTECNICO\t\tANDERSON JORGE RIBEIRO\t003TT0000176zMBYAY\t2050-06-19 20:37:30\n"
             +"01/4148513-31\t100.00\tGUINCHO\t\tANDERSON JORGE RIBEIRO\t003TT0000176zMBYAY\t2050-08-03 10:00:00\n";
 
-        long importacao=previaServicosGerais(token,"op-excecao-nome.txt",linha);
+        long importacao=previaServicosGerais(token,"op-excecao-qra.txt",linha);
         confirmarPorNumero(token,importacao,numeroOp,calendarioOp);
 
         long os=osId("01/4148512-50");

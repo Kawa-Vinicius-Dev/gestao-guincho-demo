@@ -73,9 +73,11 @@ public class PortoFinanceiroService {
         return new ResultadoSincronizacao(receitaExistente==null?1:0,receitaExistente==null?0:1,os.getValorTotal());
     }
 
+    /** A Porto nao informa a viatura no relatorio, entao o veiculo vem do cadastro do funcionario. */
     private Veiculo localizarVeiculo(OrdemServicoPorto os){
         if(preenchido(os.getSiglaViatura())){Optional<Veiculo> resultado=veiculos.findFirstByIdentificacaoIgnoreCase(os.getSiglaViatura().trim());if(resultado.isPresent())return resultado.get();}
-        return preenchido(os.getPlaca())?veiculos.findFirstByPlacaIgnoreCase(os.getPlaca().trim()).orElse(null):null;
+        if(preenchido(os.getPlaca())){Optional<Veiculo> resultado=veiculos.findFirstByPlacaIgnoreCase(os.getPlaca().trim());if(resultado.isPresent())return resultado.get();}
+        return os.getMotorista()==null?null:os.getMotorista().getVeiculo();
     }
     private boolean preenchido(String valor){return valor!=null&&!valor.isBlank();}
 

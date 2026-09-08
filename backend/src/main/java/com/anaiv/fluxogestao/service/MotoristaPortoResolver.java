@@ -5,27 +5,20 @@ import com.anaiv.fluxogestao.entity.OrdemServicoPorto;
 import com.anaiv.fluxogestao.repository.MotoristaRepository;
 import org.springframework.stereotype.Service;
 
-import java.text.Normalizer;
-import java.util.List;
-import java.util.Locale;
-
 @Service
 public class MotoristaPortoResolver {
     private final MotoristaRepository motoristas;
     public MotoristaPortoResolver(MotoristaRepository motoristas){this.motoristas=motoristas;}
 
+    /**
+     * A associacao e feita exclusivamente pelo QRA. No relatorio da Porto o mesmo nome aparece com
+     * QRAs diferentes (matricula e identificador interno) e cada QRA corresponde a uma pessoa
+     * distinta, entao casar por nome fundiria cadastros que devem ficar separados. A OS cujo QRA nao
+     * esta cadastrado fica sem funcionario e vira excecao para o operacional resolver.
+     */
     public Motorista resolver(OrdemServicoPorto os){
-        if(preenchido(os.getQra())){
-            var qra=motoristas.findByQraIgnoreCase(os.getQra().trim());
-            if(qra.isPresent()&&qra.get().isAtivo())return qra.get();
-        }
-        if(!preenchido(os.getSocorrista()))return null;
-        String procurado=normalizar(os.getSocorrista());
-        List<Motorista> candidatos=motoristas.findAll().stream().filter(Motorista::isAtivo)
-            .filter(m->normalizar(m.getNome()).equals(procurado)).toList();
-        return candidatos.size()==1?candidatos.getFirst():null;
+        if(!preenchido(os.getQra()))return null;
+        return motoristas.findByQraIgnoreCase(os.getQra().trim()).filter(Motorista::isAtivo).orElse(null);
     }
-    private String normalizar(String valor){return Normalizer.normalize(valor.trim(),Normalizer.Form.NFD)
-        .replaceAll("\\p{M}+","").replaceAll("\\s+"," ").toLowerCase(Locale.ROOT);}
     private boolean preenchido(String valor){return valor!=null&&!valor.isBlank();}
 }

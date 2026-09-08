@@ -37,7 +37,7 @@ public class CadastroService {
     @Transactional public MotoristaResponse criar(MotoristaRequest r) {
         Usuario usuario = r.usuarioId() == null ? null : usuario(r.usuarioId());
         if(r.qra()!=null&&!r.qra().isBlank()&&motoristas.findByQraIgnoreCase(r.qra().trim()).isPresent())throw new IllegalArgumentException("Já existe um motorista com este QRA.");
-        return motorista(motoristas.save(new Motorista(r.nome(), r.telefone(), r.documento(), r.qra(), usuario)));
+        return motorista(motoristas.save(new Motorista(r.nome(), r.telefone(), r.documento(), r.qra(), usuario, obterVeiculo(r.veiculoId()))));
     }
     public List<MotoristaResponse> motoristas() { return motoristas.findAll().stream().map(this::motorista).toList(); }
     @Transactional public UsuarioResponse criar(UsuarioRequest r) {
@@ -58,6 +58,7 @@ public class CadastroService {
     public VeiculoResponse veiculo(Veiculo v) { return new VeiculoResponse(v.getId(),v.getIdentificacao(),v.getPlaca(),v.getModelo(),v.getCustoPorKm(),v.isAtivo()); }
     public ContratanteResponse contratante(Contratante c) { return new ContratanteResponse(c.getId(),c.getNome(),c.getDocumento(),c.isAtivo()); }
     private CategoriaResponse categoria(Categoria c) { return new CategoriaResponse(c.getId(),c.getNome(),c.getTipo(),c.isAtivo()); }
-    private MotoristaResponse motorista(Motorista m) { return new MotoristaResponse(m.getId(),m.getNome(),m.getTelefone(),m.getDocumento(),m.getQra(),m.getUsuario()==null?null:m.getUsuario().getId(),m.isAtivo()); }
+    private MotoristaResponse motorista(Motorista m) { return new MotoristaResponse(m.getId(),m.getNome(),m.getTelefone(),m.getDocumento(),m.getQra(),m.getUsuario()==null?null:m.getUsuario().getId(),m.isAtivo(),
+        m.getVeiculo()==null?null:m.getVeiculo().getId(), m.getVeiculo()==null?null:m.getVeiculo().getIdentificacao()); }
     private UsuarioResponse usuario(Usuario u) { return new UsuarioResponse(u.getId(),u.getNome(),u.getEmail(),u.getPerfil(),u.isAtivo()); }
 }
