@@ -131,9 +131,9 @@ class PortoResumoApiIntegrationTest {
 
         String pendencias=mvc.perform(get("/api/porto/pendencias").header("Authorization","Bearer "+token))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$[?(@.referencia == '01/0000097-26')].responsavel").value("RESPONSÁVEL TESTE"))
+            .andExpect(jsonPath("$[?(@.tipo == 'SERVICO_PENDENTE' && @.referencia == '01/0000097-26')].responsavel").value("RESPONSÁVEL TESTE"))
             .andReturn().getResponse().getContentAsString();
-        List<Map<String,Object>> encontrada=JsonPath.read(pendencias,"$[?(@.referencia == '01/0000097-26')]");
+        List<Map<String,Object>> encontrada=JsonPath.read(pendencias,"$[?(@.tipo == 'SERVICO_PENDENTE' && @.referencia == '01/0000097-26')]");
         long pendenciaId=((Number)encontrada.getFirst().get("id")).longValue();
 
         mvc.perform(get("/api/porto/ordens-servico").header("Authorization","Bearer "+token))

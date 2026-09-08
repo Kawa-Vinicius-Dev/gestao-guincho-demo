@@ -150,10 +150,18 @@ public class PortoService {
         r.put("quantidadeServicosDevolvidos",servicos.stream().filter(x->x.statusOperacional()==EnumsFinanceiros.StatusOperacionalPorto.DEVOLVIDO_FINALIZADO).count());
         r.put("porEspecialidade",agrupar(servicos,OrdemServicoResponse::especialidade));r.put("porSocorrista",agrupar(servicos,OrdemServicoResponse::socorrista));
         r.put("evolucaoDiaria",evolucao(servicos,false));r.put("evolucaoMensal",evolucao(servicos,true));return r;}
-    @Transactional(readOnly=true) public List<PendenciaResponse> listarPendencias(){List<PendenciaResponse> r=new ArrayList<>();ops.findAll().stream().filter(x->x.getDataRecebimento()==null)
+    @Transactional(readOnly=true) public List<PendenciaResponse> listarPendencias(){List<PendenciaResponse> r=new ArrayList<>();
+        oss.findSemMotorista().forEach(x->r.add(new PendenciaResponse(null,"OS_SEM_FUNCIONARIO",x.getId(),x.getNumero(),x.getValorTotal(),x.getDataAtendimento(),"ABERTA",
+            motivoDaFaltaDeFuncionario(x),x.getOrdemPagamento()==null?null:"OP "+x.getOrdemPagamento().getNumero(),null,null,x.getQra())));
+        ops.findAllParaListagem().stream().filter(x->x.getDataRecebimento()==null)
         .forEach(x->r.add(new PendenciaResponse(null,"RECEBIMENTO_OP",x.getId(),x.getNumero(),x.getValorTotal(),x.getDataPagamentoProgramada(),"ABERTA",null,null,null,null,null)));
         pendencias.findAll().stream().filter(x->x.getStatus()==EnumsFinanceiros.StatusPendenciaPorto.ABERTA).forEach(x->r.add(pendencia(x)));
         return r.stream().sorted(Comparator.comparing(PendenciaResponse::data,Comparator.nullsLast(Comparator.naturalOrder()))).toList();}
+    /** O vinculo e feito pelo QRA, entao a falta tem duas causas distintas e cada uma se resolve de um jeito. */
+    private String motivoDaFaltaDeFuncionario(OrdemServicoPorto os){
+        return os.getQra()==null||os.getQra().isBlank()?"Relatório da Porto veio sem QRA nesta OS"
+            :"QRA "+os.getQra()+" não está cadastrado em Equipe";
+    }
     @Transactional public PendenciaResponse criarPendencia(PendenciaRequest request){OrdemServicoPorto os=oss.findByNumero(request.numeroOs().trim()).orElseThrow(()->new RecursoNaoEncontradoException("Ordem de serviço Porto não encontrada."));
         if(request.statusFinanceiro()!=EnumsFinanceiros.StatusFinanceiroPorto.AGUARDANDO_OP&&request.statusFinanceiro()!=EnumsFinanceiros.StatusFinanceiroPorto.BLOQUEADO_PARA_PAGAMENTO&&request.statusFinanceiro()!=EnumsFinanceiros.StatusFinanceiroPorto.VALOR_DIVERGENTE)throw new IllegalArgumentException("Selecione uma situação financeira válida para a pendência Porto.");
         PendenciaFinanceiraPorto p=pendencias.findByOrdemServico(os).orElseGet(()->new PendenciaFinanceiraPorto(os,request.motivo().trim(),request.valor(),request.dataPendencia(),request.observacao().trim(),request.responsavel().trim(),request.prazo(),limpar(request.referenciaPorto())));
