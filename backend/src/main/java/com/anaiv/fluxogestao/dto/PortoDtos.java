@@ -20,7 +20,7 @@ public final class PortoDtos {
         List<ReassociacaoOsResponse> reassociacoes) {}
     public record PreviaResponse(Long id,String nomeArquivo,TipoRelatorioPorto tipo,String status,int totalLinhas,
         List<LinhaPreviaResponse> linhas,List<String> erros,boolean requerOrdemPagamento,ResumoPreviaResponse resumo,
-        AnaliseOrdemPagamentoResponse analiseOrdemPagamento) {}
+        AnaliseOrdemPagamentoResponse analiseOrdemPagamento,List<String> osSemFuncionario) {}
     public record ConteudoImportacaoRequest(@NotBlank String conteudo) {}
     public record ColagemCalendarioRequest(@NotBlank String conteudo) {}
     public record ColagemCalendarioResponse(int criados,int ignorados,List<CalendarioResponse> itens) {}
@@ -33,7 +33,8 @@ public final class PortoDtos {
         }
     }
     public record ConfirmacaoResponse(Long importacaoId,TipoRelatorioPorto tipo,int importados,int ignorados,int novos,int atualizados,
-        int receitasCriadas,int receitasAtualizadas,BigDecimal valorTotalRecebido,String quinzena,LocalDate dataPagamento,List<String> erros) {}
+        int receitasCriadas,int receitasAtualizadas,BigDecimal valorTotalRecebido,String quinzena,LocalDate dataPagamento,List<String> erros,
+        List<String> osSemFuncionario) {}
     public record OrdemPagamentoResponse(Long id,String numero,BigDecimal valorTotal,String nomeCodigo,
         LocalDate dataPagamentoProgramada,BigDecimal valorRecebido,LocalDate dataRecebimento,String situacao,
         int quantidadeOrdensServico,BigDecimal valorOrdensServico,BigDecimal divergencia,StatusConciliacaoPorto statusConciliacao,

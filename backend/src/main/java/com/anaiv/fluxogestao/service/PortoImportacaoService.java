@@ -23,12 +23,13 @@ import java.util.*;
 public class PortoImportacaoService {
     private final ImportacaoRepository importacoes; private final RegistroImportadoPortoRepository registros;
     private final PortoCsvParser parser;private final PortoBlocosParser blocos; private final PortoService porto;private final PortoFinanceiroService financeiro; private final Path pasta;
-    public PortoImportacaoService(ImportacaoRepository i,RegistroImportadoPortoRepository r,PortoCsvParser p,PortoBlocosParser blocos,PortoService porto,PortoFinanceiroService financeiro,@Value("${app.storage-dir}")String storage){
-        importacoes=i;registros=r;parser=p;this.blocos=blocos;this.porto=porto;this.financeiro=financeiro;pasta=Path.of(storage).toAbsolutePath().normalize().resolve("porto");}
+    private final MotoristaRepository motoristas;
+    public PortoImportacaoService(ImportacaoRepository i,RegistroImportadoPortoRepository r,PortoCsvParser p,PortoBlocosParser blocos,PortoService porto,PortoFinanceiroService financeiro,MotoristaRepository motoristas,@Value("${app.storage-dir}")String storage){
+        importacoes=i;registros=r;parser=p;this.blocos=blocos;this.porto=porto;this.financeiro=financeiro;this.motoristas=motoristas;pasta=Path.of(storage).toAbsolutePath().normalize().resolve("porto");}
     @Transactional public PreviaResponse previa(MultipartFile arquivo){
         if(arquivo.isEmpty())throw new IllegalArgumentException("Selecione um arquivo CSV ou TXT.");String nome=arquivo.getOriginalFilename();
-        String nomeNormalizado=nome==null?"":nome.toLowerCase(Locale.ROOT);if(!nomeNormalizado.endsWith(".csv")&&!nomeNormalizado.endsWith(".txt"))throw new IllegalArgumentException("A importação Porto aceita CSV ou TXT.");
-        try{return preparar(arquivo.getBytes(),nome,nomeNormalizado.endsWith(".txt"),false);}
+        String nomeNormalizado=nome==null?"":nome.toLowerCase(Locale.ROOT);if(!tabular(nomeNormalizado))throw new IllegalArgumentException("A importação Porto aceita CSV, TXT ou TSV.");
+        try{return preparar(arquivo.getBytes(),nome,separadoPorTabulacao(nomeNormalizado),false);}
         catch(IllegalArgumentException e){throw e;}catch(Exception e){throw new IllegalArgumentException("Não foi possível preparar o relatório Porto.");}
     }
     @Transactional public PreviaResponse previaConteudo(ConteudoImportacaoRequest request){
@@ -39,7 +40,7 @@ public class PortoImportacaoService {
         porto.obterOp(ordemPagamentoId);
         if(arquivo.isEmpty())throw new IllegalArgumentException("Selecione o arquivo de composição da OP.");
         String nome=arquivo.getOriginalFilename();String normalizado=nome==null?"":nome.toLowerCase(Locale.ROOT);
-        if(!normalizado.endsWith(".csv")&&!normalizado.endsWith(".txt"))throw new IllegalArgumentException("A composição aceita CSV ou TXT tabular.");
+        if(!tabular(normalizado))throw new IllegalArgumentException("A composição aceita CSV, TXT ou TSV tabular.");
         try{PreviaResponse criada=preparar(arquivo.getBytes(),nome,false,false);
             if(criada.tipo()!=TipoRelatorioPorto.OS_VINCULADAS)throw new IllegalArgumentException("O arquivo não corresponde a uma composição de OP.");
             return avaliar(criada.id(),new ConfirmarImportacaoRequest(ordemPagamentoId,false,null,null,null));
@@ -93,10 +94,30 @@ public class PortoImportacaoService {
             switch(previa.tipo()){case PREVISAO_RECEBER->porto.importarOp(linha,imp);case SERVICOS_GERAIS,OS_VINCULADAS->{ }case SERVICOS_AGUARDANDO_LANCAMENTO->porto.importarAguardando(linha,imp);case SERVICOS_DEVOLVIDOS->porto.importarDevolucao(linha,imp);}
             registros.save(new RegistroImportadoPorto(imp,chave,previa.tipo()));importados++;if(linha.acao()==AcaoLinhaPorto.ATUALIZAR||linha.acao()==AcaoLinhaPorto.DIVERGENCIA)atualizados++;else novos++;}
         BigDecimal totalRecebido=BigDecimal.ZERO;if(op!=null){if(porNumero){totalRecebido=porto.recalcularOp(op);op.atualizar(totalRecebido,null,periodo.calendario().getDataPagamento(),imp);}PortoFinanceiroService.ResultadoLote resultado=financeiro.sincronizarLote(porto.ossDaOp(op),op,imp,periodo.calendario());receitasCriadas+=resultado.receitasCriadas();receitasAtualizadas+=resultado.receitasAtualizadas();if(!porNumero)totalRecebido=totalRecebido.add(resultado.valorTotal());op.sincronizarRecebimento(totalRecebido,periodo.calendario().getDataPagamento(),periodo.calendario());if(porNumero)for(OrdemPagamentoPorto origem:opsOrigem)if(!origem.getId().equals(op.getId()))porto.recalcularOp(origem);if(diferenca!=null&&diferenca.abs().compareTo(new BigDecimal("0.01"))>0&&request!=null&&request.motivoDivergencia()!=null&&request.justificativaDivergencia()!=null&&!request.justificativaDivergencia().isBlank())porto.registrarJustificativaImportacao(op,request.motivoDivergencia(),request.justificativaDivergencia(),diferenca,principal);porto.registrarHistoricoImportacao(op,principal,importados,atualizados);}
-        imp.confirmar();return new ConfirmacaoResponse(imp.getId(),previa.tipo(),importados,ignorados,novos,atualizados,receitasCriadas,receitasAtualizadas,totalRecebido,periodo==null?null:periodo.rotulo(),periodo==null?null:periodo.calendario().getDataPagamento(),List.of());
+        imp.confirmar();return new ConfirmacaoResponse(imp.getId(),previa.tipo(),importados,ignorados,novos,atualizados,receitasCriadas,receitasAtualizadas,totalRecebido,periodo==null?null:periodo.rotulo(),periodo==null?null:periodo.calendario().getDataPagamento(),List.of(),osSemFuncionario(imp));
     }
-    @Transactional public ConfirmacaoResponse reprocessarFinanceiro(Long id,Long calendarioPagamentoId){Importacao imp=obter(id);if(imp.getStatus()!=StatusImportacao.CONFIRMADA||imp.getTipoRelatorioPorto()!=TipoRelatorioPorto.OS_VINCULADAS)throw new IllegalArgumentException("Somente uma importação confirmada de OP paga pode ser reprocessada.");List<OrdemServicoPorto> oss=porto.ossDaImportacao(imp);if(oss.isEmpty())throw new IllegalArgumentException("A importação não possui ordens de serviço vinculadas para reprocessar.");Set<OrdemPagamentoPorto> ops=new LinkedHashSet<>();oss.forEach(os->{if(os.getOrdemPagamento()!=null)ops.add(os.getOrdemPagamento());});if(ops.size()!=1)throw new IllegalArgumentException("A importação precisa estar vinculada a uma única OP.");OrdemPagamentoPorto op=ops.iterator().next();PortoFinanceiroService.PeriodoFinanceiro periodo=financeiro.resolverPeriodo(op,calendarioPagamentoId);PortoFinanceiroService.ResultadoLote resultado=financeiro.sincronizarLote(oss,op,imp,periodo.calendario());op.sincronizarRecebimento(resultado.valorTotal(),periodo.calendario().getDataPagamento(),periodo.calendario());return new ConfirmacaoResponse(imp.getId(),imp.getTipoRelatorioPorto(),0,0,0,0,resultado.receitasCriadas(),resultado.receitasAtualizadas(),resultado.valorTotal(),periodo.rotulo(),periodo.calendario().getDataPagamento(),List.of());}
-    private ConfirmacaoResponse vazia(Importacao imp){return new ConfirmacaoResponse(imp.getId(),imp.getTipoRelatorioPorto(),0,0,0,0,0,0,BigDecimal.ZERO,null,null,List.of());}
+    @Transactional public ConfirmacaoResponse reprocessarFinanceiro(Long id,Long calendarioPagamentoId){Importacao imp=obter(id);if(imp.getStatus()!=StatusImportacao.CONFIRMADA||imp.getTipoRelatorioPorto()!=TipoRelatorioPorto.OS_VINCULADAS)throw new IllegalArgumentException("Somente uma importação confirmada de OP paga pode ser reprocessada.");List<OrdemServicoPorto> oss=porto.ossDaImportacao(imp);if(oss.isEmpty())throw new IllegalArgumentException("A importação não possui ordens de serviço vinculadas para reprocessar.");Set<OrdemPagamentoPorto> ops=new LinkedHashSet<>();oss.forEach(os->{if(os.getOrdemPagamento()!=null)ops.add(os.getOrdemPagamento());});if(ops.size()!=1)throw new IllegalArgumentException("A importação precisa estar vinculada a uma única OP.");OrdemPagamentoPorto op=ops.iterator().next();PortoFinanceiroService.PeriodoFinanceiro periodo=financeiro.resolverPeriodo(op,calendarioPagamentoId);PortoFinanceiroService.ResultadoLote resultado=financeiro.sincronizarLote(oss,op,imp,periodo.calendario());op.sincronizarRecebimento(resultado.valorTotal(),periodo.calendario().getDataPagamento(),periodo.calendario());return new ConfirmacaoResponse(imp.getId(),imp.getTipoRelatorioPorto(),0,0,0,0,resultado.receitasCriadas(),resultado.receitasAtualizadas(),resultado.valorTotal(),periodo.rotulo(),periodo.calendario().getDataPagamento(),List.of(),osSemFuncionario(imp));}
+    /**
+     * O vinculo com o funcionario e feito so pelo QRA, entao da para antecipar na previa quais OS
+     * ficarao sem funcionario: basta comparar o QRA de cada linha com os QRAs ativos cadastrados.
+     * Assim o operacional cadastra o QRA antes de confirmar, em vez de descobrir depois.
+     */
+    private List<String> osQueFicaraoSemFuncionario(PreviaPorto previa){
+        if(previa.tipo()==TipoRelatorioPorto.PREVISAO_RECEBER)return List.of();
+        Set<String> cadastrados=motoristas.findAll().stream().filter(Motorista::isAtivo)
+            .map(Motorista::getQra).filter(Objects::nonNull).map(x->x.trim().toUpperCase(Locale.ROOT))
+            .collect(java.util.stream.Collectors.toSet());
+        return previa.linhas().stream().filter(l->l.acao()!=AcaoLinhaPorto.ERRO)
+            .filter(l->{String qra=l.texto("qra");return qra==null||qra.isBlank()||!cadastrados.contains(qra.trim().toUpperCase(Locale.ROOT));})
+            .map(l->l.texto("numero_os")).filter(Objects::nonNull).distinct().sorted().toList();
+    }
+    /** A extensao decide o separador: .txt e .tsv sao tabulados, .csv e separado por virgula. */
+    private boolean tabular(String nome){return nome.endsWith(".csv")||separadoPorTabulacao(nome);}
+    private boolean separadoPorTabulacao(String nome){return nome.endsWith(".txt")||nome.endsWith(".tsv");}
+    /** OS que ficaram sem funcionario: QRA ausente ou nao cadastrado. O operacional precisa ve-las. */
+    private List<String> osSemFuncionario(Importacao imp){return porto.ossDaImportacao(imp).stream()
+        .filter(x->x.getMotorista()==null).map(OrdemServicoPorto::getNumero).sorted().toList();}
+    private ConfirmacaoResponse vazia(Importacao imp){return new ConfirmacaoResponse(imp.getId(),imp.getTipoRelatorioPorto(),0,0,0,0,0,0,BigDecimal.ZERO,null,null,List.of(),List.of());}
     private List<LinhaPorto> linhasUnicasValidas(PreviaPorto previa){String campo=previa.tipo()==TipoRelatorioPorto.PREVISAO_RECEBER?"numero_op":"numero_os";Set<String> vistos=new HashSet<>();return previa.linhas().stream().filter(l->l.acao()!=AcaoLinhaPorto.ERRO).filter(l->{String numero=l.texto(campo);return numero!=null&&vistos.add(numero);}).toList();}
     @Transactional(readOnly=true) public PreviaResponse avaliar(Long id,ConfirmarImportacaoRequest request){Importacao imp=obter(id);
         if(imp.getStatus()!=StatusImportacao.AGUARDANDO_CONFERENCIA||!importacaoPaga(imp.getTipoRelatorioPorto()))throw new IllegalArgumentException("Esta prévia de OS não pode ser avaliada.");
@@ -160,5 +181,5 @@ public class PortoImportacaoService {
     private List<ReassociacaoOsResponse> reassociacoes(PreviaPorto previa,String numero){return linhasUnicasValidas(previa).stream().map(linha->porto.buscarOs(linha.texto("numero_os")).map(os->{OrdemPagamentoPorto atual=os.getOrdemPagamento();return atual!=null&&!atual.getNumero().equals(numero)?new ReassociacaoOsResponse(os.getNumero(),atual.getNumero(),numero,linha.decimal("valor_total")):null;}).orElse(null)).filter(Objects::nonNull).toList();}
     private AnaliseOrdemPagamentoResponse analisarOp(PreviaPorto previa,String numero,Optional<OrdemPagamentoPorto> op){BigDecimal soma=linhasUnicasValidas(previa).stream().map(l->l.decimal("valor_total")).filter(Objects::nonNull).reduce(BigDecimal.ZERO,BigDecimal::add);BigDecimal atual=op.map(OrdemPagamentoPorto::getValorTotal).orElse(null);BigDecimal diferenca=atual==null?null:atual.subtract(soma);List<ReassociacaoOsResponse> reassociacoes=reassociacoes(previa,numero);BigDecimal valorReassociacoes=reassociacoes.stream().map(ReassociacaoOsResponse::valor).filter(Objects::nonNull).reduce(BigDecimal.ZERO,BigDecimal::add);return new AnaliseOrdemPagamentoResponse(numero,op.isPresent(),atual,soma,diferenca,reassociacoes.size(),valorReassociacoes,reassociacoes);}
     private PreviaResponse resposta(Importacao i,PreviaPorto p){return resposta(i,p,null);}
-    private PreviaResponse resposta(Importacao i,PreviaPorto p,AnaliseOrdemPagamentoResponse analise){return new PreviaResponse(i.getId(),i.getNomeArquivo(),p.tipo(),i.getStatus().name(),p.linhas().size(),p.linhas().stream().map(x->new LinhaPreviaResponse(x.dados(),x.hashRegistro(),x.acao(),x.mensagem())).toList(),p.erros(),importacaoPaga(p.tipo()),resumir(p),analise);}
+    private PreviaResponse resposta(Importacao i,PreviaPorto p,AnaliseOrdemPagamentoResponse analise){return new PreviaResponse(i.getId(),i.getNomeArquivo(),p.tipo(),i.getStatus().name(),p.linhas().size(),p.linhas().stream().map(x->new LinhaPreviaResponse(x.dados(),x.hashRegistro(),x.acao(),x.mensagem())).toList(),p.erros(),importacaoPaga(p.tipo()),resumir(p),analise,osQueFicaraoSemFuncionario(p));}
 }
