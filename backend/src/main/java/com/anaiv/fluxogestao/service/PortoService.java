@@ -122,6 +122,20 @@ public class PortoService {
             abaixo.size(),somarDivergencia(abaixo),acima.size(),somarDivergencia(acima),divergentes.size(),somarDivergencia(divergentes),
             programadas.size(),somarPrevisto(programadas),recebidas.size(),somarRecebido(recebidas),aguardando.size(),somarPrevisto(aguardando),
             vencidas.size(),somarPrevisto(vencidas),medio,lista.stream().mapToLong(OrdemPagamentoResponse::quantidadeOrdensServico).sum());}
+    /**
+     * A tela de OS abre num mes so, em vez de carregar a tabela inteira. Usa o mes corrente quando
+     * ele ja tem servico lancado; caso contrario, o mes do servico mais recente, para nao abrir
+     * vazia enquanto o movimento do mes nao comecou.
+     */
+    @Transactional(readOnly=true) public PeriodoPadraoResponse periodoPadraoOss(){
+        LocalDate hoje=LocalDate.now();
+        if(oss.countByDataAtendimentoBetween(inicioDoMes(hoje),fimDoMes(hoje))>0)return mes(hoje);
+        LocalDate maisRecente=oss.maiorDataAtendimento();
+        return mes(maisRecente==null?hoje:maisRecente);
+    }
+    private PeriodoPadraoResponse mes(LocalDate data){return new PeriodoPadraoResponse(inicioDoMes(data),fimDoMes(data));}
+    private LocalDate inicioDoMes(LocalDate data){return data.withDayOfMonth(1);}
+    private LocalDate fimDoMes(LocalDate data){return data.withDayOfMonth(data.lengthOfMonth());}
     @Transactional(readOnly=true) public List<OrdemServicoResponse> listarOss(){return listarOss(new PortoOsFiltros(null,null,null,null,null,null,null,null,null,null,null,null));}
     @Transactional(readOnly=true) public List<OrdemServicoResponse> listarOss(PortoOsFiltros filtros){return listarOss(filtros,carregarOps());}
     private List<OrdemServicoResponse> listarOss(PortoOsFiltros filtros,DadosOps dados){PortoOsFiltros f=filtros==null?new PortoOsFiltros(null,null,null,null,null,null,null,null,null,null,null,null):filtros;

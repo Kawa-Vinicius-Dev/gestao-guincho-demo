@@ -18,6 +18,8 @@ export const criarOrdemPagamentoPorto=(dados:Record<string,unknown>)=>api<OrdemP
 export const atualizarOrdemPagamentoPorto=(id:number,dados:Record<string,unknown>)=>api<OrdemPagamentoPorto>(`/api/porto/ordens-pagamento/${id}`,{method:'PUT',body:JSON.stringify(dados)})
 export function criarPreviaComposicaoPorto(id:number,arquivo:File){const body=new FormData();body.append('arquivo',arquivo);return api<PreviaPorto>(`/api/porto/ordens-pagamento/${id}/composicao/previa`,{method:'POST',body})}
 export const resumirOrdensPagamentoPorto=(params?:URLSearchParams)=>api<ResumoOpsPorto>(`/api/porto/ordens-pagamento/resumo${consulta(params)}`)
+export interface PeriodoPadraoPorto { dataInicio:string; dataFim:string }
+export const periodoPadraoOrdensServicoPorto=()=>api<PeriodoPadraoPorto>('/api/porto/ordens-servico/periodo-padrao')
 export const listarOrdensServicoPorto=(params?:URLSearchParams)=>api<OrdemServicoPorto[]>(`/api/porto/ordens-servico${consulta(params)}`)
 export const associarMotoristaPorto=(ordemServicoId:number,motoristaId:number)=>api<OrdemServicoPorto>(`/api/porto/ordens-servico/${ordemServicoId}/motorista`,{method:'PATCH',body:JSON.stringify({motoristaId})})
 export const listarPendenciasPorto=()=>api<PendenciaPorto[]>('/api/porto/pendencias')

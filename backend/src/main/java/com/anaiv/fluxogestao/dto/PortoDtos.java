@@ -54,6 +54,7 @@ public final class PortoDtos {
     public record PortoDashboardFiltros(String periodo,String visao,LocalDate referencia,LocalDate dataInicio,LocalDate dataFim,
         String numeroOs,String numeroOp,String numero,String especialidade,String socorrista,String qra,String viatura,
         StatusOperacionalPorto statusOperacional,StatusFinanceiroPorto statusFinanceiro,StatusConciliacaoPorto statusConciliacao) {}
+    public record PeriodoPadraoResponse(LocalDate dataInicio,LocalDate dataFim) {}
     public record ResumoGrupoResponse(String chave,long quantidade,BigDecimal valor) {}
     public record EvolucaoResponse(String periodo,long quantidade,BigDecimal valor) {}
     public record ResumoOrdensPagamentoResponse(
