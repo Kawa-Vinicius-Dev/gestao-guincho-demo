@@ -46,7 +46,8 @@ public final class PortoDtos {
     public record CalendarioResponse(Long id,LocalDate dataPagamento,LocalDate competenciaInicio,LocalDate competenciaFim,String descricao,boolean ativo,
         OffsetDateTime criadoEm,OffsetDateTime atualizadoEm) {}
     public record PortoFiltros(LocalDate dataInicio,LocalDate dataFim,String numero,String situacaoPagamento,
-        StatusConciliacaoPorto statusConciliacao,Boolean recebida,Boolean vencida,Boolean comComposicao,Boolean comDivergencia) {}
+        StatusConciliacaoPorto statusConciliacao,Boolean recebida,Boolean vencida,Boolean comComposicao,Boolean comDivergencia,
+        Long calendarioPagamentoId) {}
     public record PortoOsFiltros(LocalDate dataInicio,LocalDate dataFim,String numeroOs,String numeroOp,String especialidade,
         String socorrista,String qra,String viatura,StatusOperacionalPorto statusOperacional,StatusFinanceiroPorto statusFinanceiro,
         StatusConciliacaoPorto statusConciliacao,Boolean porDataPagamento) {}

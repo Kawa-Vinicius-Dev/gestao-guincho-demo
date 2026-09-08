@@ -88,9 +88,9 @@ public class PortoService {
     @Transactional public OrdemPagamentoResponse atualizarOpManual(Long id,OrdemPagamentoRequest request,UsuarioPrincipal principal){OrdemPagamentoPorto ordem=obterOp(id);ops.findByNumero(request.numero().trim()).filter(x->!x.getId().equals(id)).ifPresent(x->{throw new IllegalArgumentException("Já existe uma ordem de pagamento com este número.");});aplicarManual(ordem,request);if(Boolean.TRUE.equals(request.pagamentoConfirmado()))sincronizarRecebimentoComposto(ordem,request.dataRecebimento(),null);historicos.save(new HistoricoPorto(ordem,null,usuario(principal),"OP_ATUALIZADA_MANUALMENTE","Ordem de pagamento atualizada manualmente."));return op(ordem);}
     private void aplicarManual(OrdemPagamentoPorto op,OrdemPagamentoRequest request){if(Boolean.TRUE.equals(request.pagamentoConfirmado())){if(request.dataRecebimento()==null)throw new IllegalArgumentException("Informe a data de recebimento ao confirmar o pagamento no banco.");op.atualizarManual(request.valorInformado(),request.dataPrevista(),request.statusPorto(),EnumsFinanceiros.SituacaoFinanceiraOpPorto.PROGRAMADO,request.observacao(),calendario.findByDataPagamento(request.dataPrevista()).orElse(null));op.confirmarRecebimento(request.valorInformado(),request.dataRecebimento());}
         else{if(request.situacaoFinanceira()==EnumsFinanceiros.SituacaoFinanceiraOpPorto.RECEBIDO)throw new IllegalArgumentException("Confirme o pagamento no banco antes de marcar a OP como recebida.");op.atualizarManual(request.valorInformado(),request.dataPrevista(),request.statusPorto(),request.situacaoFinanceira(),request.observacao(),calendario.findByDataPagamento(request.dataPrevista()).orElse(null));}}
-    @Transactional(readOnly=true) public List<OrdemPagamentoResponse> listarOps(){return listarOps(new PortoFiltros(null,null,null,null,null,null,null,null,null));}
+    @Transactional(readOnly=true) public List<OrdemPagamentoResponse> listarOps(){return listarOps(new PortoFiltros(null,null,null,null,null,null,null,null,null,null));}
     @Transactional(readOnly=true) public List<OrdemPagamentoResponse> listarOps(PortoFiltros filtros){return listarOps(filtros,carregarOps());}
-    private List<OrdemPagamentoResponse> listarOps(PortoFiltros filtros,DadosOps dados){PortoFiltros f=filtros==null?new PortoFiltros(null,null,null,null,null,null,null,null,null):filtros;
+    private List<OrdemPagamentoResponse> listarOps(PortoFiltros filtros,DadosOps dados){PortoFiltros f=filtros==null?new PortoFiltros(null,null,null,null,null,null,null,null,null,null):filtros;
         return dados.ops().stream().sorted(Comparator.comparing(OrdemPagamentoPorto::getNumero)).map(x->op(x,dados.composicao(x)))
             .filter(x->filtrar(x,f)).toList();}
     /** Quantidade e soma das OS de cada OP resolvidas no banco: nao traz as linhas so para somar. */
@@ -164,6 +164,7 @@ public class PortoService {
         if(f.dataFim()!=null&&(x.dataPagamentoProgramada()==null||x.dataPagamentoProgramada().isAfter(f.dataFim())))return false;
         if(f.numero()!=null&&!f.numero().isBlank()&&!x.numero().toLowerCase(Locale.ROOT).contains(f.numero().trim().toLowerCase(Locale.ROOT)))return false;
         if(f.situacaoPagamento()!=null&&!f.situacaoPagamento().isBlank()){String situacao=f.situacaoPagamento().trim().toUpperCase(Locale.ROOT);if(situacao.equals("VENCIDA")&&!vencida)return false;if(situacao.equals("AGUARDANDO_RECEBIMENTO")&&(x.dataRecebimento()!=null||vencida))return false;if(!situacao.equals("VENCIDA")&&!situacao.equals("AGUARDANDO_RECEBIMENTO")&&!situacao.equals(x.situacao()))return false;}
+        if(f.calendarioPagamentoId()!=null&&!f.calendarioPagamentoId().equals(x.calendarioPagamentoId()))return false;
         if(f.statusConciliacao()!=null&&f.statusConciliacao()!=x.statusConciliacao())return false;
         if(f.recebida()!=null&&f.recebida()!=(x.dataRecebimento()!=null))return false;
         if(f.vencida()!=null&&f.vencida()!=vencida)return false;
