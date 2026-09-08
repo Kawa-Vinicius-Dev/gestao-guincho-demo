@@ -1,29 +1,29 @@
 import { useEffect,useState } from 'react'
 import { Link,useParams } from 'react-router-dom'
-import { listarPeriodosComissoes,obterDetalheFuncionario } from '../api/comissoes'
+import { listarPeriodosComissoes,obterDetalheSocorrista } from '../api/comissoes'
 import { Carregando,ErroPagina } from '../components/EstadoPagina'
-import type { CalendarioPorto,DetalheFuncionario } from '../types/modelos'
+import type { CalendarioPorto,DetalheSocorrista } from '../types/modelos'
 import { data,moeda } from '../utils/formatadores'
 
 const statusPagamento={PAGO:'Pago',PAGO_EM_OUTRO_PERIODO:'Pago em outro período',AGUARDANDO_PAGAMENTO:'Aguardando pagamento'} as const
 
 export default function EquipeDetalhePage(){
   const motoristaId=Number(useParams().id)
-  const [periodos,setPeriodos]=useState<CalendarioPorto[]>([]),[periodoId,setPeriodoId]=useState(0),[detalhe,setDetalhe]=useState<DetalheFuncionario|null>(null)
+  const [periodos,setPeriodos]=useState<CalendarioPorto[]>([]),[periodoId,setPeriodoId]=useState(0),[detalhe,setDetalhe]=useState<DetalheSocorrista|null>(null)
   const [carregandoPeriodos,setCarregandoPeriodos]=useState(true),[carregandoDetalhe,setCarregandoDetalhe]=useState(false),[erro,setErro]=useState('')
   useEffect(()=>{listarPeriodosComissoes().then(lista=>{setPeriodos(lista);const atual=[...lista].reverse().find(item=>item.ativo)??lista.at(-1);if(atual)setPeriodoId(atual.id)}).catch(e=>setErro(e.message)).finally(()=>setCarregandoPeriodos(false))},[])
-  useEffect(()=>{if(!motoristaId||!periodoId)return;setCarregandoDetalhe(true);setErro('');obterDetalheFuncionario(motoristaId,periodoId).then(setDetalhe).catch(e=>setErro(e.message)).finally(()=>setCarregandoDetalhe(false))},[motoristaId,periodoId])
+  useEffect(()=>{if(!motoristaId||!periodoId)return;setCarregandoDetalhe(true);setErro('');obterDetalheSocorrista(motoristaId,periodoId).then(setDetalhe).catch(e=>setErro(e.message)).finally(()=>setCarregandoDetalhe(false))},[motoristaId,periodoId])
   if(carregandoPeriodos)return <Carregando/>
   if(erro&&!detalhe)return <ErroPagina mensagem={erro}/>
   return <div className="page-enter employee-detail-page">
     <header className="employee-detail-heading">
-      <div><Link className="back-link" to="/equipe">← Voltar para funcionários</Link><span className="eyebrow">Ficha administrativa</span><h1>{detalhe?.nome||'Funcionário'}</h1><p>Histórico operacional e composição financeira por fechamento Porto.</p></div>
+      <div><Link className="back-link" to="/equipe">← Voltar para socorristas</Link><span className="eyebrow">Ficha administrativa</span><h1>{detalhe?.nome||'Socorrista'}</h1><p>Histórico operacional e composição financeira por fechamento Porto.</p></div>
       <label className="month-picker"><span>Período Porto</span><select aria-label="Período Porto" value={periodoId||''} onChange={event=>setPeriodoId(Number(event.target.value))}><option value="">Selecione</option>{periodos.map(periodo=><option key={periodo.id} value={periodo.id}>{periodo.descricao} · {data(periodo.competenciaInicio)} a {data(periodo.competenciaFim)}</option>)}</select></label>
     </header>
     {erro?<div className="form-alert" role="alert">{erro}</div>:null}
     {carregandoDetalhe&&!detalhe?<Carregando/>:null}
     {detalhe?<>
-      <section className="employee-identity panel" aria-label="Informações gerais do funcionário">
+      <section className="employee-identity panel" aria-label="Informações gerais do socorrista">
         <div className="employee-monogram">{detalhe.nome.split(' ').map(parte=>parte[0]).slice(0,2).join('')}</div>
         <div className="employee-name"><span className={`staff-status ${detalhe.ativo?'staff-disponivel':'staff-folga'}`}>{detalhe.ativo?'Ativo':'Inativo'}</span><strong>{detalhe.nome}</strong><small>{detalhe.qra||'QRA não informado'}</small></div>
         <dl><div><dt>Telefone</dt><dd>{detalhe.telefone||'Não informado'}</dd></div><div><dt>E-mail / usuário</dt><dd>{detalhe.email||'Não vinculado'}</dd></div></dl>

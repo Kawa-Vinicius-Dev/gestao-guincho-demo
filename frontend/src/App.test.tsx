@@ -46,12 +46,12 @@ test('administrador começa com a base vazia e cria o primeiro lançamento', asy
   expect(await screen.findByRole('region', { name: /fluxo do resultado operacional/i })).toBeInTheDocument()
 })
 
-test('funcionário vê apenas os lançamentos operacionais permitidos', async () => {
+test('socorrista vê apenas os lançamentos operacionais permitidos', async () => {
   const user = userEvent.setup()
   render(<App />)
 
   await user.clear(await screen.findByLabelText(/e-mail/i))
-  await user.type(screen.getByLabelText(/e-mail/i), 'funcionario@gestaoguincho.demo')
+  await user.type(screen.getByLabelText(/e-mail/i), 'socorrista@gestaoguincho.demo')
   await user.clear(screen.getByLabelText(/senha/i))
   await user.type(screen.getByLabelText(/senha/i), 'Demo@123')
   await user.click(screen.getByRole('button', { name: /entrar no sistema/i }))

@@ -168,7 +168,7 @@ class FluxoFinanceiroApiIntegrationTest {
     }
 
     @Test
-    void funcionarioRegistraDespesaMasNaoAcessaVisaoFinanceiraNemAprova() throws Exception {
+    void socorristaRegistraDespesaMasNaoAcessaVisaoFinanceiraNemAprova() throws Exception {
         String admin = login();
         criar(admin, "/api/usuarios", """
                 {"nome":"Motorista Teste","email":"motorista@fluxogestao.local",
@@ -179,22 +179,22 @@ class FluxoFinanceiroApiIntegrationTest {
                         .content("{\"email\":\"motorista@fluxogestao.local\",\"senha\":\"Motorista@123\"}"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.usuario.perfil").value("FUNCIONARIO"))
                 .andReturn().getResponse().getContentAsString();
-        String funcionario = JsonPath.read(resposta, "$.token");
+        String socorrista = JsonPath.read(resposta, "$.token");
 
-        mvc.perform(get("/api/dashboard").header("Authorization", "Bearer " + funcionario)
+        mvc.perform(get("/api/dashboard").header("Authorization", "Bearer " + socorrista)
                         .param("inicio", "2026-07-01").param("fim", "2026-07-31"))
                 .andExpect(status().isForbidden());
 
-        String despesa = criar(funcionario, "/api/despesas", """
+        String despesa = criar(socorrista, "/api/despesas", """
                 {"descricao":"Pedágio do motorista","categoriaId":1,"valor":35.00,
                  "data":"2026-07-23","status":"PAGO"}
                 """);
         long despesaId = id(despesa);
 
         mvc.perform(patch("/api/despesas/{id}/aprovar", despesaId)
-                        .header("Authorization", "Bearer " + funcionario))
+                        .header("Authorization", "Bearer " + socorrista))
                 .andExpect(status().isForbidden());
-        mvc.perform(get("/api/despesas").header("Authorization", "Bearer " + funcionario))
+        mvc.perform(get("/api/despesas").header("Authorization", "Bearer " + socorrista))
                 .andExpect(status().isForbidden());
     }
 

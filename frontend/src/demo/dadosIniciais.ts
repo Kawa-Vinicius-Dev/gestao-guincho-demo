@@ -2,7 +2,7 @@ import type { DemoState } from './modelosDemo'
 
 export const dadosIniciais: DemoState = {
   veiculos: [],
-  funcionarios: [],
+  socorristas: [],
   lancamentos: [],
   quilometragens: [],
   escala: [],

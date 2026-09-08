@@ -20,7 +20,7 @@ public final class PortoDtos {
         List<ReassociacaoOsResponse> reassociacoes) {}
     public record PreviaResponse(Long id,String nomeArquivo,TipoRelatorioPorto tipo,String status,int totalLinhas,
         List<LinhaPreviaResponse> linhas,List<String> erros,boolean requerOrdemPagamento,ResumoPreviaResponse resumo,
-        AnaliseOrdemPagamentoResponse analiseOrdemPagamento,List<String> osSemFuncionario) {}
+        AnaliseOrdemPagamentoResponse analiseOrdemPagamento,List<String> osSemSocorrista) {}
     public record ConteudoImportacaoRequest(@NotBlank String conteudo) {}
     public record ConfirmarImportacaoRequest(Long ordemPagamentoId,String numeroOrdemPagamento,
         Boolean confirmarDivergencias,Boolean confirmarReassociacoes,Long calendarioPagamentoId,
@@ -32,7 +32,7 @@ public final class PortoDtos {
     }
     public record ConfirmacaoResponse(Long importacaoId,TipoRelatorioPorto tipo,int importados,int ignorados,int novos,int atualizados,
         int receitasCriadas,int receitasAtualizadas,BigDecimal valorTotalRecebido,String quinzena,LocalDate dataPagamento,List<String> erros,
-        List<String> osSemFuncionario) {}
+        List<String> osSemSocorrista) {}
     public record OrdemPagamentoResponse(Long id,String numero,BigDecimal valorTotal,String nomeCodigo,
         LocalDate dataPagamentoProgramada,BigDecimal valorRecebido,LocalDate dataRecebimento,String situacao,
         int quantidadeOrdensServico,BigDecimal valorOrdensServico,BigDecimal divergencia,StatusConciliacaoPorto statusConciliacao,
@@ -50,7 +50,7 @@ public final class PortoDtos {
         Long calendarioPagamentoId) {}
     public record PortoOsFiltros(LocalDate dataInicio,LocalDate dataFim,String numeroOs,String numeroOp,String especialidade,
         String socorrista,String qra,String viatura,StatusOperacionalPorto statusOperacional,StatusFinanceiroPorto statusFinanceiro,
-        StatusConciliacaoPorto statusConciliacao,Boolean porDataPagamento,Boolean semFuncionario) {}
+        StatusConciliacaoPorto statusConciliacao,Boolean porDataPagamento,Boolean semSocorrista) {}
     public record PortoDashboardFiltros(String periodo,String visao,LocalDate referencia,LocalDate dataInicio,LocalDate dataFim,
         String numeroOs,String numeroOp,String numero,String especialidade,String socorrista,String qra,String viatura,
         StatusOperacionalPorto statusOperacional,StatusFinanceiroPorto statusFinanceiro,StatusConciliacaoPorto statusConciliacao) {}

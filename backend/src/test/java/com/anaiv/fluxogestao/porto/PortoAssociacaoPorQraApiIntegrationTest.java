@@ -20,14 +20,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * No relatorio da Porto o mesmo nome aparece com QRAs diferentes (matricula e identificador interno)
  * e cada QRA e uma pessoa distinta. A associacao e feita so pelo QRA, e a viatura vem do cadastro do
- * funcionario porque a Porto nunca preenche a sigla da viatura.
+ * socorrista porque a Porto nunca preenche a sigla da viatura.
  */
 @SpringBootTest @AutoConfigureMockMvc @ActiveProfiles("test")
 class PortoAssociacaoPorQraApiIntegrationTest {
     @Autowired MockMvc mvc;
     @Autowired JdbcTemplate jdbc;
 
-    @Test void associaSomentePeloQraELevaAViaturaDoFuncionarioParaOFinanceiro() throws Exception {
+    @Test void associaSomentePeloQraELevaAViaturaDoSocorristaParaOFinanceiro() throws Exception {
         String token=login();
         long veiculo=id(criar(token,"/api/veiculos","{\"identificacao\":\"VTR-QRA-01\",\"placa\":\"QRA1A01\",\"modelo\":\"Guincho\",\"custoPorKm\":1.00}"));
         // mesma pessoa no papel, dois QRAs: sao dois cadastros distintos
@@ -53,11 +53,11 @@ class PortoAssociacaoPorQraApiIntegrationTest {
         // cada QRA cai no seu proprio cadastro, mesmo com nome identico
         assertThat(motoristaDa("OS-QRA-MATRICULA")).isEqualTo(comMatricula);
         assertThat(motoristaDa("OS-QRA-IDINTERNO")).isEqualTo(comIdInterno);
-        // QRA nao cadastrado nao cai no nome: fica sem funcionario, como excecao
+        // QRA nao cadastrado nao cai no nome: fica sem socorrista, como excecao
         assertThat(motoristaDa("OS-QRA-DESCONHECIDO")).isNull();
         assertThat(motoristaDa("OS-QRA-VAZIO")).isNull();
 
-        // a viatura do funcionario chega ao lancamento financeiro, mesmo sem sigla no arquivo
+        // a viatura do socorrista chega ao lancamento financeiro, mesmo sem sigla no arquivo
         assertThat(veiculoDaContaDa("OS-QRA-MATRICULA")).isEqualTo(veiculo);
         assertThat(veiculoDaContaDa("OS-QRA-IDINTERNO")).isEqualTo(veiculo);
         assertThat(veiculoDaContaDa("OS-QRA-DESCONHECIDO")).isNull();

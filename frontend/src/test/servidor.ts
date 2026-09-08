@@ -22,10 +22,10 @@ export function restaurarEstadoTeste() {
 export const servidor = setupServer(
   http.post('/api/auth/login', async ({ request }) => {
     const { email } = await request.json() as { email: string }
-    const funcionario = email === 'funcionario@gestaoguincho.demo'
+    const socorrista = email === 'socorrista@gestaoguincho.demo'
     return HttpResponse.json({
-      token: funcionario ? 'token-funcionario-teste' : 'token-admin-teste',
-      usuario: funcionario
+      token: socorrista ? 'token-socorrista-teste' : 'token-admin-teste',
+      usuario: socorrista
         ? { id: 2, nome: 'Anderson Ribeiro', email, perfil: 'FUNCIONARIO' }
         : { id: 1, nome: 'Administrador', email: 'admin@fluxogestao.local', perfil: 'ADMINISTRADOR' },
     })

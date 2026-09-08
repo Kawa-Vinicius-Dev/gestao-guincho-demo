@@ -104,7 +104,7 @@ export default function QuilometragemPage() {
     </section>
 
     <section className="panel km-ledger"><header className="panel-title"><div><span className="eyebrow">Diário de bordo</span><h2>Registros do período</h2></div></header>
-      {registrosDoMes.length ? <div className="table-scroll"><table><thead><tr><th>Data</th><th>Veículo</th><th>Funcionário</th><th>Hodômetros</th><th>Km rodado</th><th>Km remunerado</th><th>Km morto</th><th>Custo</th></tr></thead><tbody>
+      {registrosDoMes.length ? <div className="table-scroll"><table><thead><tr><th>Data</th><th>Veículo</th><th>Socorrista</th><th>Hodômetros</th><th>Km rodado</th><th>Km remunerado</th><th>Km morto</th><th>Custo</th></tr></thead><tbody>
         {registrosDoMes.map(item => <tr key={item.id}><td>{data(item.data)}</td><td><strong>{item.veiculo}</strong></td><td>{item.motorista ?? '—'}</td><td>{numero(item.hodometroInicial)} → {numero(item.hodometroFinal)}</td><td>{numero(item.quilometragemTotal)} km</td><td>{numero(item.quilometragemRemunerada)} km</td><td><strong>{numero(item.kmMorto)} km</strong></td><td>{moeda(item.custoKmMorto)}</td></tr>)}
       </tbody></table></div> : <Vazio titulo="Sem registros no período" descricao="Selecione outra competência ou registre a primeira quilometragem."/>}
     </section>
@@ -113,7 +113,7 @@ export default function QuilometragemPage() {
       <form onSubmit={salvar} className="form-grid three-columns">
         <label className="field"><span>Data</span><input name="data" type="date" defaultValue={hojeLocal()} required/></label>
         <label className="field"><span>Veículo</span><select name="veiculoId" required><option value="">Selecione</option>{veiculos.map(item => <option value={item.id} key={item.id}>{item.identificacao}{item.modelo ? ` · ${item.modelo}` : ''}</option>)}</select></label>
-        <label className="field"><span>Funcionário</span><select name="motoristaId"><option value="">Não informado</option>{motoristas.map(item => <option value={item.id} key={item.id}>{item.nome}</option>)}</select></label>
+        <label className="field"><span>Socorrista</span><select name="motoristaId"><option value="">Não informado</option>{motoristas.map(item => <option value={item.id} key={item.id}>{item.nome}</option>)}</select></label>
         <label className="field"><span>Hodômetro inicial</span><input name="hodometroInicial" type="number" min="0" step=".01" required/></label>
         <label className="field"><span>Hodômetro final</span><input name="hodometroFinal" type="number" min="0" step=".01" required/></label>
         <label className="field"><span>Quilometragem remunerada</span><input name="quilometragemRemunerada" type="number" min="0" step=".01" required/></label>

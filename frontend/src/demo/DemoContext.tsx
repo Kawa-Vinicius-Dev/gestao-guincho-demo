@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react'
 import { dadosIniciais } from './dadosIniciais'
-import type { DemoState, FuncionarioDemo, LancamentoDemo, QuilometragemDemo, VeiculoDemo } from './modelosDemo'
+import type { DemoState, SocorristaDemo, LancamentoDemo, QuilometragemDemo, VeiculoDemo } from './modelosDemo'
 
 const STORAGE_KEY = 'gestao-guincho:demo:v4'
 const LEGACY_STORAGE_KEYS = [
@@ -14,7 +14,7 @@ interface DemoValue {
   adicionarLancamento(dados: Omit<LancamentoDemo, 'id'>): void
   adicionarQuilometragem(dados: Omit<QuilometragemDemo, 'id'>): void
   adicionarVeiculo(dados: Omit<VeiculoDemo, 'id'>): void
-  adicionarFuncionario(dados: Omit<FuncionarioDemo, 'id'>): void
+  adicionarSocorrista(dados: Omit<SocorristaDemo, 'id'>): void
   atualizarStatusLancamento(id: number, status: LancamentoDemo['status']): void
   importarExemplo(nomeArquivo: string): number
   restaurarDemo(): void
@@ -68,7 +68,7 @@ export function DemoProvider({ children }: { children: ReactNode }) {
           valor: custo,
           data: dados.data,
           veiculoId: dados.veiculoId,
-          funcionarioId: dados.funcionarioId,
+          socorristaId: dados.socorristaId,
           status: 'PAGO',
           origem: 'Manual',
           classeCusto: 'VARIAVEL',
@@ -81,8 +81,8 @@ export function DemoProvider({ children }: { children: ReactNode }) {
     persistir(atual => ({ ...atual, veiculos: [...atual.veiculos, { ...dados, id: Math.max(0, ...atual.veiculos.map(item => item.id)) + 1 }] }))
   }, [persistir])
 
-  const adicionarFuncionario = useCallback((dados: Omit<FuncionarioDemo, 'id'>) => {
-    persistir(atual => ({ ...atual, funcionarios: [...atual.funcionarios, { ...dados, id: Math.max(0, ...atual.funcionarios.map(item => item.id)) + 1 }] }))
+  const adicionarSocorrista = useCallback((dados: Omit<SocorristaDemo, 'id'>) => {
+    persistir(atual => ({ ...atual, socorristas: [...atual.socorristas, { ...dados, id: Math.max(0, ...atual.socorristas.map(item => item.id)) + 1 }] }))
   }, [persistir])
 
   const atualizarStatusLancamento = useCallback((id: number, status: LancamentoDemo['status']) => {
@@ -100,9 +100,9 @@ export function DemoProvider({ children }: { children: ReactNode }) {
       return {
         ...atual,
         lancamentos: [
-          { id: proximoLancamento, tipo: 'RECEITA', categoria: 'Serviços via Porto Seguro', descricao: 'Lote importado Porto Seguro', valor: 2860, data: '2026-07-24', veiculoId: 1, funcionarioId: 1, status: 'A_RECEBER', origem: 'Excel', protocolo: 'IMP-301' },
-          { id: proximoLancamento + 1, tipo: 'DESPESA', categoria: 'Combustível', descricao: 'Abastecimento importado', valor: 890, data: '2026-07-24', veiculoId: 2, funcionarioId: 2, status: 'PAGO', origem: 'Excel', classeCusto: 'VARIAVEL', litros: 143 },
-          { id: proximoLancamento + 2, tipo: 'DESPESA', categoria: 'Pedágio', descricao: 'Pedágios importados', valor: 185, data: '2026-07-24', veiculoId: 3, funcionarioId: 3, status: 'PAGO', origem: 'Excel', classeCusto: 'VARIAVEL' },
+          { id: proximoLancamento, tipo: 'RECEITA', categoria: 'Serviços via Porto Seguro', descricao: 'Lote importado Porto Seguro', valor: 2860, data: '2026-07-24', veiculoId: 1, socorristaId: 1, status: 'A_RECEBER', origem: 'Excel', protocolo: 'IMP-301' },
+          { id: proximoLancamento + 1, tipo: 'DESPESA', categoria: 'Combustível', descricao: 'Abastecimento importado', valor: 890, data: '2026-07-24', veiculoId: 2, socorristaId: 2, status: 'PAGO', origem: 'Excel', classeCusto: 'VARIAVEL', litros: 143 },
+          { id: proximoLancamento + 2, tipo: 'DESPESA', categoria: 'Pedágio', descricao: 'Pedágios importados', valor: 185, data: '2026-07-24', veiculoId: 3, socorristaId: 3, status: 'PAGO', origem: 'Excel', classeCusto: 'VARIAVEL' },
           ...atual.lancamentos,
         ],
         importacoes: [{
@@ -125,8 +125,8 @@ export function DemoProvider({ children }: { children: ReactNode }) {
 
   const valor = useMemo(() => ({
     state, adicionarLancamento, adicionarQuilometragem, adicionarVeiculo,
-    adicionarFuncionario, atualizarStatusLancamento, importarExemplo, restaurarDemo,
-  }), [state, adicionarLancamento, adicionarQuilometragem, adicionarVeiculo, adicionarFuncionario, atualizarStatusLancamento, importarExemplo, restaurarDemo])
+    adicionarSocorrista, atualizarStatusLancamento, importarExemplo, restaurarDemo,
+  }), [state, adicionarLancamento, adicionarQuilometragem, adicionarVeiculo, adicionarSocorrista, atualizarStatusLancamento, importarExemplo, restaurarDemo])
 
   return <DemoContext.Provider value={valor}>{children}</DemoContext.Provider>
 }

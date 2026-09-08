@@ -151,14 +151,14 @@ public class PortoService {
         r.put("porEspecialidade",agrupar(servicos,OrdemServicoResponse::especialidade));r.put("porSocorrista",agrupar(servicos,OrdemServicoResponse::socorrista));
         r.put("evolucaoDiaria",evolucao(servicos,false));r.put("evolucaoMensal",evolucao(servicos,true));return r;}
     @Transactional(readOnly=true) public List<PendenciaResponse> listarPendencias(){List<PendenciaResponse> r=new ArrayList<>();
-        oss.findSemMotorista().forEach(x->r.add(new PendenciaResponse(null,"OS_SEM_FUNCIONARIO",x.getId(),x.getNumero(),x.getValorTotal(),x.getDataAtendimento(),"ABERTA",
-            motivoDaFaltaDeFuncionario(x),x.getOrdemPagamento()==null?null:"OP "+x.getOrdemPagamento().getNumero(),null,null,x.getQra())));
+        oss.findSemMotorista().forEach(x->r.add(new PendenciaResponse(null,"OS_SEM_SOCORRISTA",x.getId(),x.getNumero(),x.getValorTotal(),x.getDataAtendimento(),"ABERTA",
+            motivoDaFaltaDeSocorrista(x),x.getOrdemPagamento()==null?null:"OP "+x.getOrdemPagamento().getNumero(),null,null,x.getQra())));
         ops.findAllParaListagem().stream().filter(x->x.getDataRecebimento()==null)
         .forEach(x->r.add(new PendenciaResponse(null,"RECEBIMENTO_OP",x.getId(),x.getNumero(),x.getValorTotal(),x.getDataPagamentoProgramada(),"ABERTA",null,null,null,null,null)));
         pendencias.findAll().stream().filter(x->x.getStatus()==EnumsFinanceiros.StatusPendenciaPorto.ABERTA).forEach(x->r.add(pendencia(x)));
         return r.stream().sorted(Comparator.comparing(PendenciaResponse::data,Comparator.nullsLast(Comparator.naturalOrder()))).toList();}
     /** O vinculo e feito pelo QRA, entao a falta tem duas causas distintas e cada uma se resolve de um jeito. */
-    private String motivoDaFaltaDeFuncionario(OrdemServicoPorto os){
+    private String motivoDaFaltaDeSocorrista(OrdemServicoPorto os){
         return os.getQra()==null||os.getQra().isBlank()?"Relatório da Porto veio sem QRA nesta OS"
             :"QRA "+os.getQra()+" não está cadastrado em Equipe";
     }
@@ -196,7 +196,7 @@ public class PortoService {
         LocalDate data=Boolean.TRUE.equals(f.porDataPagamento())?x.dataEfetivaPagamento():x.dataAtendimento();
         if(f.dataInicio()!=null&&(data==null||data.isBefore(f.dataInicio())))return false;if(f.dataFim()!=null&&(data==null||data.isAfter(f.dataFim())))return false;
         if(!contem(x.numero(),f.numeroOs())||!contem(x.ordemPagamento(),f.numeroOp())||!contem(x.especialidade(),f.especialidade())||!contem(x.socorrista(),f.socorrista())||!contem(x.qra(),f.qra())||!contem(x.viatura(),f.viatura()))return false;
-        if(f.semFuncionario()!=null&&f.semFuncionario()!=(x.motoristaId()==null))return false;
+        if(f.semSocorrista()!=null&&f.semSocorrista()!=(x.motoristaId()==null))return false;
         if(f.statusOperacional()!=null&&f.statusOperacional()!=x.statusOperacional())return false;if(f.statusFinanceiro()!=null&&f.statusFinanceiro()!=x.statusFinanceiro())return false;
         return f.statusConciliacao()==null||(x.ordemPagamentoId()!=null&&f.statusConciliacao()==conciliacoes.get(x.ordemPagamentoId()));}
     private boolean temDivergencia(OrdemPagamentoResponse x){return x.statusConciliacao()==EnumsFinanceiros.StatusConciliacaoPorto.VALOR_ABAIXO||x.statusConciliacao()==EnumsFinanceiros.StatusConciliacaoPorto.VALOR_ACIMA||x.statusConciliacao()==EnumsFinanceiros.StatusConciliacaoPorto.RECEBIDA_COM_DIVERGENCIA;}

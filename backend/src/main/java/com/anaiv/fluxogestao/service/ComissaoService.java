@@ -43,7 +43,7 @@ public class ComissaoService {
         ComissaoResponse comissao=calcular(calendarioPagamentoId,motorista);
         if(comissao.liquido().signum()<=0)throw new IllegalArgumentException("Não há valor líquido positivo de comissão para pagar neste período.");
         Usuario administrador=usuarios.findById(principal.id()).orElseThrow(()->new RecursoNaoEncontradoException("Usuário autenticado não encontrado."));
-        Categoria categoria=categorias.findFirstByNomeIgnoreCaseAndTipo("Comissão de funcionário",TipoCategoria.DESPESA)
+        Categoria categoria=categorias.findFirstByNomeIgnoreCaseAndTipo("Comissão de socorrista",TipoCategoria.DESPESA)
             .orElseThrow(()->new IllegalStateException("Categoria técnica de comissão não encontrada."));
         String protocolo="COMISSAO-"+motorista.getId()+"-"+periodo.getId();
         Despesa despesa=new Despesa("Comissão líquida - "+motorista.getNome(),categoria,comissao.liquido(),request.dataPagamento(),
@@ -52,7 +52,7 @@ public class ComissaoService {
         return pagamento(pagamentos.save(new PagamentoComissao(motorista,periodo,despesa,comissao.liquido(),request.dataPagamento(),
             request.formaPagamento(),request.observacoes(),administrador)));
     }
-    @Transactional(readOnly=true) public DetalheFuncionarioResponse detalheFuncionario(Long calendarioPagamentoId,Long motoristaId){
+    @Transactional(readOnly=true) public DetalheSocorristaResponse detalheSocorrista(Long calendarioPagamentoId,Long motoristaId){
         Motorista motorista=obterMotorista(motoristaId);
         CalendarioPagamentoPorto periodo=calendarios.obterPeriodo(calendarioPagamentoId);
         ComissaoResponse comissao=calcular(calendarioPagamentoId,motorista);
@@ -62,22 +62,22 @@ public class ComissaoService {
         List<OrdemServicoPorto> todos=oss.findByMotorista(motorista);
         todos.stream().filter(os->pagos.containsKey(os.getId())).forEach(os->selecionados.put(os.getId(),os));
         todos.stream().filter(os->estaNoPeriodo(os.getDataAtendimento(),periodo)).forEach(os->selecionados.putIfAbsent(os.getId(),os));
-        List<ServicoFuncionarioResponse> servicos=selecionados.values().stream()
+        List<ServicoSocorristaResponse> servicos=selecionados.values().stream()
             .sorted(Comparator.comparing(OrdemServicoPorto::getDataAtendimento,Comparator.nullsLast(Comparator.reverseOrder())))
-            .map(os->servicoFuncionario(os,pagos.get(os.getId()))).toList();
-        List<String> veiculos=servicos.stream().map(ServicoFuncionarioResponse::viatura).filter(Objects::nonNull)
+            .map(os->servicoSocorrista(os,pagos.get(os.getId()))).toList();
+        List<String> veiculos=servicos.stream().map(ServicoSocorristaResponse::viatura).filter(Objects::nonNull)
             .filter(viatura->!viatura.isBlank()).distinct().toList();
         Usuario usuario=motorista.getUsuario();
-        return new DetalheFuncionarioResponse(motorista.getId(),motorista.getNome(),motorista.isAtivo(),motorista.getTelefone(),
+        return new DetalheSocorristaResponse(motorista.getId(),motorista.getNome(),motorista.isAtivo(),motorista.getTelefone(),
             usuario==null?null:usuario.getEmail(),motorista.getQra(),veiculos,servicos.size(),comissao,servicos);
     }
     @Transactional(readOnly=true) public List<ResumoComissaoResponse> resumo(Long calendarioPagamentoId,Long motoristaId){
         return motoristas.findAll().stream().filter(Motorista::isAtivo).filter(m->motoristaId==null||m.getId().equals(motoristaId))
-            .map(m->calcular(calendarioPagamentoId,m)).map(c->new ResumoComissaoResponse(c.motoristaId(),c.funcionario(),c.quantidadeServicosPagos(),c.producaoPaga(),c.comissaoBruta(),c.alimentacaoAprovada(),c.liquido(),c.pagamento())).toList();
+            .map(m->calcular(calendarioPagamentoId,m)).map(c->new ResumoComissaoResponse(c.motoristaId(),c.socorrista(),c.quantidadeServicosPagos(),c.producaoPaga(),c.comissaoBruta(),c.alimentacaoAprovada(),c.liquido(),c.pagamento())).toList();
     }
     @Transactional(readOnly=true) public String csv(Long calendarioPagamentoId){
-        StringBuilder csv=new StringBuilder("\uFEFFFuncionário;Período;Serviços pagos;Produção paga;Comissão 20%;Alimentação;Líquido\r\n");
-        for(ResumoComissaoResponse r:resumo(calendarioPagamentoId,null)){csv.append(campo(r.funcionario())).append(';').append(campo(calendarios.rotulo(calendarios.obterPeriodo(calendarioPagamentoId)))).append(';')
+        StringBuilder csv=new StringBuilder("\uFEFFSocorrista;Período;Serviços pagos;Produção paga;Comissão 20%;Alimentação;Líquido\r\n");
+        for(ResumoComissaoResponse r:resumo(calendarioPagamentoId,null)){csv.append(campo(r.socorrista())).append(';').append(campo(calendarios.rotulo(calendarios.obterPeriodo(calendarioPagamentoId)))).append(';')
             .append(r.quantidadeServicosPagos()).append(';').append(r.producaoPaga()).append(';').append(r.comissaoBruta()).append(';').append(r.alimentacaoAprovada()).append(';').append(r.liquido()).append("\r\n");}
         return csv.toString();
     }
@@ -98,10 +98,10 @@ public class ComissaoService {
     private Motorista motoristaDoUsuario(UsuarioPrincipal principal){if(principal==null)throw new IllegalArgumentException("Usuário autenticado não identificado.");Usuario usuario=usuarios.findById(principal.id()).orElseThrow(()->new RecursoNaoEncontradoException("Usuário autenticado não encontrado."));return motoristas.findByUsuario(usuario).orElseThrow(()->new IllegalArgumentException("Seu usuário ainda não está vinculado a um motorista."));}
     private Motorista obterMotorista(Long id){return motoristas.findById(id).orElseThrow(()->new RecursoNaoEncontradoException("Motorista não encontrado."));}
     private boolean estaNoPeriodo(LocalDate data,CalendarioPagamentoPorto periodo){return data!=null&&!data.isBefore(periodo.getCompetenciaInicio())&&!data.isAfter(periodo.getCompetenciaFim());}
-    private ServicoFuncionarioResponse servicoFuncionario(OrdemServicoPorto os,ServicoComissaoResponse pago){
+    private ServicoSocorristaResponse servicoSocorrista(OrdemServicoPorto os,ServicoComissaoResponse pago){
         boolean pagoNoPeriodo=pago!=null;
         String status=pagoNoPeriodo?"PAGO":os.getStatusFinanceiro()==StatusFinanceiroPorto.RECEBIDO?"PAGO_EM_OUTRO_PERIODO":"AGUARDANDO_PAGAMENTO";
-        return new ServicoFuncionarioResponse(os.getId(),os.getNumero(),os.getDataAtendimento(),os.getEspecialidade(),os.getSiglaViatura(),
+        return new ServicoSocorristaResponse(os.getId(),os.getNumero(),os.getDataAtendimento(),os.getEspecialidade(),os.getSiglaViatura(),
             os.getOrdemPagamento()==null?null:os.getOrdemPagamento().getNumero(),os.getValorTotal(),status,pagoNoPeriodo,
             pagoNoPeriodo?pago.comissaoServico():null);
     }

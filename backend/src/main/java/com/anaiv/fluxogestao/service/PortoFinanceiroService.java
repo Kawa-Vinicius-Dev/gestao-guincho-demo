@@ -73,7 +73,7 @@ public class PortoFinanceiroService {
         return new ResultadoSincronizacao(receitaExistente==null?1:0,receitaExistente==null?0:1,os.getValorTotal());
     }
 
-    /** A Porto nao informa a viatura no relatorio, entao o veiculo vem do cadastro do funcionario. */
+    /** A Porto nao informa a viatura no relatorio, entao o veiculo vem do cadastro do socorrista. */
     private Veiculo localizarVeiculo(OrdemServicoPorto os){
         if(preenchido(os.getSiglaViatura())){Optional<Veiculo> resultado=veiculos.findFirstByIdentificacaoIgnoreCase(os.getSiglaViatura().trim());if(resultado.isPresent())return resultado.get();}
         if(preenchido(os.getPlaca())){Optional<Veiculo> resultado=veiculos.findFirstByPlacaIgnoreCase(os.getPlaca().trim());if(resultado.isPresent())return resultado.get();}

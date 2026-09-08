@@ -4,7 +4,7 @@ import { Vazio } from '../components/EstadoPagina'
 import type { PendenciaPorto } from '../types/modelos'
 import { moeda } from '../utils/formatadores'
 
-const tipo=(valor:PendenciaPorto['tipo'])=>valor==='SERVICO_PENDENTE'?'Serviço pendente':valor==='SERVICO_DEVOLVIDO'?'Serviço devolvido':valor==='OS_SEM_FUNCIONARIO'?'OS sem funcionário':'Recebimento de OP'
+const tipo=(valor:PendenciaPorto['tipo'])=>valor==='SERVICO_PENDENTE'?'Serviço pendente':valor==='SERVICO_DEVOLVIDO'?'Serviço devolvido':valor==='OS_SEM_SOCORRISTA'?'OS sem socorrista':'Recebimento de OP'
 export default function PortoPendenciasPage(){
   const [itens,setItens]=useState<PendenciaPorto[]>([]),[erro,setErro]=useState(''),[aberta,setAberta]=useState(false)
   async function carregar(){try{setItens(await listarPendenciasPorto())}catch(e){setErro((e as Error).message)}}useEffect(()=>{void carregar()},[])

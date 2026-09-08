@@ -73,7 +73,7 @@ public class FinanceiroService {
     }
     @Transactional public DespesaResponse rejeitar(Long id, UsuarioPrincipal principal) {
         Despesa d=despesa(id);
-        if(d.getCriadoPor().getId().equals(principal.id())) throw new IllegalArgumentException("O funcionário não pode aprovar ou rejeitar o próprio lançamento.");
+        if(d.getCriadoPor().getId().equals(principal.id())) throw new IllegalArgumentException("O socorrista não pode aprovar ou rejeitar o próprio lançamento.");
         d.rejeitar(cadastros.usuario(principal.id())); return resposta(d);
     }
     @Transactional public DespesaResponse pagar(Long id, PagamentoDespesaRequest r) {

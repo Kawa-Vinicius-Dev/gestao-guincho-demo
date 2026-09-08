@@ -10,7 +10,7 @@ const itens = [
   ['/despesas', 'Registrar despesas', false, 'operacao'],
   ['/quilometragem', 'Km rodado e morto', false, 'operacao'],
   ['/veiculos', 'Veículos e custos', true, 'operacao'],
-  ['/equipe', 'Funcionários', true, 'equipe'],
+  ['/equipe', 'Socorristas', true, 'equipe'],
   ['/minha-comissao', 'Minha comissão', false, 'equipe'],
   ['/comissoes', 'Comissões', true, 'equipe'],
   ['/porto/dashboard', 'Dashboard Porto', true, 'porto'],
@@ -50,7 +50,7 @@ export function Layout() {
         <div className="period-signal"><i/> Dados financeiros sincronizados</div>
         <div className="operator">
           <span className="operator-avatar">{usuario?.nome.slice(0,2).toUpperCase()}</span>
-          <span><strong>{usuario?.nome}</strong><small>{usuario?.perfil==='ADMINISTRADOR'?'Administrador':'Funcionário'}</small></span>
+          <span><strong>{usuario?.nome}</strong><small>{usuario?.perfil==='ADMINISTRADOR'?'Administrador':'Socorrista'}</small></span>
           <button className="logout-button" onClick={logout}>Sair</button>
         </div>
       </header>

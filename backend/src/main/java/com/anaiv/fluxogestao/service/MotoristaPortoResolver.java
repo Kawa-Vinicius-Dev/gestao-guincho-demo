@@ -14,7 +14,7 @@ public class MotoristaPortoResolver {
      * A associacao e feita exclusivamente pelo QRA. No relatorio da Porto o mesmo nome aparece com
      * QRAs diferentes (matricula e identificador interno) e cada QRA corresponde a uma pessoa
      * distinta, entao casar por nome fundiria cadastros que devem ficar separados. A OS cujo QRA nao
-     * esta cadastrado fica sem funcionario e vira excecao para o operacional resolver.
+     * esta cadastrado fica sem socorrista e vira excecao para o operacional resolver.
      */
     public Motorista resolver(OrdemServicoPorto os){
         if(!preenchido(os.getQra()))return null;

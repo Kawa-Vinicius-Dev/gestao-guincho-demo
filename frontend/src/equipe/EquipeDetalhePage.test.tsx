@@ -10,7 +10,7 @@ const periodos=[
   {id:6,dataPagamento:'2027-08-05',competenciaInicio:'2027-07-01',competenciaFim:'2027-07-31',descricao:'Julho',ativo:false},
   {id:7,dataPagamento:'2027-09-05',competenciaInicio:'2027-08-01',competenciaFim:'2027-08-31',descricao:'Agosto',ativo:true},
 ]
-const comissaoAtual={calendarioPagamentoId:7,periodo:'01/08/2027 a 31/08/2027',funcionario:'Ana Motorista',motoristaId:4,quantidadeServicosPagos:1,producaoPaga:500,percentualComissao:.2,comissaoBruta:100,alimentacaoAprovada:30,alimentacaoPendente:12,liquido:70,aguardandoOp:false,servicos:[{id:1,numeroOs:'OS-PAGA',especialidade:'GUINCHO',dataAtendimento:'2027-06-15',numeroOp:'OP-77',valorServico:500,comissaoServico:100}],alimentacoes:[{id:9,motoristaId:4,data:'2027-08-21',valor:30,situacao:'PENDENTE',aprovada:true},{id:10,motoristaId:4,data:'2027-08-22',valor:12,situacao:'PENDENTE',aprovada:false}]}
+const comissaoAtual={calendarioPagamentoId:7,periodo:'01/08/2027 a 31/08/2027',socorrista:'Ana Motorista',motoristaId:4,quantidadeServicosPagos:1,producaoPaga:500,percentualComissao:.2,comissaoBruta:100,alimentacaoAprovada:30,alimentacaoPendente:12,liquido:70,aguardandoOp:false,servicos:[{id:1,numeroOs:'OS-PAGA',especialidade:'GUINCHO',dataAtendimento:'2027-06-15',numeroOp:'OP-77',valorServico:500,comissaoServico:100}],alimentacoes:[{id:9,motoristaId:4,data:'2027-08-21',valor:30,situacao:'PENDENTE',aprovada:true},{id:10,motoristaId:4,data:'2027-08-22',valor:12,situacao:'PENDENTE',aprovada:false}]}
 const detalheAtual={id:4,nome:'Ana Motorista',ativo:true,telefone:'(85) 99999-1234',email:'ana@local.test',qra:'QRA-ANA',veiculosUtilizados:['VTR-07','VTR-12'],totalServicosPrestados:2,comissao:comissaoAtual,servicos:[
   {id:2,numeroOs:'OS-PENDENTE',dataAtendimento:'2027-08-20',especialidade:'REMOÇÃO',viatura:'VTR-12',numeroOp:null,valorServico:300,statusPagamento:'AGUARDANDO_PAGAMENTO',pagoNoPeriodo:false,comissaoGerada:null},
   {id:1,numeroOs:'OS-PAGA',dataAtendimento:'2027-06-15',especialidade:'GUINCHO',viatura:'VTR-07',numeroOp:'OP-77',valorServico:500,statusPagamento:'PAGO',pagoNoPeriodo:true,comissaoGerada:100},
@@ -32,7 +32,7 @@ function configurarAdmin(){
   return consultaMotoristas
 }
 
-test('administrador abre o funcionário pela Equipe e consulta composição oficial e período anterior',async()=>{
+test('administrador abre o socorrista pela Equipe e consulta composição oficial e período anterior',async()=>{
   const consultaMotoristas=configurarAdmin()
   const user=userEvent.setup()
   render(<App/>)
@@ -69,12 +69,12 @@ test('administrador abre o funcionário pela Equipe e consulta composição ofic
   expect(screen.queryByText('OS-PENDENTE')).not.toBeInTheDocument()
 })
 
-test('funcionário comum não acessa a ficha administrativa nem chama o endpoint de outro funcionário',async()=>{
+test('socorrista comum não acessa a ficha administrativa nem chama o endpoint de outro socorrista',async()=>{
   let chamadas=0
-  sessionStorage.setItem(TOKEN_KEY,'token-funcionario')
+  sessionStorage.setItem(TOKEN_KEY,'token-socorrista')
   window.history.replaceState({},'','/equipe/4')
   servidor.use(
-    http.get('/api/auth/me',()=>HttpResponse.json({id:2,nome:'Funcionário',email:'funcionario@local.test',perfil:'FUNCIONARIO'})),
+    http.get('/api/auth/me',()=>HttpResponse.json({id:2,nome:'Socorrista',email:'socorrista@local.test',perfil:'FUNCIONARIO'})),
     http.get('/api/equipe/4/detalhes',()=>{chamadas+=1;return HttpResponse.json(detalheAtual)}),
   )
 

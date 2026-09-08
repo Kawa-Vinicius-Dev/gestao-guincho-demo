@@ -18,12 +18,12 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Uma OS sem funcionario so aparecia na tela de importacao, no momento em que era importada. Quem
+ * Uma OS sem socorrista so aparecia na tela de importacao, no momento em que era importada. Quem
  * fechasse a tela perdia o rastro. Ela passa a constar tambem em Pendencias, que e onde o
  * operacional procura o que precisa ser resolvido.
  */
 @SpringBootTest @AutoConfigureMockMvc @ActiveProfiles("test")
-class PortoPendenciaOsSemFuncionarioApiIntegrationTest {
+class PortoPendenciaOsSemSocorristaApiIntegrationTest {
     @Autowired MockMvc mvc;
     @Autowired JdbcTemplate jdbc;
 
@@ -32,7 +32,7 @@ class PortoPendenciaOsSemFuncionarioApiIntegrationTest {
         jdbc.update("delete from motoristas where qra='990001'");
     }
 
-    @Test void listaAsOsSemFuncionarioComOMotivoDaFalta() throws Exception {
+    @Test void listaAsOsSemSocorristaComOMotivoDaFalta() throws Exception {
         String token=login();
         long motorista=((Number)JsonPath.read(mvc.perform(post("/api/motoristas").header("Authorization","Bearer "+token)
             .contentType(MediaType.APPLICATION_JSON).content("{\"nome\":\"SOCORRISTA PENDENCIA\",\"qra\":\"990001\"}"))
@@ -48,9 +48,9 @@ class PortoPendenciaOsSemFuncionarioApiIntegrationTest {
         String pendencias=mvc.perform(get("/api/porto/pendencias").header("Authorization","Bearer "+token))
             .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
 
-        List<String> semFuncionario=JsonPath.read(pendencias,"$[?(@.tipo=='OS_SEM_FUNCIONARIO')].referencia");
-        assertThat(semFuncionario).contains("OS-PEND-QRA-DESCONHECIDO","OS-PEND-SEM-QRA");
-        assertThat(semFuncionario).doesNotContain("OS-PEND-ASSOCIADA");
+        List<String> semSocorrista=JsonPath.read(pendencias,"$[?(@.tipo=='OS_SEM_SOCORRISTA')].referencia");
+        assertThat(semSocorrista).contains("OS-PEND-QRA-DESCONHECIDO","OS-PEND-SEM-QRA");
+        assertThat(semSocorrista).doesNotContain("OS-PEND-ASSOCIADA");
 
         // o motivo distingue quem nao trouxe QRA de quem trouxe um QRA que nao esta cadastrado
         List<String> motivoSemQra=JsonPath.read(pendencias,"$[?(@.referencia=='OS-PEND-SEM-QRA')].motivo");

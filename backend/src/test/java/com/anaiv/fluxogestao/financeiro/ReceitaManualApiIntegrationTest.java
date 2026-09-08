@@ -41,16 +41,16 @@ class ReceitaManualApiIntegrationTest {
     }
 
     @Test
-    void funcionarioNaoPodeEditarNemExcluirReceitaManual() throws Exception {
+    void socorristaNaoPodeEditarNemExcluirReceitaManual() throws Exception {
         String admin=login();long categoria=id(criar(admin,"/api/categorias","{\"nome\":\"Receita protegida por perfil\",\"tipo\":\"RECEITA\"}"));
         long receita=id(criar(admin,"/api/receitas","{\"descricao\":\"Receita do administrador\",\"categoriaId\":"+categoria+",\"valor\":80,\"dataCompetencia\":\"2032-01-01\",\"dataRecebimento\":\"2032-01-01\",\"status\":\"RECEBIDA\",\"recorrente\":false}"));
-        criar(admin,"/api/usuarios","{\"nome\":\"Funcionário sem permissão\",\"email\":\"receita.funcionario@local.test\",\"senha\":\"Funcionario@123\",\"perfil\":\"FUNCIONARIO\"}");
-        String funcionario=login("receita.funcionario@local.test","Funcionario@123");
+        criar(admin,"/api/usuarios","{\"nome\":\"Socorrista sem permissão\",\"email\":\"receita.socorrista@local.test\",\"senha\":\"Socorrista@123\",\"perfil\":\"FUNCIONARIO\"}");
+        String socorrista=login("receita.socorrista@local.test","Socorrista@123");
 
-        mvc.perform(put("/api/receitas/{id}",receita).header("Authorization","Bearer "+funcionario).contentType(MediaType.APPLICATION_JSON)
+        mvc.perform(put("/api/receitas/{id}",receita).header("Authorization","Bearer "+socorrista).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"descricao\":\"Tentativa\",\"categoriaId\":"+categoria+",\"valor\":1,\"dataCompetencia\":\"2032-01-01\",\"status\":\"RECEBIDA\",\"recorrente\":false}"))
             .andExpect(status().isForbidden());
-        mvc.perform(delete("/api/receitas/{id}",receita).header("Authorization","Bearer "+funcionario)).andExpect(status().isForbidden());
+        mvc.perform(delete("/api/receitas/{id}",receita).header("Authorization","Bearer "+socorrista)).andExpect(status().isForbidden());
         assertThat(jdbc.queryForObject("select count(*) from receitas where id=?",Integer.class,receita)).isOne();
     }
 

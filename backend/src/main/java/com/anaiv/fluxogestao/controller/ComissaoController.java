@@ -29,6 +29,6 @@ public class ComissaoController {
     @PostMapping("/comissoes/{motoristaId}/pagamentos") @PreAuthorize("hasRole('ADMINISTRADOR')")
     public PagamentoComissaoResponse pagar(@PathVariable Long motoristaId,@RequestParam Long calendarioPagamentoId,
         @Valid @RequestBody PagamentoComissaoRequest request,@AuthenticationPrincipal UsuarioPrincipal principal){return comissoes.pagar(calendarioPagamentoId,motoristaId,request,principal);}
-    @GetMapping("/equipe/{motoristaId}/detalhes") @PreAuthorize("hasRole('ADMINISTRADOR')") public DetalheFuncionarioResponse detalheFuncionario(@PathVariable Long motoristaId,@RequestParam Long calendarioPagamentoId){return comissoes.detalheFuncionario(calendarioPagamentoId,motoristaId);}
+    @GetMapping("/equipe/{motoristaId}/detalhes") @PreAuthorize("hasRole('ADMINISTRADOR')") public DetalheSocorristaResponse detalheSocorrista(@PathVariable Long motoristaId,@RequestParam Long calendarioPagamentoId){return comissoes.detalheSocorrista(calendarioPagamentoId,motoristaId);}
     @GetMapping("/comissoes/relatorio.csv") @PreAuthorize("hasRole('ADMINISTRADOR')") public ResponseEntity<byte[]> relatorio(@RequestParam Long calendarioPagamentoId){return ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION,"attachment; filename=relatorio-comissoes.csv").contentType(new MediaType("text","csv",StandardCharsets.UTF_8)).body(comissoes.csv(calendarioPagamentoId).getBytes(StandardCharsets.UTF_8));}
 }

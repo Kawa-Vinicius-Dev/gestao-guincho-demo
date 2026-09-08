@@ -16,7 +16,7 @@ export interface VeiculoDemo {
   metaMargem: number
 }
 
-export interface FuncionarioDemo {
+export interface SocorristaDemo {
   id: number
   nome: string
   funcao: string
@@ -35,7 +35,7 @@ export interface LancamentoDemo {
   valor: number
   data: string
   veiculoId?: number
-  funcionarioId?: number
+  socorristaId?: number
   status: StatusLancamento
   origem: OrigemLancamentoDemo
   contratanteFonte?: 'Porto Seguro' | 'Outra seguradora' | 'Cliente particular' | 'Empresa contratante' | 'Outros'
@@ -47,7 +47,7 @@ export interface LancamentoDemo {
 export interface QuilometragemDemo {
   id: number
   veiculoId: number
-  funcionarioId?: number
+  socorristaId?: number
   data: string
   kmRodado: number
   kmMorto: number
@@ -58,7 +58,7 @@ export interface QuilometragemDemo {
 export interface EscalaDemo {
   id: number
   dia: string
-  funcionarioId: number
+  socorristaId: number
   veiculoId: number
   turno: 'DIURNO' | 'NOTURNO' | 'COMERCIAL'
   status: 'CONFIRMADA' | 'PLANTAO' | 'FOLGA'
@@ -74,7 +74,7 @@ export interface ImportacaoDemo {
 
 export interface DemoState {
   veiculos: VeiculoDemo[]
-  funcionarios: FuncionarioDemo[]
+  socorristas: SocorristaDemo[]
   lancamentos: LancamentoDemo[]
   quilometragens: QuilometragemDemo[]
   escala: EscalaDemo[]

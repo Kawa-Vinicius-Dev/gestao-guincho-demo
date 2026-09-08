@@ -10,7 +10,7 @@ export default function PortoImportacoesPage(){
   const [arquivo,setArquivo]=useState<File|null>(null),[previa,setPrevia]=useState<PreviaPorto|null>(null)
   const [modo,setModo]=useState<'arquivo'|'colagem'>('arquivo'),[conteudo,setConteudo]=useState('')
   const [periodos,setPeriodos]=useState<CalendarioPorto[]>([]),[numeroOp,setNumeroOp]=useState(''),[periodoId,setPeriodoId]=useState('')
-  const [semFuncionario,setSemFuncionario]=useState<string[]>([])
+  const [semSocorrista,setSemSocorrista]=useState<string[]>([])
   const [mensagem,setMensagem]=useState(''),[erro,setErro]=useState(''),[carregando,setCarregando]=useState(false),[etapa,setEtapa]=useState(''),[validando,setValidando]=useState(false),[inputKey,setInputKey]=useState(0)
   const [chaveValidada,setChaveValidada]=useState('')
   const [confirmarDivergencias,setConfirmarDivergencias]=useState(false),[confirmarReassociacoes,setConfirmarReassociacoes]=useState(false)
@@ -43,7 +43,7 @@ export default function PortoImportacoesPage(){
   }
   function alterarNumero(valor:string){setNumeroOp(valor);setChaveValidada('');limparConfirmacoes()}
   function alterarPeriodo(valor:string){setPeriodoId(valor);setChaveValidada('');limparConfirmacoes()}
-  async function confirmar(){setSemFuncionario([])
+  async function confirmar(){setSemSocorrista([])
     if(confirmacaoEmCurso.current||!previa||previa.requerOrdemPagamento&&(!numeroNormalizado||!periodoId||chaveValidada!==chaveAvaliacao))return
     confirmacaoEmCurso.current=true
     setCarregando(true);setEtapa('Confirmando importação…');setErro('')
@@ -53,7 +53,7 @@ export default function PortoImportacoesPage(){
         :await confirmarImportacaoPortoSemOp(previa.id,confirmarDivergencias)
       const financeiro=r.tipo==='OS_VINCULADAS'||r.tipo==='SERVICOS_GERAIS'?` · ${r.receitasCriadas} ${r.receitasCriadas===1?'receita criada':'receitas criadas'} · ${r.receitasAtualizadas} ${r.receitasAtualizadas===1?'receita atualizada':'receitas atualizadas'} · ${moeda(r.valorTotalRecebido)} recebidos${r.quinzena?` · período ${r.quinzena}`:''}${r.dataPagamento?` · pagamento em ${dataBr(r.dataPagamento)}`:''}`:''
       setMensagem(`${r.importados} ${r.importados===1?'registro importado':'registros importados'}${r.ignorados?` · ${r.ignorados} ignorados por duplicidade`:''}${financeiro}.`)
-      setSemFuncionario(r.osSemFuncionario??[])
+      setSemSocorrista(r.osSemSocorrista??[])
       setPrevia(null);setArquivo(null);setNumeroOp('');setPeriodoId('');setChaveValidada('');limparConfirmacoes();setInputKey(x=>x+1)
     }catch(e){setErro((e as Error).message)}finally{confirmacaoEmCurso.current=false;setEtapa('');setCarregando(false)}
   }
@@ -72,7 +72,7 @@ export default function PortoImportacoesPage(){
   const divergenciaConfirmada=(!temDivergenciaFinanceira&&!temDivergenciasDados)||(confirmarDivergencias&&(!temDivergenciaFinanceira||Boolean(motivoDivergencia&&justificativaDivergencia.trim())))
 
   return <div className="page-enter"><header className="page-heading"><div><span className="eyebrow">Módulo Porto</span><h1>Importar relatórios</h1><p>Cole serviços ou envie CSV/TXT, confira a prévia e confirme somente depois da validação.</p></div></header>
-    {carregando?<span role="status">{etapa}</span>:null}{erro?<div className="form-alert" role="alert">{erro}{previa?<button type="button" onClick={()=>void confirmar()}>Tentar novamente</button>:null}</div>:null}{mensagem?<div className="success-notice">{mensagem}</div>:null}{semFuncionario.length?<div className="form-alert" role="alert"><strong>{semFuncionario.length} {semFuncionario.length===1?'ordem de serviço ficou':'ordens de serviço ficaram'} sem funcionário.</strong> O vínculo é feito pelo QRA; cadastre o QRA na tela Equipe ou associe o funcionário na tela Ordens de serviço.<div className="table-scroll"><table><thead><tr><th>Ordem de serviço</th></tr></thead><tbody>{semFuncionario.map(n=><tr key={n}><td>{n}</td></tr>)}</tbody></table></div></div>:null}
+    {carregando?<span role="status">{etapa}</span>:null}{erro?<div className="form-alert" role="alert">{erro}{previa?<button type="button" onClick={()=>void confirmar()}>Tentar novamente</button>:null}</div>:null}{mensagem?<div className="success-notice">{mensagem}</div>:null}{semSocorrista.length?<div className="form-alert" role="alert"><strong>{semSocorrista.length} {semSocorrista.length===1?'ordem de serviço ficou':'ordens de serviço ficaram'} sem socorrista.</strong> O vínculo é feito pelo QRA; cadastre o QRA na tela Equipe ou associe o socorrista na tela Ordens de serviço.<div className="table-scroll"><table><thead><tr><th>Ordem de serviço</th></tr></thead><tbody>{semSocorrista.map(n=><tr key={n}><td>{n}</td></tr>)}</tbody></table></div></div>:null}
     <section className="panel porto-import-card"><div className="segmented porto-import-modes" role="group" aria-label="Forma de importação"><button className={modo==='arquivo'?'active':''} onClick={()=>{setModo('arquivo');setPrevia(null)}}>Enviar arquivo</button><button className={modo==='colagem'?'active':''} onClick={()=>{setModo('colagem');setPrevia(null)}}>Colar serviços da Porto</button></div>
       {modo==='arquivo'?<div className="porto-upload"><label className="field"><span>Arquivo CSV ou TXT</span><input key={inputKey} aria-label="Arquivo CSV" type="file" accept=".csv,.txt,.tsv,text/csv,text/plain,text/tab-separated-values" onChange={e=>{setArquivo(e.target.files?.[0]??null);setPrevia(null);setMensagem('')}}/></label><button className="button button-primary" disabled={!arquivo||carregando} onClick={analisar}>{carregando?'Analisando…':'Analisar CSV'}</button></div>:<div className="porto-paste"><label className="field"><span>Conteúdo copiado da Porto</span><textarea aria-label="Conteúdo copiado da Porto" rows={10} value={conteudo} onChange={e=>{setConteudo(e.target.value);setPrevia(null);setMensagem('')}} placeholder="Cole aqui a tabela copiada com Ctrl+C"/></label><div className="porto-paste-actions"><button className="button button-ghost" type="button" onClick={limpar}>Limpar</button><button className="button button-primary" disabled={!conteudo.trim()||carregando} onClick={analisar}>{carregando?'Analisando…':'Analisar conteúdo'}</button></div></div>}
       {previa?<div className="porto-preview"><header className="panel-title"><div><span className="eyebrow">Prévia detectada</span><h2>{rotulos[previa.tipo]}</h2></div><span className="import-pill">{previa.totalLinhas} linhas</span></header>
@@ -90,7 +90,7 @@ export default function PortoImportacoesPage(){
           <button type="button" className="button button-ghost" disabled={carregando} onClick={cancelar}>Cancelar prévia</button>
           <button className="button button-primary" disabled={carregando||validando||temErros||!divergenciaConfirmada||temReassociacoes&&!confirmarReassociacoes||previa.requerOrdemPagamento&&(!numeroNormalizado||!periodoId||!analise)||previa.linhas.length===0} onClick={confirmar}>Confirmar importação</button>
         </footer>
-        {previa.osSemFuncionario?.length?<div className="form-alert" role="alert"><strong>{previa.osSemFuncionario.length} {previa.osSemFuncionario.length===1?'ordem de serviço ficará':'ordens de serviço ficarão'} sem funcionário.</strong> O vínculo é feito pelo QRA. Cadastre o QRA na tela Equipe antes de confirmar, ou confirme assim mesmo e associe depois.<div className="table-scroll"><table><thead><tr><th>Ordem de serviço</th></tr></thead><tbody>{previa.osSemFuncionario.map(n=><tr key={n}><td>{n}</td></tr>)}</tbody></table></div></div>:null}
+        {previa.osSemSocorrista?.length?<div className="form-alert" role="alert"><strong>{previa.osSemSocorrista.length} {previa.osSemSocorrista.length===1?'ordem de serviço ficará':'ordens de serviço ficarão'} sem socorrista.</strong> O vínculo é feito pelo QRA. Cadastre o QRA na tela Equipe antes de confirmar, ou confirme assim mesmo e associe depois.<div className="table-scroll"><table><thead><tr><th>Ordem de serviço</th></tr></thead><tbody>{previa.osSemSocorrista.map(n=><tr key={n}><td>{n}</td></tr>)}</tbody></table></div></div>:null}
         <div className="table-scroll porto-preview-table"><table><thead><tr><th>Ordem</th><th>Especialidade / Nome</th><th>Valor</th><th>Data</th><th>Ação</th></tr></thead><tbody>{previa.linhas.map(l=><tr key={l.hashRegistro}><td><strong>{l.dados.numero_op||l.dados.numero_os}</strong></td><td>{l.dados.especialidade||l.dados.nome_codigo||'—'}</td><td>{l.dados.valor_total}</td><td>{l.dados.data_pagamento||l.dados.data_atendimento}</td><td>{l.mensagem||l.acao}</td></tr>)}</tbody></table></div>
       </div>:null}
     </section>

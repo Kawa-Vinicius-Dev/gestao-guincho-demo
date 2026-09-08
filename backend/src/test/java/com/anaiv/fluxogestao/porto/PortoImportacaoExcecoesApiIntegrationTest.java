@@ -20,13 +20,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * A extensao do arquivo decide o separador usado na leitura, entao .tsv precisa ser tratado como
  * tabulado. E, como a associacao passou a ser feita so pelo QRA, a confirmacao precisa dizer quais
- * OS ficaram sem funcionario para o operacional resolver.
+ * OS ficaram sem socorrista para o operacional resolver.
  */
 @SpringBootTest @AutoConfigureMockMvc @ActiveProfiles("test")
 class PortoImportacaoExcecoesApiIntegrationTest {
     @Autowired MockMvc mvc;
 
-    @Test void aceitaTsvTabuladoERelataAsOsQueFicaramSemFuncionario() throws Exception {
+    @Test void aceitaTsvTabuladoERelataAsOsQueFicaramSemSocorrista() throws Exception {
         String token=login();
         criar(token,"/api/motoristas","{\"nome\":\"SOCORRISTA COM QRA\",\"qra\":\"880001\"}");
         long calendario=((Number)JsonPath.read(criar(token,"/api/porto/calendario",
@@ -45,8 +45,8 @@ class PortoImportacaoExcecoesApiIntegrationTest {
             .andExpect(jsonPath("$.totalLinhas").value(3))
             .andReturn().getResponse().getContentAsString();
 
-        // a previa ja antecipa quais ficarao sem funcionario, antes de confirmar
-        List<String> avisoPrevia=JsonPath.read(previa,"$.osSemFuncionario");
+        // a previa ja antecipa quais ficarao sem socorrista, antes de confirmar
+        List<String> avisoPrevia=JsonPath.read(previa,"$.osSemSocorrista");
         assertThat(avisoPrevia).containsExactly("OS-EXC-QRA-DESCONHECIDO","OS-EXC-SEM-QRA");
 
         String confirmacao=mvc.perform(post("/api/porto/importacoes/{id}/confirmar",((Number)JsonPath.read(previa,"$.id")).longValue())
@@ -56,8 +56,8 @@ class PortoImportacaoExcecoesApiIntegrationTest {
             .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
 
         assertThat((Integer)JsonPath.read(confirmacao,"$.importados")).isEqualTo(3);
-        List<String> semFuncionario=JsonPath.read(confirmacao,"$.osSemFuncionario");
-        assertThat(semFuncionario).containsExactly("OS-EXC-QRA-DESCONHECIDO","OS-EXC-SEM-QRA");
+        List<String> semSocorrista=JsonPath.read(confirmacao,"$.osSemSocorrista");
+        assertThat(semSocorrista).containsExactly("OS-EXC-QRA-DESCONHECIDO","OS-EXC-SEM-QRA");
     }
 
     @Test void recusaExtensaoQueNaoSabeLer() throws Exception {

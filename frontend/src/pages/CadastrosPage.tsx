@@ -7,7 +7,7 @@ import { moeda } from '../utils/formatadores'
 type Tipo='veiculos'|'motoristas'|'usuarios'|'configuracoes'
 const textos={
   veiculos:['Frota','Veículos','Custo por quilômetro e identificação dos guinchos.'],
-  motoristas:['Equipe','Motoristas','Funcionários relacionados à operação e à quilometragem.'],
+  motoristas:['Equipe','Motoristas','Socorristas relacionados à operação e à quilometragem.'],
   usuarios:['Acesso','Usuários','Perfis que podem entrar no sistema e suas permissões.'],
   configuracoes:['Base financeira','Configurações','Contratantes, categorias e segurança da conta.'],
 } as const

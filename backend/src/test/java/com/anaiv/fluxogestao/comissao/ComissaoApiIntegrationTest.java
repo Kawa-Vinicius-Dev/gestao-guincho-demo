@@ -64,7 +64,7 @@ class ComissaoApiIntegrationTest {
     }
 
     @Test
-    void funcionarioRegistraSomentePropriaAlimentacaoEAprovacaoPodeGerarSaldoNegativo() throws Exception {
+    void socorristaRegistraSomentePropriaAlimentacaoEAprovacaoPodeGerarSaldoNegativo() throws Exception {
         String admin=login("admin@fluxogestao.local","Admin@123");
         long usuario=criarUsuario(admin,"Comissionado Beta","comissao.beta@local.test");
         long motorista=criarMotorista(admin,"Comissionado Beta","QRA-BETA",usuario);
@@ -72,29 +72,29 @@ class ComissaoApiIntegrationTest {
         long op=criarOp(admin,"OP-COM-200",200,"2026-10-07");
         confirmarComposicao(admin,op,calendario,"comissao-beta.txt",linha("OS-COM-BETA",200,"GUINCHO","QRA-BETA","01/07/2026"));
 
-        String funcionario=login("comissao.beta@local.test","Funcionario@123");
-        mvc.perform(get("/api/comissoes/periodos").header("Authorization","Bearer "+funcionario))
+        String socorrista=login("comissao.beta@local.test","Socorrista@123");
+        mvc.perform(get("/api/comissoes/periodos").header("Authorization","Bearer "+socorrista))
             .andExpect(status().isOk()).andExpect(jsonPath("$[?(@.id == "+calendario+")]").exists());
-        String alimentacao=mvc.perform(post("/api/minha-comissao/alimentacoes").header("Authorization","Bearer "+funcionario)
+        String alimentacao=mvc.perform(post("/api/minha-comissao/alimentacoes").header("Authorization","Bearer "+socorrista)
                 .contentType(MediaType.APPLICATION_JSON).content("{\"data\":\"2026-09-10\",\"valor\":50.00,\"observacoes\":\"Refeição sintética\"}"))
             .andExpect(status().isCreated()).andExpect(jsonPath("$.motoristaId").value(motorista))
             .andExpect(jsonPath("$.situacao").value("PENDENTE"))
             .andReturn().getResponse().getContentAsString();
         long despesa=((Number)JsonPath.read(alimentacao,"$.id")).longValue();
 
-        mvc.perform(get("/api/minha-comissao").header("Authorization","Bearer "+funcionario)
+        mvc.perform(get("/api/minha-comissao").header("Authorization","Bearer "+socorrista)
                 .param("calendarioPagamentoId",String.valueOf(calendario)))
             .andExpect(status().isOk()).andExpect(jsonPath("$.comissaoBruta").value(40d))
             .andExpect(jsonPath("$.alimentacaoAprovada").value(0d)).andExpect(jsonPath("$.alimentacaoPendente").value(50d));
 
         mvc.perform(patch("/api/despesas/{id}/aprovar",despesa).header("Authorization","Bearer "+admin))
             .andExpect(status().isOk()).andExpect(jsonPath("$.aprovada").value(true));
-        mvc.perform(get("/api/minha-comissao").header("Authorization","Bearer "+funcionario)
+        mvc.perform(get("/api/minha-comissao").header("Authorization","Bearer "+socorrista)
                 .param("calendarioPagamentoId",String.valueOf(calendario)))
             .andExpect(status().isOk()).andExpect(jsonPath("$.alimentacaoAprovada").value(50d))
             .andExpect(jsonPath("$.liquido").value(-10d));
 
-        mvc.perform(get("/api/comissoes/resumo").header("Authorization","Bearer "+funcionario)
+        mvc.perform(get("/api/comissoes/resumo").header("Authorization","Bearer "+socorrista)
                 .param("calendarioPagamentoId",String.valueOf(calendario)))
             .andExpect(status().isForbidden());
     }
@@ -105,12 +105,12 @@ class ComissaoApiIntegrationTest {
         long usuario=criarUsuario(admin,"Comissionado Sem OP","comissao.semop@local.test");
         criarMotorista(admin,"Comissionado Sem OP","QRA-SEM-OP",usuario);
         long calendario=criarCalendario(admin,"2027-01-08","2026-12-01","2026-12-31","Fechamento sem OP");
-        String funcionario=login("comissao.semop@local.test","Funcionario@123");
+        String socorrista=login("comissao.semop@local.test","Socorrista@123");
 
-        mvc.perform(post("/api/minha-comissao/alimentacoes").header("Authorization","Bearer "+funcionario)
+        mvc.perform(post("/api/minha-comissao/alimentacoes").header("Authorization","Bearer "+socorrista)
                 .contentType(MediaType.APPLICATION_JSON).content("{\"data\":\"2026-12-10\",\"valor\":35.00}"))
             .andExpect(status().isCreated());
-        mvc.perform(get("/api/minha-comissao").header("Authorization","Bearer "+funcionario)
+        mvc.perform(get("/api/minha-comissao").header("Authorization","Bearer "+socorrista)
                 .param("calendarioPagamentoId",String.valueOf(calendario)))
             .andExpect(status().isOk()).andExpect(jsonPath("$.aguardandoOp").value(true))
             .andExpect(jsonPath("$.producaoPaga").value(0d)).andExpect(jsonPath("$.comissaoBruta").value(0d))
@@ -159,8 +159,8 @@ class ComissaoApiIntegrationTest {
     @Test
     void detalheAdministrativoReutilizaCalculoOficialEIncluiServicosAindaNaoPagosPorPeriodo() throws Exception {
         String admin=login("admin@fluxogestao.local","Admin@123");
-        long usuario=criarUsuario(admin,"Detalhe Funcionário","detalhe.funcionario@local.test");
-        long motorista=id(postJson(admin,"/api/motoristas","{\"nome\":\"Detalhe Funcionário\",\"telefone\":\"(85) 99999-1234\",\"qra\":\"QRA-DET\",\"usuarioId\":"+usuario+"}"));
+        long usuario=criarUsuario(admin,"Detalhe Socorrista","detalhe.socorrista@local.test");
+        long motorista=id(postJson(admin,"/api/motoristas","{\"nome\":\"Detalhe Socorrista\",\"telefone\":\"(85) 99999-1234\",\"qra\":\"QRA-DET\",\"usuarioId\":"+usuario+"}"));
         long agosto=criarCalendario(admin,"2027-09-05","2027-08-01","2027-08-31","Fechamento agosto detalhes");
         long julho=criarCalendario(admin,"2027-08-05","2027-07-01","2027-07-31","Fechamento julho detalhes");
         long op=criarOp(admin,"OP-DET-PAGA",500,"2027-09-05");
@@ -172,8 +172,8 @@ class ComissaoApiIntegrationTest {
         jdbc.update("insert into ordens_servico_porto(numero,valor_total,especialidade,sigla_viatura,qra,data_atendimento,motorista_id) values(?,?,?,?,?,?,?)",
             "OS-DET-JUL",200,"PANE","VTR-ANTIGA","QRA-DET","2027-07-10",motorista);
 
-        String funcionario=login("detalhe.funcionario@local.test","Funcionario@123");
-        String alimentacao=mvc.perform(post("/api/minha-comissao/alimentacoes").header("Authorization","Bearer "+funcionario)
+        String socorrista=login("detalhe.socorrista@local.test","Socorrista@123");
+        String alimentacao=mvc.perform(post("/api/minha-comissao/alimentacoes").header("Authorization","Bearer "+socorrista)
                 .contentType(MediaType.APPLICATION_JSON).content("{\"data\":\"2027-08-21\",\"valor\":30.00}"))
             .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
         long despesa=((Number)JsonPath.read(alimentacao,"$.id")).longValue();
@@ -184,10 +184,10 @@ class ComissaoApiIntegrationTest {
                 .param("calendarioPagamentoId",String.valueOf(agosto)))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.id").value(motorista))
-            .andExpect(jsonPath("$.nome").value("Detalhe Funcionário"))
+            .andExpect(jsonPath("$.nome").value("Detalhe Socorrista"))
             .andExpect(jsonPath("$.ativo").value(true))
             .andExpect(jsonPath("$.telefone").value("(85) 99999-1234"))
-            .andExpect(jsonPath("$.email").value("detalhe.funcionario@local.test"))
+            .andExpect(jsonPath("$.email").value("detalhe.socorrista@local.test"))
             .andExpect(jsonPath("$.qra").value("QRA-DET"))
             .andExpect(jsonPath("$.totalServicosPrestados").value(2))
             .andExpect(jsonPath("$.veiculosUtilizados",containsInAnyOrder("VTR-PAGA","VTR-PENDENTE")))
@@ -218,7 +218,7 @@ class ComissaoApiIntegrationTest {
             .andExpect(jsonPath("$.comissao.comissaoBruta").value(0d))
             .andExpect(jsonPath("$.comissao.alimentacaoAprovada").value(0d));
 
-        mvc.perform(get("/api/equipe/{id}/detalhes",motorista).header("Authorization","Bearer "+funcionario)
+        mvc.perform(get("/api/equipe/{id}/detalhes",motorista).header("Authorization","Bearer "+socorrista)
                 .param("calendarioPagamentoId",String.valueOf(agosto)))
             .andExpect(status().isForbidden());
     }
@@ -232,8 +232,8 @@ class ComissaoApiIntegrationTest {
         long op=criarOp(admin,"OP-COM-PAGAMENTO",500,"2036-02-15");
         confirmarComposicao(admin,op,calendario,"comissao-pagamento.txt",linha("OS-COM-PAGAMENTO",500,"GUINCHO","QRA-PAGAMENTO","10/01/2036"));
 
-        String funcionario=login("comissao.pagamento@local.test","Funcionario@123");
-        String alimentacao=mvc.perform(post("/api/minha-comissao/alimentacoes").header("Authorization","Bearer "+funcionario)
+        String socorrista=login("comissao.pagamento@local.test","Socorrista@123");
+        String alimentacao=mvc.perform(post("/api/minha-comissao/alimentacoes").header("Authorization","Bearer "+socorrista)
                 .contentType(MediaType.APPLICATION_JSON).content("{\"data\":\"2036-01-12\",\"valor\":30.00}"))
             .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
         long despesaAlimentacao=((Number)JsonPath.read(alimentacao,"$.id")).longValue();
@@ -251,7 +251,7 @@ class ComissaoApiIntegrationTest {
             .andExpect(status().isOk()).andExpect(jsonPath("$.despesasPagas").value(30d));
 
         String corpo="{\"dataPagamento\":\"2036-02-16\",\"formaPagamento\":\"PIX\",\"observacoes\":\"Fechamento aprovado\"}";
-        mvc.perform(post("/api/comissoes/{id}/pagamentos",motorista).header("Authorization","Bearer "+funcionario)
+        mvc.perform(post("/api/comissoes/{id}/pagamentos",motorista).header("Authorization","Bearer "+socorrista)
                 .param("calendarioPagamentoId",String.valueOf(calendario)).contentType(MediaType.APPLICATION_JSON).content(corpo))
             .andExpect(status().isForbidden());
         String primeiro=mvc.perform(post("/api/comissoes/{id}/pagamentos",motorista).header("Authorization","Bearer "+admin)
@@ -271,8 +271,8 @@ class ComissaoApiIntegrationTest {
 
         long usuarioNegativo=criarUsuario(admin,"Comissionado Negativo","comissao.negativo.pagamento@local.test");
         long motoristaNegativo=criarMotorista(admin,"Comissionado Negativo","QRA-PAG-NEG",usuarioNegativo);
-        String funcionarioNegativo=login("comissao.negativo.pagamento@local.test","Funcionario@123");
-        String alimentacaoNegativa=mvc.perform(post("/api/minha-comissao/alimentacoes").header("Authorization","Bearer "+funcionarioNegativo)
+        String socorristaNegativo=login("comissao.negativo.pagamento@local.test","Socorrista@123");
+        String alimentacaoNegativa=mvc.perform(post("/api/minha-comissao/alimentacoes").header("Authorization","Bearer "+socorristaNegativo)
                 .contentType(MediaType.APPLICATION_JSON).content("{\"data\":\"2036-01-13\",\"valor\":50.00}"))
             .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
         long despesaNegativa=((Number)JsonPath.read(alimentacaoNegativa,"$.id")).longValue();
@@ -302,7 +302,7 @@ class ComissaoApiIntegrationTest {
     }
     private long criarCalendario(String token,String pagamento,String inicio,String fim,String descricao) throws Exception {return id(postJson(token,"/api/porto/calendario","{\"dataPagamento\":\""+pagamento+"\",\"competenciaInicio\":\""+inicio+"\",\"competenciaFim\":\""+fim+"\",\"descricao\":\""+descricao+"\",\"ativo\":true}"));}
     private long criarOp(String token,String numero,int valor,String data) throws Exception {return id(postJson(token,"/api/porto/ordens-pagamento","{\"numero\":\""+numero+"\",\"dataPrevista\":\""+data+"\",\"valorInformado\":"+valor+",\"statusPorto\":\"PROCESSADO\",\"situacaoFinanceira\":\"PROGRAMADO\",\"pagamentoConfirmado\":false}"));}
-    private long criarUsuario(String token,String nome,String email) throws Exception {return id(postJson(token,"/api/usuarios","{\"nome\":\""+nome+"\",\"email\":\""+email+"\",\"senha\":\"Funcionario@123\",\"perfil\":\"FUNCIONARIO\"}"));}
+    private long criarUsuario(String token,String nome,String email) throws Exception {return id(postJson(token,"/api/usuarios","{\"nome\":\""+nome+"\",\"email\":\""+email+"\",\"senha\":\"Socorrista@123\",\"perfil\":\"FUNCIONARIO\"}"));}
     private long criarMotorista(String token,String nome,String qra,long usuario) throws Exception {return id(postJson(token,"/api/motoristas","{\"nome\":\""+nome+"\",\"qra\":"+(qra==null?"null":"\""+qra+"\"")+",\"usuarioId\":"+usuario+"}"));}
     private String postJson(String token,String caminho,String corpo) throws Exception {return mvc.perform(post(caminho).header("Authorization","Bearer "+token).contentType(MediaType.APPLICATION_JSON).content(corpo)).andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();}
     private long id(String json){return ((Number)JsonPath.read(json,"$.id")).longValue();}

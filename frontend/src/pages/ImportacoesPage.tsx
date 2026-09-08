@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useDemo } from '../demo/DemoContext'
 import { dataHora, moeda } from '../utils/formatadores'
 
-const colunas = ['Data', 'Tipo', 'Categoria', 'Descrição', 'Valor', 'Veículo', 'Funcionário', 'Km rodado', 'Km morto', 'Origem']
+const colunas = ['Data', 'Tipo', 'Categoria', 'Descrição', 'Valor', 'Veículo', 'Socorrista', 'Km rodado', 'Km morto', 'Origem']
 const previa = [
   { data: '24/07/2026', tipo: 'Receita', categoria: 'Porto Seguro', descricao: 'Lote importado Porto Seguro', valor: 2860, veiculo: 'G-01' },
   { data: '24/07/2026', tipo: 'Despesa', categoria: 'Combustível', descricao: 'Abastecimento importado', valor: 890, veiculo: 'G-02' },

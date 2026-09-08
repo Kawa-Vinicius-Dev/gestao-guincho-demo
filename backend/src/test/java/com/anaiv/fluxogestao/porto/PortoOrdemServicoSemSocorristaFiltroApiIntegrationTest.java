@@ -23,7 +23,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * orfas dos meses anteriores.
  */
 @SpringBootTest @AutoConfigureMockMvc @ActiveProfiles("test")
-class PortoOrdemServicoSemFuncionarioFiltroApiIntegrationTest {
+class PortoOrdemServicoSemSocorristaFiltroApiIntegrationTest {
     @Autowired MockMvc mvc;
     @Autowired JdbcTemplate jdbc;
 
@@ -32,7 +32,7 @@ class PortoOrdemServicoSemFuncionarioFiltroApiIntegrationTest {
         jdbc.update("delete from motoristas where qra='770777'");
     }
 
-    @Test void filtraAsOsSemFuncionarioEmQualquerMes() throws Exception {
+    @Test void filtraAsOsSemSocorristaEmQualquerMes() throws Exception {
         String token=login();
         long motorista=((Number)JsonPath.read(mvc.perform(post("/api/motoristas").header("Authorization","Bearer "+token)
             .contentType(MediaType.APPLICATION_JSON).content("{\"nome\":\"SOCORRISTA FILTRO\",\"qra\":\"770777\"}"))
@@ -43,16 +43,16 @@ class PortoOrdemServicoSemFuncionarioFiltroApiIntegrationTest {
         inserir("OS-FILTRO-ORFA-ABRIL","2077-04-12",null);
 
         // sem recorte de data, o filtro alcanca as orfas de meses diferentes
-        List<String> orfas=JsonPath.read(listar(token,"semFuncionario=true&numeroOs=OS-FILTRO"),"$[*].numero");
+        List<String> orfas=JsonPath.read(listar(token,"semSocorrista=true&numeroOs=OS-FILTRO"),"$[*].numero");
         assertThat(orfas).containsExactlyInAnyOrder("OS-FILTRO-ORFA-MARCO","OS-FILTRO-ORFA-ABRIL");
 
         // o inverso tambem serve, para conferir o que ja foi atribuido
-        List<String> comDono=JsonPath.read(listar(token,"semFuncionario=false&numeroOs=OS-FILTRO"),"$[*].numero");
+        List<String> comDono=JsonPath.read(listar(token,"semSocorrista=false&numeroOs=OS-FILTRO"),"$[*].numero");
         assertThat(comDono).containsExactly("OS-FILTRO-COM-DONO");
 
         // combinado com periodo, restringe ao mes pedido
         List<String> orfasDeMarco=JsonPath.read(
-            listar(token,"semFuncionario=true&numeroOs=OS-FILTRO&dataInicio=2077-03-01&dataFim=2077-03-31"),"$[*].numero");
+            listar(token,"semSocorrista=true&numeroOs=OS-FILTRO&dataInicio=2077-03-01&dataFim=2077-03-31"),"$[*].numero");
         assertThat(orfasDeMarco).containsExactly("OS-FILTRO-ORFA-MARCO");
 
         // sem o filtro, continua trazendo todas
