@@ -59,7 +59,7 @@ public class DashboardService {
             return new ResultadoVeiculo(v.id(),v.identificacao(),rv,dv,rv.subtract(dv),kmv,cv);
         }).filter(r->r.receitas().signum()!=0||r.despesas().signum()!=0||r.kmMorto().signum()!=0).toList();
         long importados=importacoes.somarTotalRegistrosPorStatus(StatusImportacao.CONFIRMADA);
-        return new DashboardResponse(recebida,prevista,prevista,atrasada,pagas,despPrev,realizado,projetado,projetado,
+        return new DashboardResponse(recebida,prevista,atrasada,pagas,despPrev,realizado,projetado,
             importados,kmTotal,kmRem,kmMorto,custoMorto,resultados);
     }
     private boolean entre(LocalDate data,LocalDate inicio,LocalDate fim){return data!=null&&!data.isBefore(inicio)&&!data.isAfter(fim);}

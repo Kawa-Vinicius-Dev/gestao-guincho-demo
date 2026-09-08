@@ -32,9 +32,9 @@ export interface Quilometragem {
 }
 export interface ResultadoVeiculo { veiculoId:number; veiculo:string; receitas:number; despesas:number; resultado:number; kmMorto:number; custoKmMorto:number }
 export interface Dashboard {
-  receitaRecebida:number; receitaPrevista:number; totalReceber:number; totalAtrasado:number;
+  receitaRecebida:number; receitaPrevista:number; totalAtrasado:number;
   despesasPagas:number; despesasPrevistas:number; saldoRealizado:number; saldoProjetado:number;
-  lucroEstimado:number; registrosImportados:number; quilometragemTotal:number; kmRemunerado:number;
+  registrosImportados:number; quilometragemTotal:number; kmRemunerado:number;
   kmMorto:number; custoKmMorto:number; resultadoPorVeiculo:ResultadoVeiculo[]
 }
 export interface ItemImportacao {

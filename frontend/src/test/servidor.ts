@@ -35,9 +35,9 @@ export const servidor = setupServer(
     id: 1, nome: 'Administrador', email: 'admin@fluxogestao.local', perfil: 'ADMINISTRADOR',
   })),
   http.get('/api/dashboard', () => HttpResponse.json({
-    receitaRecebida: 780, receitaPrevista: 0, totalReceber: 0, totalAtrasado: 0,
+    receitaRecebida: 780, receitaPrevista: 0, totalAtrasado: 0,
     despesasPagas: 200, despesasPrevistas: 0, saldoRealizado: 580, saldoProjetado: 580,
-    lucroEstimado: 580, registrosImportados: 0, quilometragemTotal: 100,
+    registrosImportados: 0, quilometragemTotal: 100,
     kmRemunerado: 70, kmMorto: 30, custoKmMorto: 75, resultadoPorVeiculo: [],
   })),
   http.get('/api/contas-receber', () => HttpResponse.json(contas)),

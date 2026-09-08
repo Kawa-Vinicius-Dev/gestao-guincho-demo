@@ -51,9 +51,9 @@ public final class FinanceiroDtos {
 
     public record ResultadoVeiculo(Long veiculoId, String veiculo, BigDecimal receitas, BigDecimal despesas,
         BigDecimal resultado, BigDecimal kmMorto, BigDecimal custoKmMorto) {}
-    public record DashboardResponse(BigDecimal receitaRecebida, BigDecimal receitaPrevista, BigDecimal totalReceber,
+    public record DashboardResponse(BigDecimal receitaRecebida, BigDecimal receitaPrevista,
         BigDecimal totalAtrasado, BigDecimal despesasPagas, BigDecimal despesasPrevistas,
-        BigDecimal saldoRealizado, BigDecimal saldoProjetado, BigDecimal lucroEstimado,
+        BigDecimal saldoRealizado, BigDecimal saldoProjetado,
         long registrosImportados, BigDecimal quilometragemTotal, BigDecimal kmRemunerado,
         BigDecimal kmMorto, BigDecimal custoKmMorto, List<ResultadoVeiculo> resultadoPorVeiculo) {}
 }

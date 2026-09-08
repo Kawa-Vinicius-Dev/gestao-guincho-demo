@@ -7,7 +7,7 @@ import { MemoryRouter } from 'react-router-dom'
 
 test('mostra a receita da OP paga na visão geral usando o dashboard real',async()=>{
   servidor.use(
-    http.get('/api/dashboard',()=>HttpResponse.json({receitaRecebida:1000,receitaPrevista:0,totalReceber:0,totalAtrasado:0,despesasPagas:200,despesasPrevistas:0,saldoRealizado:800,saldoProjetado:800,lucroEstimado:800,registrosImportados:1,quilometragemTotal:0,kmRemunerado:0,kmMorto:0,custoKmMorto:0,resultadoPorVeiculo:[]})),
+    http.get('/api/dashboard',()=>HttpResponse.json({receitaRecebida:1000,receitaPrevista:0,totalAtrasado:0,despesasPagas:200,despesasPrevistas:0,saldoRealizado:800,saldoProjetado:800,registrosImportados:1,quilometragemTotal:0,kmRemunerado:0,kmMorto:0,custoKmMorto:0,resultadoPorVeiculo:[]})),
     http.get('/api/porto/ordens-pagamento/resumo',()=>HttpResponse.json({quantidadeTotalOps:2,valorTotalPrevisto:900,quantidadeSemComposicao:1,valorSemComposicao:400,quantidadeConciliadas:1,valorConciliadas:500,quantidadeComDivergencia:0,valorTotalDivergencias:0,quantidadePagamentoProgramado:2,valorProgramado:900,quantidadeRecebidas:0,valorRecebido:0,quantidadeAguardandoRecebimento:2,valorAguardandoRecebimento:900,quantidadeVencidasNaoRecebidas:0,valorVencidoNaoRecebido:0,valorMedioPorOp:450,quantidadeOrdensServico:3})),
   )
   render(<MemoryRouter><DashboardPage/></MemoryRouter>)
