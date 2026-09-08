@@ -26,6 +26,8 @@ export function resolverPendenciaPorto(id:number){return api<PendenciaPorto>(`/a
 export const obterDashboardPorto=(params?:URLSearchParams)=>api<DashboardPorto>(`/api/porto/dashboard${consulta(params)}`)
 export const listarCalendarioPorto=()=>api<CalendarioPorto[]>('/api/porto/calendario')
 type DadosCalendarioPorto={dataPagamento:string;competenciaInicio:string;competenciaFim:string;descricao:string;ativo:boolean}
+export interface ColagemCalendarioPorto { criados:number; ignorados:number; itens:CalendarioPorto[] }
+export const colarCalendarioPorto=(conteudo:string)=>api<ColagemCalendarioPorto>('/api/porto/calendario/colagem',{method:'POST',body:JSON.stringify({conteudo})})
 export const criarDataCalendarioPorto=(dados:DadosCalendarioPorto)=>api<CalendarioPorto>('/api/porto/calendario',{method:'POST',body:JSON.stringify(dados)})
 export const atualizarDataCalendarioPorto=(id:number,dados:DadosCalendarioPorto)=>api<CalendarioPorto>(`/api/porto/calendario/${id}`,{method:'PUT',body:JSON.stringify(dados)})
 export const desativarDataCalendarioPorto=(id:number)=>api<CalendarioPorto>(`/api/porto/calendario/${id}/desativar`,{method:'PATCH'})

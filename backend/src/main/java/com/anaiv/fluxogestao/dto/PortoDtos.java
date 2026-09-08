@@ -22,6 +22,8 @@ public final class PortoDtos {
         List<LinhaPreviaResponse> linhas,List<String> erros,boolean requerOrdemPagamento,ResumoPreviaResponse resumo,
         AnaliseOrdemPagamentoResponse analiseOrdemPagamento) {}
     public record ConteudoImportacaoRequest(@NotBlank String conteudo) {}
+    public record ColagemCalendarioRequest(@NotBlank String conteudo) {}
+    public record ColagemCalendarioResponse(int criados,int ignorados,List<CalendarioResponse> itens) {}
     public record ConfirmarImportacaoRequest(Long ordemPagamentoId,String numeroOrdemPagamento,
         Boolean confirmarDivergencias,Boolean confirmarReassociacoes,Long calendarioPagamentoId,
         MotivoJustificativaPorto motivoDivergencia,String justificativaDivergencia) {

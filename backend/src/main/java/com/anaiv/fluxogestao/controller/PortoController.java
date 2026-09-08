@@ -45,6 +45,7 @@ public class PortoController {
     @PatchMapping("/ordens-pagamento/{id}/receber") public OrdemPagamentoResponse receber(@PathVariable Long id,@Valid @RequestBody RecebimentoRequest r){return porto.receber(id,r);}
     @GetMapping("/calendario") public List<CalendarioResponse> calendario(){return calendario.listar();}
     @PostMapping("/calendario") @ResponseStatus(HttpStatus.CREATED) public CalendarioResponse criarData(@Valid @RequestBody CalendarioRequest request){return calendario.criar(request);}
+    @PostMapping("/calendario/colagem") public ColagemCalendarioResponse colarCalendario(@Valid @RequestBody ColagemCalendarioRequest request){return calendario.colar(request.conteudo());}
     @PutMapping("/calendario/{id}") public CalendarioResponse atualizarData(@PathVariable Long id,@Valid @RequestBody CalendarioRequest request){return calendario.atualizar(id,request);}
     @PatchMapping("/calendario/{id}/desativar") public CalendarioResponse desativarData(@PathVariable Long id){return calendario.desativar(id);}
     @GetMapping("/relatorios/excel") public ResponseEntity<byte[]> excel(@ModelAttribute PortoFiltros filtros,@ModelAttribute PortoOsFiltros filtrosOs){return ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION,"attachment; filename=relatorio-porto.xlsx").contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")).body(relatorios.excel(filtros,filtrosOs));}
