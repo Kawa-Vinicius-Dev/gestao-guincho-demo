@@ -17,8 +17,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /**
  * A Porto entrega apenas as datas de pagamento e a periodicidade, sem a competencia. A competencia
- * e derivada da posicao do pagamento no mes: o 1o pagamento cobre a 1a quinzena do mes anterior e o
- * 2o cobre a 2a quinzena. A regra foi conferida contra as dez datas ja cadastradas no calendario.
+ * e derivada da posicao do pagamento no mes: o 1o pagamento cobre a 2a quinzena do mes anterior e o
+ * 2o cobre a 1a quinzena do proprio mes. Confirmado pelo cliente: o pagamento de 16/09/2026 refere-se
+ * aos servicos de 16/08/2026 a 31/08/2026.
  */
 @SpringBootTest @AutoConfigureMockMvc @ActiveProfiles("test")
 class PortoCalendarioColagemApiIntegrationTest {
@@ -49,13 +50,13 @@ class PortoCalendarioColagemApiIntegrationTest {
         assertThat((Integer)JsonPath.read(resposta,"$.criados")).isEqualTo(4);
         assertThat((Integer)JsonPath.read(resposta,"$.ignorados")).isZero();
 
-        // 1o pagamento do mes cobre a 1a quinzena do mes anterior
-        assertThat(competencia("2081-09-16")).isEqualTo("2081-08-01|2081-08-15");
-        // 2o pagamento do mes cobre a 2a quinzena do mes anterior
-        assertThat(competencia("2081-09-30")).isEqualTo("2081-08-16|2081-08-31");
+        // 1o pagamento do mes cobre a 2a quinzena do mes anterior
+        assertThat(competencia("2081-09-16")).isEqualTo("2081-08-16|2081-08-31");
+        // 2o pagamento do mes cobre a 1a quinzena do proprio mes
+        assertThat(competencia("2081-09-30")).isEqualTo("2081-09-01|2081-09-15");
         // dia irregular (14/12) nao muda a regra: continua sendo o 1o pagamento do mes
-        assertThat(competencia("2081-12-14")).isEqualTo("2081-11-01|2081-11-15");
-        assertThat(competencia("2081-12-30")).isEqualTo("2081-11-16|2081-11-30");
+        assertThat(competencia("2081-12-14")).isEqualTo("2081-11-16|2081-11-30");
+        assertThat(competencia("2081-12-30")).isEqualTo("2081-12-01|2081-12-15");
     }
 
     @Test void colagemRepetidaNaoDuplicaDatasJaCadastradas() throws Exception {

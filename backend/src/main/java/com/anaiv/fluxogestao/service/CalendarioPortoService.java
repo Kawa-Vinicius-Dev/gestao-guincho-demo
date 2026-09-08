@@ -26,8 +26,8 @@ public class CalendarioPortoService {
 
     /**
      * A Porto entrega so as datas de pagamento e a periodicidade. A competencia e derivada da posicao
-     * do pagamento dentro do mes: o 1o pagamento cobre a 1a quinzena do mes anterior e o 2o cobre a 2a.
-     * A regra vale mesmo quando a Porto antecipa o dia (14/08 e 14/12, por exemplo).
+     * do pagamento dentro do mes, conforme competenciaDoPagamento. A regra vale mesmo quando a Porto
+     * antecipa o dia do pagamento (14/08 e 14/12, por exemplo).
      */
     @Transactional public ColagemCalendarioResponse colar(String conteudo){
         TreeSet<LocalDate> datas=new TreeSet<>();Matcher m=DATA_BR.matcher(conteudo==null?"":conteudo);
@@ -37,23 +37,30 @@ public class CalendarioPortoService {
         for(LocalDate data:datas){
             Optional<CalendarioPagamentoPorto> existente=repositorio.findByDataPagamento(data);
             if(existente.isPresent()){ignorados++;itens.add(resposta(existente.get()));continue;}
-            PeriodoQuinzena competencia=competenciaDoPagamento(data,datas);
+            boolean primeiroDoMes=primeiroPagamentoDoMes(data,datas);
+            PeriodoQuinzena competencia=competenciaDoPagamento(data,primeiroDoMes);
             if(repositorio.findByCompetenciaInicioAndCompetenciaFim(competencia.inicio(),competencia.fim()).isPresent()){ignorados++;continue;}
-            itens.add(resposta(repositorio.save(new CalendarioPagamentoPorto(data,competencia.inicio(),competencia.fim(),descricao(data,competencia),true))));
+            itens.add(resposta(repositorio.save(new CalendarioPagamentoPorto(data,competencia.inicio(),competencia.fim(),descricao(data,primeiroDoMes),true))));
             criados++;
         }
         return new ColagemCalendarioResponse(criados,ignorados,itens);
     }
-    /** Primeiro pagamento do mes: 1a quinzena do mes anterior. Segundo em diante: 2a quinzena. */
-    private PeriodoQuinzena competenciaDoPagamento(LocalDate data,TreeSet<LocalDate> datas){
-        boolean primeiroDoMes=datas.headSet(data).stream().noneMatch(x->x.getYear()==data.getYear()&&x.getMonthValue()==data.getMonthValue())
+    private boolean primeiroPagamentoDoMes(LocalDate data,TreeSet<LocalDate> datas){
+        return datas.headSet(data).stream().noneMatch(x->x.getYear()==data.getYear()&&x.getMonthValue()==data.getMonthValue())
             &&repositorio.findAllByOrderByDataPagamento().stream().noneMatch(x->x.getDataPagamento().isBefore(data)&&x.getDataPagamento().getYear()==data.getYear()&&x.getDataPagamento().getMonthValue()==data.getMonthValue());
-        LocalDate anterior=data.minusMonths(1);
-        return primeiroDoMes?new PeriodoQuinzena(anterior.withDayOfMonth(1),anterior.withDayOfMonth(15))
-            :new PeriodoQuinzena(anterior.withDayOfMonth(16),anterior.withDayOfMonth(anterior.lengthOfMonth()));
     }
-    private String descricao(LocalDate data,PeriodoQuinzena competencia){
-        return (competencia.inicio().getDayOfMonth()==1?"1º":"2º")+" ciclo de "+MES[data.getMonthValue()-1]+" de "+data.getYear();
+    /**
+     * O pagamento sai cerca de quinze dias apos o fechamento do periodo: o 1o pagamento do mes cobre
+     * a 2a quinzena do mes anterior e o 2o cobre a 1a quinzena do proprio mes. Exemplo confirmado
+     * pelo cliente: o pagamento de 16/09/2026 refere-se aos servicos de 16/08/2026 a 31/08/2026.
+     */
+    private PeriodoQuinzena competenciaDoPagamento(LocalDate data,boolean primeiroDoMes){
+        LocalDate anterior=data.minusMonths(1);
+        return primeiroDoMes?new PeriodoQuinzena(anterior.withDayOfMonth(16),anterior.withDayOfMonth(anterior.lengthOfMonth()))
+            :new PeriodoQuinzena(data.withDayOfMonth(1),data.withDayOfMonth(15));
+    }
+    private String descricao(LocalDate data,boolean primeiroDoMes){
+        return (primeiroDoMes?"1º":"2º")+" ciclo de "+MES[data.getMonthValue()-1]+" de "+data.getYear();
     }
     private static final String[] MES={"janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"};
 

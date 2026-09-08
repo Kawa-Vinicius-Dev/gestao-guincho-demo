@@ -57,9 +57,9 @@ class PortoFluxoFinanceiroApiIntegrationTest {
         String primeira=confirmarComposicao(token,opPrimeira,"q1-financeiro.txt",linha("OS-FIN-Q1",100,"10/07/2026"));
         String segunda=confirmarComposicao(token,opSegunda,"q2-financeiro.txt",linha("OS-FIN-Q2",250,"20/07/2026"));
 
-        assertThat((String)JsonPath.read(primeira,"$.quinzena")).isEqualTo("01/07/2026 a 15/07/2026");
+        assertThat((String)JsonPath.read(primeira,"$.quinzena")).isEqualTo("16/07/2026 a 31/07/2026");
         assertThat((String)JsonPath.read(primeira,"$.dataPagamento")).isEqualTo("2026-08-14");
-        assertThat((String)JsonPath.read(segunda,"$.quinzena")).isEqualTo("16/07/2026 a 31/07/2026");
+        assertThat((String)JsonPath.read(segunda,"$.quinzena")).isEqualTo("01/08/2026 a 15/08/2026");
         assertThat((String)JsonPath.read(segunda,"$.dataPagamento")).isEqualTo("2026-08-28");
         assertThat((Integer)JsonPath.read(primeira,"$.receitasCriadas")).isEqualTo(1);
         assertThat(((Number)JsonPath.read(primeira,"$.valorTotalRecebido")).doubleValue()).isEqualTo(100d);
