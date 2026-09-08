@@ -19,9 +19,12 @@ public class AuthService {
     private final SessaoRepository sessoes;
     private final PasswordEncoder encoder;
     private final long horasSessao;
+    private final int forcaBcrypt;
     public AuthService(UsuarioRepository usuarios, SessaoRepository sessoes, PasswordEncoder encoder,
-                       @Value("${app.session-hours:12}") long horasSessao) {
+                       @Value("${app.session-hours:12}") long horasSessao,
+                       @Value("${app.security.bcrypt-strength:10}") int forcaBcrypt) {
         this.usuarios = usuarios; this.sessoes = sessoes; this.encoder = encoder; this.horasSessao = horasSessao;
+        this.forcaBcrypt = forcaBcrypt;
     }
     @Transactional
     public LoginResponse login(LoginRequest request) {
@@ -29,6 +32,7 @@ public class AuthService {
                 .filter(Usuario::isAtivo)
                 .filter(u -> encoder.matches(request.senha(), u.getSenhaHash()))
                 .orElseThrow(() -> new IllegalArgumentException("E-mail ou senha inválidos."));
+        regravarHashSeDesatualizado(usuario, request.senha());
         String token = TokenSeguro.gerar();
         sessoes.save(new Sessao(usuario, TokenSeguro.hash(token), OffsetDateTime.now().plusHours(horasSessao)));
         return new LoginResponse(token, resposta(usuario));
@@ -49,6 +53,18 @@ public class AuthService {
     }
     public UsuarioResponse me(UsuarioPrincipal principal) {
         return new UsuarioResponse(principal.id(), principal.nome(), principal.email(), principal.perfil());
+    }
+    /**
+     * O custo do BCrypt fica gravado dentro do proprio hash, entao baixar o fator de trabalho na
+     * configuracao nao acelera quem ja tem senha cadastrada. Regrava o hash no primeiro login apos
+     * a mudanca: o usuario paga o custo antigo uma vez e passa a usar o novo fator dai em diante.
+     */
+    private void regravarHashSeDesatualizado(Usuario usuario, String senha) {
+        if (custoDoHash(usuario.getSenhaHash()) != forcaBcrypt) usuario.trocarSenha(encoder.encode(senha));
+    }
+    private int custoDoHash(String hash) {
+        if (hash == null || hash.length() < 7 || !hash.startsWith("$2")) return forcaBcrypt;
+        try { return Integer.parseInt(hash.substring(4, 6)); } catch (NumberFormatException e) { return forcaBcrypt; }
     }
     private UsuarioResponse resposta(Usuario u) { return new UsuarioResponse(u.getId(), u.getNome(), u.getEmail(), u.getPerfil()); }
 }
