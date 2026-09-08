@@ -15,14 +15,24 @@ export class ApiError extends Error {
 export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   const token = tokenStorage.get()
   const isForm = init.body instanceof FormData
-  const response = await fetch(apiUrl(path), {
-    ...init,
-    headers: {
-      ...(isForm ? {} : init.body ? { 'Content-Type': 'application/json' } : {}),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...init.headers,
-    },
-  })
+  const metric = `api:${init.method ?? 'GET'} ${path}`
+  const start = `${metric}:start:${crypto.randomUUID()}`
+  const end = `${metric}:end:${crypto.randomUUID()}`
+  performance.mark(start)
+  let response: Response
+  try {
+    response = await fetch(apiUrl(path), {
+      ...init,
+      headers: {
+        ...(isForm ? {} : init.body ? { 'Content-Type': 'application/json' } : {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...init.headers,
+      },
+    })
+  } finally {
+    performance.mark(end)
+    performance.measure(metric, start, end)
+  }
   if (response.status === 401 && path !== '/api/auth/login') {
     tokenStorage.clear()
     window.dispatchEvent(new Event('auth:expired'))

@@ -10,4 +10,5 @@ public class RegistroImportadoPorto {
     @Column(name="criado_em") private OffsetDateTime criadoEm=OffsetDateTime.now();
     protected RegistroImportadoPorto() {}
     public RegistroImportadoPorto(Importacao i,String hash,EnumsFinanceiros.TipoRelatorioPorto tipo){importacao=i;hashRegistro=hash;tipoRelatorio=tipo;}
+    public String getHashRegistro(){return hashRegistro;}
 }

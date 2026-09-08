@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -18,6 +19,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest @AutoConfigureMockMvc @ActiveProfiles("test")
 class PortoDashboardPeriodoApiIntegrationTest {
     @Autowired MockMvc mvc;
+    @Autowired JdbcTemplate jdbc;
+
+    @Test void receitaPortoRecebidaNoMesSelecionadoEntraNoDashboard() throws Exception {
+        String token=login();
+        jdbc.update("insert into receitas (descricao,valor,data_competencia,data_recebimento,status,recorrente) values (?,?,?,?,?,?)",
+            "Porto Seguro - OS-DASH-AGOSTO",1000.00,java.sql.Date.valueOf("2099-07-31"),java.sql.Date.valueOf("2099-08-14"),"RECEBIDA",false);
+
+        mvc.perform(get("/api/dashboard").param("inicio","2099-08-01").param("fim","2099-08-31").header("Authorization","Bearer "+token))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.receitaRecebida").value(1000.00));
+    }
 
     @Test void calculaSemanaEQuinzenaNasBordas() throws Exception {
         String token=login();
