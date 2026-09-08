@@ -4,7 +4,6 @@ import type { CalendarioPorto, ConfirmacaoPorto, DashboardPorto, DetalheOpPorto,
 
 export function criarPreviaPorto(arquivo:File){const body=new FormData();body.append('arquivo',arquivo);return api<PreviaPorto>('/api/porto/importacoes/previa',{method:'POST',body})}
 export function criarPreviaConteudoPorto(conteudo:string){return api<PreviaPorto>('/api/porto/importacoes/previa-conteudo',{method:'POST',body:JSON.stringify({conteudo})})}
-export function avaliarImportacaoPorto(id:number,ordemPagamentoId:number){return api<PreviaPorto>(`/api/porto/importacoes/${id}/avaliar`,{method:'POST',body:JSON.stringify({ordemPagamentoId})})}
 export function confirmarImportacaoPorto(id:number,ordemPagamentoId?:number,confirmarDivergencias=false,motivoDivergencia?:string,justificativaDivergencia?:string,calendarioPagamentoId?:number){return api<ConfirmacaoPorto>(`/api/porto/importacoes/${id}/confirmar`,{method:'POST',body:JSON.stringify({ordemPagamentoId:ordemPagamentoId??null,confirmarDivergencias,calendarioPagamentoId:calendarioPagamentoId??null,motivoDivergencia,justificativaDivergencia})})}
 export interface AvaliarImportacaoPorNumeroPorto { numeroOrdemPagamento:string; calendarioPagamentoId:number }
 export function avaliarImportacaoPortoPorNumero(id:number,dados:AvaliarImportacaoPorNumeroPorto,signal?:AbortSignal){return api<PreviaPorto>(`/api/porto/importacoes/${id}/avaliar`,{method:'POST',body:JSON.stringify(dados),signal})}

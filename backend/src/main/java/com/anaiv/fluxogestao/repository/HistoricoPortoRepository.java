@@ -6,5 +6,5 @@ import java.util.List;
 
 public interface HistoricoPortoRepository extends JpaRepository<HistoricoPorto,Long> {
     List<HistoricoPorto> findByOrdemPagamentoOrderByCriadoEmDesc(OrdemPagamentoPorto op);
-    List<HistoricoPorto> findByOrdemServicoOrderByCriadoEmDesc(OrdemServicoPorto os);
+    
 }

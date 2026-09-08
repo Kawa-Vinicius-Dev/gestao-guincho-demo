@@ -15,9 +15,6 @@ public class Motorista {
     private boolean ativo = true;
 
     protected Motorista() {}
-    public Motorista(String nome, String telefone, String documento, String qra, Usuario usuario) {
-        this(nome, telefone, documento, qra, usuario, null);
-    }
     public Motorista(String nome, String telefone, String documento, String qra, Usuario usuario, Veiculo veiculo) {
         this.nome = nome; this.telefone = telefone; this.documento = documento; this.qra = normalizarQra(qra); this.usuario = usuario; this.veiculo = veiculo;
     }

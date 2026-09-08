@@ -22,12 +22,6 @@ public class CalendarioPortoService {
     @Transactional public CalendarioResponse desativar(Long id){CalendarioPagamentoPorto item=obter(id);item.desativar();return resposta(item);}
     @Transactional(readOnly=true) public LocalDate proximaDataAtiva(LocalDate data){return repositorio.findFirstByAtivoTrueAndDataPagamentoAfterOrderByDataPagamento(data).orElseThrow(()->new IllegalArgumentException("Não há data ativa posterior no calendário Porto.")).getDataPagamento();}
     @Transactional(readOnly=true) public int ciclosUltrapassados(LocalDate prevista,LocalDate efetiva){if(prevista==null||efetiva==null||!efetiva.isAfter(prevista))return 0;return repositorio.findByAtivoTrueAndDataPagamentoAfterAndDataPagamentoLessThanEqualOrderByDataPagamento(prevista,efetiva).size();}
-    @Transactional(readOnly=true) public CalendarioPagamentoPorto pagamentoDaCompetencia(LocalDate dataServico){
-        PeriodoQuinzena periodo=periodo(dataServico);
-        return repositorio.findFirstByAtivoTrueAndCompetenciaInicioLessThanEqualAndCompetenciaFimGreaterThanEqualOrderByDataPagamento(dataServico,dataServico)
-            .filter(x->periodo.inicio().equals(x.getCompetenciaInicio())&&periodo.fim().equals(x.getCompetenciaFim()))
-            .orElseThrow(()->new IllegalArgumentException("Não existe data ativa no calendário Porto para o período "+periodo.rotulo()+"."));
-    }
     @Transactional(readOnly=true) public Optional<LocalDate> previsaoDaCompetencia(LocalDate dataServico){
         PeriodoQuinzena periodo=periodo(dataServico);
         return repositorio.findFirstByAtivoTrueAndCompetenciaInicioLessThanEqualAndCompetenciaFimGreaterThanEqualOrderByDataPagamento(dataServico,dataServico)

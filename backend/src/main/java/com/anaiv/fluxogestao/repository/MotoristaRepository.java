@@ -9,7 +9,6 @@ import java.util.*;
 import com.anaiv.fluxogestao.entity.Usuario;
 public interface MotoristaRepository extends JpaRepository<Motorista, Long> {
     Optional<Motorista> findFirstByNomeIgnoreCase(String nome);
-    List<Motorista> findByNomeIgnoreCase(String nome);
     Optional<Motorista> findByQraIgnoreCase(String qra);
     Optional<Motorista> findByUsuario(Usuario usuario);
     @Lock(LockModeType.PESSIMISTIC_WRITE) @Query("select m from Motorista m where m.id=:id")

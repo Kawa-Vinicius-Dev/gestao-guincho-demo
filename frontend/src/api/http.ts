@@ -45,13 +45,3 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   return response.json() as Promise<T>
 }
 
-export function downloadCsv(tipo:string,inicio:string,fim:string) {
-  const token=tokenStorage.get()
-  return fetch(apiUrl(`/api/relatorios/${tipo}.csv?inicio=${inicio}&fim=${fim}`), { headers: token ? {Authorization:`Bearer ${token}`} : {} })
-    .then(async response => {
-      if(!response.ok) throw new ApiError('Não foi possível exportar o relatório.',response.status)
-      const blob=await response.blob()
-      const url=URL.createObjectURL(blob)
-      const a=document.createElement('a');a.href=url;a.download=`${tipo}.csv`;a.click();URL.revokeObjectURL(url)
-    })
-}

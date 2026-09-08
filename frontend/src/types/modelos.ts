@@ -42,11 +42,6 @@ export interface ItemImportacao {
   origem?:string; destino?:string; valor:number; kmRemunerado?:number; motorista?:string;
   veiculo?:string; previsaoPagamento:string; observacoes?:string
 }
-export interface Importacao {
-  id:number; nomeArquivo:string; status:'PROCESSANDO'|'AGUARDANDO_CONFERENCIA'|'CONFIRMADA'|'CANCELADA'|'ERRO_LEITURA';
-  textoExtraido?:string; mensagemErro?:string; totalRegistros:number; criadoEm:string;
-  confirmadoEm?:string; itens:ItemImportacao[]
-}
 export type TipoRelatorioPorto = 'PREVISAO_RECEBER'|'OS_VINCULADAS'|'SERVICOS_DEVOLVIDOS'|'SERVICOS_GERAIS'|'SERVICOS_AGUARDANDO_LANCAMENTO'
 export type AcaoLinhaPorto = 'IMPORTAR'|'ATUALIZAR'|'IGNORAR'|'ERRO'|'DIVERGENCIA'
 export interface LinhaPreviaPorto { dados:Record<string,string>; hashRegistro:string; acao:AcaoLinhaPorto; mensagem?:string }

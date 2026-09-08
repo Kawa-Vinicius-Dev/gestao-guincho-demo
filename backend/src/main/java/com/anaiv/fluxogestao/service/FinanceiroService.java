@@ -105,9 +105,6 @@ public class FinanceiroService {
         return itens.stream().sorted(Comparator.comparing(LancamentoFinanceiroResponse::data).reversed()
             .thenComparing(LancamentoFinanceiroResponse::id,Comparator.reverseOrder())).toList();
     }
-    public List<ContaReceber> contasEntidades() { return contas.findAll(); }
-    public List<Receita> receitasEntidades() { return receitas.findAll(); }
-    public List<Despesa> despesasEntidades() { return despesas.findAll(); }
     private ContaReceber conta(Long id){return contas.findById(id).orElseThrow(()->new RecursoNaoEncontradoException("Conta a receber não encontrada."));}
     private Despesa despesa(Long id){return despesas.findById(id).orElseThrow(()->new RecursoNaoEncontradoException("Despesa não encontrada."));}
     private Receita receita(Long id){return receitas.findById(id).orElseThrow(()->new RecursoNaoEncontradoException("Receita não encontrada."));}

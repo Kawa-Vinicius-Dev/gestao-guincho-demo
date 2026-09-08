@@ -24,7 +24,6 @@ public class QuilometragemService {
         return resposta(repository.save(q));
     }
     public List<QuilometragemResponse> listar(){return repository.findAll().stream().map(this::resposta).toList();}
-    public List<Quilometragem> entidades(){return repository.findAll();}
     private QuilometragemResponse resposta(Quilometragem q){return new QuilometragemResponse(q.getId(),q.getData(),q.getVeiculo().getIdentificacao(),
         q.getMotorista()==null?null:q.getMotorista().getNome(),q.getProtocolo(),q.getHodometroInicial(),q.getHodometroFinal(),
         q.getQuilometragemTotal(),q.getQuilometragemRemunerada(),q.getKmMorto(),q.getCustoPorKm(),q.getCustoKmMorto(),q.getObservacoes());}

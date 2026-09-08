@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.Optional;
 import com.anaiv.fluxogestao.entity.OrdemServicoPorto;
 public interface ReceitaRepository extends JpaRepository<Receita, Long> {
-    List<Receita> findByDataCompetenciaBetweenOrderByDataCompetenciaDesc(LocalDate inicio, LocalDate fim);
     @Query("select r from Receita r where coalesce(r.dataRecebimento,r.dataCompetencia) between :inicio and :fim")
     List<Receita> findParaDashboardEntre(@Param("inicio") LocalDate inicio,@Param("fim") LocalDate fim);
     Optional<Receita> findByOrdemServicoPorto(OrdemServicoPorto ordemServicoPorto);
