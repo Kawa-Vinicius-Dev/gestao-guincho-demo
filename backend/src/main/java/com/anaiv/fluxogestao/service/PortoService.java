@@ -89,10 +89,18 @@ public class PortoService {
     private void aplicarManual(OrdemPagamentoPorto op,OrdemPagamentoRequest request){if(Boolean.TRUE.equals(request.pagamentoConfirmado())){if(request.dataRecebimento()==null)throw new IllegalArgumentException("Informe a data de recebimento ao confirmar o pagamento no banco.");op.atualizarManual(request.valorInformado(),request.dataPrevista(),request.statusPorto(),EnumsFinanceiros.SituacaoFinanceiraOpPorto.PROGRAMADO,request.observacao(),calendario.findByDataPagamento(request.dataPrevista()).orElse(null));op.confirmarRecebimento(request.valorInformado(),request.dataRecebimento());}
         else{if(request.situacaoFinanceira()==EnumsFinanceiros.SituacaoFinanceiraOpPorto.RECEBIDO)throw new IllegalArgumentException("Confirme o pagamento no banco antes de marcar a OP como recebida.");op.atualizarManual(request.valorInformado(),request.dataPrevista(),request.statusPorto(),request.situacaoFinanceira(),request.observacao(),calendario.findByDataPagamento(request.dataPrevista()).orElse(null));}}
     @Transactional(readOnly=true) public List<OrdemPagamentoResponse> listarOps(){return listarOps(new PortoFiltros(null,null,null,null,null,null,null,null,null));}
-    @Transactional(readOnly=true) public List<OrdemPagamentoResponse> listarOps(PortoFiltros filtros){PortoFiltros f=filtros==null?new PortoFiltros(null,null,null,null,null,null,null,null,null):filtros;
-        return ops.findAll().stream().sorted(Comparator.comparing(OrdemPagamentoPorto::getNumero)).map(this::op)
+    @Transactional(readOnly=true) public List<OrdemPagamentoResponse> listarOps(PortoFiltros filtros){return listarOps(filtros,carregar());}
+    private List<OrdemPagamentoResponse> listarOps(PortoFiltros filtros,Dados dados){PortoFiltros f=filtros==null?new PortoFiltros(null,null,null,null,null,null,null,null,null):filtros;
+        return dados.ops().stream().sorted(Comparator.comparing(OrdemPagamentoPorto::getNumero)).map(x->op(x,dados.oss(x)))
             .filter(x->filtrar(x,f)).toList();}
-    @Transactional(readOnly=true) public ResumoOrdensPagamentoResponse resumo(PortoFiltros filtros){List<OrdemPagamentoResponse> lista=listarOps(filtros);LocalDate hoje=LocalDate.now();
+    private Dados carregar(){List<OrdemServicoPorto> servicos=oss.findAllParaListagem();
+        Map<Long,List<OrdemServicoPorto>> porOp=servicos.stream().filter(x->x.getOrdemPagamento()!=null)
+            .collect(java.util.stream.Collectors.groupingBy(x->x.getOrdemPagamento().getId()));
+        return new Dados(ops.findAllParaListagem(),servicos,porOp);}
+    private record Dados(List<OrdemPagamentoPorto> ops,List<OrdemServicoPorto> servicos,Map<Long,List<OrdemServicoPorto>> porOp){
+        List<OrdemServicoPorto> oss(OrdemPagamentoPorto op){return porOp.getOrDefault(op.getId(),List.of());}}
+    @Transactional(readOnly=true) public ResumoOrdensPagamentoResponse resumo(PortoFiltros filtros){return resumo(filtros,carregar());}
+    private ResumoOrdensPagamentoResponse resumo(PortoFiltros filtros,Dados dados){List<OrdemPagamentoResponse> lista=listarOps(filtros,dados);LocalDate hoje=LocalDate.now();
         List<OrdemPagamentoResponse> semComposicao=lista.stream().filter(x->x.quantidadeOrdensServico()==0).toList();
         List<OrdemPagamentoResponse> conciliadas=lista.stream().filter(x->x.statusConciliacao()==EnumsFinanceiros.StatusConciliacaoPorto.CONCILIADA).toList();
         List<OrdemPagamentoResponse> abaixo=lista.stream().filter(x->x.statusConciliacao()==EnumsFinanceiros.StatusConciliacaoPorto.VALOR_ABAIXO).toList();
@@ -108,10 +116,11 @@ public class PortoService {
             programadas.size(),somarPrevisto(programadas),recebidas.size(),somarRecebido(recebidas),aguardando.size(),somarPrevisto(aguardando),
             vencidas.size(),somarPrevisto(vencidas),medio,lista.stream().mapToLong(OrdemPagamentoResponse::quantidadeOrdensServico).sum());}
     @Transactional(readOnly=true) public List<OrdemServicoResponse> listarOss(){return listarOss(new PortoOsFiltros(null,null,null,null,null,null,null,null,null,null,null,null));}
-    @Transactional(readOnly=true) public List<OrdemServicoResponse> listarOss(PortoOsFiltros filtros){PortoOsFiltros f=filtros==null?new PortoOsFiltros(null,null,null,null,null,null,null,null,null,null,null,null):filtros;
-        Map<Long,EnumsFinanceiros.StatusConciliacaoPorto> conciliacoes=ops.findAll().stream().collect(java.util.stream.Collectors.toMap(OrdemPagamentoPorto::getId,x->op(x).statusConciliacao()));
-        return oss.findAll().stream().sorted(Comparator.comparing(OrdemServicoPorto::getNumero)).map(this::os).filter(x->filtrarOs(x,f,conciliacoes)).toList();}
-    @Transactional(readOnly=true) public Map<String,Object> dashboard(PortoFiltros filtrosOp,PortoOsFiltros filtrosOs){ResumoOrdensPagamentoResponse resumo=resumo(filtrosOp);List<OrdemServicoResponse> servicos=listarOss(filtrosOs);Map<String,Object> r=new LinkedHashMap<>();adicionarResumo(r,resumo);
+    @Transactional(readOnly=true) public List<OrdemServicoResponse> listarOss(PortoOsFiltros filtros){return listarOss(filtros,carregar());}
+    private List<OrdemServicoResponse> listarOss(PortoOsFiltros filtros,Dados dados){PortoOsFiltros f=filtros==null?new PortoOsFiltros(null,null,null,null,null,null,null,null,null,null,null,null):filtros;
+        Map<Long,EnumsFinanceiros.StatusConciliacaoPorto> conciliacoes=dados.ops().stream().collect(java.util.stream.Collectors.toMap(OrdemPagamentoPorto::getId,x->op(x,dados.oss(x)).statusConciliacao()));
+        return dados.servicos().stream().sorted(Comparator.comparing(OrdemServicoPorto::getNumero)).map(this::os).filter(x->filtrarOs(x,f,conciliacoes)).toList();}
+    @Transactional(readOnly=true) public Map<String,Object> dashboard(PortoFiltros filtrosOp,PortoOsFiltros filtrosOs){Dados dados=carregar();ResumoOrdensPagamentoResponse resumo=resumo(filtrosOp,dados);List<OrdemServicoResponse> servicos=listarOss(filtrosOs,dados);Map<String,Object> r=new LinkedHashMap<>();adicionarResumo(r,resumo);
         r.put("quantidadeTotalServicos",servicos.size());r.put("valorTotalRealizado",somarServicos(servicos));
         List<OrdemServicoResponse> aguardando=servicos.stream().filter(x->x.statusFinanceiro()==EnumsFinanceiros.StatusFinanceiroPorto.AGUARDANDO_OP).toList();r.put("quantidadeAguardandoOp",aguardando.size());r.put("valorAguardandoOp",somarServicos(aguardando));
         List<OrdemServicoResponse> programados=servicos.stream().filter(x->x.statusFinanceiro()==EnumsFinanceiros.StatusFinanceiroPorto.PAGAMENTO_PROGRAMADO).toList();r.put("quantidadeServicosPagamentoProgramado",programados.size());r.put("valorServicosPagamentoProgramado",somarServicos(programados));
@@ -136,7 +145,8 @@ public class PortoService {
         return justificativa(justificativas.save(new JustificativaConciliacaoPorto(ordem,request.motivo(),request.observacao().trim(),usuario)));}
     @Transactional public void registrarJustificativaImportacao(OrdemPagamentoPorto op,EnumsFinanceiros.MotivoJustificativaPorto motivo,String observacao,BigDecimal diferenca,UsuarioPrincipal principal){Usuario usuario=usuario(principal);justificativas.save(new JustificativaConciliacaoPorto(op,motivo,observacao.trim(),diferenca,usuario));}
     @Transactional public void registrarHistoricoImportacao(OrdemPagamentoPorto op,UsuarioPrincipal principal,int importados,int atualizados){historicos.save(new HistoricoPorto(op,null,usuario(principal),"COMPOSICAO_IMPORTADA","Composição confirmada: "+importados+" registro(s), "+atualizados+" atualizado(s)."));}
-    private OrdemPagamentoResponse op(OrdemPagamentoPorto x){List<OrdemServicoPorto> vinculadas=oss.findByOrdemPagamento(x);BigDecimal soma=vinculadas.stream().map(OrdemServicoPorto::getValorTotal).filter(Objects::nonNull).reduce(BigDecimal.ZERO,BigDecimal::add);BigDecimal diferenca=x.getValorTotal().subtract(soma);
+    private OrdemPagamentoResponse op(OrdemPagamentoPorto x){return op(x,oss.findByOrdemPagamento(x));}
+    private OrdemPagamentoResponse op(OrdemPagamentoPorto x,List<OrdemServicoPorto> vinculadas){BigDecimal soma=vinculadas.stream().map(OrdemServicoPorto::getValorTotal).filter(Objects::nonNull).reduce(BigDecimal.ZERO,BigDecimal::add);BigDecimal diferenca=x.getValorTotal().subtract(soma);
         EnumsFinanceiros.StatusConciliacaoPorto status=vinculadas.isEmpty()?EnumsFinanceiros.StatusConciliacaoPorto.SEM_COMPOSICAO:diferenca.abs().compareTo(new BigDecimal("0.01"))<=0?EnumsFinanceiros.StatusConciliacaoPorto.CONCILIADA:diferenca.signum()>0?EnumsFinanceiros.StatusConciliacaoPorto.VALOR_ABAIXO:EnumsFinanceiros.StatusConciliacaoPorto.VALOR_ACIMA;
         if(x.getValorRecebido()!=null&&x.getValorRecebido().subtract(x.getValorTotal()).abs().compareTo(new BigDecimal("0.01"))>0)status=EnumsFinanceiros.StatusConciliacaoPorto.RECEBIDA_COM_DIVERGENCIA;
         CalendarioPagamentoPorto ciclo=x.getCalendarioPagamento();return new OrdemPagamentoResponse(x.getId(),x.getNumero(),x.getValorTotal(),x.getNomeCodigo(),x.getDataPagamentoProgramada(),x.getValorRecebido(),x.getDataRecebimento(),x.getSituacaoFinanceira().name(),vinculadas.size(),soma,diferenca,status,x.getStatusPorto(),x.getObservacao(),ciclo==null?null:ciclo.getId(),ciclo==null?null:calendarioService.rotulo(ciclo));}
