@@ -41,20 +41,36 @@ public class PortoFinanceiroService {
         return sincronizar(os,op,importacao,ciclo,ciclo.getDataPagamento());
     }
     public ResultadoSincronizacao sincronizar(OrdemServicoPorto os,OrdemPagamentoPorto op,Importacao importacao,CalendarioPagamentoPorto ciclo,LocalDate dataRecebimento){
-        if(os.getValorTotal()==null||os.getValorTotal().signum()<0||os.getDataAtendimento()==null)throw new IllegalArgumentException("A OS "+os.getNumero()+" não possui valor e data válidos para o lançamento financeiro.");
+        ResultadoLote resultado=sincronizarLote(List.of(os),op,importacao,ciclo,dataRecebimento);
+        return new ResultadoSincronizacao(resultado.receitasCriadas(),resultado.receitasAtualizadas(),resultado.valorTotal());
+    }
+    public ResultadoLote sincronizarLote(List<OrdemServicoPorto> oss,OrdemPagamentoPorto op,Importacao importacao,CalendarioPagamentoPorto ciclo){
+        return sincronizarLote(oss,op,importacao,ciclo,ciclo.getDataPagamento());
+    }
+    public ResultadoLote sincronizarLote(List<OrdemServicoPorto> oss,OrdemPagamentoPorto op,Importacao importacao,CalendarioPagamentoPorto ciclo,LocalDate dataRecebimento){
+        if(oss.isEmpty())return new ResultadoLote(0,0,BigDecimal.ZERO);
         Contratante contratante=contratantes.findFirstByNomeIgnoreCase(CONTRATANTE_PORTO).orElseGet(()->contratantes.save(new Contratante(CONTRATANTE_PORTO,null)));
         Categoria categoria=categorias.findFirstByNomeIgnoreCaseAndTipo(CATEGORIA_GUINCHO,TipoCategoria.RECEITA).orElseGet(()->categorias.save(new Categoria(CATEGORIA_GUINCHO,TipoCategoria.RECEITA)));
+        Map<Long,ContaReceber> contasPorOs=contas.findByOrdemServicoPortoIn(oss).stream().collect(java.util.stream.Collectors.toMap(x->x.getOrdemServicoPorto().getId(),x->x));
+        Map<Long,Receita> receitasPorOs=receitas.findByOrdemServicoPortoIn(oss).stream().collect(java.util.stream.Collectors.toMap(x->x.getOrdemServicoPorto().getId(),x->x));
+        int criadas=0,atualizadas=0;BigDecimal total=BigDecimal.ZERO;
+        for(OrdemServicoPorto os:oss){
+            ResultadoSincronizacao resultado=sincronizar(os,op,importacao,dataRecebimento,contratante,categoria,contasPorOs.get(os.getId()),receitasPorOs.get(os.getId()));
+            criadas+=resultado.receitasCriadas();atualizadas+=resultado.receitasAtualizadas();total=total.add(resultado.valor());
+        }
+        return new ResultadoLote(criadas,atualizadas,total);
+    }
+    private ResultadoSincronizacao sincronizar(OrdemServicoPorto os,OrdemPagamentoPorto op,Importacao importacao,LocalDate dataRecebimento,Contratante contratante,Categoria categoria,ContaReceber contaExistente,Receita receitaExistente){
+        if(os.getValorTotal()==null||os.getValorTotal().signum()<0||os.getDataAtendimento()==null)throw new IllegalArgumentException("A OS "+os.getNumero()+" não possui valor e data válidos para o lançamento financeiro.");
         Veiculo veiculo=localizarVeiculo(os);Motorista motorista=os.getMotorista();
         String descricao="Porto Seguro - OP "+op.getNumero()+" - OS "+os.getNumero();
-        Optional<ContaReceber> contaExistente=contas.findByOrdemServicoPorto(os);
-        ContaReceber conta=contaExistente.orElseGet(()->new ContaReceber(contratante,os.getNumero(),descricao,os.getValorTotal(),os.getDataAtendimento(),dataRecebimento,veiculo,null,OrigemLancamento.IMPORTADA,importacao));
+        ContaReceber conta=contaExistente==null?new ContaReceber(contratante,os.getNumero(),descricao,os.getValorTotal(),os.getDataAtendimento(),dataRecebimento,veiculo,null,OrigemLancamento.IMPORTADA,importacao):contaExistente;
         conta.sincronizarPorto(contratante,os.getNumero(),descricao,os.getValorTotal(),os.getDataAtendimento(),dataRecebimento,veiculo,motorista,importacao,os,op);
         ContaReceber contaSalva=contas.save(conta);
-        Optional<Receita> receitaExistente=receitas.findByOrdemServicoPorto(os);
-        Receita receita=receitaExistente.orElseGet(()->new Receita(contaSalva,contratante,categoria,descricao,os.getValorTotal(),os.getDataAtendimento(),dataRecebimento,StatusReceita.RECEBIDA,false,veiculo,null));
+        Receita receita=receitaExistente==null?new Receita(contaSalva,contratante,categoria,descricao,os.getValorTotal(),os.getDataAtendimento(),dataRecebimento,StatusReceita.RECEBIDA,false,veiculo,null):receitaExistente;
         receita.sincronizarPorto(contaSalva,contratante,categoria,descricao,os.getValorTotal(),os.getDataAtendimento(),dataRecebimento,veiculo,motorista,importacao,os,op);
         receitas.save(receita);os.marcarRecebida(dataRecebimento);
-        return new ResultadoSincronizacao(receitaExistente.isEmpty()?1:0,receitaExistente.isPresent()?1:0,os.getValorTotal());
+        return new ResultadoSincronizacao(receitaExistente==null?1:0,receitaExistente==null?0:1,os.getValorTotal());
     }
 
     private Veiculo localizarVeiculo(OrdemServicoPorto os){
@@ -65,4 +81,5 @@ public class PortoFinanceiroService {
 
     public record PeriodoFinanceiro(CalendarioPagamentoPorto calendario,String rotulo){}
     public record ResultadoSincronizacao(int receitasCriadas,int receitasAtualizadas,BigDecimal valor){}
+    public record ResultadoLote(int receitasCriadas,int receitasAtualizadas,BigDecimal valorTotal){}
 }

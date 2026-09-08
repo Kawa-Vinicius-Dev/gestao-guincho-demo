@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { avaliarImportacaoPortoPorNumero, cancelarImportacaoPorto, confirmarImportacaoPortoPorNumero, confirmarImportacaoPortoSemOp, criarPreviaConteudoPorto, criarPreviaPorto, listarCalendarioPorto } from '../api/porto'
 import type { CalendarioPorto, PreviaPorto } from '../types/modelos'
 import { moeda } from '../utils/formatadores'
@@ -10,10 +10,11 @@ export default function PortoImportacoesPage(){
   const [arquivo,setArquivo]=useState<File|null>(null),[previa,setPrevia]=useState<PreviaPorto|null>(null)
   const [modo,setModo]=useState<'arquivo'|'colagem'>('arquivo'),[conteudo,setConteudo]=useState('')
   const [periodos,setPeriodos]=useState<CalendarioPorto[]>([]),[numeroOp,setNumeroOp]=useState(''),[periodoId,setPeriodoId]=useState('')
-  const [mensagem,setMensagem]=useState(''),[erro,setErro]=useState(''),[carregando,setCarregando]=useState(false),[validando,setValidando]=useState(false),[inputKey,setInputKey]=useState(0)
+  const [mensagem,setMensagem]=useState(''),[erro,setErro]=useState(''),[carregando,setCarregando]=useState(false),[etapa,setEtapa]=useState(''),[validando,setValidando]=useState(false),[inputKey,setInputKey]=useState(0)
   const [chaveValidada,setChaveValidada]=useState('')
   const [confirmarDivergencias,setConfirmarDivergencias]=useState(false),[confirmarReassociacoes,setConfirmarReassociacoes]=useState(false)
   const [motivoDivergencia,setMotivoDivergencia]=useState(''),[justificativaDivergencia,setJustificativaDivergencia]=useState('')
+  const confirmacaoEmCurso=useRef(false)
 
   useEffect(()=>{listarCalendarioPorto().then(setPeriodos).catch(e=>setErro(e.message))},[])
 
@@ -36,14 +37,15 @@ export default function PortoImportacoesPage(){
   function limparConfirmacoes(){setConfirmarDivergencias(false);setConfirmarReassociacoes(false);setMotivoDivergencia('');setJustificativaDivergencia('')}
   async function analisar(){
     if(modo==='arquivo'&&!arquivo||modo==='colagem'&&!conteudo.trim())return
-    setCarregando(true);setErro('');setNumeroOp('');setPeriodoId('');setChaveValidada('');limparConfirmacoes()
-    try{setPrevia(modo==='arquivo'?await criarPreviaPorto(arquivo as File):await criarPreviaConteudoPorto(conteudo))}catch(e){setErro((e as Error).message)}finally{setCarregando(false)}
+    setCarregando(true);setEtapa('Analisando arquivo…');setErro('');setNumeroOp('');setPeriodoId('');setChaveValidada('');limparConfirmacoes()
+    try{setPrevia(modo==='arquivo'?await criarPreviaPorto(arquivo as File):await criarPreviaConteudoPorto(conteudo))}catch(e){setErro((e as Error).message)}finally{setEtapa('');setCarregando(false)}
   }
   function alterarNumero(valor:string){setNumeroOp(valor);setChaveValidada('');limparConfirmacoes()}
   function alterarPeriodo(valor:string){setPeriodoId(valor);setChaveValidada('');limparConfirmacoes()}
   async function confirmar(){
-    if(!previa||previa.requerOrdemPagamento&&(!numeroNormalizado||!periodoId||chaveValidada!==chaveAvaliacao))return
-    setCarregando(true);setErro('')
+    if(confirmacaoEmCurso.current||!previa||previa.requerOrdemPagamento&&(!numeroNormalizado||!periodoId||chaveValidada!==chaveAvaliacao))return
+    confirmacaoEmCurso.current=true
+    setCarregando(true);setEtapa('Confirmando importação…');setErro('')
     try{
       const r=previa.requerOrdemPagamento
         ?await confirmarImportacaoPortoPorNumero(previa.id,{numeroOrdemPagamento:numeroNormalizado,calendarioPagamentoId:Number(periodoId),confirmarDivergencias,confirmarReassociacoes,motivoDivergencia:motivoDivergencia||undefined,justificativaDivergencia:justificativaDivergencia.trim()||undefined})
@@ -51,7 +53,7 @@ export default function PortoImportacoesPage(){
       const financeiro=r.tipo==='OS_VINCULADAS'||r.tipo==='SERVICOS_GERAIS'?` · ${r.receitasCriadas} ${r.receitasCriadas===1?'receita criada':'receitas criadas'} · ${r.receitasAtualizadas} ${r.receitasAtualizadas===1?'receita atualizada':'receitas atualizadas'} · ${moeda(r.valorTotalRecebido)} recebidos${r.quinzena?` · período ${r.quinzena}`:''}${r.dataPagamento?` · pagamento em ${dataBr(r.dataPagamento)}`:''}`:''
       setMensagem(`${r.importados} ${r.importados===1?'registro importado':'registros importados'}${r.ignorados?` · ${r.ignorados} ignorados por duplicidade`:''}${financeiro}.`)
       setPrevia(null);setArquivo(null);setNumeroOp('');setPeriodoId('');setChaveValidada('');limparConfirmacoes();setInputKey(x=>x+1)
-    }catch(e){setErro((e as Error).message)}finally{setCarregando(false)}
+    }catch(e){setErro((e as Error).message)}finally{confirmacaoEmCurso.current=false;setEtapa('');setCarregando(false)}
   }
   async function cancelar(){
     if(!previa)return;setCarregando(true);setErro('')
@@ -68,7 +70,7 @@ export default function PortoImportacoesPage(){
   const divergenciaConfirmada=(!temDivergenciaFinanceira&&!temDivergenciasDados)||(confirmarDivergencias&&(!temDivergenciaFinanceira||Boolean(motivoDivergencia&&justificativaDivergencia.trim())))
 
   return <div className="page-enter"><header className="page-heading"><div><span className="eyebrow">Módulo Porto</span><h1>Importar relatórios</h1><p>Cole serviços ou envie CSV/TXT, confira a prévia e confirme somente depois da validação.</p></div></header>
-    {erro?<div className="form-alert">{erro}</div>:null}{mensagem?<div className="success-notice">{mensagem}</div>:null}
+    {carregando?<span role="status">{etapa}</span>:null}{erro?<div className="form-alert" role="alert">{erro}{previa?<button type="button" onClick={()=>void confirmar()}>Tentar novamente</button>:null}</div>:null}{mensagem?<div className="success-notice">{mensagem}</div>:null}
     <section className="panel porto-import-card"><div className="segmented porto-import-modes" role="group" aria-label="Forma de importação"><button className={modo==='arquivo'?'active':''} onClick={()=>{setModo('arquivo');setPrevia(null)}}>Enviar arquivo</button><button className={modo==='colagem'?'active':''} onClick={()=>{setModo('colagem');setPrevia(null)}}>Colar serviços da Porto</button></div>
       {modo==='arquivo'?<div className="porto-upload"><label className="field"><span>Arquivo CSV ou TXT</span><input key={inputKey} aria-label="Arquivo CSV" type="file" accept=".csv,.txt,text/csv,text/plain" onChange={e=>{setArquivo(e.target.files?.[0]??null);setPrevia(null);setMensagem('')}}/></label><button className="button button-primary" disabled={!arquivo||carregando} onClick={analisar}>{carregando?'Analisando…':'Analisar CSV'}</button></div>:<div className="porto-paste"><label className="field"><span>Conteúdo copiado da Porto</span><textarea aria-label="Conteúdo copiado da Porto" rows={10} value={conteudo} onChange={e=>{setConteudo(e.target.value);setPrevia(null);setMensagem('')}} placeholder="Cole aqui a tabela copiada com Ctrl+C"/></label><div className="porto-paste-actions"><button className="button button-ghost" type="button" onClick={limpar}>Limpar</button><button className="button button-primary" disabled={!conteudo.trim()||carregando} onClick={analisar}>{carregando?'Analisando…':'Analisar conteúdo'}</button></div></div>}
       {previa?<div className="porto-preview"><header className="panel-title"><div><span className="eyebrow">Prévia detectada</span><h2>{rotulos[previa.tipo]}</h2></div><span className="import-pill">{previa.totalLinhas} linhas</span></header>

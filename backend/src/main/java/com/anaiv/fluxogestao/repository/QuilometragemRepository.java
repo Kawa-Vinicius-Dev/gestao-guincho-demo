@@ -7,4 +7,5 @@ import java.util.List;
 public interface QuilometragemRepository extends JpaRepository<Quilometragem, Long> {
     boolean existsByDataAndVeiculoIdAndHodometroInicialAndHodometroFinal(LocalDate data, Long veiculoId, BigDecimal inicio, BigDecimal fim);
     List<Quilometragem> findByDataBetweenOrderByDataDesc(LocalDate inicio, LocalDate fim);
+    List<Quilometragem> findByDataBetween(LocalDate inicio,LocalDate fim);
 }

@@ -12,6 +12,10 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -24,6 +28,25 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class PortoFluxoFinanceiroApiIntegrationTest {
     @Autowired MockMvc mvc;
     @Autowired JdbcTemplate jdbc;
+
+    @Test
+    void confirmaUmaPreviaUmaUnicaVezSobRequisicoesSimultaneas() throws Exception {
+        String token=login();
+        long op=criarOp(token,"OP-CONC-1",100,"2026-08-14");
+        long importacao=previaComposicao(token,op,"concorrente.txt",linha("OS-CONC-1",100,"10/07/2026"));
+        ExecutorService pool=Executors.newFixedThreadPool(2);
+        try {
+            List<Future<org.springframework.test.web.servlet.ResultActions>> chamadas=pool.invokeAll(List.of(
+                () -> confirmarConcorrente(token,importacao,op),
+                () -> confirmarConcorrente(token,importacao,op)
+            ));
+            for(Future<org.springframework.test.web.servlet.ResultActions> chamada:chamadas)chamada.get().andExpect(status().isOk());
+        } finally {
+            pool.shutdownNow();
+        }
+        assertThat(jdbc.queryForObject("select count(*) from ordens_servico_porto where numero='OS-CONC-1'",Integer.class)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("select count(*) from receitas where ordem_servico_porto_id=(select id from ordens_servico_porto where numero='OS-CONC-1')",Integer.class)).isEqualTo(1);
+    }
 
     @Test
     void confirmaOpsPagasNasDuasQuinzenasEAtualizaFinanceiroDashboardEDre() throws Exception {
@@ -351,6 +374,7 @@ class PortoFluxoFinanceiroApiIntegrationTest {
         return ((Number)JsonPath.read(resposta,"$.id")).longValue();
     }
     private String confirmarComposicao(String token,long op,String nome,String linhas) throws Exception {return confirmar(token,previaComposicao(token,op,nome,linhas),op);}
+    private org.springframework.test.web.servlet.ResultActions confirmarConcorrente(String token,long importacao,long op) throws Exception {return mvc.perform(post("/api/porto/importacoes/{id}/confirmar",importacao).header("Authorization","Bearer "+token).contentType(MediaType.APPLICATION_JSON).content("{\"ordemPagamentoId\":"+op+"}"));}
     private String confirmar(String token,long importacao,long op) throws Exception {return mvc.perform(post("/api/porto/importacoes/{id}/confirmar",importacao).header("Authorization","Bearer "+token).contentType(MediaType.APPLICATION_JSON).content("{\"ordemPagamentoId\":"+op+"}" )).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();}
     private String confirmar(String token,long importacao,long op,long calendario) throws Exception {return mvc.perform(post("/api/porto/importacoes/{id}/confirmar",importacao).header("Authorization","Bearer "+token).contentType(MediaType.APPLICATION_JSON).content("{\"ordemPagamentoId\":"+op+",\"calendarioPagamentoId\":"+calendario+"}" )).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();}
     private String confirmarPorNumero(String token,long importacao,String numero,long calendario) throws Exception {return mvc.perform(post("/api/porto/importacoes/{id}/confirmar",importacao).header("Authorization","Bearer "+token).contentType(MediaType.APPLICATION_JSON).content("{\"numeroOrdemPagamento\":\""+numero+"\",\"calendarioPagamentoId\":"+calendario+"}" )).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();}

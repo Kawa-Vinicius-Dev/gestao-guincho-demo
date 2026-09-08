@@ -14,6 +14,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.nio.charset.StandardCharsets;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -46,7 +47,26 @@ class PortoApiIntegrationTest {
     @Test
     void endpointsPortoExigemAutenticacao() throws Exception {
         MockMultipartFile arquivo=new MockMultipartFile("arquivo","porto.csv","text/csv","A;B\n1;2".getBytes(StandardCharsets.UTF_8));
-        mvc.perform(multipart("/api/porto/importacoes/previa").file(arquivo)).andExpect(status().isUnauthorized());
+        mvc.perform(multipart("/api/porto/importacoes/previa").file(arquivo))
+            .andExpect(status().isUnauthorized())
+            .andExpect(header().string("Server-Timing", containsString("app;dur=")))
+            .andExpect(header().exists("X-Request-Id"));
+    }
+
+    @Test
+    void endpointApiExatoIncluiTempoDaAplicacaoEIdentificadorDaRequisicao() throws Exception {
+        mvc.perform(get("/api"))
+            .andExpect(status().isUnauthorized())
+            .andExpect(header().string("Server-Timing", containsString("app;dur=")))
+            .andExpect(header().exists("X-Request-Id"));
+    }
+
+    @Test
+    void respostasDaApiIncluemTempoDaAplicacaoEIdentificadorDaRequisicao() throws Exception {
+        mvc.perform(get("/api/porto/dashboard?periodo=MENSAL").header("Authorization", "Bearer " + login()))
+            .andExpect(status().isOk())
+            .andExpect(header().string("Server-Timing", containsString("app;dur=")))
+            .andExpect(header().exists("X-Request-Id"));
     }
 
     @Test

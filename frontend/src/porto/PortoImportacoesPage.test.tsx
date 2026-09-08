@@ -1,9 +1,82 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
-import { expect, test } from 'vitest'
+import { expect, test, vi } from 'vitest'
 import PortoImportacoesPage from '../pages/PortoImportacoesPage'
 import { servidor } from '../test/servidor'
+
+test('mede a chamada de análise de importação', async () => {
+  const medida = vi.spyOn(performance, 'measure')
+  try {
+    servidor.use(
+      http.post('/api/porto/importacoes/previa', () => HttpResponse.json({
+        id: 81, nomeArquivo: 'medicao.csv', tipo: 'SERVICOS_GERAIS', status: 'AGUARDANDO_CONFERENCIA', totalLinhas: 1,
+        requerOrdemPagamento: false, erros: [], linhas: [{ hashRegistro: 'medicao', dados: { numero_os: 'OS-MEDICAO' } }],
+      }, { status: 201 })),
+    )
+    const user = userEvent.setup()
+    render(<PortoImportacoesPage />)
+    await user.upload(screen.getByLabelText(/arquivo csv/i), new File(['csv'], 'medicao.csv', { type: 'text/csv' }))
+    await user.click(screen.getByRole('button', { name: /analisar csv/i }))
+
+    expect(await screen.findByText('OS-MEDICAO')).toBeInTheDocument()
+    expect(medida).toHaveBeenCalledWith(
+      'api:POST /api/porto/importacoes/previa',
+      expect.stringMatching(/^api:POST \/api\/porto\/importacoes\/previa:start:/),
+      expect.stringMatching(/^api:POST \/api\/porto\/importacoes\/previa:end:/),
+    )
+  } finally {
+    medida.mockRestore()
+  }
+})
+
+test('ignora duplo clique enquanto confirma a importação', async () => {
+  let confirmacoes=0
+  servidor.use(
+    http.post('/api/porto/importacoes/previa', () => HttpResponse.json({
+      id: 82, nomeArquivo: 'duplo-clique.csv', tipo: 'PREVISAO_RECEBER', status: 'AGUARDANDO_CONFERENCIA', totalLinhas: 1,
+      requerOrdemPagamento: false, erros: [], linhas: [{ hashRegistro: 'duplo-clique', dados: { numero_op: 'OP-DUPLO-1', valor_total: '100.00' } }],
+    }, { status: 201 })),
+    http.post('/api/porto/importacoes/82/confirmar', async () => {
+      confirmacoes++
+      await new Promise(resolve => setTimeout(resolve, 20))
+      return HttpResponse.json({ importacaoId: 82, tipo: 'PREVISAO_RECEBER', importados: 1, ignorados: 0 })
+    }),
+  )
+  const user=userEvent.setup()
+  render(<PortoImportacoesPage />)
+  await user.upload(screen.getByLabelText(/arquivo csv/i),new File(['csv'],'duplo-clique.csv',{type:'text/csv'}))
+  await user.click(screen.getByRole('button',{name:/analisar csv/i}))
+  await screen.findByText('OP-DUPLO-1')
+  const confirmar=screen.getByRole('button',{name:/confirmar importação/i})
+  await act(async()=>{
+    confirmar.click()
+    confirmar.click()
+  })
+  await screen.findByText(/1 registro importado/i)
+  expect(confirmacoes).toBe(1)
+})
+
+test('expõe o progresso e mantém erro de confirmação acionável', async () => {
+  let concluirAnalise!: (resposta: Response) => void
+  let concluirConfirmacao!: (resposta: Response) => void
+  servidor.use(
+    http.post('/api/porto/importacoes/previa', () => new Promise(resolve => { concluirAnalise=resolve })),
+    http.post('/api/porto/importacoes/83/confirmar', () => new Promise(resolve => { concluirConfirmacao=resolve })),
+  )
+  const user=userEvent.setup()
+  render(<PortoImportacoesPage />)
+  await user.upload(screen.getByLabelText(/arquivo csv/i),new File(['csv'],'progresso.csv',{type:'text/csv'}))
+  await user.click(screen.getByRole('button',{name:/analisar csv/i}))
+  expect(screen.getByRole('status')).toHaveTextContent(/analisando arquivo/i)
+  concluirAnalise(HttpResponse.json({id:83,nomeArquivo:'progresso.csv',tipo:'PREVISAO_RECEBER',status:'AGUARDANDO_CONFERENCIA',totalLinhas:1,requerOrdemPagamento:false,erros:[],linhas:[{hashRegistro:'progresso',dados:{numero_op:'OP-PROGRESSO'}}]},{status:201}))
+  await screen.findByText('OP-PROGRESSO')
+  await user.click(screen.getByRole('button',{name:/confirmar importação/i}))
+  expect(screen.getByRole('status')).toHaveTextContent(/confirmando importação/i)
+  concluirConfirmacao(HttpResponse.json({detalhe:'Falha temporária.'},{status:500}))
+  expect(await screen.findByRole('alert')).toHaveTextContent('Falha temporária.')
+  expect(screen.getByRole('button',{name:/tentar novamente/i})).toBeInTheDocument()
+})
 
 test('envia CSV, exige OP para relatório de OS e confirma a prévia', async () => {
   let numeroAvaliado='',numeroConfirmado=''

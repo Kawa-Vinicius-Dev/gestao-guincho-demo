@@ -1,6 +1,6 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, expect, test } from 'vitest'
+import { beforeEach, expect, test, vi } from 'vitest'
 import App from './App'
 
 beforeEach(() => {
@@ -59,4 +59,44 @@ test('funcionário vê apenas os lançamentos operacionais permitidos', async ()
   expect(await screen.findByRole('heading', { name: /despesas/i })).toBeInTheDocument()
   expect(screen.queryByRole('link', { name: /DRE mensal/i })).not.toBeInTheDocument()
   expect(screen.getByRole('link', { name: /km rodado e morto/i })).toBeInTheDocument()
+})
+
+test('mede a transição entre rotas no navegador', async () => {
+  const medida = vi.spyOn(performance, 'measure')
+  const marcacao = vi.spyOn(performance, 'mark')
+  try {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.clear(await screen.findByLabelText(/e-mail/i))
+    await user.type(screen.getByLabelText(/e-mail/i), 'admin@fluxogestao.local')
+    await user.clear(screen.getByLabelText(/senha/i))
+    await user.type(screen.getByLabelText(/senha/i), 'Admin@123')
+    await user.click(screen.getByRole('button', { name: /entrar no sistema/i }))
+    await screen.findByRole('heading', { name: /visão financeira/i })
+    medida.mockClear()
+    marcacao.mockClear()
+    const link = screen.getByRole('link', { name: /^entradas e saídas$/i })
+    let inicioMarcadoNoClique = false
+    const conferirInicio = () => {
+      inicioMarcadoNoClique = marcacao.mock.calls.some(([nome]) => String(nome).startsWith('route:/lancamentos:start:'))
+    }
+    link.addEventListener('click', conferirInicio)
+    await user.click(link)
+    link.removeEventListener('click', conferirInicio)
+    expect(await screen.findByRole('heading', { name: /^entradas e saídas$/i })).toBeInTheDocument()
+    expect(inicioMarcadoNoClique).toBe(true)
+
+    await waitFor(() => expect(medida).toHaveBeenCalledWith(
+      'route:/lancamentos',
+      expect.stringMatching(/^route:\/lancamentos:start:/),
+      expect.stringMatching(/^route:\/lancamentos:end:/),
+    ))
+    const inicio = marcacao.mock.calls.findIndex(([nome]) => String(nome).startsWith('route:/lancamentos:start:'))
+    const fim = marcacao.mock.calls.findIndex(([nome]) => String(nome).startsWith('route:/lancamentos:end:'))
+    expect(fim).toBeGreaterThan(inicio)
+  } finally {
+    marcacao.mockRestore()
+    medida.mockRestore()
+  }
 })
