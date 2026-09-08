@@ -69,6 +69,40 @@ class PortoDashboardPeriodoApiIntegrationTest {
             .andExpect(status().isOk()).andExpect(jsonPath("$.valorProgramado").value(321.0)).andExpect(jsonPath("$.valorRecebido").value(321.0));
     }
 
+    @Test void visaoPagamentosMostraServicosDaOpConfirmadaNoPeriodoDoPagamento() throws Exception {
+        String token=login();
+        String op=mvc.perform(post("/api/porto/ordens-pagamento").header("Authorization","Bearer "+token).contentType(MediaType.APPLICATION_JSON).content("""
+            {"numero":"OP-VISAO-PAGAMENTOS","dataPrevista":"2043-08-14","valorInformado":500.00,"statusPorto":"PROCESSADO",
+             "situacaoFinanceira":"PROGRAMADO","pagamentoConfirmado":false,"observacao":"Quinzena anterior"}
+            """)).andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        long opId=((Number)JsonPath.read(op,"$.id")).longValue();
+        String calendario=mvc.perform(post("/api/porto/calendario").header("Authorization","Bearer "+token).contentType(MediaType.APPLICATION_JSON).content("""
+            {"dataPagamento":"2043-08-14","competenciaInicio":"2043-07-16","competenciaFim":"2043-07-31","descricao":"2a quinzena de julho","ativo":true}
+            """)).andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        long calendarioId=((Number)JsonPath.read(calendario,"$.id")).longValue();
+
+        MockMultipartFile arquivo=new MockMultipartFile("arquivo","visao-pagamentos.csv","text/csv",("""
+            Número da Ordem de Serviço,Valor Total,Especialidade,Sigla da Viatura,Socorrista,QRA,Data de atendimento
+            OS-VISAO-PAGAMENTOS,500.00,GUINCHO,VTR-09,SOCORRISTA TESTE,QRA-VISAO,2043-07-20
+            """).getBytes(StandardCharsets.UTF_8));
+        long previaId=((Number)JsonPath.read(mvc.perform(multipart("/api/porto/importacoes/previa").file(arquivo).header("Authorization","Bearer "+token))
+            .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString(),"$.id")).longValue();
+        mvc.perform(post("/api/porto/importacoes/{id}/confirmar",previaId).header("Authorization","Bearer "+token).contentType(MediaType.APPLICATION_JSON)
+            .content("{\"ordemPagamentoId\":"+opId+",\"calendarioPagamentoId\":"+calendarioId+"}")).andExpect(status().isOk());
+
+        mvc.perform(get("/api/porto/dashboard").param("periodo","PERSONALIZADO").param("dataInicio","2043-08-01").param("dataFim","2043-08-31")
+                .param("visao","PAGAMENTOS").header("Authorization","Bearer "+token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.quantidadeTotalServicos").value(1))
+            .andExpect(jsonPath("$.valorTotalRealizado").value(500.0))
+            .andExpect(jsonPath("$.valorRecebido").value(500.0));
+        mvc.perform(get("/api/porto/dashboard").param("periodo","PERSONALIZADO").param("dataInicio","2043-07-01").param("dataFim","2043-07-31")
+                .param("visao","PRODUCAO").header("Authorization","Bearer "+token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.quantidadeTotalServicos").value(1))
+            .andExpect(jsonPath("$.valorTotalRealizado").value(500.0));
+    }
+
     private String login() throws Exception {
         String resposta=mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content("{\"email\":\"admin@fluxogestao.local\",\"senha\":\"Admin@123\"}"))
             .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();

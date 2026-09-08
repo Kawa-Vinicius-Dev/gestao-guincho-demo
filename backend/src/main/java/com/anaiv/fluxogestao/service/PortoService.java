@@ -107,8 +107,8 @@ public class PortoService {
             abaixo.size(),somarDivergencia(abaixo),acima.size(),somarDivergencia(acima),divergentes.size(),somarDivergencia(divergentes),
             programadas.size(),somarPrevisto(programadas),recebidas.size(),somarRecebido(recebidas),aguardando.size(),somarPrevisto(aguardando),
             vencidas.size(),somarPrevisto(vencidas),medio,lista.stream().mapToLong(OrdemPagamentoResponse::quantidadeOrdensServico).sum());}
-    @Transactional(readOnly=true) public List<OrdemServicoResponse> listarOss(){return listarOss(new PortoOsFiltros(null,null,null,null,null,null,null,null,null,null,null));}
-    @Transactional(readOnly=true) public List<OrdemServicoResponse> listarOss(PortoOsFiltros filtros){PortoOsFiltros f=filtros==null?new PortoOsFiltros(null,null,null,null,null,null,null,null,null,null,null):filtros;
+    @Transactional(readOnly=true) public List<OrdemServicoResponse> listarOss(){return listarOss(new PortoOsFiltros(null,null,null,null,null,null,null,null,null,null,null,null));}
+    @Transactional(readOnly=true) public List<OrdemServicoResponse> listarOss(PortoOsFiltros filtros){PortoOsFiltros f=filtros==null?new PortoOsFiltros(null,null,null,null,null,null,null,null,null,null,null,null):filtros;
         Map<Long,EnumsFinanceiros.StatusConciliacaoPorto> conciliacoes=ops.findAll().stream().collect(java.util.stream.Collectors.toMap(OrdemPagamentoPorto::getId,x->op(x).statusConciliacao()));
         return oss.findAll().stream().sorted(Comparator.comparing(OrdemServicoPorto::getNumero)).map(this::os).filter(x->filtrarOs(x,f,conciliacoes)).toList();}
     @Transactional(readOnly=true) public Map<String,Object> dashboard(PortoFiltros filtrosOp,PortoOsFiltros filtrosOs){ResumoOrdensPagamentoResponse resumo=resumo(filtrosOp);List<OrdemServicoResponse> servicos=listarOss(filtrosOs);Map<String,Object> r=new LinkedHashMap<>();adicionarResumo(r,resumo);
@@ -152,7 +152,8 @@ public class PortoService {
         if(f.comComposicao()!=null&&f.comComposicao()!=(x.quantidadeOrdensServico()>0))return false;
         return f.comDivergencia()==null||f.comDivergencia()==temDivergencia(x);}
     private boolean filtrarOs(OrdemServicoResponse x,PortoOsFiltros f,Map<Long,EnumsFinanceiros.StatusConciliacaoPorto> conciliacoes){
-        if(f.dataInicio()!=null&&(x.dataAtendimento()==null||x.dataAtendimento().isBefore(f.dataInicio())))return false;if(f.dataFim()!=null&&(x.dataAtendimento()==null||x.dataAtendimento().isAfter(f.dataFim())))return false;
+        LocalDate data=Boolean.TRUE.equals(f.porDataPagamento())?x.dataEfetivaPagamento():x.dataAtendimento();
+        if(f.dataInicio()!=null&&(data==null||data.isBefore(f.dataInicio())))return false;if(f.dataFim()!=null&&(data==null||data.isAfter(f.dataFim())))return false;
         if(!contem(x.numero(),f.numeroOs())||!contem(x.ordemPagamento(),f.numeroOp())||!contem(x.especialidade(),f.especialidade())||!contem(x.socorrista(),f.socorrista())||!contem(x.qra(),f.qra())||!contem(x.viatura(),f.viatura()))return false;
         if(f.statusOperacional()!=null&&f.statusOperacional()!=x.statusOperacional())return false;if(f.statusFinanceiro()!=null&&f.statusFinanceiro()!=x.statusFinanceiro())return false;
         return f.statusConciliacao()==null||(x.ordemPagamentoId()!=null&&f.statusConciliacao()==conciliacoes.get(x.ordemPagamentoId()));}

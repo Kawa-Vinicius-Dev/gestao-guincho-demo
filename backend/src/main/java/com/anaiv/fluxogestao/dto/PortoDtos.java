@@ -48,7 +48,7 @@ public final class PortoDtos {
         StatusConciliacaoPorto statusConciliacao,Boolean recebida,Boolean vencida,Boolean comComposicao,Boolean comDivergencia) {}
     public record PortoOsFiltros(LocalDate dataInicio,LocalDate dataFim,String numeroOs,String numeroOp,String especialidade,
         String socorrista,String qra,String viatura,StatusOperacionalPorto statusOperacional,StatusFinanceiroPorto statusFinanceiro,
-        StatusConciliacaoPorto statusConciliacao) {}
+        StatusConciliacaoPorto statusConciliacao,Boolean porDataPagamento) {}
     public record PortoDashboardFiltros(String periodo,String visao,LocalDate referencia,LocalDate dataInicio,LocalDate dataFim,
         String numeroOs,String numeroOp,String numero,String especialidade,String socorrista,String qra,String viatura,
         StatusOperacionalPorto statusOperacional,StatusFinanceiroPorto statusFinanceiro,StatusConciliacaoPorto statusConciliacao) {}
