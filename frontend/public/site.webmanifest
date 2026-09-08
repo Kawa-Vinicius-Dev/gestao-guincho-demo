@@ -1,0 +1,20 @@
+{
+  "name": "J M S",
+  "short_name": "J M S",
+  "display": "standalone",
+  "theme_color": "#17212b",
+  "background_color": "#17212b",
+  "start_url": "/",
+  "icons": [
+    {
+      "src": "/favicon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
