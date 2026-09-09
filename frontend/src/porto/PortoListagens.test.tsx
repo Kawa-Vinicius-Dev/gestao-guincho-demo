@@ -50,6 +50,23 @@ test('lista OS com OP e aceita viatura vazia',async()=>{
   render(<PortoOrdensServicoPage/>);expect(await screen.findByText('OS-200')).toBeInTheDocument();expect(screen.getByText('OP-100')).toBeInTheDocument();expect(screen.getByText('Sem viatura')).toBeInTheDocument()
 })
 
+test('exporta somente as OS sem socorrista com o filtro marcado',async()=>{
+  const chamadas:string[]=[]
+  servidor.use(
+    http.get('/api/porto/ordens-servico',({request})=>{const url=new URL(request.url);return HttpResponse.json(url.searchParams.get('semSocorrista')?[{id:9,numero:'OS-ORFA',valorTotal:300,qra:'QRA-9',dataAtendimento:'2026-07-02'}]:[{id:2,numero:'OS-200',valorTotal:700,socorrista:'Ana',motoristaId:5,motorista:'Ana',qra:'QRA-1',dataAtendimento:'2026-07-30'}])}),
+    http.get('/api/porto/ordens-servico/excel',({request})=>{chamadas.push(new URL(request.url).search);return HttpResponse.text('planilha')}),
+  )
+  URL.createObjectURL=vi.fn(()=>'blob:teste');URL.revokeObjectURL=vi.fn();HTMLAnchorElement.prototype.click=vi.fn()
+  const user=userEvent.setup();render(<PortoOrdensServicoPage/>)
+  await screen.findByText('OS-200')
+  await user.click(screen.getByLabelText(/somente os sem socorrista/i))
+  expect(await screen.findByText('OS-ORFA')).toBeInTheDocument()
+  await user.click(screen.getByRole('button',{name:/exportar os sem socorrista/i}))
+  await vi.waitFor(()=>expect(chamadas).toHaveLength(1))
+  expect(chamadas[0]).toContain('semSocorrista=true')
+  expect(chamadas[0]).not.toContain('dataInicio')
+})
+
 test('lista serviço devolvido como pendência financeira',async()=>{
   servidor.use(http.get('/api/porto/pendencias',()=>HttpResponse.json([{tipo:'SERVICO_DEVOLVIDO',referenciaId:2,referencia:'OS-200',valor:700,data:'2026-07-31',situacao:'ABERTA'}])))
   render(<PortoPendenciasPage/>);expect(await screen.findByText('Serviço devolvido')).toBeInTheDocument();expect(screen.getByText('OS-200')).toBeInTheDocument();expect(screen.queryByText(/despesa/i)).not.toBeInTheDocument()

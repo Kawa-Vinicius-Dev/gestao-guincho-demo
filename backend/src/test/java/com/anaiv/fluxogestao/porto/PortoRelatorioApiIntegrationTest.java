@@ -76,6 +76,32 @@ class PortoRelatorioApiIntegrationTest {
         try(var documento=Loader.loadPDF(pdf)){assertThat(new PDFTextStripper().getText(documento)).contains("OP-EXP-001","Valor informado","Valor calculado","Diferenca");}
     }
 
+    @Test void excelDeOsSemSocorristaTrazSomenteAsSemVinculoComOMotivo() throws Exception {
+        String token=prepararDados();
+        byte[] bytes=mvc.perform(get("/api/porto/ordens-servico/excel").param("semSocorrista","true").header("Authorization","Bearer "+token))
+            .andExpect(status().isOk())
+            .andExpect(header().string("Content-Type","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+            .andReturn().getResponse().getContentAsByteArray();
+        try(XSSFWorkbook workbook=new XSSFWorkbook(new ByteArrayInputStream(bytes))){
+            var aba=workbook.getSheet("Ordens de serviço");
+            var cabecalho=aba.getRow(0);
+            assertThat(java.util.stream.IntStream.range(0,cabecalho.getLastCellNum()).mapToObj(i->cabecalho.getCell(i).getStringCellValue()).toList())
+                .containsExactly("Número da OS","Data do atendimento","Especialidade","Nome no relatório Porto","QRA","Viatura","Placa","Cliente","Valor","Número da OP","Socorrista vinculado","Motivo da falta de vínculo");
+            // a ultima linha e o total: a lista vai ate lastRowNum-1
+            var linhas=java.util.stream.IntStream.range(1,aba.getLastRowNum()).mapToObj(aba::getRow).toList();
+            assertThat(linhas).isNotEmpty();
+            assertThat(linhas).allSatisfy(linha->{
+                assertThat(texto(linha,10)).as("a exportacao nao pode conter OS ja vinculada").isEmpty();
+                assertThat(texto(linha,11)).contains("QRA");
+            });
+            assertThat(linhas.stream().map(linha->texto(linha,0)).toList()).contains("OS-EXP-001","OS-EXP-002");
+            assertThat(texto(linhas.stream().filter(linha->texto(linha,0).equals("OS-EXP-002")).findFirst().orElseThrow(),11))
+                .isEqualTo("QRA QRA-TESTE-002 não está cadastrado em Equipe");
+        }
+    }
+
+    private String texto(org.apache.poi.ss.usermodel.Row linha,int coluna){var celula=linha.getCell(coluna);return celula==null||celula.getCellType()!=CellType.STRING?"":celula.getStringCellValue();}
+
     private String prepararDados() throws Exception {
         String token=login();
         confirmar(token,previa(token,"op-exportacao.csv","""
