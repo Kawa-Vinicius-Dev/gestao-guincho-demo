@@ -44,7 +44,8 @@ class PortoValorImportadoApiIntegrationTest {
             """).getBytes(StandardCharsets.UTF_8));
         long previa=id(mvc.perform(multipart("/api/porto/importacoes/previa").file(arquivo).header("Authorization","Bearer "+token))
             .andExpect(status().isCreated())
-            .andExpect(jsonPath("$.osSemSocorrista.length()").value(2))
+            .andExpect(jsonPath("$.osSemSocorrista.length()").value(1))
+            .andExpect(jsonPath("$.osSemSocorrista[0]").value("OS-IMUT-SEMQRA"))
             .andReturn().getResponse().getContentAsString());
 
         // sem confirmar nada de excecao: QRA ausente ou desconhecido nao e divergencia, e nao trava
@@ -56,26 +57,31 @@ class PortoValorImportadoApiIntegrationTest {
             .andExpect(jsonPath("$.receitasCriadas").value(3))
             .andExpect(jsonPath("$.valorTotalRecebido").value(515.75));
 
-        // a OS orfa entra completa: valor, data e lancamento financeiro, so sem socorrista
-        assertThat(motoristaDa("OS-IMUT-ORFA")).isNull();
-        assertThat(valorDaOs("OS-IMUT-ORFA")).isEqualByComparingTo("275.50");
-        assertThat(valorDaReceitaDa("OS-IMUT-ORFA")).isEqualByComparingTo("275.50");
-        assertThat(valorDaContaDa("OS-IMUT-ORFA")).isEqualByComparingTo("275.50");
+        // QRA preenchido sempre sai com socorrista: o desconhecido ganhou cadastro proprio
+        Long criado=motoristaDa("OS-IMUT-ORFA");
+        assertThat(criado).isNotNull().isNotEqualTo(socorrista);
+        assertThat(jdbc.queryForObject("select qra from motoristas where id=?",String.class,criado)).isEqualTo("QRA-NAO-CADASTRADO");
+        assertThat(jdbc.queryForObject("select nome from motoristas where id=?",String.class,criado)).isEqualTo("QUEM SERA");
 
-        long osOrfa=idDaOs("OS-IMUT-ORFA");
-        mvc.perform(patch("/api/porto/ordens-servico/{id}/motorista",osOrfa).header("Authorization","Bearer "+token)
+        // a excecao que sobra e a OS sem QRA: entra completa, so sem socorrista
+        assertThat(motoristaDa("OS-IMUT-SEMQRA")).isNull();
+        assertThat(valorDaOs("OS-IMUT-SEMQRA")).isEqualByComparingTo("90.25");
+        assertThat(valorDaReceitaDa("OS-IMUT-SEMQRA")).isEqualByComparingTo("90.25");
+        assertThat(valorDaContaDa("OS-IMUT-SEMQRA")).isEqualByComparingTo("90.25");
+
+        mvc.perform(patch("/api/porto/ordens-servico/{id}/motorista",idDaOs("OS-IMUT-SEMQRA")).header("Authorization","Bearer "+token)
                 .contentType(MediaType.APPLICATION_JSON).content("{\"motoristaId\":"+socorrista+"}"))
             .andExpect(status().isOk()).andExpect(jsonPath("$.motoristaId").value(socorrista))
-            .andExpect(jsonPath("$.valorTotal").value(275.50));
+            .andExpect(jsonPath("$.valorTotal").value(90.25));
 
         // associar mudou quem executou e o veiculo dele, e nada do dinheiro
-        assertThat(motoristaDa("OS-IMUT-ORFA")).isEqualTo(socorrista);
-        assertThat(motoristaDaReceitaDa("OS-IMUT-ORFA")).isEqualTo(socorrista);
-        assertThat(veiculoDaReceitaDa("OS-IMUT-ORFA")).isEqualTo(veiculo);
-        assertThat(valorDaOs("OS-IMUT-ORFA")).isEqualByComparingTo("275.50");
-        assertThat(valorDaReceitaDa("OS-IMUT-ORFA")).isEqualByComparingTo("275.50");
-        assertThat(valorDaContaDa("OS-IMUT-ORFA")).isEqualByComparingTo("275.50");
-        assertThat(dataRecebimentoDaReceitaDa("OS-IMUT-ORFA")).isEqualTo("2073-08-14");
+        assertThat(motoristaDa("OS-IMUT-SEMQRA")).isEqualTo(socorrista);
+        assertThat(motoristaDaReceitaDa("OS-IMUT-SEMQRA")).isEqualTo(socorrista);
+        assertThat(veiculoDaReceitaDa("OS-IMUT-SEMQRA")).isEqualTo(veiculo);
+        assertThat(valorDaOs("OS-IMUT-SEMQRA")).isEqualByComparingTo("90.25");
+        assertThat(valorDaReceitaDa("OS-IMUT-SEMQRA")).isEqualByComparingTo("90.25");
+        assertThat(valorDaContaDa("OS-IMUT-SEMQRA")).isEqualByComparingTo("90.25");
+        assertThat(dataRecebimentoDaReceitaDa("OS-IMUT-SEMQRA")).isEqualTo("2073-08-14");
     }
 
     @Test void receitaVindaDaPortoNaoPodeSerEditadaNemExcluidaPelaTelaDeReceitas() throws Exception {

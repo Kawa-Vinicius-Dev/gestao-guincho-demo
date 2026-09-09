@@ -53,13 +53,18 @@ class PortoAssociacaoPorQraApiIntegrationTest {
         // cada QRA cai no seu proprio cadastro, mesmo com nome identico
         assertThat(motoristaDa("OS-QRA-MATRICULA")).isEqualTo(comMatricula);
         assertThat(motoristaDa("OS-QRA-IDINTERNO")).isEqualTo(comIdInterno);
-        // QRA nao cadastrado nao cai no nome: fica sem socorrista, como excecao
-        assertThat(motoristaDa("OS-QRA-DESCONHECIDO")).isNull();
+        // QRA nao cadastrado nao cai no nome: ganha cadastro proprio, criado pelo QRA do relatorio
+        Long criado=motoristaDa("OS-QRA-DESCONHECIDO");
+        assertThat(criado).isNotNull().isNotIn(comMatricula,comIdInterno);
+        assertThat(jdbc.queryForObject("select qra from motoristas where id=?",String.class,criado)).isEqualTo("999999");
+        assertThat(jdbc.queryForObject("select nome from motoristas where id=?",String.class,criado)).isEqualTo("CARLOS ALBERTO TESTE");
+        // sem QRA nao ha identidade para criar: essa e a excecao que sobra para o operacional
         assertThat(motoristaDa("OS-QRA-VAZIO")).isNull();
 
         // a viatura do socorrista chega ao lancamento financeiro, mesmo sem sigla no arquivo
         assertThat(veiculoDaContaDa("OS-QRA-MATRICULA")).isEqualTo(veiculo);
         assertThat(veiculoDaContaDa("OS-QRA-IDINTERNO")).isEqualTo(veiculo);
+        // o cadastro nasce sem viatura: a Porto nao informa, e ela e atribuida depois em Socorristas
         assertThat(veiculoDaContaDa("OS-QRA-DESCONHECIDO")).isNull();
     }
 

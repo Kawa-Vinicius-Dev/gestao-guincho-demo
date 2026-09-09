@@ -101,16 +101,14 @@ public class PortoImportacaoService {
     }
     @Transactional public ConfirmacaoResponse reprocessarFinanceiro(Long id,Long calendarioPagamentoId){Importacao imp=obter(id);if(imp.getStatus()!=StatusImportacao.CONFIRMADA||imp.getTipoRelatorioPorto()!=TipoRelatorioPorto.OS_VINCULADAS)throw new IllegalArgumentException("Somente uma importação confirmada de OP paga pode ser reprocessada.");List<OrdemServicoPorto> oss=porto.ossDaImportacao(imp);if(oss.isEmpty())throw new IllegalArgumentException("A importação não possui ordens de serviço vinculadas para reprocessar.");Set<OrdemPagamentoPorto> ops=new LinkedHashSet<>();oss.forEach(os->{if(os.getOrdemPagamento()!=null)ops.add(os.getOrdemPagamento());});if(ops.size()!=1)throw new IllegalArgumentException("A importação precisa estar vinculada a uma única OP.");OrdemPagamentoPorto op=ops.iterator().next();PortoFinanceiroService.PeriodoFinanceiro periodo=financeiro.resolverPeriodo(op,calendarioPagamentoId);PortoFinanceiroService.ResultadoLote resultado=financeiro.sincronizarLote(oss,op,imp,periodo.calendario());op.sincronizarRecebimento(resultado.valorTotal(),periodo.calendario().getDataPagamento(),periodo.calendario());return new ConfirmacaoResponse(imp.getId(),imp.getTipoRelatorioPorto(),0,0,0,0,resultado.receitasCriadas(),resultado.receitasAtualizadas(),resultado.valorTotal(),periodo.rotulo(),periodo.calendario().getDataPagamento(),List.of(),osSemSocorrista(imp));}
     /**
-     * O vinculo com o socorrista e feito so pelo QRA, entao da para antecipar na previa quais OS
-     * ficarao sem socorrista: basta comparar o QRA de cada linha com os QRAs ativos cadastrados.
-     * Assim o operacional cadastra o QRA antes de confirmar, em vez de descobrir depois.
+     * Linha com QRA sai da confirmacao com socorrista, nem que o cadastro seja criado na hora. Sem
+     * QRA nao ha o que criar, e a OS fica como excecao - sao essas que a previa antecipa, para o
+     * operacional ja saber quantas vao precisar de atribuicao manual.
      */
     private List<String> osQueFicaraoSemSocorrista(PreviaPorto previa){
         if(previa.tipo()==TipoRelatorioPorto.PREVISAO_RECEBER)return List.of();
-        Set<String> cadastrados=motoristas.qrasAtivos().stream().map(x->x.trim().toUpperCase(Locale.ROOT))
-            .collect(java.util.stream.Collectors.toSet());
         return previa.linhas().stream().filter(l->l.acao()!=AcaoLinhaPorto.ERRO)
-            .filter(l->{String qra=l.texto("qra");return qra==null||qra.isBlank()||!cadastrados.contains(qra.trim().toUpperCase(Locale.ROOT));})
+            .filter(l->{String qra=l.texto("qra");return qra==null||qra.isBlank();})
             .map(l->l.texto("numero_os")).filter(Objects::nonNull).distinct().sorted().toList();
     }
     /**

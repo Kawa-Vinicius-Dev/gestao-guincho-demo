@@ -29,6 +29,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 class PortoRelatorioApiIntegrationTest {
     @Autowired MockMvc mvc;
+    @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
+
+    @org.junit.jupiter.api.AfterEach void limparExcecao(){
+        jdbc.update("delete from ordens_servico_porto where numero='OS-EXP-SEM-QRA'");
+    }
 
     @Test
     void excelMantemUmaLinhaPorOpAbasEsperadasFiltrosETextoSeguro() throws Exception {
@@ -78,6 +83,9 @@ class PortoRelatorioApiIntegrationTest {
 
     @Test void excelDeOsSemSocorristaTrazSomenteAsSemVinculoComOMotivo() throws Exception {
         String token=prepararDados();
+        // toda OS com QRA sai da importacao com socorrista; a excecao que sobra e a sem QRA
+        jdbc.update("insert into ordens_servico_porto (numero,valor_total,especialidade,data_atendimento) values (?,?,?,?)",
+            "OS-EXP-SEM-QRA",new java.math.BigDecimal("50.00"),"CHAVEIRO",java.sql.Date.valueOf("2026-08-02"));
         byte[] bytes=mvc.perform(get("/api/porto/ordens-servico/excel").param("semSocorrista","true").header("Authorization","Bearer "+token))
             .andExpect(status().isOk())
             .andExpect(header().string("Content-Type","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
@@ -94,9 +102,10 @@ class PortoRelatorioApiIntegrationTest {
                 assertThat(texto(linha,10)).as("a exportacao nao pode conter OS ja vinculada").isEmpty();
                 assertThat(texto(linha,11)).contains("QRA");
             });
-            assertThat(linhas.stream().map(linha->texto(linha,0)).toList()).contains("OS-EXP-001","OS-EXP-002");
-            assertThat(texto(linhas.stream().filter(linha->texto(linha,0).equals("OS-EXP-002")).findFirst().orElseThrow(),11))
-                .isEqualTo("QRA QRA-TESTE-002 não está cadastrado em Equipe");
+            List<String> numeros=linhas.stream().map(linha->texto(linha,0)).toList();
+            assertThat(numeros).contains("OS-EXP-SEM-QRA").doesNotContain("OS-EXP-001","OS-EXP-002");
+            assertThat(texto(linhas.stream().filter(linha->texto(linha,0).equals("OS-EXP-SEM-QRA")).findFirst().orElseThrow(),11))
+                .isEqualTo("Relatório da Porto veio sem QRA nesta OS");
         }
     }
 
