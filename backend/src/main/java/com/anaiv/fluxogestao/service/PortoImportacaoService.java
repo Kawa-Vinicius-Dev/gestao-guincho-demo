@@ -7,6 +7,8 @@ import com.anaiv.fluxogestao.entity.EnumsFinanceiros.*;
 import com.anaiv.fluxogestao.exception.RecursoNaoEncontradoException;
 import com.anaiv.fluxogestao.repository.*;
 import com.anaiv.fluxogestao.security.UsuarioPrincipal;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +23,7 @@ import java.util.*;
 
 @Service
 public class PortoImportacaoService {
+    private static final Logger log=LoggerFactory.getLogger(PortoImportacaoService.class);
     private final ImportacaoRepository importacoes; private final RegistroImportadoPortoRepository registros;
     private final PortoCsvParser parser;private final PortoBlocosParser blocos; private final PortoService porto;private final PortoFinanceiroService financeiro; private final Path pasta;
     private final MotoristaRepository motoristas;
@@ -30,7 +33,7 @@ public class PortoImportacaoService {
         if(arquivo.isEmpty())throw new IllegalArgumentException("Selecione um arquivo CSV ou TXT.");String nome=arquivo.getOriginalFilename();
         String nomeNormalizado=nome==null?"":nome.toLowerCase(Locale.ROOT);if(!tabular(nomeNormalizado))throw new IllegalArgumentException("A importação Porto aceita CSV, TXT ou TSV.");
         try{return preparar(arquivo.getBytes(),nome,separadoPorTabulacao(nomeNormalizado),false);}
-        catch(IllegalArgumentException e){throw e;}catch(Exception e){throw new IllegalArgumentException("Não foi possível preparar o relatório Porto.");}
+        catch(IllegalArgumentException e){throw e;}catch(Exception e){throw falha("Não foi possível preparar o relatório Porto.",e);}
     }
     @Transactional public PreviaResponse previaConteudo(ConteudoImportacaoRequest request){
         String conteudo=normalizarConteudo(request.conteudo());if(conteudo.isBlank())throw new IllegalArgumentException("Cole ao menos uma linha de serviços Porto.");
@@ -44,7 +47,7 @@ public class PortoImportacaoService {
         try{PreviaResponse criada=preparar(arquivo.getBytes(),nome,false,false);
             if(criada.tipo()!=TipoRelatorioPorto.OS_VINCULADAS)throw new IllegalArgumentException("O arquivo não corresponde a uma composição de OP.");
             return avaliar(criada.id(),new ConfirmarImportacaoRequest(ordemPagamentoId,false,null,null,null));
-        }catch(IllegalArgumentException e){throw e;}catch(Exception e){throw new IllegalArgumentException("Não foi possível preparar a composição da OP.");}
+        }catch(IllegalArgumentException e){throw e;}catch(Exception e){throw falha("Não foi possível preparar a composição da OP.",e);}
     }
     private PreviaResponse preparar(byte[] bytes,String nome,boolean servicosGerais,boolean hashNormalizado){
         try{PreviaPorto previa=contextualizar(parse(bytes,servicosGerais));
@@ -67,12 +70,12 @@ public class PortoImportacaoService {
             Files.createDirectories(pasta);Path destino=pasta.resolve(UUID.randomUUID()+(servicosGerais?".txt":".csv")).normalize();if(!destino.startsWith(pasta))throw new IllegalArgumentException("Nome de arquivo inválido.");Files.write(destino,bytes,StandardOpenOption.CREATE_NEW);
             String conteudo=new String(bytes,StandardCharsets.UTF_8);Importacao imp=new Importacao(nome,hash,destino.toString());
             imp.prepararPorto(previa.tipo(),conteudo.substring(0,Math.min(conteudo.length(),10000)));importacoes.saveAndFlush(imp);return resposta(imp,previa);
-        }catch(IllegalArgumentException e){throw e;}catch(Exception e){throw new IllegalArgumentException("Não foi possível preparar o relatório Porto.");}
+        }catch(IllegalArgumentException e){throw e;}catch(Exception e){throw falha("Não foi possível preparar o relatório Porto.",e);}
     }
     @Transactional public ConfirmacaoResponse confirmar(Long id,ConfirmarImportacaoRequest request,UsuarioPrincipal principal){Importacao imp=obterParaConfirmacao(id);
         if(imp.getStatus()==StatusImportacao.CONFIRMADA&&imp.getTipoRelatorioPorto()!=null)return vazia(imp);
         if(imp.getStatus()!=StatusImportacao.AGUARDANDO_CONFERENCIA||imp.getTipoRelatorioPorto()==null)throw new IllegalArgumentException("Esta importação Porto não pode ser confirmada.");
-        PreviaPorto previa;try{previa=contextualizar(reler(imp));}catch(Exception e){throw new IllegalArgumentException("Não foi possível reler o relatório Porto.");}
+        PreviaPorto previa;try{previa=contextualizar(reler(imp));}catch(Exception e){throw falha("Não foi possível reler o relatório Porto.",e);}
         if(previa.linhas().stream().anyMatch(l->l.acao()==AcaoLinhaPorto.ERRO))throw new IllegalArgumentException("A importação contém linhas com erro; corrija o arquivo e envie novamente.");
         OrdemPagamentoPorto op=null;Set<OrdemPagamentoPorto> opsOrigem=new LinkedHashSet<>();boolean opExistente=false;boolean porNumero=request!=null&&request.numeroOrdemPagamento()!=null&&!request.numeroOrdemPagamento().isBlank();if(importacaoPaga(previa.tipo())){if(request==null)throw new IllegalArgumentException("Informe o número da OP antes de confirmar.");
             String numero=numeroOp(request);Optional<OrdemPagamentoPorto> existente=request.ordemPagamentoId()!=null?Optional.of(porto.obterOp(request.ordemPagamentoId())):porto.buscarOp(numero);
@@ -121,6 +124,8 @@ public class PortoImportacaoService {
         Files.createDirectories(destino.getParent());
         Files.write(destino,bytes,StandardOpenOption.CREATE,StandardOpenOption.WRITE,StandardOpenOption.TRUNCATE_EXISTING);
     }
+    /** O operador recebe uma frase curta, mas a causa real precisa sobreviver no log do servidor. */
+    private IllegalArgumentException falha(String mensagem,Exception causa){log.warn(mensagem,causa);return new IllegalArgumentException(mensagem,causa);}
     /** A extensao decide o separador: .txt e .tsv sao tabulados, .csv e separado por virgula. */
     private boolean tabular(String nome){return nome.endsWith(".csv")||separadoPorTabulacao(nome);}
     private boolean separadoPorTabulacao(String nome){return nome.endsWith(".txt")||nome.endsWith(".tsv");}
@@ -133,14 +138,14 @@ public class PortoImportacaoService {
         if(imp.getStatus()!=StatusImportacao.AGUARDANDO_CONFERENCIA||!importacaoPaga(imp.getTipoRelatorioPorto()))throw new IllegalArgumentException("Esta prévia de OS não pode ser avaliada.");
         if(request==null||(request.ordemPagamentoId()==null&&(request.numeroOrdemPagamento()==null||request.numeroOrdemPagamento().isBlank())))throw new IllegalArgumentException("Informe o número da OP antes de avaliar.");
         try{String numero=numeroOp(request);Optional<OrdemPagamentoPorto> op=request.ordemPagamentoId()!=null?Optional.of(porto.obterOp(request.ordemPagamentoId())):porto.buscarOp(numero);PreviaPorto previa=contextualizar(reler(imp));PreviaPorto avaliada=avaliarProcessamento(previa,op.orElse(null),numero);return resposta(imp,avaliada,analisarOp(avaliada,numero,op));}
-        catch(IllegalArgumentException e){throw e;}catch(Exception e){throw new IllegalArgumentException("Não foi possível reler o CSV Porto.");}
+        catch(IllegalArgumentException e){throw e;}catch(Exception e){throw falha("Não foi possível reler o CSV Porto.",e);}
     }
     @Transactional public PreviaResponse cancelar(Long id){Importacao imp=obter(id);
         if(imp.getTipoRelatorioPorto()==null)throw new IllegalArgumentException("Esta não é uma importação Porto.");
         if(imp.getStatus()==StatusImportacao.CONFIRMADA)throw new IllegalArgumentException("Uma importação confirmada não pode ser cancelada.");
         if(imp.getStatus()!=StatusImportacao.CANCELADA)imp.cancelar();
         try{return resposta(imp,contextualizar(reler(imp)));}
-        catch(Exception e){throw new IllegalArgumentException("Não foi possível reler o CSV Porto.");}
+        catch(Exception e){throw falha("Não foi possível reler o CSV Porto.",e);}
     }
     private Importacao obter(Long id){return importacoes.findById(id).orElseThrow(()->new RecursoNaoEncontradoException("Importação Porto não encontrada."));}
     private Importacao obterParaConfirmacao(Long id){return importacoes.findByIdForUpdate(id).orElseThrow(()->new RecursoNaoEncontradoException("Importação Porto não encontrada."));}

@@ -3,14 +3,15 @@ import { api } from '../api/http'
 import { StatusBadge } from '../components/StatusBadge'
 import { Vazio } from '../components/EstadoPagina'
 import type { Categoria, Contratante, Receita, Veiculo } from '../types/modelos'
-import { data, moeda } from '../utils/formatadores'
+import { data, hojeIso, moeda } from '../utils/formatadores'
 
 export default function ReceitasPage(){
   const [lista,setLista]=useState<Receita[]>([]),[cadastros,setCadastros]=useState<{categorias:Categoria[];contratantes:Contratante[];veiculos:Veiculo[]}>({categorias:[],contratantes:[],veiculos:[]})
   const [form,setForm]=useState(false),[editando,setEditando]=useState<Receita|null>(null),[excluindo,setExcluindo]=useState<Receita|null>(null),[erro,setErro]=useState('')
   const carregar=()=>api<Receita[]>('/api/receitas').then(setLista)
-  useEffect(()=>{carregar();Promise.all([api<Categoria[]>('/api/categorias?tipo=RECEITA'),api<Contratante[]>('/api/contratantes'),api<Veiculo[]>('/api/veiculos')])
-    .then(([categorias,contratantes,veiculos])=>setCadastros({categorias,contratantes,veiculos}))},[])
+  useEffect(()=>{carregar().catch(x=>setErro((x as Error).message))
+    Promise.all([api<Categoria[]>('/api/categorias?tipo=RECEITA'),api<Contratante[]>('/api/contratantes'),api<Veiculo[]>('/api/veiculos')])
+      .then(([categorias,contratantes,veiculos])=>setCadastros({categorias,contratantes,veiculos})).catch(x=>setErro((x as Error).message))},[])
   async function salvar(e:FormEvent<HTMLFormElement>){e.preventDefault();const f=new FormData(e.currentTarget)
     const status=String(f.get('status'))
     const body={descricao:f.get('descricao'),valor:Number(f.get('valor')),dataCompetencia:f.get('dataCompetencia'),
@@ -28,8 +29,8 @@ export default function ReceitasPage(){
       <form key={editando?.id??'nova'} onSubmit={salvar} className="form-grid two-columns"><label className="field field-wide"><span>Descrição</span><input name="descricao" defaultValue={editando?.descricao} required/></label>
         <label className="field"><span>Valor</span><input name="valor" type="number" step=".01" min=".01" defaultValue={editando?.valor} required/></label>
         <label className="field"><span>Status</span><select name="status" defaultValue={editando?.status??'RECEBIDA'}><option>RECEBIDA</option><option>PREVISTA</option></select></label>
-        <label className="field"><span>Competência</span><input name="dataCompetencia" type="date" defaultValue={editando?.dataCompetencia??new Date().toISOString().slice(0,10)} required/></label>
-        <label className="field"><span>Data do recebimento</span><input name="dataRecebimento" type="date" defaultValue={editando?.dataRecebimento??new Date().toISOString().slice(0,10)}/></label>
+        <label className="field"><span>Competência</span><input name="dataCompetencia" type="date" defaultValue={editando?.dataCompetencia??hojeIso()} required/></label>
+        <label className="field"><span>Data do recebimento</span><input name="dataRecebimento" type="date" defaultValue={editando?.dataRecebimento??hojeIso()}/></label>
         <label className="field"><span>Contratante</span><select name="contratanteId" defaultValue={editando?.contratanteId??''}><option value="">Não informado</option>{cadastros.contratantes.map(x=><option key={x.id} value={x.id}>{x.nome}</option>)}</select></label>
         <label className="field"><span>Categoria</span><select name="categoriaId" defaultValue={editando?.categoriaId??''}><option value="">Sem categoria</option>{cadastros.categorias.map(x=><option key={x.id} value={x.id}>{x.nome}</option>)}</select></label>
         <label className="field"><span>Veículo</span><select name="veiculoId" defaultValue={editando?.veiculoId??''}><option value="">Não relacionado</option>{cadastros.veiculos.map(x=><option key={x.id} value={x.id}>{x.identificacao}</option>)}</select></label>

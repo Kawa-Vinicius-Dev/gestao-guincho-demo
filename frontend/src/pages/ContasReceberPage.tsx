@@ -3,10 +3,10 @@ import { api } from '../api/http'
 import { StatusBadge } from '../components/StatusBadge'
 import { Vazio } from '../components/EstadoPagina'
 import type { ContaReceber, Contratante, Veiculo } from '../types/modelos'
-import { moeda } from '../utils/formatadores'
+import { hojeIso, moeda } from '../utils/formatadores'
 
-const hoje=()=>new Date().toISOString().slice(0,10)
-const proximoMes=()=>{const d=new Date();d.setMonth(d.getMonth()+1);return d.toISOString().slice(0,10)}
+const hoje=hojeIso
+const proximoMes=()=>{const [ano,mes,dia]=hojeIso().split('-').map(Number);const d=new Date(ano,mes-1,dia);d.setMonth(d.getMonth()+1);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
 export default function ContasReceberPage(){
   const [contas,setContas]=useState<ContaReceber[]>([]),[contratantes,setContratantes]=useState<Contratante[]>([])
   const [veiculos,setVeiculos]=useState<Veiculo[]>([]),[status,setStatus]=useState(''),[pesquisa,setPesquisa]=useState('')
@@ -18,7 +18,7 @@ export default function ContasReceberPage(){
       .then(setContas).catch(e=>{if(e.name!=='AbortError')setErro(e.message)})
     return()=>controller.abort()
   },[status,pesquisa,versao])
-  useEffect(()=>{Promise.all([api<Contratante[]>('/api/contratantes'),api<Veiculo[]>('/api/veiculos')]).then(([c,v])=>{setContratantes(c);setVeiculos(v)})},[])
+  useEffect(()=>{Promise.all([api<Contratante[]>('/api/contratantes'),api<Veiculo[]>('/api/veiculos')]).then(([c,v])=>{setContratantes(c);setVeiculos(v)}).catch(e=>setErro((e as Error).message))},[])
   async function salvar(event:FormEvent<HTMLFormElement>){
     event.preventDefault();const f=new FormData(event.currentTarget)
     const body={contratanteId:Number(f.get('contratanteId')),protocolo:f.get('protocolo')||null,descricao:f.get('descricao'),
