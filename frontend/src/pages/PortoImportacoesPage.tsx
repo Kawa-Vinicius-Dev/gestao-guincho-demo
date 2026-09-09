@@ -15,6 +15,7 @@ export default function PortoImportacoesPage(){
   const [chaveValidada,setChaveValidada]=useState('')
   const [confirmarDivergencias,setConfirmarDivergencias]=useState(false),[confirmarReassociacoes,setConfirmarReassociacoes]=useState(false)
   const [motivoDivergencia,setMotivoDivergencia]=useState(''),[justificativaDivergencia,setJustificativaDivergencia]=useState('')
+  const [falhaAoConfirmar,setFalhaAoConfirmar]=useState(false)
   const confirmacaoEmCurso=useRef(false)
 
   useEffect(()=>{listarCalendarioPorto().then(setPeriodos).catch(e=>setErro(e.message))},[])
@@ -38,7 +39,7 @@ export default function PortoImportacoesPage(){
   function limparConfirmacoes(){setConfirmarDivergencias(false);setConfirmarReassociacoes(false);setMotivoDivergencia('');setJustificativaDivergencia('')}
   async function analisar(){
     if(modo==='arquivo'&&!arquivo||modo==='colagem'&&!conteudo.trim())return
-    setCarregando(true);setEtapa('Analisando arquivo…');setErro('');setNumeroOp('');setPeriodoId('');setChaveValidada('');limparConfirmacoes()
+    setCarregando(true);setEtapa('Analisando arquivo…');setErro('');setFalhaAoConfirmar(false);setNumeroOp('');setPeriodoId('');setChaveValidada('');limparConfirmacoes()
     try{setPrevia(modo==='arquivo'?await criarPreviaPorto(arquivo as File):await criarPreviaConteudoPorto(conteudo))}catch(e){setErro((e as Error).message)}finally{setEtapa('');setCarregando(false)}
   }
   function alterarNumero(valor:string){setNumeroOp(valor);setChaveValidada('');limparConfirmacoes()}
@@ -46,7 +47,7 @@ export default function PortoImportacoesPage(){
   async function confirmar(){setSemSocorrista([])
     if(confirmacaoEmCurso.current||!previa||previa.requerOrdemPagamento&&(!numeroNormalizado||!periodoId||chaveValidada!==chaveAvaliacao))return
     confirmacaoEmCurso.current=true
-    setCarregando(true);setEtapa('Confirmando importação…');setErro('')
+    setCarregando(true);setEtapa('Confirmando importação…');setErro('');setFalhaAoConfirmar(false)
     try{
       const r=previa.requerOrdemPagamento
         ?await confirmarImportacaoPortoPorNumero(previa.id,{numeroOrdemPagamento:numeroNormalizado,calendarioPagamentoId:Number(periodoId),confirmarDivergencias,confirmarReassociacoes,motivoDivergencia:motivoDivergencia||undefined,justificativaDivergencia:justificativaDivergencia.trim()||undefined})
@@ -55,13 +56,13 @@ export default function PortoImportacoesPage(){
       setMensagem(`${r.importados} ${r.importados===1?'registro importado':'registros importados'}${r.ignorados?` · ${r.ignorados} ignorados por duplicidade`:''}${financeiro}.`)
       setSemSocorrista(r.osSemSocorrista??[])
       setPrevia(null);setArquivo(null);setNumeroOp('');setPeriodoId('');setChaveValidada('');limparConfirmacoes();setInputKey(x=>x+1)
-    }catch(e){setErro((e as Error).message)}finally{confirmacaoEmCurso.current=false;setEtapa('');setCarregando(false)}
+    }catch(e){setErro((e as Error).message);setFalhaAoConfirmar(true)}finally{confirmacaoEmCurso.current=false;setEtapa('');setCarregando(false)}
   }
   async function cancelar(){
-    if(!previa)return;setCarregando(true);setErro('')
+    if(!previa)return;setCarregando(true);setErro('');setFalhaAoConfirmar(false)
     try{await cancelarImportacaoPorto(previa.id);setMensagem('Prévia cancelada. Corrija e reenvie o arquivo quando estiver pronto.');setPrevia(null);setArquivo(null);setNumeroOp('');setPeriodoId('');setChaveValidada('');limparConfirmacoes();setInputKey(x=>x+1)}catch(e){setErro((e as Error).message)}finally{setCarregando(false)}
   }
-  function limpar(){setConteudo('');setArquivo(null);setPrevia(null);setErro('');setMensagem('');setNumeroOp('');setPeriodoId('');setChaveValidada('');limparConfirmacoes();setInputKey(x=>x+1)}
+  function limpar(){setConteudo('');setArquivo(null);setPrevia(null);setErro('');setMensagem('');setFalhaAoConfirmar(false);setNumeroOp('');setPeriodoId('');setChaveValidada('');limparConfirmacoes();setInputKey(x=>x+1)}
 
   const temErros=Boolean(previa?.erros.length||previa?.linhas.some(l=>l.acao==='ERRO'))
   const analise=chaveValidada===chaveAvaliacao&&previa?.analiseOrdemPagamento?.numero===numeroNormalizado?previa.analiseOrdemPagamento:undefined
@@ -72,7 +73,7 @@ export default function PortoImportacoesPage(){
   const divergenciaConfirmada=(!temDivergenciaFinanceira&&!temDivergenciasDados)||(confirmarDivergencias&&(!temDivergenciaFinanceira||Boolean(motivoDivergencia&&justificativaDivergencia.trim())))
 
   return <div className="page-enter"><header className="page-heading"><div><span className="eyebrow">Módulo Porto</span><h1>Importar relatórios</h1><p>Cole serviços ou envie CSV/TXT, confira a prévia e confirme somente depois da validação.</p></div></header>
-    {carregando?<span role="status">{etapa}</span>:null}{erro?<div className="form-alert" role="alert">{erro}{previa?<button type="button" onClick={()=>void confirmar()}>Tentar novamente</button>:null}</div>:null}{mensagem?<div className="success-notice">{mensagem}</div>:null}{semSocorrista.length?<div className="form-alert" role="alert"><strong>{semSocorrista.length} {semSocorrista.length===1?'ordem de serviço ficou':'ordens de serviço ficaram'} sem socorrista.</strong> O vínculo é feito pelo QRA; cadastre o QRA na tela Equipe ou associe o socorrista na tela Ordens de serviço.<div className="table-scroll"><table><thead><tr><th>Ordem de serviço</th></tr></thead><tbody>{semSocorrista.map(n=><tr key={n}><td>{n}</td></tr>)}</tbody></table></div></div>:null}
+    {carregando?<span role="status">{etapa}</span>:null}{erro?<div className="form-alert" role="alert">{erro}{falhaAoConfirmar&&previa?<button type="button" onClick={()=>void confirmar()}>Tentar novamente</button>:null}</div>:null}{mensagem?<div className="success-notice">{mensagem}</div>:null}{semSocorrista.length?<div className="form-alert" role="alert"><strong>{semSocorrista.length} {semSocorrista.length===1?'ordem de serviço ficou':'ordens de serviço ficaram'} sem socorrista.</strong> O vínculo é feito pelo QRA; cadastre o QRA na tela Equipe ou associe o socorrista na tela Ordens de serviço.<div className="table-scroll"><table><thead><tr><th>Ordem de serviço</th></tr></thead><tbody>{semSocorrista.map(n=><tr key={n}><td>{n}</td></tr>)}</tbody></table></div></div>:null}
     <section className="panel porto-import-card"><div className="segmented porto-import-modes" role="group" aria-label="Forma de importação"><button className={modo==='arquivo'?'active':''} onClick={()=>{setModo('arquivo');setPrevia(null)}}>Enviar arquivo</button><button className={modo==='colagem'?'active':''} onClick={()=>{setModo('colagem');setPrevia(null)}}>Colar serviços da Porto</button></div>
       {modo==='arquivo'?<div className="porto-upload"><label className="field"><span>Arquivo CSV ou TXT</span><input key={inputKey} aria-label="Arquivo CSV" type="file" accept=".csv,.txt,.tsv,text/csv,text/plain,text/tab-separated-values" onChange={e=>{setArquivo(e.target.files?.[0]??null);setPrevia(null);setMensagem('')}}/></label><button className="button button-primary" disabled={!arquivo||carregando} onClick={analisar}>{carregando?'Analisando…':'Analisar CSV'}</button></div>:<div className="porto-paste"><label className="field"><span>Conteúdo copiado da Porto</span><textarea aria-label="Conteúdo copiado da Porto" rows={10} value={conteudo} onChange={e=>{setConteudo(e.target.value);setPrevia(null);setMensagem('')}} placeholder="Cole aqui a tabela copiada com Ctrl+C"/></label><div className="porto-paste-actions"><button className="button button-ghost" type="button" onClick={limpar}>Limpar</button><button className="button button-primary" disabled={!conteudo.trim()||carregando} onClick={analisar}>{carregando?'Analisando…':'Analisar conteúdo'}</button></div></div>}
       {previa?<div className="porto-preview"><header className="panel-title"><div><span className="eyebrow">Prévia detectada</span><h2>{rotulos[previa.tipo]}</h2></div><span className="import-pill">{previa.totalLinhas} linhas</span></header>

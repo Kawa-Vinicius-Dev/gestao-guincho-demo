@@ -54,14 +54,14 @@ public class PortoImportacaoService {
             if(existente.isPresent()){
                 Importacao imp=existente.get();
                 if(imp.getTipoRelatorioPorto()==null)throw new IllegalArgumentException("Este arquivo já foi importado por outro fluxo.");
-                if(imp.getStatus()==StatusImportacao.AGUARDANDO_CONFERENCIA)return resposta(imp,previa);
+                if(imp.getStatus()==StatusImportacao.AGUARDANDO_CONFERENCIA){regravar(imp,bytes);return resposta(imp,previa);}
                 if(imp.getStatus()==StatusImportacao.CANCELADA||imp.getStatus()==StatusImportacao.ERRO_LEITURA){
-                    Files.write(Path.of(imp.getCaminhoArquivo()),bytes,StandardOpenOption.WRITE,StandardOpenOption.TRUNCATE_EXISTING);
+                    regravar(imp,bytes);
                     String conteudo=new String(bytes,StandardCharsets.UTF_8);
                     imp.prepararPorto(previa.tipo(),conteudo.substring(0,Math.min(conteudo.length(),10000)));
                     importacoes.saveAndFlush(imp);return resposta(imp,previa);
                 }
-                if(imp.getStatus()==StatusImportacao.CONFIRMADA){imp.prepararPorto(previa.tipo(),imp.getTextoExtraido());importacoes.saveAndFlush(imp);return resposta(imp,previa);}
+                if(imp.getStatus()==StatusImportacao.CONFIRMADA){regravar(imp,bytes);imp.prepararPorto(previa.tipo(),imp.getTextoExtraido());importacoes.saveAndFlush(imp);return resposta(imp,previa);}
                 throw new IllegalArgumentException("Este arquivo já foi importado.");
             }
             Files.createDirectories(pasta);Path destino=pasta.resolve(UUID.randomUUID()+(servicosGerais?".txt":".csv")).normalize();if(!destino.startsWith(pasta))throw new IllegalArgumentException("Nome de arquivo inválido.");Files.write(destino,bytes,StandardOpenOption.CREATE_NEW);
@@ -109,6 +109,17 @@ public class PortoImportacaoService {
         return previa.linhas().stream().filter(l->l.acao()!=AcaoLinhaPorto.ERRO)
             .filter(l->{String qra=l.texto("qra");return qra==null||qra.isBlank()||!cadastrados.contains(qra.trim().toUpperCase(Locale.ROOT));})
             .map(l->l.texto("numero_os")).filter(Objects::nonNull).distinct().sorted().toList();
+    }
+    /**
+     * A confirmacao rele o arquivo do disco, mas o disco do Render e efemero: entre a previa e a
+     * confirmacao o processo pode reiniciar e levar o arquivo junto. Reenviar o mesmo arquivo cai
+     * aqui, pelo hash, entao os bytes sao gravados de novo em vez de confiar no que sobrou la.
+     */
+    private void regravar(Importacao imp,byte[] bytes)throws Exception{
+        Path destino=Path.of(imp.getCaminhoArquivo()).toAbsolutePath().normalize();
+        if(!destino.startsWith(pasta))throw new IllegalArgumentException("Caminho de arquivo inválido para esta importação.");
+        Files.createDirectories(destino.getParent());
+        Files.write(destino,bytes,StandardOpenOption.CREATE,StandardOpenOption.WRITE,StandardOpenOption.TRUNCATE_EXISTING);
     }
     /** A extensao decide o separador: .txt e .tsv sao tabulados, .csv e separado por virgula. */
     private boolean tabular(String nome){return nome.endsWith(".csv")||separadoPorTabulacao(nome);}

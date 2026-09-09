@@ -283,3 +283,53 @@ test('mostra na tela erro retornado pela validação automática da OP',async()=
   expect(await screen.findByText('Não foi possível validar a OP informada.')).toBeInTheDocument()
   expect(screen.getByRole('button',{name:/confirmar importação/i})).toBeDisabled()
 })
+
+test('falha ao cancelar a prévia não oferece um botão que importa', async () => {
+  let confirmacoes = 0
+  servidor.use(
+    http.post('/api/porto/importacoes/previa', () => HttpResponse.json({
+      id: 84, nomeArquivo: 'cancelamento.csv', tipo: 'PREVISAO_RECEBER', status: 'AGUARDANDO_CONFERENCIA', totalLinhas: 1,
+      requerOrdemPagamento: false, erros: [], linhas: [{ hashRegistro: 'cancelamento', dados: { numero_op: 'OP-CANCELA-1', valor_total: '100.00' } }],
+    }, { status: 201 })),
+    http.post('/api/porto/importacoes/84/cancelar', () => HttpResponse.json({ detalhe: 'Não foi possível cancelar agora.' }, { status: 400 })),
+    http.post('/api/porto/importacoes/84/confirmar', () => { confirmacoes++; return HttpResponse.json({ importacaoId: 84, tipo: 'PREVISAO_RECEBER', importados: 1, ignorados: 0 }) }),
+  )
+  const user = userEvent.setup()
+  render(<PortoImportacoesPage />)
+  await user.upload(screen.getByLabelText(/arquivo csv/i), new File(['csv'], 'cancelamento.csv', { type: 'text/csv' }))
+  await user.click(screen.getByRole('button', { name: /analisar csv/i }))
+  await screen.findByText('OP-CANCELA-1')
+
+  await user.click(screen.getByRole('button', { name: /cancelar prévia/i }))
+
+  expect(await screen.findByText('Não foi possível cancelar agora.')).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /tentar novamente/i })).not.toBeInTheDocument()
+  expect(confirmacoes).toBe(0)
+})
+
+test('falha ao confirmar oferece repetir a própria confirmação', async () => {
+  let tentativas = 0
+  servidor.use(
+    http.post('/api/porto/importacoes/previa', () => HttpResponse.json({
+      id: 85, nomeArquivo: 'repeticao.csv', tipo: 'PREVISAO_RECEBER', status: 'AGUARDANDO_CONFERENCIA', totalLinhas: 1,
+      requerOrdemPagamento: false, erros: [], linhas: [{ hashRegistro: 'repeticao', dados: { numero_op: 'OP-REPETE-1', valor_total: '100.00' } }],
+    }, { status: 201 })),
+    http.post('/api/porto/importacoes/85/confirmar', () => {
+      tentativas++
+      return tentativas === 1
+        ? HttpResponse.json({ detalhe: 'Instabilidade momentânea.' }, { status: 500 })
+        : HttpResponse.json({ importacaoId: 85, tipo: 'PREVISAO_RECEBER', importados: 1, ignorados: 0 })
+    }),
+  )
+  const user = userEvent.setup()
+  render(<PortoImportacoesPage />)
+  await user.upload(screen.getByLabelText(/arquivo csv/i), new File(['csv'], 'repeticao.csv', { type: 'text/csv' }))
+  await user.click(screen.getByRole('button', { name: /analisar csv/i }))
+  await screen.findByText('OP-REPETE-1')
+
+  await user.click(screen.getByRole('button', { name: /confirmar importação/i }))
+  await user.click(await screen.findByRole('button', { name: /tentar novamente/i }))
+
+  expect(await screen.findByText(/1 registro importado/i)).toBeInTheDocument()
+  expect(tentativas).toBe(2)
+})
