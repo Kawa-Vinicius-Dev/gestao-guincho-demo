@@ -62,6 +62,34 @@ test('erro do backend ao desativar aparece na tela', async () => {
   expect(await screen.findByText('Socorrista não encontrado.')).toBeInTheDocument()
 })
 
+test('cria acesso para o socorrista e mostra a senha provisória uma vez', async () => {
+  let enviado: Record<string, unknown> | null = null
+  comEquipe([{ ...socorrista, usuarioId: undefined }])
+  servidor.use(http.post('/api/motoristas/4/acesso', async ({ request }) => {
+    enviado = await request.json() as Record<string, unknown>
+    return HttpResponse.json({ usuarioId: 12, nome: 'Anderson Ribeiro', email: 'anderson@jms.local', senhaProvisoria: 'kjhs-2mp4-7xqt' }, { status: 201 })
+  }))
+  const user = userEvent.setup()
+  comRota(<EquipePage />)
+
+  await user.click(await screen.findByRole('button', { name: /criar acesso/i }))
+  const dialogo = screen.getByRole('dialog')
+  await user.type(within(dialogo).getByLabelText(/e-mail de acesso/i), 'anderson@jms.local')
+  await user.click(within(dialogo).getByRole('button', { name: /criar acesso/i }))
+
+  expect(enviado).toEqual({ email: 'anderson@jms.local' })
+  expect(await screen.findByText('kjhs-2mp4-7xqt')).toBeInTheDocument()
+  expect(screen.getByText(/uma única vez/i)).toBeInTheDocument()
+})
+
+test('quem já tem acesso não recebe o botão de criar de novo', async () => {
+  comEquipe([{ ...socorrista, usuarioId: 12 }])
+  comRota(<EquipePage />)
+
+  expect(await screen.findByText('Anderson Ribeiro')).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /criar acesso/i })).not.toBeInTheDocument()
+})
+
 test('socorrista desativado não é oferecido para vincular uma OS', async () => {
   const { default: PortoOrdensServicoPage } = await import('../pages/PortoOrdensServicoPage')
   servidor.use(

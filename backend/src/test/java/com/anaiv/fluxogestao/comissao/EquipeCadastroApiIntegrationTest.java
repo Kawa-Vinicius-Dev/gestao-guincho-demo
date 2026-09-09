@@ -124,6 +124,65 @@ class EquipeCadastroApiIntegrationTest {
         assertThat(motoristaDa("OS-HISTORICO")).isEqualTo(socorrista);
     }
 
+    @Test void donoDaAcessoAoSocorristaSemEscolherSenhaPorEle() throws Exception {
+        String token=login();
+        long socorrista=id(criar(token,"/api/motoristas","{\"nome\":\"Socorrista Com Acesso\",\"qra\":\"QRA-ACESSO\"}"));
+
+        String acesso=mvc.perform(post("/api/motoristas/{id}/acesso",socorrista).header("Authorization","Bearer "+token)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"email\":\"com.acesso@jms.local\"}"))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.nome").value("Socorrista Com Acesso"))
+            .andExpect(jsonPath("$.email").value("com.acesso@jms.local"))
+            .andReturn().getResponse().getContentAsString();
+        String provisoria=JsonPath.read(acesso,"$.senhaProvisoria");
+        assertThat(provisoria).isNotBlank();
+
+        // o usuario nasce vinculado ao socorrista e com perfil de socorrista
+        assertThat(jdbc.queryForObject("select u.perfil from usuarios u join motoristas m on m.usuario_id=u.id where m.id=?",String.class,socorrista))
+            .isEqualTo("FUNCIONARIO");
+
+        // entra com a provisoria, e a primeira coisa que o sistema exige e a troca
+        String corpo=mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"com.acesso@jms.local\",\"senha\":\""+provisoria+"\"}"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.usuario.senhaProvisoria").value(true))
+            .andReturn().getResponse().getContentAsString();
+        String tokenSocorrista=JsonPath.read(corpo,"$.token");
+        mvc.perform(get("/api/minha-comissao").header("Authorization","Bearer "+tokenSocorrista)
+                .param("calendarioPagamentoId","1")).andExpect(status().isForbidden());
+
+        mvc.perform(put("/api/auth/senha").header("Authorization","Bearer "+tokenSocorrista)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"senhaAtual\":\""+provisoria+"\",\"novaSenha\":\"MinhaSenhaJMS@1\"}"))
+            .andExpect(status().isNoContent());
+
+        // dai em diante ele usa as telas do proprio perfil
+        String definitivo=JsonPath.read(mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"com.acesso@jms.local\",\"senha\":\"MinhaSenhaJMS@1\"}"))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(),"$.token");
+        mvc.perform(post("/api/minha-comissao/alimentacoes").header("Authorization","Bearer "+definitivo)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"data\":\"2026-08-10\",\"valor\":45.00}"))
+            .andExpect(status().isCreated()).andExpect(jsonPath("$.motoristaId").value(socorrista));
+    }
+
+    @Test void acessoNaoSeRepeteNemVaiParaSocorristaDesativado() throws Exception {
+        String token=login();
+        long comAcesso=id(criar(token,"/api/motoristas","{\"nome\":\"Ja Tem Acesso\",\"qra\":\"QRA-JA-TEM\"}"));
+        mvc.perform(post("/api/motoristas/{id}/acesso",comAcesso).header("Authorization","Bearer "+token)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"email\":\"ja.tem@jms.local\"}"))
+            .andExpect(status().isCreated());
+        mvc.perform(post("/api/motoristas/{id}/acesso",comAcesso).header("Authorization","Bearer "+token)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"email\":\"outro.email@jms.local\"}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.detalhe").value("Este socorrista já tem acesso ao sistema."));
+
+        long desativado=id(criar(token,"/api/motoristas","{\"nome\":\"Ja Saiu\",\"qra\":\"QRA-JA-SAIU\"}"));
+        mvc.perform(patch("/api/motoristas/{id}/desativar",desativado).header("Authorization","Bearer "+token)).andExpect(status().isOk());
+        mvc.perform(post("/api/motoristas/{id}/acesso",desativado).header("Authorization","Bearer "+token)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"email\":\"ja.saiu@jms.local\"}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.detalhe").value("Este socorrista está desativado e não pode receber acesso."));
+    }
+
     private void importar(String token,String arquivo,String linha,String numeroOp,long calendario) throws Exception {
         MockMultipartFile csv=new MockMultipartFile("arquivo",arquivo,"text/csv",
             ("Número da Ordem de Serviço,Valor Total,Especialidade,Sigla da Viatura,Socorrista,QRA,Data de atendimento\n"+linha+"\n")

@@ -29,6 +29,15 @@ public final class FinanceiroDtos {
         @NotNull @DecimalMin("0.01") BigDecimal valor, @NotNull LocalDate data, LocalDate vencimento,
         LocalDate dataPagamento, String formaPagamento, Long veiculoId, Long motoristaId, String protocolo,
         String comprovante, String observacoes, @NotNull StatusDespesa status) {}
+    public record DespesaRecorrenteRequest(@NotBlank String descricao, @NotNull Long categoriaId,
+        @NotNull @DecimalMin("0.01") BigDecimal valor, @NotNull @Min(1) @Max(31) Integer diaVencimento,
+        Long veiculoId, Long motoristaId, String observacoes) {}
+    public record DespesaRecorrenteResponse(Long id, String descricao, String categoria, Long categoriaId,
+        BigDecimal valor, int diaVencimento, String veiculo, Long veiculoId, String motorista, Long motoristaId,
+        String observacoes, boolean ativo) {}
+    /** O lancamento e por mes e nao repete: diz o que criou e o que ja existia. */
+    public record LancamentoRecorrenteResponse(String mes, int lancadas, int jaExistiam, BigDecimal valorLancado,
+        List<DespesaResponse> despesas) {}
     public record PagamentoDespesaRequest(@NotNull LocalDate dataPagamento, String formaPagamento,
         String comprovante, String observacoes) {}
     public record DespesaResponse(Long id, String descricao, String categoria, BigDecimal valor, LocalDate data,

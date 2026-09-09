@@ -84,6 +84,24 @@ public class CadastroService {
      * unica vez para ele repassar, e derruba as sessoes daquele usuario. No proximo acesso a
      * pessoa e obrigada a trocar, entao a senha que passou pelo WhatsApp morre ali.
      */
+    /**
+     * Da acesso ao socorrista sem o dono escolher senha por ele: cria o usuario com perfil de
+     * socorrista e senha provisoria, e vincula ao cadastro. A senha volta uma unica vez para o dono
+     * repassar, e o proprio socorrista troca no primeiro acesso.
+     */
+    @Transactional public SenhaRedefinidaResponse criarAcesso(Long motoristaId, CriarAcessoRequest r) {
+        Motorista alvo = motoristas.findById(motoristaId).orElseThrow(() -> naoEncontrado("Socorrista", motoristaId));
+        if (alvo.getUsuario() != null) throw new IllegalArgumentException("Este socorrista já tem acesso ao sistema.");
+        if (!alvo.isAtivo()) throw new IllegalArgumentException("Este socorrista está desativado e não pode receber acesso.");
+        if (usuarios.findByEmailIgnoreCase(r.email()).isPresent()) throw new IllegalArgumentException("Já existe um usuário com este e-mail.");
+        String provisoria = senhaProvisoria();
+        String hash = encoder.encode(provisoria);
+        Usuario acesso = new Usuario(alvo.getNome(), r.email(), hash, PerfilUsuario.FUNCIONARIO);
+        acesso.definirSenhaProvisoria(hash);
+        acesso = usuarios.save(acesso);
+        alvo.atualizar(alvo.getNome(), alvo.getTelefone(), alvo.getDocumento(), alvo.getQra(), acesso, alvo.getVeiculo());
+        return new SenhaRedefinidaResponse(acesso.getId(), acesso.getNome(), acesso.getEmail(), provisoria);
+    }
     @Transactional public SenhaRedefinidaResponse redefinirSenha(Long id) {
         Usuario alvo = usuario(id);
         String provisoria = senhaProvisoria();

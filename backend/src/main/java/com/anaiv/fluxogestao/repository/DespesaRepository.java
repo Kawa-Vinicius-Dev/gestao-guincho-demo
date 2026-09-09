@@ -15,6 +15,8 @@ public interface DespesaRepository extends JpaRepository<Despesa, Long> {
     /** Superconjunto do periodo: o extrato usa o pagamento, senao o vencimento, senao o lancamento. */
     @Query("select d from Despesa d where d.dataPagamento between :inicio and :fim or d.vencimento between :inicio and :fim or d.data between :inicio and :fim")
     List<Despesa> findParaLancamentosEntre(@Param("inicio") LocalDate inicio,@Param("fim") LocalDate fim);
+    /** Ja lancadas por molde no periodo: e o que impede lancar o mesmo mes duas vezes. */
+    List<Despesa> findByDespesaRecorrenteIsNotNullAndVencimentoBetween(LocalDate inicio,LocalDate fim);
     List<Despesa> findByMotoristaAndNaturezaAndDataBetweenOrderByDataDesc(Motorista motorista,NaturezaDespesa natureza,LocalDate inicio,LocalDate fim);
     List<Despesa> findByMotoristaInAndNaturezaAndDataBetweenOrderByDataDesc(Collection<Motorista> motoristas,NaturezaDespesa natureza,LocalDate inicio,LocalDate fim);
 }

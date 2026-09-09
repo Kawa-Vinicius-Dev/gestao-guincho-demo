@@ -117,7 +117,7 @@ public class FinanceiroService {
         r.getDataRecebimento(),r.getStatus(),r.isRecorrente(),r.getContratante()==null?null:r.getContratante().getNome(),r.getContratante()==null?null:r.getContratante().getId(),
         r.getCategoria()==null?null:r.getCategoria().getNome(),r.getCategoria()==null?null:r.getCategoria().getId(),r.getVeiculo()==null?null:r.getVeiculo().getIdentificacao(),r.getVeiculo()==null?null:r.getVeiculo().getId(),
         r.getContaReceber()==null?null:r.getContaReceber().getId(),r.getObservacoes(),r.isManual());}
-    private DespesaResponse resposta(Despesa d){return new DespesaResponse(d.getId(),d.getDescricao(),d.getCategoria().getNome(),d.getValor(),
+    public DespesaResponse resposta(Despesa d){return new DespesaResponse(d.getId(),d.getDescricao(),d.getCategoria().getNome(),d.getValor(),
         d.getData(),d.getVencimento(),d.getDataPagamento(),d.getFormaPagamento(),d.getVeiculo()==null?null:d.getVeiculo().getIdentificacao(),
         d.getMotorista()==null?null:d.getMotorista().getNome(),d.getProtocolo(),d.getComprovante(),d.getObservacoes(),d.getStatus(),
         d.isAprovada(),d.getCriadoPor().getNome());}

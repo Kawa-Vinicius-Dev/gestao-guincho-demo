@@ -29,6 +29,8 @@ public class CadastroController {
     public MotoristaResponse motorista(@Valid @RequestBody MotoristaRequest r){ return service.criar(r); }
     @PutMapping("/motoristas/{id}") @PreAuthorize("hasRole('ADMINISTRADOR')")
     public MotoristaResponse atualizarMotorista(@PathVariable Long id,@Valid @RequestBody MotoristaRequest r){ return service.atualizar(id,r); }
+    @PostMapping("/motoristas/{id}/acesso") @ResponseStatus(HttpStatus.CREATED) @PreAuthorize("hasRole('ADMINISTRADOR')")
+    public SenhaRedefinidaResponse criarAcesso(@PathVariable Long id,@Valid @RequestBody CriarAcessoRequest r){ return service.criarAcesso(id,r); }
     @PatchMapping("/motoristas/{id}/desativar") @PreAuthorize("hasRole('ADMINISTRADOR')")
     public MotoristaResponse desativarMotorista(@PathVariable Long id){ return service.desativar(id); }
     @PatchMapping("/motoristas/{id}/reativar") @PreAuthorize("hasRole('ADMINISTRADOR')")

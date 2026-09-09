@@ -28,6 +28,7 @@ public class Despesa {
     private boolean aprovada;
     @ManyToOne(optional = false) @JoinColumn(name = "criado_por_id") private Usuario criadoPor;
     @ManyToOne @JoinColumn(name = "aprovado_por_id") private Usuario aprovadoPor;
+    @ManyToOne @JoinColumn(name = "despesa_recorrente_id") private DespesaRecorrente despesaRecorrente;
     @Column(name = "criado_em") private OffsetDateTime criadoEm = OffsetDateTime.now();
 
     protected Despesa() {}
@@ -39,6 +40,9 @@ public class Despesa {
         this.veiculo = veiculo; this.motorista = motorista; this.protocolo = protocolo; this.comprovante = comprovante;
         this.observacoes = observacoes; this.status = status; this.criadoPor = criadoPor;
     }
+    /** Marca a origem: a despesa foi lancada por um molde recorrente, e nao digitada. */
+    public void nasceuDe(DespesaRecorrente molde) { this.despesaRecorrente = molde; }
+    public DespesaRecorrente getDespesaRecorrente() { return despesaRecorrente; }
     public void aprovar(Usuario usuario) { this.aprovada = true; this.aprovadoPor = usuario; }
     public void pagar(LocalDate dataPagamento, String formaPagamento, String comprovante, String observacoes) {
         if (!aprovada) throw new IllegalArgumentException("A despesa precisa estar aprovada antes do pagamento.");

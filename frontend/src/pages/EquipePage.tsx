@@ -2,13 +2,14 @@ import { useEffect,useState,type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api/http'
 import { Carregando,ErroPagina,Vazio } from '../components/EstadoPagina'
-import type { Motorista,Veiculo } from '../types/modelos'
+import type { Motorista,SenhaRedefinida,Veiculo } from '../types/modelos'
 
 export default function EquipePage(){
   const [motoristas,setMotoristas]=useState<Motorista[]>([])
   const [veiculos,setVeiculos]=useState<Veiculo[]>([])
   const [carregando,setCarregando]=useState(true),[modal,setModal]=useState(false),[salvando,setSalvando]=useState(false),[erro,setErro]=useState('')
   const [editando,setEditando]=useState<Motorista|null>(null)
+  const [dandoAcesso,setDandoAcesso]=useState<Motorista|null>(null),[acesso,setAcesso]=useState<SenhaRedefinida|null>(null)
   const carregar=()=>{setCarregando(true);setErro('');api<Motorista[]>('/api/motoristas').then(setMotoristas).catch(e=>setErro(e.message)).finally(()=>setCarregando(false))}
   useEffect(carregar,[])
   useEffect(()=>{api<Veiculo[]>('/api/veiculos').then(setVeiculos).catch(()=>setVeiculos([]))},[])
@@ -25,6 +26,14 @@ export default function EquipePage(){
         :await api<Motorista>('/api/motoristas',{method:'POST',body:JSON.stringify(corpo)})
       setMotoristas(lista=>editando?lista.map(item=>item.id===motorista.id?motorista:item):[...lista,motorista])
       fechar()
+    }catch(e){setErro((e as Error).message)}finally{setSalvando(false)}
+  }
+  // o dono nao escolhe senha por ninguem: o sistema sorteia uma provisoria e o socorrista troca no primeiro acesso
+  async function criarAcesso(evento:FormEvent<HTMLFormElement>){
+    evento.preventDefault();if(!dandoAcesso)return;const form=new FormData(evento.currentTarget);setSalvando(true);setErro('')
+    try{
+      setAcesso(await api<SenhaRedefinida>(`/api/motoristas/${dandoAcesso.id}/acesso`,{method:'POST',body:JSON.stringify({email:String(form.get('email'))})}))
+      setDandoAcesso(null);carregar()
     }catch(e){setErro((e as Error).message)}finally{setSalvando(false)}
   }
   // desativar nao apaga: o socorrista sai dos vinculos novos e o historico dele continua de pe
@@ -46,7 +55,8 @@ export default function EquipePage(){
       <div className="team-contact"><span>Telefone<strong>{motorista.telefone||'Não informado'}</strong></span><span>Usuário<strong>{motorista.usuarioId?'Vinculado':'Não vinculado'}</strong></span></div>
       <div className="team-card-actions"><Link className="button button-ghost team-detail-action" to={`/equipe/${motorista.id}`}>Ver detalhes</Link>
         <button className="table-action" onClick={()=>abrirEdicao(motorista)}>Editar</button>
-        <button className={motorista.ativo?'table-action table-action-danger':'table-action'} onClick={()=>void alternarAtivo(motorista)}>{motorista.ativo?'Desativar':'Reativar'}</button></div>
+        <button className={motorista.ativo?'table-action table-action-danger':'table-action'} onClick={()=>void alternarAtivo(motorista)}>{motorista.ativo?'Desativar':'Reativar'}</button>
+        {!motorista.usuarioId&&motorista.ativo?<button className="table-action" onClick={()=>{setErro('');setDandoAcesso(motorista)}}>Criar acesso</button>:null}</div>
     </article>)}</section>:<Vazio titulo="Nenhum socorrista cadastrado" descricao="Cadastre o primeiro socorrista para vinculá-lo às ordens de serviço."/>}
 
     {modal?<div className="modal-backdrop"><section className="modal" role="dialog" aria-modal="true" aria-label={editando?`Editar ${editando.nome}`:'Cadastrar socorrista'}><header><div><span className="eyebrow">Equipe</span><h2>{editando?'Editar socorrista':'Novo socorrista'}</h2></div><button aria-label="Fechar" onClick={fechar}>×</button></header>
@@ -58,5 +68,19 @@ export default function EquipePage(){
         <label className="field field-wide"><span>Documento</span><input name="documento" defaultValue={editando?.documento}/></label>
         <div className="modal-actions field-wide"><button type="button" className="button button-ghost" onClick={fechar}>Cancelar</button><button className="button button-primary" disabled={salvando}>{salvando?'Salvando…':editando?'Salvar alterações':'Salvar socorrista'}</button></div>
       </form></section></div>:null}
+
+    {dandoAcesso?<div className="modal-backdrop"><section className="modal" role="dialog" aria-modal="true" aria-label={`Criar acesso para ${dandoAcesso.nome}`}><header><div><span className="eyebrow">{dandoAcesso.nome}</span><h2>Criar acesso</h2></div><button aria-label="Fechar" onClick={()=>setDandoAcesso(null)}>×</button></header>
+      <p>{dandoAcesso.nome} vai poder registrar as próprias despesas e ver a comissão dele. O sistema gera uma senha provisória para você repassar.</p>
+      <form onSubmit={criarAcesso} className="form-grid">
+        <label className="field"><span>E-mail de acesso</span><input name="email" type="email" required/></label>
+        <div className="modal-actions"><button type="button" className="button button-ghost" onClick={()=>setDandoAcesso(null)}>Cancelar</button><button className="button button-primary" disabled={salvando}>{salvando?'Criando…':'Criar acesso'}</button></div>
+      </form></section></div>:null}
+
+    {acesso?<div className="modal-backdrop"><section className="modal" role="dialog" aria-modal="true" aria-label="Senha provisória gerada"><header><div><span className="eyebrow">{acesso.nome}</span><h2>Acesso criado</h2></div><button aria-label="Fechar" onClick={()=>setAcesso(null)}>×</button></header>
+      <p>Passe estes dados para {acesso.nome}. A senha aparece <strong>uma única vez</strong> e só serve para o primeiro acesso: o sistema obriga a troca antes de liberar qualquer tela.</p>
+      <p className="senha-provisoria"><code>{acesso.email}</code></p>
+      <p className="senha-provisoria"><code>{acesso.senhaProvisoria}</code></p>
+      <div className="modal-actions"><button className="button button-primary" onClick={()=>setAcesso(null)}>Já anotei</button></div>
+    </section></div>:null}
   </div>
 }

@@ -22,6 +22,11 @@ export interface Despesa {
   comprovante?:string; observacoes?:string; status:'PENDENTE'|'PAGO'|'ATRASADO'|'REJEITADO';
   aprovada:boolean; criadoPor:string
 }
+export interface DespesaRecorrente {
+  id:number; descricao:string; categoria:string; categoriaId:number; valor:number; diaVencimento:number;
+  veiculo?:string; veiculoId?:number; motorista?:string; motoristaId?:number; observacoes?:string; ativo:boolean
+}
+export interface LancamentoRecorrente { mes:string; lancadas:number; jaExistiam:number; valorLancado:number; despesas:Despesa[] }
 export interface LancamentoFinanceiro {
   id:string; tipo:'RECEITA'|'DESPESA'; referenciaId:number; descricao:string; categoria:string; valor:number;
   data:string; status:string; realizado:boolean; veiculo?:string; veiculoId?:number; motorista?:string; origem:string; protocolo?:string

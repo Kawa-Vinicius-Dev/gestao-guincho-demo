@@ -45,6 +45,7 @@ export const servidor = setupServer(
   http.get('/api/lancamentos', () => HttpResponse.json(lancamentos)),
   http.get('/api/receitas', () => HttpResponse.json([])),
   http.get('/api/despesas', () => HttpResponse.json(despesas)),
+  http.get('/api/despesas-recorrentes', () => HttpResponse.json([])),
   http.get('/api/quilometragens', () => HttpResponse.json(quilometragens)),
   http.get('/api/veiculos', () => HttpResponse.json(veiculos)),
   http.get('/api/motoristas', () => HttpResponse.json([])),
