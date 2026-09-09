@@ -31,9 +31,9 @@ public class FinanceiroService {
     }
     @Transactional public ContaReceber salvarImportada(ContaReceber conta) { return contas.save(conta); }
     @Transactional public List<ContaResponse> listarContas(StatusContaReceber status, String pesquisa) {
-        LocalDate hoje=LocalDate.now(); contas.findAll().forEach(c->c.atualizarAtraso(hoje));
+        LocalDate hoje=LocalDate.now(); List<ContaReceber> todas=contas.findAll(); todas.forEach(c->c.atualizarAtraso(hoje));
         String termo=pesquisa==null?"":pesquisa.toLowerCase();
-        return contas.findAll().stream()
+        return todas.stream()
             .filter(c->status==null||c.getStatus()==status)
             .filter(c->termo.isBlank()||c.getDescricao().toLowerCase().contains(termo)
                 ||(c.getProtocolo()!=null&&c.getProtocolo().toLowerCase().contains(termo))
@@ -65,8 +65,8 @@ public class FinanceiroService {
         return resposta(despesas.save(d));
     }
     @Transactional public List<DespesaResponse> listarDespesas() {
-        despesas.findAll().forEach(d->d.atualizarAtraso(LocalDate.now()));
-        return despesas.findAll().stream().map(this::resposta).toList();
+        List<Despesa> todas=despesas.findAll(); todas.forEach(d->d.atualizarAtraso(LocalDate.now()));
+        return todas.stream().map(this::resposta).toList();
     }
     @Transactional public DespesaResponse aprovar(Long id, UsuarioPrincipal principal) {
         Despesa d=despesa(id); d.aprovar(cadastros.usuario(principal.id())); return resposta(d);
@@ -81,7 +81,7 @@ public class FinanceiroService {
     }
     @Transactional(readOnly=true) public List<LancamentoFinanceiroResponse> listarLancamentos(LocalDate inicio,LocalDate fim) {
         List<LancamentoFinanceiroResponse> itens=new ArrayList<>();
-        receitas.findAll().stream().filter(r->r.getStatus()!=StatusReceita.CANCELADA).map(r->{
+        receitas.findParaLancamentosEntre(inicio,fim).stream().filter(r->r.getStatus()!=StatusReceita.CANCELADA).map(r->{
             boolean realizado=r.getStatus()==StatusReceita.RECEBIDA;
             LocalDate data=realizado&&r.getDataRecebimento()!=null?r.getDataRecebimento():r.getDataCompetencia();
             return new LancamentoFinanceiroResponse("RECEITA-"+r.getId(),"RECEITA",r.getId(),r.getDescricao(),
@@ -89,13 +89,13 @@ public class FinanceiroService {
                 r.getVeiculo()==null?null:r.getVeiculo().getIdentificacao(),r.getVeiculo()==null?null:r.getVeiculo().getId(),
                 r.getMotorista()==null?null:r.getMotorista().getNome(),r.isManual()?"MANUAL":"PORTO",null);
         }).filter(l->entre(l.data(),inicio,fim)).forEach(itens::add);
-        contas.findAll().stream().filter(c->c.getStatus()==StatusContaReceber.PENDENTE||c.getStatus()==StatusContaReceber.ATRASADO)
+        contas.findByDataCompetenciaBetweenOrderByVencimento(inicio,fim).stream().filter(c->c.getStatus()==StatusContaReceber.PENDENTE||c.getStatus()==StatusContaReceber.ATRASADO)
             .map(c->new LancamentoFinanceiroResponse("CONTA-"+c.getId(),"RECEITA",c.getId(),c.getDescricao(),"Conta a receber",
                 c.getValorPrevisto(),c.getDataCompetencia(),c.getStatus().name(),false,
                 c.getVeiculo()==null?null:c.getVeiculo().getIdentificacao(),c.getVeiculo()==null?null:c.getVeiculo().getId(),
                 c.getMotorista()==null?null:c.getMotorista().getNome(),c.getOrigem().name(),c.getProtocolo()))
             .filter(l->entre(l.data(),inicio,fim)).forEach(itens::add);
-        despesas.findAll().stream().filter(d->d.getStatus()!=StatusDespesa.REJEITADO).map(d->{
+        despesas.findParaLancamentosEntre(inicio,fim).stream().filter(d->d.getStatus()!=StatusDespesa.REJEITADO).map(d->{
             boolean realizado=d.isAprovada()&&d.getStatus()==StatusDespesa.PAGO;
             LocalDate data=realizado&&d.getDataPagamento()!=null?d.getDataPagamento():(d.getVencimento()!=null?d.getVencimento():d.getData());
             return new LancamentoFinanceiroResponse("DESPESA-"+d.getId(),"DESPESA",d.getId(),d.getDescricao(),d.getCategoria().getNome(),

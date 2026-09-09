@@ -104,8 +104,7 @@ public class PortoImportacaoService {
      */
     private List<String> osQueFicaraoSemSocorrista(PreviaPorto previa){
         if(previa.tipo()==TipoRelatorioPorto.PREVISAO_RECEBER)return List.of();
-        Set<String> cadastrados=motoristas.findAll().stream().filter(Motorista::isAtivo)
-            .map(Motorista::getQra).filter(Objects::nonNull).map(x->x.trim().toUpperCase(Locale.ROOT))
+        Set<String> cadastrados=motoristas.qrasAtivos().stream().map(x->x.trim().toUpperCase(Locale.ROOT))
             .collect(java.util.stream.Collectors.toSet());
         return previa.linhas().stream().filter(l->l.acao()!=AcaoLinhaPorto.ERRO)
             .filter(l->{String qra=l.texto("qra");return qra==null||qra.isBlank()||!cadastrados.contains(qra.trim().toUpperCase(Locale.ROOT));})
@@ -171,11 +170,13 @@ public class PortoImportacaoService {
     private String normalizarConteudo(String conteudo){String semBom=conteudo==null?"":conteudo.replace("\uFEFF","").replace("\r\n","\n").replace('\r','\n');
         return String.join("\n",semBom.lines().map(String::stripTrailing).toList()).trim();}
     private ResumoPreviaResponse resumir(PreviaPorto previa){Set<String> unicos=new LinkedHashSet<>();int duplicidades=0;int novos=0;int existentes=0;int atualizados=0;int erros=0;BigDecimal valorTotal=BigDecimal.ZERO;
-        String campoNumero=previa.tipo()==TipoRelatorioPorto.PREVISAO_RECEBER?"numero_op":"numero_os";
+        boolean porOp=previa.tipo()==TipoRelatorioPorto.PREVISAO_RECEBER;String campoNumero=porOp?"numero_op":"numero_os";
+        Set<String> numeros=previa.linhas().stream().filter(l->l.acao()!=AcaoLinhaPorto.ERRO).map(l->l.texto(campoNumero)).filter(Objects::nonNull).collect(java.util.stream.Collectors.toSet());
+        Set<String> jaGravados=porOp?porto.numerosDeOpExistentes(numeros):porto.numerosDeOsExistentes(numeros);
         for(LinhaPorto linha:previa.linhas()){if(linha.acao()==AcaoLinhaPorto.ERRO){erros++;continue;}String numero=linha.texto(campoNumero);if(numero==null||!unicos.add(numero)){duplicidades++;continue;}
-            boolean existe=previa.tipo()==TipoRelatorioPorto.PREVISAO_RECEBER?porto.existeOp(numero):porto.existeOs(numero);if(existe){existentes++;if(linha.acao()==AcaoLinhaPorto.ATUALIZAR)atualizados++;}else novos++;
+            if(jaGravados.contains(numero)){existentes++;if(linha.acao()==AcaoLinhaPorto.ATUALIZAR)atualizados++;}else novos++;
             BigDecimal valor=linha.decimal("valor_total");if(valor!=null)valorTotal=valorTotal.add(valor);}
-        return new ResumoPreviaResponse(previa.linhas().size(),previa.tipo()==TipoRelatorioPorto.PREVISAO_RECEBER?unicos.size():0,novos,existentes,atualizados,duplicidades,erros,valorTotal);}
+        return new ResumoPreviaResponse(previa.linhas().size(),porOp?unicos.size():0,novos,existentes,atualizados,duplicidades,erros,valorTotal);}
     private String numeroOp(ConfirmarImportacaoRequest request){if(request.ordemPagamentoId()!=null)return porto.obterOp(request.ordemPagamentoId()).getNumero();String numero=request.numeroOrdemPagamento();if(numero==null||numero.isBlank())throw new IllegalArgumentException("Informe o número da OP antes de continuar.");return numero.trim();}
     private boolean confirmouReassociacoes(ConfirmarImportacaoRequest request){return Boolean.TRUE.equals(request.confirmarReassociacoes())||(request.numeroOrdemPagamento()==null&&Boolean.TRUE.equals(request.confirmarDivergencias()));}
     private List<ReassociacaoOsResponse> reassociacoes(PreviaPorto previa,String numero){return linhasUnicasValidas(previa).stream().map(linha->porto.buscarOs(linha.texto("numero_os")).map(os->{OrdemPagamentoPorto atual=os.getOrdemPagamento();return atual!=null&&!atual.getNumero().equals(numero)?new ReassociacaoOsResponse(os.getNumero(),atual.getNumero(),numero,linha.decimal("valor_total")):null;}).orElse(null)).filter(Objects::nonNull).toList();}

@@ -39,7 +39,7 @@ public class CadastroService {
         if(r.qra()!=null&&!r.qra().isBlank()&&motoristas.findByQraIgnoreCase(r.qra().trim()).isPresent())throw new IllegalArgumentException("Já existe um motorista com este QRA.");
         return motorista(motoristas.save(new Motorista(r.nome(), r.telefone(), r.documento(), r.qra(), usuario, obterVeiculo(r.veiculoId()))));
     }
-    public List<MotoristaResponse> motoristas() { return motoristas.findAll().stream().map(this::motorista).toList(); }
+    public List<MotoristaResponse> motoristas() { return motoristas.findAllParaListagem().stream().map(this::motorista).toList(); }
     @Transactional public UsuarioResponse criar(UsuarioRequest r) {
         String email = Usuario.normalizarEmail(r.email());
         if (usuarios.findByEmailIgnoreCase(email).isPresent()) throw new IllegalArgumentException("Já existe um usuário com este e-mail.");

@@ -71,9 +71,27 @@ public class ComissaoService {
         return new DetalheSocorristaResponse(motorista.getId(),motorista.getNome(),motorista.isAtivo(),motorista.getTelefone(),
             usuario==null?null:usuario.getEmail(),motorista.getQra(),veiculos,servicos.size(),comissao,servicos);
     }
+    /** Uma tela so, todos os socorristas: as tres consultas sao feitas em lote, nao por socorrista. */
     @Transactional(readOnly=true) public List<ResumoComissaoResponse> resumo(Long calendarioPagamentoId,Long motoristaId){
-        return motoristas.findAll().stream().filter(Motorista::isAtivo).filter(m->motoristaId==null||m.getId().equals(motoristaId))
-            .map(m->calcular(calendarioPagamentoId,m)).map(c->new ResumoComissaoResponse(c.motoristaId(),c.socorrista(),c.quantidadeServicosPagos(),c.producaoPaga(),c.comissaoBruta(),c.alimentacaoAprovada(),c.liquido(),c.pagamento())).toList();
+        CalendarioPagamentoPorto periodo=calendarios.obterPeriodo(calendarioPagamentoId);
+        List<Motorista> ativos=motoristas.findAllParaListagem().stream().filter(Motorista::isAtivo).filter(m->motoristaId==null||m.getId().equals(motoristaId)).toList();
+        if(ativos.isEmpty())return List.of();
+        DadosDoPeriodo dados=carregar(ativos,periodo);
+        return ativos.stream().map(m->calcular(periodo,m,dados)).map(c->new ResumoComissaoResponse(c.motoristaId(),c.socorrista(),c.quantidadeServicosPagos(),c.producaoPaga(),c.comissaoBruta(),c.alimentacaoAprovada(),c.liquido(),c.pagamento())).toList();
+    }
+    private record DadosDoPeriodo(Map<Long,List<OrdemServicoPorto>> servicos,Map<Long,List<Despesa>> alimentacoes,Map<Long,PagamentoComissao> pagamentos){
+        List<OrdemServicoPorto> servicosDe(Motorista m){return servicos.getOrDefault(m.getId(),List.of());}
+        List<Despesa> alimentacoesDe(Motorista m){return alimentacoes.getOrDefault(m.getId(),List.of());}
+        PagamentoComissao pagamentoDe(Motorista m){return pagamentos.get(m.getId());}
+    }
+    private DadosDoPeriodo carregar(List<Motorista> equipe,CalendarioPagamentoPorto periodo){
+        Map<Long,List<OrdemServicoPorto>> servicos=oss.findPagasNoPeriodo(equipe,periodo,SituacaoFinanceiraOpPorto.RECEBIDO,StatusFinanceiroPorto.RECEBIDO)
+            .stream().collect(java.util.stream.Collectors.groupingBy(x->x.getMotorista().getId(),LinkedHashMap::new,java.util.stream.Collectors.toList()));
+        Map<Long,List<Despesa>> alimentacoes=despesas.findByMotoristaInAndNaturezaAndDataBetweenOrderByDataDesc(equipe,NaturezaDespesa.ALIMENTACAO_FUNCIONARIO,periodo.getCompetenciaInicio(),periodo.getCompetenciaFim())
+            .stream().collect(java.util.stream.Collectors.groupingBy(x->x.getMotorista().getId(),LinkedHashMap::new,java.util.stream.Collectors.toList()));
+        Map<Long,PagamentoComissao> pagos=pagamentos.findByCalendarioPagamento(periodo).stream()
+            .collect(java.util.stream.Collectors.toMap(x->x.getMotorista().getId(),x->x,(a,b)->a));
+        return new DadosDoPeriodo(servicos,alimentacoes,pagos);
     }
     @Transactional(readOnly=true) public String csv(Long calendarioPagamentoId){
         StringBuilder csv=new StringBuilder("\uFEFFSocorrista;Período;Serviços pagos;Produção paga;Comissão 20%;Alimentação;Líquido\r\n");
@@ -83,16 +101,16 @@ public class ComissaoService {
     }
     private ComissaoResponse calcular(Long calendarioPagamentoId,Motorista motorista){
         CalendarioPagamentoPorto periodo=calendarios.obterPeriodo(calendarioPagamentoId);
-        List<OrdemServicoPorto> servicos=oss.findByMotorista(motorista).stream().filter(os->os.getOrdemPagamento()!=null)
-            .filter(os->os.getOrdemPagamento().getCalendarioPagamento()!=null&&os.getOrdemPagamento().getCalendarioPagamento().getId().equals(periodo.getId()))
-            .filter(os->os.getOrdemPagamento().getSituacaoFinanceira()==SituacaoFinanceiraOpPorto.RECEBIDO&&os.getStatusFinanceiro()==StatusFinanceiroPorto.RECEBIDO)
-            .collect(java.util.stream.Collectors.toMap(OrdemServicoPorto::getId,x->x,(a,b)->a,LinkedHashMap::new)).values().stream().toList();
+        return calcular(periodo,motorista,carregar(List.of(motorista),periodo));
+    }
+    private ComissaoResponse calcular(CalendarioPagamentoPorto periodo,Motorista motorista,DadosDoPeriodo dados){
+        List<OrdemServicoPorto> servicos=dados.servicosDe(motorista);
         BigDecimal producao=soma(servicos.stream().map(OrdemServicoPorto::getValorTotal).toList());BigDecimal bruta=producao.multiply(PERCENTUAL).setScale(2,RoundingMode.HALF_UP);
-        List<Despesa> alimentacoes=despesas.findByMotoristaAndNaturezaAndDataBetweenOrderByDataDesc(motorista,NaturezaDespesa.ALIMENTACAO_FUNCIONARIO,periodo.getCompetenciaInicio(),periodo.getCompetenciaFim());
+        List<Despesa> alimentacoes=dados.alimentacoesDe(motorista);
         BigDecimal aprovada=soma(alimentacoes.stream().filter(Despesa::isAprovada).filter(d->d.getStatus()!=StatusDespesa.REJEITADO).map(Despesa::getValor).toList());
         BigDecimal pendente=soma(alimentacoes.stream().filter(d->!d.isAprovada()).filter(d->d.getStatus()!=StatusDespesa.REJEITADO).map(Despesa::getValor).toList());
         List<ServicoComissaoResponse> detalhados=servicos.stream().map(os->new ServicoComissaoResponse(os.getId(),os.getNumero(),os.getEspecialidade(),os.getDataAtendimento(),os.getOrdemPagamento().getNumero(),os.getValorTotal(),os.getValorTotal().multiply(PERCENTUAL).setScale(2,RoundingMode.HALF_UP))).toList();
-        PagamentoComissaoResponse pagamento=pagamentos.findByMotoristaAndCalendarioPagamento(motorista,periodo).map(this::pagamento).orElse(null);
+        PagamentoComissaoResponse pagamento=dados.pagamentoDe(motorista)==null?null:pagamento(dados.pagamentoDe(motorista));
         return new ComissaoResponse(periodo.getId(),calendarios.rotulo(periodo),motorista.getNome(),motorista.getId(),detalhados.size(),producao,PERCENTUAL,bruta,aprovada,pendente,bruta.subtract(aprovada),detalhados.isEmpty(),detalhados,alimentacoes.stream().map(this::alimentacao).toList(),pagamento);
     }
     private Motorista motoristaDoUsuario(UsuarioPrincipal principal){if(principal==null)throw new IllegalArgumentException("Usuário autenticado não identificado.");Usuario usuario=usuarios.findById(principal.id()).orElseThrow(()->new RecursoNaoEncontradoException("Usuário autenticado não encontrado."));return motoristas.findByUsuario(usuario).orElseThrow(()->new IllegalArgumentException("Seu usuário ainda não está vinculado a um motorista."));}

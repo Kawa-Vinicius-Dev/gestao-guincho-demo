@@ -26,8 +26,9 @@ public class PortoService {
     public Optional<OrdemServicoPorto> buscarOs(String numero){return numero==null?Optional.empty():oss.findByNumero(numero);}
     public Map<String,OrdemServicoPorto> buscarOssEmLote(Collection<String> numeros){return oss.findByNumeroIn(numeros).stream().collect(java.util.stream.Collectors.toMap(OrdemServicoPorto::getNumero,x->x));}
     public Map<String,OrdemPagamentoPorto> buscarOpsEmLote(Collection<String> numeros){return ops.findByNumeroIn(numeros).stream().collect(java.util.stream.Collectors.toMap(OrdemPagamentoPorto::getNumero,x->x));}
-    public boolean existeOp(String numero){return numero!=null&&ops.findByNumero(numero).isPresent();}
-    public boolean existeOs(String numero){return numero!=null&&oss.findByNumero(numero).isPresent();}
+    /** Existencia em lote: o resumo da previa percorre centenas de linhas e nao pode consultar uma a uma. */
+    public Set<String> numerosDeOpExistentes(Collection<String> numeros){return numeros.isEmpty()?Set.of():new HashSet<>(ops.numerosExistentes(numeros));}
+    public Set<String> numerosDeOsExistentes(Collection<String> numeros){return numeros.isEmpty()?Set.of():new HashSet<>(oss.numerosExistentes(numeros));}
     public AcaoLinhaPorto classificarOp(LinhaPorto linha,OrdemPagamentoPorto op){if(op==null)return AcaoLinhaPorto.IMPORTAR;
         boolean mudou=diferente(op.getValorTotal(),linha.decimal("valor_total"))||diferenteSeInformado(op.getNomeCodigo(),linha.texto("nome_codigo"))||!Objects.equals(op.getDataPagamentoProgramada(),linha.data("data_pagamento"));return mudou?AcaoLinhaPorto.ATUALIZAR:AcaoLinhaPorto.IGNORAR;}
     public AcaoLinhaPorto classificarOsGeral(LinhaPorto linha,OrdemServicoPorto os){if(os==null)return AcaoLinhaPorto.IMPORTAR;
