@@ -14,6 +14,7 @@ public class Usuario {
     @Column(name = "senha_hash") private String senhaHash;
     @Enumerated(EnumType.STRING) private PerfilUsuario perfil;
     private boolean ativo = true;
+    @Column(name = "senha_provisoria") private boolean senhaProvisoria = false;
     @Column(name = "criado_em") private OffsetDateTime criadoEm = OffsetDateTime.now();
 
     protected Usuario() {}
@@ -27,6 +28,10 @@ public class Usuario {
     public String getSenhaHash() { return senhaHash; }
     public PerfilUsuario getPerfil() { return perfil; }
     public boolean isAtivo() { return ativo; }
-    public void trocarSenha(String hash) { this.senhaHash = hash; }
+    public boolean isSenhaProvisoria() { return senhaProvisoria; }
+    /** Troca feita pelo dono da conta: a senha deixa de ser provisoria. */
+    public void trocarSenha(String hash) { this.senhaHash = hash; this.senhaProvisoria = false; }
+    /** Senha gerada por um administrador: vale ate o primeiro acesso, que obriga a troca. */
+    public void definirSenhaProvisoria(String hash) { this.senhaHash = hash; this.senhaProvisoria = true; }
     public void atualizar(String nome, PerfilUsuario perfil, boolean ativo) { this.nome = nome; this.perfil = perfil; this.ativo = ativo; }
 }

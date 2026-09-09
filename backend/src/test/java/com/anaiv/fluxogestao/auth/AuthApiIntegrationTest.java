@@ -11,6 +11,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -106,6 +107,52 @@ class AuthApiIntegrationTest {
         login("sessoes.troca@example.com", "Sessoes@123", 400);
         String novo = JsonPath.read(login("sessoes.troca@example.com", "NovaSessao@123", 200), "$.token");
         mvc.perform(get("/api/auth/me").header("Authorization", "Bearer " + novo)).andExpect(status().isOk());
+    }
+
+    @Test
+    void administradorRedefineSenhaEOUsuarioSoVoltaAUsarOSistemaDepoisDeTrocar() throws Exception {
+        String admin = JsonPath.read(login("admin@fluxogestao.local", "Admin@123", 200), "$.token");
+        mvc.perform(post("/api/usuarios").header("Authorization", "Bearer " + admin)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"nome":"Socorrista Esquecido","email":"esquecido@example.com",
+                                 "senha":"Esquecido@123","perfil":"FUNCIONARIO"}
+                                """))
+                .andExpect(status().isCreated());
+        String lista = mvc.perform(get("/api/usuarios").header("Authorization", "Bearer " + admin))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        java.util.List<java.util.Map<String, Object>> encontrados =
+                JsonPath.read(lista, "$[?(@.email == 'esquecido@example.com')]");
+        long id = ((Number) encontrados.getFirst().get("id")).longValue();
+        String antigo = JsonPath.read(login("esquecido@example.com", "Esquecido@123", 200), "$.token");
+
+        String redefinicao = mvc.perform(patch("/api/usuarios/{id}/redefinir-senha", id).header("Authorization", "Bearer " + admin))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.email").value("esquecido@example.com"))
+                .andReturn().getResponse().getContentAsString();
+        String provisoria = JsonPath.read(redefinicao, "$.senhaProvisoria");
+        assertThat(provisoria).isNotBlank();
+
+        // a sessao aberta com a senha antiga morre, e a senha antiga nao entra mais
+        mvc.perform(get("/api/auth/me").header("Authorization", "Bearer " + antigo)).andExpect(status().isUnauthorized());
+        login("esquecido@example.com", "Esquecido@123", 400);
+
+        String comProvisoria = JsonPath.read(login("esquecido@example.com", provisoria, 200), "$.token");
+        mvc.perform(get("/api/auth/me").header("Authorization", "Bearer " + comProvisoria))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.senhaProvisoria").value(true));
+        // categorias e liberado para o perfil FUNCIONARIO: aqui o 403 so pode vir da senha provisoria
+        mvc.perform(get("/api/categorias").header("Authorization", "Bearer " + comProvisoria)).andExpect(status().isForbidden());
+
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/auth/senha")
+                        .header("Authorization", "Bearer " + comProvisoria)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"senhaAtual\":\"" + provisoria + "\",\"novaSenha\":\"EscolhidaPorMim@1\"}"))
+                .andExpect(status().isNoContent());
+
+        String definitivo = JsonPath.read(login("esquecido@example.com", "EscolhidaPorMim@1", 200), "$.token");
+        mvc.perform(get("/api/auth/me").header("Authorization", "Bearer " + definitivo))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.senhaProvisoria").value(false));
+        mvc.perform(get("/api/categorias").header("Authorization", "Bearer " + definitivo)).andExpect(status().isOk());
     }
 
     private String login(String email, String senha, int statusEsperado) throws Exception {

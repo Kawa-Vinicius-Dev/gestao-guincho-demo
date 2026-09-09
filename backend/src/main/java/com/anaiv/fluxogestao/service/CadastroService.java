@@ -8,16 +8,20 @@ import com.anaiv.fluxogestao.repository.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.security.SecureRandom;
 import java.util.List;
 
 @Service
 public class CadastroService {
     private final VeiculoRepository veiculos; private final ContratanteRepository contratantes;
     private final CategoriaRepository categorias; private final MotoristaRepository motoristas;
-    private final UsuarioRepository usuarios; private final PasswordEncoder encoder;
+    private final UsuarioRepository usuarios; private final PasswordEncoder encoder; private final SessaoRepository sessoes;
+    private static final SecureRandom SORTEIO = new SecureRandom();
+    // Sem 0/O e 1/l/I: a senha e ditada ou colada num WhatsApp e nao pode depender de fonte.
+    private static final String ALFABETO = "abcdefghjkmnpqrstuvwxyz23456789";
     public CadastroService(VeiculoRepository v, ContratanteRepository c, CategoriaRepository ca,
-                           MotoristaRepository m, UsuarioRepository u, PasswordEncoder encoder) {
-        veiculos=v; contratantes=c; categorias=ca; motoristas=m; usuarios=u; this.encoder=encoder;
+                           MotoristaRepository m, UsuarioRepository u, PasswordEncoder encoder, SessaoRepository sessoes) {
+        veiculos=v; contratantes=c; categorias=ca; motoristas=m; usuarios=u; this.encoder=encoder; this.sessoes=sessoes;
     }
     @Transactional public VeiculoResponse criar(VeiculoRequest r) {
         return veiculo(new Veiculo(r.identificacao(), r.placa(), r.modelo(), r.custoPorKm()), true);
@@ -60,5 +64,25 @@ public class CadastroService {
     private CategoriaResponse categoria(Categoria c) { return new CategoriaResponse(c.getId(),c.getNome(),c.getTipo(),c.isAtivo()); }
     private MotoristaResponse motorista(Motorista m) { return new MotoristaResponse(m.getId(),m.getNome(),m.getTelefone(),m.getDocumento(),m.getQra(),m.getUsuario()==null?null:m.getUsuario().getId(),m.isAtivo(),
         m.getVeiculo()==null?null:m.getVeiculo().getId(), m.getVeiculo()==null?null:m.getVeiculo().getIdentificacao()); }
-    private UsuarioResponse usuario(Usuario u) { return new UsuarioResponse(u.getId(),u.getNome(),u.getEmail(),u.getPerfil(),u.isAtivo()); }
+    /**
+     * O dono nao ve nem escolhe a senha de ninguem: o sistema sorteia uma provisoria, devolve uma
+     * unica vez para ele repassar, e derruba as sessoes daquele usuario. No proximo acesso a
+     * pessoa e obrigada a trocar, entao a senha que passou pelo WhatsApp morre ali.
+     */
+    @Transactional public SenhaRedefinidaResponse redefinirSenha(Long id) {
+        Usuario alvo = usuario(id);
+        String provisoria = senhaProvisoria();
+        alvo.definirSenhaProvisoria(encoder.encode(provisoria));
+        sessoes.deleteByUsuario(alvo);
+        return new SenhaRedefinidaResponse(alvo.getId(), alvo.getNome(), alvo.getEmail(), provisoria);
+    }
+    private String senhaProvisoria() {
+        StringBuilder senha = new StringBuilder();
+        for (int i = 0; i < 12; i++) {
+            if (i > 0 && i % 4 == 0) senha.append('-');
+            senha.append(ALFABETO.charAt(SORTEIO.nextInt(ALFABETO.length())));
+        }
+        return senha.toString();
+    }
+    private UsuarioResponse usuario(Usuario u) { return new UsuarioResponse(u.getId(),u.getNome(),u.getEmail(),u.getPerfil(),u.isAtivo(),u.isSenhaProvisoria()); }
 }

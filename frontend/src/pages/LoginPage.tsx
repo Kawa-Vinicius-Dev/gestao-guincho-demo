@@ -34,6 +34,7 @@ export default function LoginPage(){
         <label className="field"><span>E-mail</span><input name="email" type="email" autoComplete="username" required defaultValue={credencialLocal?.email}/></label>
         <label className="field"><span>Senha</span><input name="senha" type="password" autoComplete="current-password" required defaultValue={credencialLocal?.senha}/></label>
         <button className="button button-primary button-block" disabled={enviando}>{enviando?'Entrando…':'Entrar no sistema'}</button>
+        <details className="login-ajuda"><summary>Esqueci minha senha</summary><p>Peça ao administrador para redefinir seu acesso em <strong>Configurações → Acessos</strong>. Ele gera uma senha provisória e te repassa; no primeiro acesso o sistema pede que você escolha a sua.</p></details>
         {credencialLocal?<div className="demo-credentials"><span><strong>Administrador local</strong>{credencialLocal.email} · {credencialLocal.senha}</span></div>:null}
       </form>
     </section>

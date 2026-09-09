@@ -28,6 +28,8 @@ public class CadastroController {
     @PostMapping("/motoristas") @ResponseStatus(HttpStatus.CREATED) @PreAuthorize("hasRole('ADMINISTRADOR')")
     public MotoristaResponse motorista(@Valid @RequestBody MotoristaRequest r){ return service.criar(r); }
     @GetMapping("/usuarios") @PreAuthorize("hasRole('ADMINISTRADOR')") public List<UsuarioResponse> usuarios(){ return service.usuarios(); }
+    @PatchMapping("/usuarios/{id}/redefinir-senha") @PreAuthorize("hasRole('ADMINISTRADOR')")
+    public SenhaRedefinidaResponse redefinirSenha(@PathVariable Long id){ return service.redefinirSenha(id); }
     @PostMapping("/usuarios") @ResponseStatus(HttpStatus.CREATED) @PreAuthorize("hasRole('ADMINISTRADOR')")
     public UsuarioResponse usuario(@Valid @RequestBody UsuarioRequest r){ return service.criar(r); }
 }

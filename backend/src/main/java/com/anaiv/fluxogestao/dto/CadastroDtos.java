@@ -20,5 +20,7 @@ public final class CadastroDtos {
     public record UsuarioRequest(@NotBlank String nome, @Email @NotBlank String email, @NotBlank @Size(min=8) String senha, @NotNull PerfilUsuario perfil) {
         public UsuarioRequest { email = Usuario.normalizarEmail(email); }
     }
-    public record UsuarioResponse(Long id, String nome, String email, PerfilUsuario perfil, boolean ativo) {}
+    public record UsuarioResponse(Long id, String nome, String email, PerfilUsuario perfil, boolean ativo, boolean senhaProvisoria) {}
+    /** A senha gerada aparece uma unica vez, na resposta: nao fica guardada em lugar nenhum em texto. */
+    public record SenhaRedefinidaResponse(Long usuarioId, String nome, String email, String senhaProvisoria) {}
 }

@@ -11,7 +11,7 @@ public final class AuthDtos {
     public record LoginRequest(@Email @NotBlank String email, @NotBlank String senha) {
         public LoginRequest { email = Usuario.normalizarEmail(email); }
     }
-    public record UsuarioResponse(Long id, String nome, String email, PerfilUsuario perfil) {}
+    public record UsuarioResponse(Long id, String nome, String email, PerfilUsuario perfil, boolean senhaProvisoria) {}
     public record LoginResponse(String token, UsuarioResponse usuario) {}
     public record TrocarSenhaRequest(@NotBlank String senhaAtual, @NotBlank @Size(min = 8) String novaSenha) {}
 }

@@ -28,6 +28,7 @@ const PortoPendencias=lazy(()=>import('./pages/PortoPendenciasPage'))
 const PortoCalendario=lazy(()=>import('./pages/PortoCalendarioPage'))
 const PortoRelatorios=lazy(()=>import('./pages/PortoRelatoriosPage'))
 const Configuracoes=lazy(()=>import('./pages/ConfiguracoesPage'))
+const TrocarSenha=lazy(()=>import('./pages/TrocarSenhaPage'))
 const NaoEncontrado=lazy(()=>import('./pages/NaoEncontradoPage'))
 
 function MedirTransicaoDeRota(){
@@ -72,7 +73,9 @@ export default function App(){
   useEffect(()=>removerDadosDemoLegados(),[])
   return <BrowserRouter><MedirTransicaoDeRota/><AuthProvider><Suspense fallback={<Carregando/>}><Routes>
     <Route path="/login" element={<Login/>}/>
-    <Route element={<RotaProtegida/>}><Route element={<Layout/>}>
+    <Route element={<RotaProtegida/>}>
+      <Route path="/trocar-senha" element={<TrocarSenha/>}/>
+      <Route element={<Layout/>}>
       <Route path="/despesas" element={<Despesas/>}/>
       <Route path="/quilometragem" element={<Quilometragem/>}/>
       <Route path="/minha-comissao" element={<MinhaComissao/>}/>

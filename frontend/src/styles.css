@@ -111,3 +111,5 @@ button,input,select,textarea{font:inherit}button{color:inherit}a{color:inherit}:
 @media(max-width:760px){.employee-detail-heading{align-items:stretch;flex-direction:column}.employee-detail-heading .month-picker{width:100%}.employee-identity{grid-template-columns:auto 1fr}.employee-identity dl{grid-column:1/-1}.employee-summary{grid-template-columns:repeat(2,1fr)}.employee-food>.panel-title{align-items:stretch;flex-direction:column}.food-totals{justify-content:space-between}}
 @media(max-width:480px){.employee-summary{grid-template-columns:1fr}.employee-identity dl{grid-template-columns:1fr}.food-totals{flex-direction:column;gap:10px}}
 @media(max-width:480px){.commission-metrics{grid-template-columns:1fr}}
+.senha-provisoria{margin:14px 0;padding:14px;border:1px dashed var(--line);border-radius:8px;background:#f8fafc;text-align:center}.senha-provisoria code{font:600 20px 'IBM Plex Mono',monospace;letter-spacing:2px;color:var(--ink)}
+.login-ajuda{margin-top:18px;color:var(--muted);font-size:9px}.login-ajuda summary{cursor:pointer;color:var(--blue-600)}.login-ajuda p{margin:7px 0 0}

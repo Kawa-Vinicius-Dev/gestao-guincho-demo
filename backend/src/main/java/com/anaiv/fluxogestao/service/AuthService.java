@@ -55,7 +55,7 @@ public class AuthService {
         sessoes.deleteByUsuario(usuario);
     }
     public UsuarioResponse me(UsuarioPrincipal principal) {
-        return new UsuarioResponse(principal.id(), principal.nome(), principal.email(), principal.perfil());
+        return new UsuarioResponse(principal.id(), principal.nome(), principal.email(), principal.perfil(), principal.senhaProvisoria());
     }
     /**
      * O custo do BCrypt fica gravado dentro do proprio hash, entao baixar o fator de trabalho na
@@ -69,5 +69,5 @@ public class AuthService {
         if (hash == null || hash.length() < 7 || !hash.startsWith("$2")) return forcaBcrypt;
         try { return Integer.parseInt(hash.substring(4, 6)); } catch (NumberFormatException e) { return forcaBcrypt; }
     }
-    private UsuarioResponse resposta(Usuario u) { return new UsuarioResponse(u.getId(), u.getNome(), u.getEmail(), u.getPerfil()); }
+    private UsuarioResponse resposta(Usuario u) { return new UsuarioResponse(u.getId(), u.getNome(), u.getEmail(), u.getPerfil(), u.isSenhaProvisoria()); }
 }

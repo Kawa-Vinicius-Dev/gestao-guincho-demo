@@ -1,5 +1,6 @@
 export type Perfil = 'ADMINISTRADOR' | 'FUNCIONARIO'
-export interface Usuario { id: number; nome: string; email: string; perfil: Perfil; ativo?: boolean }
+export interface Usuario { id: number; nome: string; email: string; perfil: Perfil; ativo?: boolean; senhaProvisoria?: boolean }
+export interface SenhaRedefinida { usuarioId: number; nome: string; email: string; senhaProvisoria: string }
 export interface Veiculo { id: number; identificacao: string; placa: string; modelo?: string; custoPorKm: number; ativo: boolean }
 export interface Contratante { id: number; nome: string; documento?: string; ativo: boolean }
 export interface Categoria { id: number; nome: string; tipo: 'RECEITA' | 'DESPESA'; ativo: boolean }
