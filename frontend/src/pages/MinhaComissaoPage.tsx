@@ -2,11 +2,12 @@ import { useEffect,useState,type FormEvent } from 'react'
 import { listarPeriodosComissoes,obterMinhaComissao,registrarAlimentacao } from '../api/comissoes'
 import type { CalendarioPorto,Comissao } from '../types/modelos'
 import { data,moeda } from '../utils/formatadores'
+import { periodoCorrente } from '../utils/periodos'
 
 export default function MinhaComissaoPage(){
   const [periodos,setPeriodos]=useState<CalendarioPorto[]>([]),[periodoId,setPeriodoId]=useState(0),[comissao,setComissao]=useState<Comissao|null>(null)
   const [erro,setErro]=useState(''),[mensagem,setMensagem]=useState(''),[salvando,setSalvando]=useState(false)
-  useEffect(()=>{listarPeriodosComissoes().then(lista=>{setPeriodos(lista);const atual=[...lista].reverse().find(x=>x.ativo)??lista.at(-1);if(atual)setPeriodoId(atual.id)}).catch(e=>setErro(e.message))},[])
+  useEffect(()=>{listarPeriodosComissoes().then(lista=>{setPeriodos(lista);const atual=periodoCorrente(lista);if(atual)setPeriodoId(atual.id)}).catch(e=>setErro(e.message))},[])
   useEffect(()=>{if(periodoId)obterMinhaComissao(periodoId).then(setComissao).catch(e=>setErro(e.message))},[periodoId])
   async function salvar(event:FormEvent<HTMLFormElement>){event.preventDefault();const form=new FormData(event.currentTarget);setSalvando(true);setErro('');try{await registrarAlimentacao(String(form.get('data')),Number(form.get('valor')),String(form.get('observacoes')||''));setMensagem('Alimentação registrada e enviada para aprovação.');event.currentTarget.reset();setComissao(await obterMinhaComissao(periodoId))}catch(e){setErro((e as Error).message)}finally{setSalvando(false)}}
   return <div className="page-enter commission-page"><header className="page-heading"><div><span className="eyebrow">Área do socorrista</span><h1>Minha comissão</h1><p>Acompanhe somente seus serviços pagos e sua alimentação no fechamento Porto.</p></div><label className="month-picker"><span>Período financeiro</span><select aria-label="Período financeiro" value={periodoId||''} onChange={e=>setPeriodoId(Number(e.target.value))}><option value="">Selecione</option>{periodos.map(p=><option key={p.id} value={p.id}>{p.descricao} · {data(p.competenciaInicio)} a {data(p.competenciaFim)}</option>)}</select></label></header>

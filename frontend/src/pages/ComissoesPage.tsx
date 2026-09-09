@@ -3,10 +3,11 @@ import { api } from '../api/http'
 import { baixarRelatorioComissoes,detalharComissao,listarPeriodosComissoes,registrarPagamentoComissao,resumirComissoes } from '../api/comissoes'
 import type { CalendarioPorto,Comissao,Motorista,ResumoComissao } from '../types/modelos'
 import { data,moeda } from '../utils/formatadores'
+import { periodoCorrente } from '../utils/periodos'
 
 export default function ComissoesPage(){
   const [periodos,setPeriodos]=useState<CalendarioPorto[]>([]),[motoristas,setMotoristas]=useState<Motorista[]>([]),[periodoId,setPeriodoId]=useState(0),[motoristaId,setMotoristaId]=useState(0),[itens,setItens]=useState<ResumoComissao[]>([]),[detalhe,setDetalhe]=useState<Comissao|null>(null),[erro,setErro]=useState(''),[mensagem,setMensagem]=useState('')
-  useEffect(()=>{Promise.all([listarPeriodosComissoes(),api<Motorista[]>('/api/motoristas')]).then(([p,m])=>{setPeriodos(p);setMotoristas(m);const atual=[...p].reverse().find(x=>x.ativo)??p.at(-1);if(atual)setPeriodoId(atual.id)}).catch(e=>setErro(e.message))},[])
+  useEffect(()=>{Promise.all([listarPeriodosComissoes(),api<Motorista[]>('/api/motoristas')]).then(([p,m])=>{setPeriodos(p);setMotoristas(m);const atual=periodoCorrente(p);if(atual)setPeriodoId(atual.id)}).catch(e=>setErro(e.message))},[])
   useEffect(()=>{if(periodoId)resumirComissoes(periodoId,motoristaId||undefined).then(setItens).catch(e=>setErro(e.message))},[periodoId,motoristaId])
   async function abrir(id:number){try{setDetalhe(await detalharComissao(id,periodoId))}catch(e){setErro((e as Error).message)}}
   async function pagar(evento:FormEvent<HTMLFormElement>){evento.preventDefault();if(!detalhe)return;const form=new FormData(evento.currentTarget)

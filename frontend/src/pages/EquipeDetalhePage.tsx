@@ -4,6 +4,7 @@ import { listarPeriodosComissoes,obterDetalheSocorrista } from '../api/comissoes
 import { Carregando,ErroPagina } from '../components/EstadoPagina'
 import type { CalendarioPorto,DetalheSocorrista } from '../types/modelos'
 import { data,moeda } from '../utils/formatadores'
+import { periodoCorrente } from '../utils/periodos'
 
 const statusPagamento={PAGO:'Pago',PAGO_EM_OUTRO_PERIODO:'Pago em outro período',AGUARDANDO_PAGAMENTO:'Aguardando pagamento'} as const
 
@@ -11,7 +12,7 @@ export default function EquipeDetalhePage(){
   const motoristaId=Number(useParams().id)
   const [periodos,setPeriodos]=useState<CalendarioPorto[]>([]),[periodoId,setPeriodoId]=useState(0),[detalhe,setDetalhe]=useState<DetalheSocorrista|null>(null)
   const [carregandoPeriodos,setCarregandoPeriodos]=useState(true),[carregandoDetalhe,setCarregandoDetalhe]=useState(false),[erro,setErro]=useState('')
-  useEffect(()=>{listarPeriodosComissoes().then(lista=>{setPeriodos(lista);const atual=[...lista].reverse().find(item=>item.ativo)??lista.at(-1);if(atual)setPeriodoId(atual.id)}).catch(e=>setErro(e.message)).finally(()=>setCarregandoPeriodos(false))},[])
+  useEffect(()=>{listarPeriodosComissoes().then(lista=>{setPeriodos(lista);const atual=periodoCorrente(lista);if(atual)setPeriodoId(atual.id)}).catch(e=>setErro(e.message)).finally(()=>setCarregandoPeriodos(false))},[])
   useEffect(()=>{if(!motoristaId||!periodoId)return;setCarregandoDetalhe(true);setErro('');obterDetalheSocorrista(motoristaId,periodoId).then(setDetalhe).catch(e=>setErro(e.message)).finally(()=>setCarregandoDetalhe(false))},[motoristaId,periodoId])
   if(carregandoPeriodos)return <Carregando/>
   if(erro&&!detalhe)return <ErroPagina mensagem={erro}/>
