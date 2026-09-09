@@ -33,6 +33,7 @@ public class AuthService {
                 .filter(u -> encoder.matches(request.senha(), u.getSenhaHash()))
                 .orElseThrow(() -> new IllegalArgumentException("E-mail ou senha inválidos."));
         regravarHashSeDesatualizado(usuario, request.senha());
+        sessoes.deleteByUsuarioAndExpiraEmBefore(usuario, OffsetDateTime.now());
         String token = TokenSeguro.gerar();
         sessoes.save(new Sessao(usuario, TokenSeguro.hash(token), OffsetDateTime.now().plusHours(horasSessao)));
         return new LoginResponse(token, resposta(usuario));
@@ -50,6 +51,8 @@ public class AuthService {
             throw new IllegalArgumentException("A senha atual não confere.");
         }
         usuario.trocarSenha(encoder.encode(request.novaSenha()));
+        // trocar a senha e o que se faz quando um acesso vaza: os tokens ja emitidos precisam morrer junto.
+        sessoes.deleteByUsuario(usuario);
     }
     public UsuarioResponse me(UsuarioPrincipal principal) {
         return new UsuarioResponse(principal.id(), principal.nome(), principal.email(), principal.perfil());

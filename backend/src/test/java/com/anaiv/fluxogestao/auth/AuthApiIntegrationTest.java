@@ -77,6 +77,37 @@ class AuthApiIntegrationTest {
                 .andExpect(jsonPath("$.detalhe").value("Já existe um usuário com este e-mail."));
     }
 
+    @Test
+    void trocaDeSenhaDerrubaAsSessoesAbertasEmOutrosDispositivos() throws Exception {
+        String admin = JsonPath.read(login("admin@fluxogestao.local", "Admin@123", 200), "$.token");
+        mvc.perform(post("/api/usuarios").header("Authorization", "Bearer " + admin)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"nome":"Usuário Sessões","email":"sessoes.troca@example.com",
+                                 "senha":"Sessoes@123","perfil":"FUNCIONARIO"}
+                                """))
+                .andExpect(status().isCreated());
+
+        String celular = JsonPath.read(login("sessoes.troca@example.com", "Sessoes@123", 200), "$.token");
+        String computador = JsonPath.read(login("sessoes.troca@example.com", "Sessoes@123", 200), "$.token");
+        assertThat(celular).isNotEqualTo(computador);
+        mvc.perform(get("/api/auth/me").header("Authorization", "Bearer " + celular)).andExpect(status().isOk());
+
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/auth/senha")
+                        .header("Authorization", "Bearer " + computador)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"senhaAtual":"Sessoes@123","novaSenha":"NovaSessao@123"}
+                                """))
+                .andExpect(status().isNoContent());
+
+        mvc.perform(get("/api/auth/me").header("Authorization", "Bearer " + celular)).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/auth/me").header("Authorization", "Bearer " + computador)).andExpect(status().isUnauthorized());
+        login("sessoes.troca@example.com", "Sessoes@123", 400);
+        String novo = JsonPath.read(login("sessoes.troca@example.com", "NovaSessao@123", 200), "$.token");
+        mvc.perform(get("/api/auth/me").header("Authorization", "Bearer " + novo)).andExpect(status().isOk());
+    }
+
     private String login(String email, String senha, int statusEsperado) throws Exception {
         var resultado = mvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
