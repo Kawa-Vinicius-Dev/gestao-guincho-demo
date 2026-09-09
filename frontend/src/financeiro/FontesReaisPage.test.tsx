@@ -2,7 +2,6 @@ import { render, screen } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { beforeEach, expect, test, vi } from 'vitest'
 import App from '../App'
-import { dadosIniciais } from '../demo/dadosIniciais'
 import { servidor } from '../test/servidor'
 
 const TOKEN_KEY = 'fluxo-gestao:token:v1'
@@ -19,8 +18,8 @@ beforeEach(() => {
 })
 
 test('PostgreSQL vazio ignora lançamentos financeiros antigos do localStorage', async () => {
+  // sobra do prototipo antigo: o modulo demo nao existe mais, mas a chave pode estar no navegador do usuario
   localStorage.setItem('gestao-guincho:demo:v4', JSON.stringify({
-    ...dadosIniciais,
     lancamentos: [
       { id: 901, tipo: 'DESPESA', categoria: 'Combustível', descricao: 'Gasolina', valor: 100, data: '2026-07-10', status: 'PAGO', origem: 'Demo' },
       { id: 902, tipo: 'RECEITA', categoria: 'Serviço', descricao: 'Atendimento', valor: 300, data: '2026-07-11', status: 'RECEBIDO', origem: 'Demo' },

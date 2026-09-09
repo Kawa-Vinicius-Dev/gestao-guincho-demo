@@ -27,6 +27,7 @@ const PortoOss=lazy(()=>import('./pages/PortoOrdensServicoPage'))
 const PortoPendencias=lazy(()=>import('./pages/PortoPendenciasPage'))
 const PortoCalendario=lazy(()=>import('./pages/PortoCalendarioPage'))
 const PortoRelatorios=lazy(()=>import('./pages/PortoRelatoriosPage'))
+const Configuracoes=lazy(()=>import('./pages/ConfiguracoesPage'))
 const NaoEncontrado=lazy(()=>import('./pages/NaoEncontradoPage'))
 
 function MedirTransicaoDeRota(){
@@ -95,6 +96,7 @@ export default function App(){
         <Route path="/porto/calendario" element={<PortoCalendario/>}/>
         <Route path="/porto/relatorios" element={<PortoRelatorios/>}/>
         <Route path="/usuarios" element={<Equipe/>}/>
+        <Route path="/configuracoes" element={<Configuracoes/>}/>
       </Route>
       <Route path="*" element={<NaoEncontrado/>}/>
     </Route></Route>

@@ -20,8 +20,9 @@ const itens = [
   ['/porto/pendencias', 'Pendências e devolvidos', true, 'porto'],
   ['/porto/calendario', 'Calendário de pagamentos', true, 'porto'],
   ['/porto/relatorios', 'Relatórios Porto', true, 'porto'],
+  ['/configuracoes', 'Configurações', true, 'sistema'],
 ] as const
-const grupos = { financeiro: 'Financeiro', operacao: 'Operação', equipe: 'Equipe', porto: 'Porto Seguro' } as const
+const grupos = { financeiro: 'Financeiro', operacao: 'Operação', equipe: 'Equipe', porto: 'Porto Seguro', sistema: 'Sistema' } as const
 
 export function Layout() {
   const { usuario, logout } = useAuth()
