@@ -19,6 +19,13 @@ public class Motorista {
         this.nome = nome; this.telefone = telefone; this.documento = documento; this.qra = normalizarQra(qra); this.usuario = usuario; this.veiculo = veiculo;
     }
     public void definirVeiculo(Veiculo veiculo) { this.veiculo = veiculo; }
+    public void atualizar(String nome, String telefone, String documento, String qra, Usuario usuario, Veiculo veiculo) {
+        this.nome = nome; this.telefone = telefone; this.documento = documento; this.qra = normalizarQra(qra);
+        this.usuario = usuario; this.veiculo = veiculo;
+    }
+    /** Desativar nao apaga: as OS ja atendidas continuam apontando para ele e o historico fica de pe. */
+    public void desativar() { this.ativo = false; }
+    public void reativar() { this.ativo = true; }
     public Long getId() { return id; }
     public String getNome() { return nome; }
     public String getTelefone() { return telefone; }

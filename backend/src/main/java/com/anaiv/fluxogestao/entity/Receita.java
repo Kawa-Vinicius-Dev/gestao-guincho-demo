@@ -40,6 +40,14 @@ public class Receita {
         this.contratante=contratante;this.categoria=categoria;this.descricao=descricao;this.valor=valor;this.dataCompetencia=competencia;
         this.dataRecebimento=recebimento;this.status=status;this.recorrente=recorrente;this.veiculo=veiculo;this.observacoes=observacoes;
     }
+    /**
+     * Quem executou e com que viatura sao dados administrativos: mudam depois da importacao, quando
+     * o operacional descobre de quem era a OS. Valor, datas e status vieram da Porto e ficam como
+     * chegaram - o dinheiro nao muda porque alguem corrigiu um vinculo.
+     */
+    public void atualizarVinculoAdministrativo(Motorista motorista,Veiculo veiculo){
+        this.motorista=motorista;if(veiculo!=null)this.veiculo=veiculo;
+    }
     public boolean isManual(){return contaReceber==null&&ordemServicoPorto==null&&ordemPagamentoPorto==null&&importacao==null;}
     public void sincronizarPorto(ContaReceber conta,Contratante contratante,Categoria categoria,String descricao,
         BigDecimal valor,LocalDate competencia,LocalDate recebimento,Veiculo veiculo,Motorista motorista,

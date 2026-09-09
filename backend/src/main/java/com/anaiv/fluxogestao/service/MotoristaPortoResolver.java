@@ -20,5 +20,12 @@ public class MotoristaPortoResolver {
         if(!preenchido(os.getQra()))return null;
         return motoristas.findByQraIgnoreCase(os.getQra().trim()).filter(Motorista::isAtivo).orElse(null);
     }
+    /**
+     * QRA de quem saiu da equipe. Nao serve para vincular OS nova, mas tambem nao pode apagar o
+     * vinculo de uma OS antiga numa reimportacao: quem atendeu aquele servico continua sendo ele.
+     */
+    public boolean desativado(OrdemServicoPorto os){
+        return preenchido(os.getQra())&&motoristas.findByQraIgnoreCase(os.getQra().trim()).filter(x->!x.isAtivo()).isPresent();
+    }
     private boolean preenchido(String valor){return valor!=null&&!valor.isBlank();}
 }

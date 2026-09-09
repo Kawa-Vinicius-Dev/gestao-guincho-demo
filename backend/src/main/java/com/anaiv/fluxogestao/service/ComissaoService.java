@@ -74,10 +74,11 @@ public class ComissaoService {
     /** Uma tela so, todos os socorristas: as tres consultas sao feitas em lote, nao por socorrista. */
     @Transactional(readOnly=true) public List<ResumoComissaoResponse> resumo(Long calendarioPagamentoId,Long motoristaId){
         CalendarioPagamentoPorto periodo=calendarios.obterPeriodo(calendarioPagamentoId);
-        List<Motorista> ativos=motoristas.findAllParaListagem().stream().filter(Motorista::isAtivo).filter(m->motoristaId==null||m.getId().equals(motoristaId)).toList();
-        if(ativos.isEmpty())return List.of();
-        DadosDoPeriodo dados=carregar(ativos,periodo);
-        return ativos.stream().map(m->calcular(periodo,m,dados)).map(c->new ResumoComissaoResponse(c.motoristaId(),c.socorrista(),c.quantidadeServicosPagos(),c.producaoPaga(),c.comissaoBruta(),c.alimentacaoAprovada(),c.liquido(),c.pagamento())).toList();
+        List<Motorista> equipe=motoristas.findAllParaListagem().stream().filter(m->motoristaId==null||m.getId().equals(motoristaId)).toList();
+        if(equipe.isEmpty())return List.of();
+        DadosDoPeriodo dados=carregar(equipe,periodo);
+        // desativado sai da lista, menos quando trabalhou no periodo: a comissao dele ainda tem de ser conferida e paga
+        return equipe.stream().filter(m->m.isAtivo()||!dados.servicosDe(m).isEmpty()).map(m->calcular(periodo,m,dados)).map(c->new ResumoComissaoResponse(c.motoristaId(),c.socorrista(),c.quantidadeServicosPagos(),c.producaoPaga(),c.comissaoBruta(),c.alimentacaoAprovada(),c.liquido(),c.pagamento())).toList();
     }
     private record DadosDoPeriodo(Map<Long,List<OrdemServicoPorto>> servicos,Map<Long,List<Despesa>> alimentacoes,Map<Long,PagamentoComissao> pagamentos){
         List<OrdemServicoPorto> servicosDe(Motorista m){return servicos.getOrDefault(m.getId(),List.of());}

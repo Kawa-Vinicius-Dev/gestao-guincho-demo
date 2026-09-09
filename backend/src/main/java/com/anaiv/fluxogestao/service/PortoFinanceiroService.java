@@ -73,6 +73,17 @@ public class PortoFinanceiroService {
         return new ResultadoSincronizacao(receitaExistente==null?1:0,receitaExistente==null?0:1,os.getValorTotal());
     }
 
+    /**
+     * Chamado quando o operacional associa a OS a um socorrista depois da importacao. Leva o
+     * vinculo para a conta e a receita ja lancadas, para que a OS apareca no socorrista e no
+     * veiculo dele nos relatorios. Nenhum valor e recalculado aqui.
+     */
+    public void atualizarVinculoAdministrativo(OrdemServicoPorto os,Motorista motorista){
+        Veiculo veiculo=localizarVeiculo(os);
+        contas.findByOrdemServicoPorto(os).ifPresent(x->x.atualizarVinculoAdministrativo(motorista,veiculo));
+        receitas.findByOrdemServicoPorto(os).ifPresent(x->x.atualizarVinculoAdministrativo(motorista,veiculo));
+    }
+
     /** A Porto nao informa a viatura no relatorio, entao o veiculo vem do cadastro do socorrista. */
     private Veiculo localizarVeiculo(OrdemServicoPorto os){
         if(preenchido(os.getSiglaViatura())){Optional<Veiculo> resultado=veiculos.findFirstByIdentificacaoIgnoreCase(os.getSiglaViatura().trim());if(resultado.isPresent())return resultado.get();}

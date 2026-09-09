@@ -40,8 +40,23 @@ public class CadastroService {
     }
     @Transactional public MotoristaResponse criar(MotoristaRequest r) {
         Usuario usuario = r.usuarioId() == null ? null : usuario(r.usuarioId());
-        if(r.qra()!=null&&!r.qra().isBlank()&&motoristas.findByQraIgnoreCase(r.qra().trim()).isPresent())throw new IllegalArgumentException("Já existe um motorista com este QRA.");
+        validarQraUnico(r.qra(), null);
         return motorista(motoristas.save(new Motorista(r.nome(), r.telefone(), r.documento(), r.qra(), usuario, obterVeiculo(r.veiculoId()))));
+    }
+    @Transactional public MotoristaResponse atualizar(Long id, MotoristaRequest r) {
+        Motorista alvo = motoristas.findById(id).orElseThrow(() -> naoEncontrado("Socorrista", id));
+        validarQraUnico(r.qra(), id);
+        alvo.atualizar(r.nome(), r.telefone(), r.documento(), r.qra(),
+            r.usuarioId() == null ? null : usuario(r.usuarioId()), obterVeiculo(r.veiculoId()));
+        return motorista(alvo);
+    }
+    @Transactional public MotoristaResponse desativar(Long id) { Motorista alvo = motoristas.findById(id).orElseThrow(() -> naoEncontrado("Socorrista", id)); alvo.desativar(); return motorista(alvo); }
+    @Transactional public MotoristaResponse reativar(Long id) { Motorista alvo = motoristas.findById(id).orElseThrow(() -> naoEncontrado("Socorrista", id)); alvo.reativar(); return motorista(alvo); }
+    /** O QRA e a identidade do socorrista na Porto: nao pode se repetir, nem depois de uma edicao. */
+    private void validarQraUnico(String qra, Long id) {
+        if (qra == null || qra.isBlank()) return;
+        motoristas.findByQraIgnoreCase(qra.trim()).filter(x -> !x.getId().equals(id))
+            .ifPresent(x -> { throw new IllegalArgumentException("Já existe um socorrista com este QRA."); });
     }
     public List<MotoristaResponse> motoristas() { return motoristas.findAllParaListagem().stream().map(this::motorista).toList(); }
     @Transactional public UsuarioResponse criar(UsuarioRequest r) {

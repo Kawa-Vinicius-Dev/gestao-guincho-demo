@@ -37,6 +37,10 @@ public class ContaReceber {
         this.veiculo = veiculo; this.observacoes = observacoes; this.origem = origem; this.importacao = importacao;
     }
     public void receber(BigDecimal valor, LocalDate data) { valorRecebido = valor; dataRecebimento = data; status = StatusContaReceber.RECEBIDO; }
+    /** Igual a receita: troca quem executou e a viatura, nunca o valor previsto ou o recebido. */
+    public void atualizarVinculoAdministrativo(Motorista motorista,Veiculo veiculo){
+        this.motorista=motorista;if(veiculo!=null)this.veiculo=veiculo;
+    }
     public void sincronizarPorto(Contratante contratante,String protocolo,String descricao,BigDecimal valor,
         LocalDate competencia,LocalDate pagamento,Veiculo veiculo,Motorista motorista,Importacao importacao,
         OrdemServicoPorto os,OrdemPagamentoPorto op) {

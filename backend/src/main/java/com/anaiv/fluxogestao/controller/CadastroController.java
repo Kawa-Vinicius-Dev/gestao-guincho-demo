@@ -27,6 +27,12 @@ public class CadastroController {
     @GetMapping("/motoristas") public List<MotoristaResponse> motoristas(){ return service.motoristas(); }
     @PostMapping("/motoristas") @ResponseStatus(HttpStatus.CREATED) @PreAuthorize("hasRole('ADMINISTRADOR')")
     public MotoristaResponse motorista(@Valid @RequestBody MotoristaRequest r){ return service.criar(r); }
+    @PutMapping("/motoristas/{id}") @PreAuthorize("hasRole('ADMINISTRADOR')")
+    public MotoristaResponse atualizarMotorista(@PathVariable Long id,@Valid @RequestBody MotoristaRequest r){ return service.atualizar(id,r); }
+    @PatchMapping("/motoristas/{id}/desativar") @PreAuthorize("hasRole('ADMINISTRADOR')")
+    public MotoristaResponse desativarMotorista(@PathVariable Long id){ return service.desativar(id); }
+    @PatchMapping("/motoristas/{id}/reativar") @PreAuthorize("hasRole('ADMINISTRADOR')")
+    public MotoristaResponse reativarMotorista(@PathVariable Long id){ return service.reativar(id); }
     @GetMapping("/usuarios") @PreAuthorize("hasRole('ADMINISTRADOR')") public List<UsuarioResponse> usuarios(){ return service.usuarios(); }
     @PatchMapping("/usuarios/{id}/redefinir-senha") @PreAuthorize("hasRole('ADMINISTRADOR')")
     public SenhaRedefinidaResponse redefinirSenha(@PathVariable Long id){ return service.redefinirSenha(id); }

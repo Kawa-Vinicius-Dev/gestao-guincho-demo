@@ -113,3 +113,4 @@ button,input,select,textarea{font:inherit}button{color:inherit}a{color:inherit}:
 @media(max-width:480px){.commission-metrics{grid-template-columns:1fr}}
 .senha-provisoria{margin:14px 0;padding:14px;border:1px dashed var(--line);border-radius:8px;background:#f8fafc;text-align:center}.senha-provisoria code{font:600 20px 'IBM Plex Mono',monospace;letter-spacing:2px;color:var(--ink)}
 .login-ajuda{margin-top:18px;color:var(--muted);font-size:9px}.login-ajuda summary{cursor:pointer;color:var(--blue-600)}.login-ajuda p{margin:7px 0 0}
+.team-card-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.team-card-actions .team-detail-action{margin:0}
