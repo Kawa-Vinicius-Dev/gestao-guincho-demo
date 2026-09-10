@@ -192,9 +192,10 @@ class PortoApiIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON).content("{}"))
             .andExpect(status().isOk()).andExpect(jsonPath("$.importados").value(1));
         String ops=mvc.perform(get("/api/porto/ordens-pagamento").header("Authorization","Bearer "+token))
-            .andExpect(status().isOk()).andExpect(jsonPath("$[0].situacao").value("PROGRAMADO"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[?(@.numero == 'OP-900')].situacao",org.hamcrest.Matchers.contains("PROGRAMADO")))
             .andReturn().getResponse().getContentAsString();
-        long opId=((Number)JsonPath.read(ops,"$[0].id")).longValue();
+        long opId=((Number)JsonPath.<java.util.List<java.util.Map<String,Object>>>read(ops,"$[?(@.numero == 'OP-900')]").getFirst().get("id")).longValue();
 
         long previaOs=previa(token,"os.csv","""
             Número da Ordem de Serviço,Valor Total,Especialidade,Sigla da Viatura,Socorrista,QRA,Data de atendimento
