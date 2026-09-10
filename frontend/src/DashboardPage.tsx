@@ -1,9 +1,9 @@
 import { useEffect,useState } from 'react'
 import { Link } from 'react-router-dom'
-import { api } from '../api/http'
-import { resumirOrdensPagamentoPorto } from '../api/porto'
-import type { Dashboard,ResumoOpsPorto } from '../types/modelos'
-import { moeda,numero } from '../utils/formatadores'
+import { api } from './api/http'
+import { resumirOrdensPagamentoPorto } from './api/porto'
+import type { Dashboard,ResumoOpsPorto } from './types/modelos'
+import { moeda,numero } from './utils/formatadores'
 
 const meses=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez']
 const rotuloMes=(mes:string)=>{const [ano,numeroMes]=mes.split('-').map(Number);return `${meses[numeroMes-1]}/${String(ano).slice(-2)}`}

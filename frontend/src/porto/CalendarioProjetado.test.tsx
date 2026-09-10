@@ -2,7 +2,7 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { expect, test } from 'vitest'
-import PortoCalendarioPage from '../pages/PortoCalendarioPage'
+import PortoCalendarioPage from './PortoCalendarioPage'
 import { servidor } from '../test/servidor'
 
 const informado = {

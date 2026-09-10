@@ -2,7 +2,7 @@ import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { expect, test, vi } from 'vitest'
-import PortoImportacoesPage from '../pages/PortoImportacoesPage'
+import PortoImportacoesPage from './PortoImportacoesPage'
 import { servidor } from '../test/servidor'
 
 test('mede a chamada de análise de importação', async () => {
