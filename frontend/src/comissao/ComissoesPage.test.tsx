@@ -3,8 +3,8 @@ import userEvent from '@testing-library/user-event'
 import { http,HttpResponse } from 'msw'
 import { expect,test } from 'vitest'
 import { servidor } from '../test/servidor'
-import MinhaComissaoPage from '../pages/MinhaComissaoPage'
-import ComissoesPage from '../pages/ComissoesPage'
+import MinhaComissaoPage from './MinhaComissaoPage'
+import ComissoesPage from './ComissoesPage'
 
 const periodos=[{id:7,dataPagamento:'2026-08-31',competenciaInicio:'2026-08-01',competenciaFim:'2026-08-31',descricao:'Agosto',ativo:true}]
 const detalhe={calendarioPagamentoId:7,periodo:'01/08/2026 a 31/08/2026',socorrista:'Ana Motorista',motoristaId:4,quantidadeServicosPagos:2,producaoPaga:1000,percentualComissao:.2,comissaoBruta:200,alimentacaoAprovada:250,alimentacaoPendente:35,liquido:-50,aguardandoOp:false,servicos:[{id:1,numeroOs:'OS-1',especialidade:'GUINCHO',dataAtendimento:'2026-06-30',numeroOp:'OP-7',valorServico:1000,comissaoServico:200}],alimentacoes:[{id:9,motoristaId:4,data:'2026-08-10',valor:250,situacao:'PAGO',aprovada:true}]}

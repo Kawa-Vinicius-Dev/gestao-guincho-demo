@@ -2,9 +2,9 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { expect, test, vi } from 'vitest'
-import PortoOrdensPagamentoPage from '../pages/PortoOrdensPagamentoPage'
-import PortoOrdensServicoPage from '../pages/PortoOrdensServicoPage'
-import PortoPendenciasPage from '../pages/PortoPendenciasPage'
+import PortoOrdensPagamentoPage from './PortoOrdensPagamentoPage'
+import PortoOrdensServicoPage from './PortoOrdensServicoPage'
+import PortoPendenciasPage from './PortoPendenciasPage'
 import { servidor } from '../test/servidor'
 
 test('confirma recebimento manual de OP programada', async()=>{

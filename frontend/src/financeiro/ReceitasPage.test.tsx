@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { http,HttpResponse } from 'msw'
 import { expect,test } from 'vitest'
 import { servidor } from '../test/servidor'
-import ReceitasPage from '../pages/ReceitasPage'
+import ReceitasPage from './ReceitasPage'
 
 test('edita receita manual sem duplicar e exclui somente após a confirmação',async()=>{
   let receitas=[{id:1,descricao:'Manual',valor:100,dataCompetencia:'2026-08-01',dataRecebimento:'2026-08-01',status:'RECEBIDA',recorrente:false,categoria:'Serviços',categoriaId:1,manual:true},{id:2,descricao:'Porto OP 9',valor:500,dataCompetencia:'2026-08-01',dataRecebimento:'2026-08-31',status:'RECEBIDA',recorrente:false,categoria:'Serviços',categoriaId:1,manual:false}]

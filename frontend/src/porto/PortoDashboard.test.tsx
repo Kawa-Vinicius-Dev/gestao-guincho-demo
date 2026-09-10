@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { expect, test } from 'vitest'
-import PortoDashboardPage from '../pages/PortoDashboardPage'
+import PortoDashboardPage from './PortoDashboardPage'
 import { servidor } from '../test/servidor'
 
 test('separa realizado, programado e recebido no dashboard Porto',async()=>{

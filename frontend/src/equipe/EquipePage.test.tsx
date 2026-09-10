@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { MemoryRouter } from 'react-router-dom'
 import { expect, test } from 'vitest'
-import EquipePage from '../pages/EquipePage'
+import EquipePage from './EquipePage'
 import { servidor } from '../test/servidor'
 
 // a tela tem Link para o detalhe do socorrista, entao precisa de rota em volta
@@ -91,7 +91,7 @@ test('quem já tem acesso não recebe o botão de criar de novo', async () => {
 })
 
 test('socorrista desativado não é oferecido para vincular uma OS', async () => {
-  const { default: PortoOrdensServicoPage } = await import('../pages/PortoOrdensServicoPage')
+  const { default: PortoOrdensServicoPage } = await import('../porto/PortoOrdensServicoPage')
   servidor.use(
     http.get('/api/motoristas', () => HttpResponse.json([socorrista, { id: 5, nome: 'Quem Saiu', qra: 'QRA-2', ativo: false }])),
     http.get('/api/porto/ordens-servico', () => HttpResponse.json([{ id: 3, numero: 'OS-SEM', valorTotal: 300, qra: 'QRA-X', dataAtendimento: '2026-07-02' }])),

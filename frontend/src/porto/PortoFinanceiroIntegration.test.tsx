@@ -1,7 +1,7 @@
 import { render,screen,within } from '@testing-library/react'
 import { http,HttpResponse } from 'msw'
 import { expect,test } from 'vitest'
-import DashboardPage from '../pages/DashboardPage'
+import DashboardPage from '../DashboardPage'
 import { servidor } from '../test/servidor'
 import { MemoryRouter } from 'react-router-dom'
 

@@ -1,6 +1,6 @@
 import { render,screen } from '@testing-library/react'
 import { expect,test } from 'vitest'
-import DrePage from '../pages/DrePage'
+import DrePage from './DrePage'
 
 test('DRE usa os totais financeiros reais expostos pelo backend',async()=>{
   render(<DrePage/>)
