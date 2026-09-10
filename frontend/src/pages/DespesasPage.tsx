@@ -48,10 +48,20 @@ export default function DespesasPage(){
   async function aprovar(id:number){setErro('');try{await api(`/api/despesas/${id}/aprovar`,{method:'PATCH'});await carregar()}catch(x){setErro((x as Error).message)}}
   async function pagar(id:number){setErro('');setMensagem('')
     try{await api(`/api/despesas/${id}/pagar`,{method:'PATCH',body:JSON.stringify({dataPagamento:hoje(),formaPagamento:'PIX'})});setMensagem('Pagamento registrado no caixa oficial.');await carregar()}catch(x){setErro((x as Error).message)}}
+  async function anexarComprovante(id:number,arquivo:File){setErro('')
+    const dados=new FormData();dados.append('arquivo',arquivo)
+    try{await api(`/api/despesas/${id}/comprovante`,{method:'POST',body:dados});await carregar()}catch(x){setErro((x as Error).message)}}
+  async function abrirComprovante(id:number){setErro('')
+    try{const r=await api<{url:string}>(`/api/despesas/${id}/comprovante`);window.open(r.url,'_blank','noopener')}catch(x){setErro((x as Error).message)}}
+  async function removerComprovante(id:number){setErro('')
+    try{await api(`/api/despesas/${id}/comprovante`,{method:'DELETE'});await carregar()}catch(x){setErro((x as Error).message)}}
   return <div className="page-enter"><header className="page-heading"><div><span className="eyebrow">Saídas</span><h1>Despesas</h1><p>Custos da operação vinculados a veículos, motoristas e protocolos.</p></div><button className="button button-primary" onClick={()=>setForm(true)}>Registrar despesa</button></header>
     {erro?<div className="form-alert" role="alert">{erro}</div>:null}{mensagem?<div className="success-notice">{mensagem}</div>:null}
-    {admin?<section className="panel">{lista.length?<div className="table-scroll"><table><thead><tr><th>Descrição</th><th>Categoria</th><th>Data</th><th>Veículo</th><th>Situação</th><th>Aprovação</th><th>Valor</th><th/></tr></thead><tbody>
-      {lista.map(d=><tr key={d.id}><td><strong>{d.descricao}</strong><small>{d.criadoPor}</small></td><td>{d.categoria}</td><td>{data(d.data)}</td><td>{d.veiculo||'—'}</td><td><StatusBadge status={d.status}/></td><td>{d.aprovada?<span className="approved">Aprovada</span>:<button className="table-action" onClick={()=>void aprovar(d.id)}>Aprovar</button>}</td><td>{moeda(d.valor)}</td><td>{d.aprovada&&d.status!=='PAGO'&&d.status!=='REJEITADO'?<button className="table-action" onClick={()=>void pagar(d.id)}>Registrar pagamento</button>:null}</td></tr>)}
+    {admin?<section className="panel">{lista.length?<div className="table-scroll"><table><thead><tr><th>Descrição</th><th>Categoria</th><th>Data</th><th>Veículo</th><th>Situação</th><th>Aprovação</th><th>Valor</th><th>Comprovante</th><th/></tr></thead><tbody>
+      {lista.map(d=><tr key={d.id}><td><strong>{d.descricao}</strong><small>{d.criadoPor}</small></td><td>{d.categoria}</td><td>{data(d.data)}</td><td>{d.veiculo||'—'}</td><td><StatusBadge status={d.status}/></td><td>{d.aprovada?<span className="approved">Aprovada</span>:<button className="table-action" onClick={()=>void aprovar(d.id)}>Aprovar</button>}</td><td>{moeda(d.valor)}</td>
+        <td>{d.comprovanteNomeOriginal?<span className="comprovante-anexado"><button className="table-action" onClick={()=>void abrirComprovante(d.id)}>Ver</button><button className="table-action table-action-danger" onClick={()=>void removerComprovante(d.id)}>Remover</button></span>
+          :<input className="file-action" aria-label="Anexar comprovante" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" onChange={e=>{const arquivo=e.target.files?.[0];if(arquivo)void anexarComprovante(d.id,arquivo);e.target.value=''}}/>}</td>
+        <td>{d.aprovada&&d.status!=='PAGO'&&d.status!=='REJEITADO'?<button className="table-action" onClick={()=>void pagar(d.id)}>Registrar pagamento</button>:null}</td></tr>)}
       </tbody></table></div>:<Vazio titulo="Nenhuma despesa" descricao="Registre custos ou aguarde lançamentos dos socorristas."/>}</section>
       :<section className="employee-callout"><span className="eyebrow">Perfil socorrista</span><h2>Registre os custos assim que acontecerem.</h2><p>Seus lançamentos serão conferidos pelo administrador antes de entrarem no financeiro.</p><button className="button button-primary" onClick={()=>setForm(true)}>Registrar agora</button></section>}
     {admin?<section className="panel" aria-label="Despesas fixas"><header className="panel-title"><div><h2>Despesas fixas</h2><p>O que cai todo mês: aluguel, seguro, parcela. Cadastre uma vez e lance o mês quando quiser.</p></div>

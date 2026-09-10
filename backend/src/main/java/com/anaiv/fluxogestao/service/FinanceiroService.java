@@ -6,19 +6,29 @@ import com.anaiv.fluxogestao.entity.EnumsFinanceiros.*;
 import com.anaiv.fluxogestao.exception.RecursoNaoEncontradoException;
 import com.anaiv.fluxogestao.repository.*;
 import com.anaiv.fluxogestao.security.UsuarioPrincipal;
+import com.anaiv.fluxogestao.arquivos.ArmazenamentoArquivos;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 
 @Service
 public class FinanceiroService {
+    private static final Set<String> TIPOS_ACEITOS = Set.of("application/pdf", "image/jpeg", "image/png", "image/webp");
+    private static final long TAMANHO_MAXIMO_BYTES = 10L * 1024 * 1024;
+
     private final ContaReceberRepository contas; private final ReceitaRepository receitas;
     private final DespesaRepository despesas; private final CadastroService cadastros;
-    public FinanceiroService(ContaReceberRepository c, ReceitaRepository r, DespesaRepository d, CadastroService cad) {
-        contas=c; receitas=r; despesas=d; cadastros=cad;
+    private final ArmazenamentoArquivos armazenamento;
+    public FinanceiroService(ContaReceberRepository c, ReceitaRepository r, DespesaRepository d, CadastroService cad,
+                              ArmazenamentoArquivos armazenamento) {
+        contas=c; receitas=r; despesas=d; cadastros=cad; this.armazenamento=armazenamento;
     }
 
     @Transactional public ContaResponse criarConta(ContaRequest r) {
@@ -79,6 +89,46 @@ public class FinanceiroService {
     @Transactional public DespesaResponse pagar(Long id, PagamentoDespesaRequest r) {
         Despesa d=despesa(id);d.pagar(r.dataPagamento(),r.formaPagamento(),r.comprovante(),r.observacoes());return resposta(d);
     }
+    @Transactional public DespesaResponse anexarComprovante(Long id, MultipartFile arquivo, UsuarioPrincipal principal) {
+        Despesa d=despesa(id);
+        verificarAcessoAoComprovante(d,principal);
+        if (arquivo==null||arquivo.isEmpty()) throw new IllegalArgumentException("Selecione um arquivo para anexar.");
+        if (arquivo.getSize()>TAMANHO_MAXIMO_BYTES) throw new IllegalArgumentException("O arquivo excede o tamanho máximo de 10 MB.");
+        String contentType=arquivo.getContentType();
+        if (contentType==null||!TIPOS_ACEITOS.contains(contentType))
+            throw new IllegalArgumentException("Envie um comprovante em PDF, JPG, PNG ou WEBP.");
+        if (d.getComprovanteArquivo()!=null) armazenamento.remover(d.getComprovanteArquivo());
+        String caminho="despesas/"+id+"/"+UUID.randomUUID()+"-"+nomeSeguro(arquivo.getOriginalFilename());
+        try {
+            armazenamento.enviar(caminho, arquivo.getBytes(), contentType);
+        } catch (java.io.IOException e) {
+            throw new IllegalStateException("Não foi possível ler o arquivo enviado.", e);
+        }
+        d.anexarComprovante(caminho, arquivo.getOriginalFilename(), contentType, arquivo.getSize());
+        return resposta(d);
+    }
+    @Transactional(readOnly=true) public ComprovanteResponse urlComprovante(Long id, UsuarioPrincipal principal) {
+        Despesa d=despesa(id);
+        verificarAcessoAoComprovante(d,principal);
+        if (d.getComprovanteArquivo()==null) throw new RecursoNaoEncontradoException("Esta despesa não tem comprovante anexado.");
+        return new ComprovanteResponse(armazenamento.urlTemporaria(d.getComprovanteArquivo(), Duration.ofMinutes(5)));
+    }
+    @Transactional public DespesaResponse removerComprovante(Long id, UsuarioPrincipal principal) {
+        Despesa d=despesa(id);
+        verificarAcessoAoComprovante(d,principal);
+        if (d.getComprovanteArquivo()!=null) armazenamento.remover(d.getComprovanteArquivo());
+        d.removerComprovante();
+        return resposta(d);
+    }
+    private void verificarAcessoAoComprovante(Despesa d, UsuarioPrincipal principal) {
+        if (principal.perfil()==PerfilUsuario.ADMINISTRADOR) return;
+        if (!d.getCriadoPor().getId().equals(principal.id()))
+            throw new IllegalArgumentException("Você só pode gerenciar o comprovante das despesas que lançou.");
+    }
+    private String nomeSeguro(String nomeOriginal) {
+        String nome=nomeOriginal==null||nomeOriginal.isBlank()?"arquivo":nomeOriginal;
+        return nome.replaceAll("[^A-Za-z0-9._-]","_");
+    }
     @Transactional(readOnly=true) public List<LancamentoFinanceiroResponse> listarLancamentos(LocalDate inicio,LocalDate fim) {
         List<LancamentoFinanceiroResponse> itens=new ArrayList<>();
         receitas.findParaLancamentosEntre(inicio,fim).stream().filter(r->r.getStatus()!=StatusReceita.CANCELADA).map(r->{
@@ -120,5 +170,5 @@ public class FinanceiroService {
     public DespesaResponse resposta(Despesa d){return new DespesaResponse(d.getId(),d.getDescricao(),d.getCategoria().getNome(),d.getValor(),
         d.getData(),d.getVencimento(),d.getDataPagamento(),d.getFormaPagamento(),d.getVeiculo()==null?null:d.getVeiculo().getIdentificacao(),
         d.getMotorista()==null?null:d.getMotorista().getNome(),d.getProtocolo(),d.getComprovante(),d.getObservacoes(),d.getStatus(),
-        d.isAprovada(),d.getCriadoPor().getNome());}
+        d.isAprovada(),d.getCriadoPor().getNome(),d.getComprovanteNomeOriginal(),d.getComprovanteTamanhoBytes());}
 }

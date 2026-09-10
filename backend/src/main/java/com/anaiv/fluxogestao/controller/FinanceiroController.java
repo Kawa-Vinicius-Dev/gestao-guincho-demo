@@ -39,6 +39,13 @@ public class FinanceiroController {
     public DespesaResponse rejeitar(@PathVariable Long id,@AuthenticationPrincipal UsuarioPrincipal p){return financeiro.rejeitar(id,p);}
     @PatchMapping("/despesas/{id}/pagar") @PreAuthorize("hasRole('ADMINISTRADOR')")
     public DespesaResponse pagar(@PathVariable Long id,@Valid @RequestBody PagamentoDespesaRequest r){return financeiro.pagar(id,r);}
+    @PostMapping("/despesas/{id}/comprovante")
+    public DespesaResponse anexarComprovante(@PathVariable Long id,@RequestParam("arquivo") org.springframework.web.multipart.MultipartFile arquivo,
+        @AuthenticationPrincipal UsuarioPrincipal p){return financeiro.anexarComprovante(id,arquivo,p);}
+    @GetMapping("/despesas/{id}/comprovante")
+    public ComprovanteResponse urlComprovante(@PathVariable Long id,@AuthenticationPrincipal UsuarioPrincipal p){return financeiro.urlComprovante(id,p);}
+    @DeleteMapping("/despesas/{id}/comprovante")
+    public DespesaResponse removerComprovante(@PathVariable Long id,@AuthenticationPrincipal UsuarioPrincipal p){return financeiro.removerComprovante(id,p);}
 
     @GetMapping("/lancamentos") @PreAuthorize("hasRole('ADMINISTRADOR')")
     public List<LancamentoFinanceiroResponse> lancamentos(

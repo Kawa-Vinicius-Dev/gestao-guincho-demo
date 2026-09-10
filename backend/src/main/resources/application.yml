@@ -45,3 +45,8 @@ app:
   bootstrap:
     admin-email: ${ADMIN_EMAIL:}
     admin-password: ${ADMIN_PASSWORD:}
+  storage:
+    supabase:
+      url: ${SUPABASE_STORAGE_URL:}
+      service-role-key: ${SUPABASE_STORAGE_SERVICE_ROLE_KEY:}
+      bucket: ${SUPABASE_STORAGE_BUCKET:comprovantes}
