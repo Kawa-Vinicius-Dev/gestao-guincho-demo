@@ -153,14 +153,13 @@ DATABASE_PASSWORD=senha-segura
 ADMIN_EMAIL=administrador@empresa.com
 ADMIN_PASSWORD=senha-forte
 CORS_ALLOWED_ORIGINS=https://projeto.vercel.app
-STORAGE_DIR=/tmp/importacoes
 SESSION_HOURS=12
 SUPABASE_STORAGE_URL=https://SEU-PROJETO.supabase.co
 SUPABASE_STORAGE_SERVICE_ROLE_KEY=chave-service-role-do-supabase
 SUPABASE_STORAGE_BUCKET=comprovantes
 ```
 
-> `STORAGE_DIR` aponta para disco local, que é efêmero no Render (some a cada deploy ou restart) a menos que um Persistent Disk seja anexado ao serviço. Enquanto isso não for resolvido, trate os arquivos importados pela Porto como não duráveis — o banco em si (Supabase) é a fonte confiável de dado. Os comprovantes de despesa não têm esse problema: vão direto para o Supabase Storage (bucket privado `comprovantes`, criado manualmente no painel do Supabase), então sobrevivem a qualquer redeploy.
+> Nenhum arquivo enviado por usuário (comprovante de despesa, PDF de importação legado ou CSV/TXT da Porto) é gravado em disco local do servidor — todos vão direto para o Supabase Storage (bucket privado `comprovantes`, criado manualmente no painel do Supabase, com um prefixo por origem). Isso os torna duráveis a qualquer redeploy ou restart do Render, que tem disco efêmero.
 
 O Render fornece `PORT` automaticamente. Em execução local, o backend continua aceitando `SERVER_PORT` e usa a porta `8080` quando nenhuma das variáveis está definida.
 

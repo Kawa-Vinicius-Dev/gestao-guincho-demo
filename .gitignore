@@ -30,8 +30,6 @@ Thumbs.db
 !.env.example
 .env.local
 backend/data/
-backend/storage/
-storage/
 playwright-report/
 test-results/
 frontend/test-results/

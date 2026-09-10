@@ -15,6 +15,9 @@ public interface ArmazenamentoArquivos {
     /** Gera uma URL temporaria para baixar o arquivo, valida pelo tempo informado. */
     String urlTemporaria(String caminho, Duration validade);
 
+    /** Baixa o conteudo do arquivo para uso no proprio servidor (ex.: reler um CSV importado). */
+    byte[] baixar(String caminho);
+
     /** Remove o arquivo. Nao falha se o arquivo ja nao existir. */
     void remover(String caminho);
 }

@@ -1,5 +1,6 @@
 package com.anaiv.fluxogestao.financeiro;
 
+import com.anaiv.fluxogestao.arquivos.ArmazenamentoArquivos;
 import com.anaiv.fluxogestao.cadastro.*;
 import com.anaiv.fluxogestao.financeiro.*;
 import com.anaiv.fluxogestao.porto.*;
@@ -8,11 +9,9 @@ import com.anaiv.fluxogestao.financeiro.ImportacaoDtos.*;
 import com.anaiv.fluxogestao.financeiro.EnumsFinanceiros.*;
 import com.anaiv.fluxogestao.exception.RecursoNaoEncontradoException;
 import com.anaiv.fluxogestao.financeiro.ImportacaoRepository;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-import java.nio.file.*;
 import java.security.MessageDigest;
 import java.time.OffsetDateTime;
 import java.util.*;
@@ -20,10 +19,10 @@ import java.util.*;
 @Service
 public class ImportacaoService {
     private final ImportacaoRepository repository; private final LeitorDocumentoPortoSeguro leitor;
-    private final CadastroService cadastros; private final FinanceiroService financeiro; private final Path pasta;
+    private final CadastroService cadastros; private final FinanceiroService financeiro; private final ArmazenamentoArquivos armazenamento;
     public ImportacaoService(ImportacaoRepository r,LeitorDocumentoPortoSeguro l,CadastroService c,FinanceiroService f,
-                             @Value("${app.storage-dir}") String storage){
-        repository=r;leitor=l;cadastros=c;financeiro=f;pasta=Path.of(storage).toAbsolutePath().normalize();
+                             ArmazenamentoArquivos armazenamento){
+        repository=r;leitor=l;cadastros=c;financeiro=f;this.armazenamento=armazenamento;
     }
     @Transactional
     public ImportacaoResponse importar(MultipartFile arquivo){
@@ -34,11 +33,9 @@ public class ImportacaoService {
             byte[] bytes=arquivo.getBytes();
             String hash=HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));
             if(repository.existsByHashArquivo(hash)) throw new IllegalArgumentException("Este documento já foi importado.");
-            Files.createDirectories(pasta);
-            Path destino=pasta.resolve(UUID.randomUUID()+".pdf").normalize();
-            if(!destino.startsWith(pasta)) throw new IllegalArgumentException("Nome de arquivo inválido.");
-            Files.write(destino,bytes,StandardOpenOption.CREATE_NEW);
-            Importacao i=repository.save(new Importacao(arquivo.getOriginalFilename(),hash,destino.toString()));
+            String caminho="importacoes/"+UUID.randomUUID()+".pdf";
+            armazenamento.enviar(caminho,bytes,"application/pdf");
+            Importacao i=repository.save(new Importacao(arquivo.getOriginalFilename(),hash,caminho));
             var resultado=leitor.ler(bytes);
             if(resultado.requerOcr()) i.falhar("O PDF não contém texto pesquisável. Será necessário OCR quando o formato real for configurado.");
             else i.leituraConcluida(resultado.texto().substring(0,Math.min(resultado.texto().length(),10000)));

@@ -32,6 +32,15 @@ public class ArmazenamentoArquivosEmMemoria implements ArmazenamentoArquivos {
     }
 
     @Override
+    public byte[] baixar(String caminho) {
+        byte[] conteudo = arquivos.get(caminho);
+        if (conteudo == null) {
+            throw new IllegalStateException("Arquivo não encontrado no armazenamento de teste: " + caminho);
+        }
+        return conteudo;
+    }
+
+    @Override
     public void remover(String caminho) {
         arquivos.remove(caminho);
     }
