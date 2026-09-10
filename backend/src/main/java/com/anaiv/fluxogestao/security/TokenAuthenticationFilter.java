@@ -1,6 +1,6 @@
 package com.anaiv.fluxogestao.security;
 
-import com.anaiv.fluxogestao.repository.SessaoRepository;
+import com.anaiv.fluxogestao.auth.SessaoRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

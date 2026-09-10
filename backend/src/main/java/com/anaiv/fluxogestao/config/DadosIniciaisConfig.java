@@ -1,14 +1,16 @@
 package com.anaiv.fluxogestao.config;
 
-import com.anaiv.fluxogestao.entity.*;
-import com.anaiv.fluxogestao.repository.CategoriaRepository;
-import com.anaiv.fluxogestao.repository.UsuarioRepository;
+import com.anaiv.fluxogestao.auth.*;
+import com.anaiv.fluxogestao.cadastro.*;
+import com.anaiv.fluxogestao.financeiro.*;
+import com.anaiv.fluxogestao.cadastro.CategoriaRepository;
+import com.anaiv.fluxogestao.auth.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import static com.anaiv.fluxogestao.entity.EnumsFinanceiros.TipoCategoria.*;
+import static com.anaiv.fluxogestao.financeiro.EnumsFinanceiros.TipoCategoria.*;
 
 @Configuration
 public class DadosIniciaisConfig {

@@ -1,6 +1,6 @@
 package com.anaiv.fluxogestao.porto;
 
-import com.anaiv.fluxogestao.service.CalendarioPortoService;
+import com.anaiv.fluxogestao.porto.CalendarioPortoService;
 import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

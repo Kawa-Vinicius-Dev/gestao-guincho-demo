@@ -1,7 +1,7 @@
 package com.anaiv.fluxogestao.porto;
 
-import com.anaiv.fluxogestao.entity.EnumsFinanceiros.TipoRelatorioPorto;
-import com.anaiv.fluxogestao.service.PortoCsvParser;
+import com.anaiv.fluxogestao.financeiro.EnumsFinanceiros.TipoRelatorioPorto;
+import com.anaiv.fluxogestao.porto.PortoCsvParser;
 import org.junit.jupiter.api.Test;
 
 import java.io.InputStream;

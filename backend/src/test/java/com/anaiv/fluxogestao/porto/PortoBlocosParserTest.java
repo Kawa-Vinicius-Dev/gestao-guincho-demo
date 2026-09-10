@@ -1,7 +1,7 @@
 package com.anaiv.fluxogestao.porto;
 
-import com.anaiv.fluxogestao.entity.EnumsFinanceiros.TipoRelatorioPorto;
-import com.anaiv.fluxogestao.service.PortoBlocosParser;
+import com.anaiv.fluxogestao.financeiro.EnumsFinanceiros.TipoRelatorioPorto;
+import com.anaiv.fluxogestao.porto.PortoBlocosParser;
 import org.junit.jupiter.api.Test;
 import java.nio.charset.StandardCharsets;
 import static org.assertj.core.api.Assertions.assertThat;
