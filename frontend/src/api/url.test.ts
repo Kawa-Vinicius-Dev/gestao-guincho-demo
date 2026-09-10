@@ -16,16 +16,16 @@ test('mantém a rota local quando VITE_API_URL está vazia',async()=>{
 })
 
 test('usa o backend configurado em VITE_API_URL',async()=>{
-  const apiUrl=await carregarApiUrl('https://gestao-guincho-demo-production.up.railway.app')
-  expect(apiUrl('/api/auth/login')).toBe('https://gestao-guincho-demo-production.up.railway.app/api/auth/login')
+  const apiUrl=await carregarApiUrl('https://fluxo-gestao-backend.onrender.com')
+  expect(apiUrl('/api/auth/login')).toBe('https://fluxo-gestao-backend.onrender.com/api/auth/login')
 })
 
 test('remove barras finais da URL base',async()=>{
-  const apiUrl=await carregarApiUrl('https://gestao-guincho-demo-production.up.railway.app///')
-  expect(apiUrl('/api/auth/login')).toBe('https://gestao-guincho-demo-production.up.railway.app/api/auth/login')
+  const apiUrl=await carregarApiUrl('https://fluxo-gestao-backend.onrender.com///')
+  expect(apiUrl('/api/auth/login')).toBe('https://fluxo-gestao-backend.onrender.com/api/auth/login')
 })
 
 test('aceita caminho sem barra inicial',async()=>{
-  const apiUrl=await carregarApiUrl('https://gestao-guincho-demo-production.up.railway.app')
-  expect(apiUrl('api/auth/login')).toBe('https://gestao-guincho-demo-production.up.railway.app/api/auth/login')
+  const apiUrl=await carregarApiUrl('https://fluxo-gestao-backend.onrender.com')
+  expect(apiUrl('api/auth/login')).toBe('https://fluxo-gestao-backend.onrender.com/api/auth/login')
 })

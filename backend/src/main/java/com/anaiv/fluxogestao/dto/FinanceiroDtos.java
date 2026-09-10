@@ -43,7 +43,8 @@ public final class FinanceiroDtos {
     public record DespesaResponse(Long id, String descricao, String categoria, BigDecimal valor, LocalDate data,
         LocalDate vencimento, LocalDate dataPagamento, String formaPagamento, String veiculo, String motorista,
         String protocolo, String comprovante, String observacoes, StatusDespesa status, boolean aprovada,
-        String criadoPor) {}
+        String criadoPor, String comprovanteNomeOriginal, Long comprovanteTamanhoBytes) {}
+    public record ComprovanteResponse(String url) {}
 
     public record LancamentoFinanceiroResponse(String id, String tipo, Long referenciaId, String descricao,
         String categoria, BigDecimal valor, LocalDate data, String status, boolean realizado,

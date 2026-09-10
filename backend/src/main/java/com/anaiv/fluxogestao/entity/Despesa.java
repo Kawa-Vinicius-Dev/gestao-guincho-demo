@@ -22,6 +22,10 @@ public class Despesa {
     @ManyToOne @JoinColumn(name = "motorista_id") private Motorista motorista;
     private String protocolo;
     private String comprovante;
+    @Column(name = "comprovante_arquivo") private String comprovanteArquivo;
+    @Column(name = "comprovante_nome_original") private String comprovanteNomeOriginal;
+    @Column(name = "comprovante_content_type") private String comprovanteContentType;
+    @Column(name = "comprovante_tamanho_bytes") private Long comprovanteTamanhoBytes;
     private String observacoes;
     @Enumerated(EnumType.STRING) private StatusDespesa status;
     @Enumerated(EnumType.STRING) private NaturezaDespesa natureza=NaturezaDespesa.GERAL;
@@ -53,6 +57,18 @@ public class Despesa {
         if (observacoes != null && !observacoes.isBlank()) this.observacoes = observacoes;
     }
     public void marcarComoAlimentacao(){this.natureza=NaturezaDespesa.ALIMENTACAO_FUNCIONARIO;}
+    public void anexarComprovante(String chaveArmazenamento, String nomeOriginal, String contentType, long tamanhoBytes) {
+        this.comprovanteArquivo = chaveArmazenamento;
+        this.comprovanteNomeOriginal = nomeOriginal;
+        this.comprovanteContentType = contentType;
+        this.comprovanteTamanhoBytes = tamanhoBytes;
+    }
+    public void removerComprovante() {
+        this.comprovanteArquivo = null;
+        this.comprovanteNomeOriginal = null;
+        this.comprovanteContentType = null;
+        this.comprovanteTamanhoBytes = null;
+    }
     public void rejeitar(Usuario usuario) { this.aprovada = false; this.aprovadoPor = usuario; this.status = StatusDespesa.REJEITADO; }
     public void atualizarAtraso(LocalDate hoje) { if (status == StatusDespesa.PENDENTE && vencimento != null && vencimento.isBefore(hoje)) status = StatusDespesa.ATRASADO; }
     public Long getId() { return id; }
@@ -67,6 +83,10 @@ public class Despesa {
     public Motorista getMotorista() { return motorista; }
     public String getProtocolo() { return protocolo; }
     public String getComprovante() { return comprovante; }
+    public String getComprovanteArquivo() { return comprovanteArquivo; }
+    public String getComprovanteNomeOriginal() { return comprovanteNomeOriginal; }
+    public String getComprovanteContentType() { return comprovanteContentType; }
+    public Long getComprovanteTamanhoBytes() { return comprovanteTamanhoBytes; }
     public String getObservacoes() { return observacoes; }
     public StatusDespesa getStatus() { return status; }
     public boolean isAprovada() { return aprovada; }

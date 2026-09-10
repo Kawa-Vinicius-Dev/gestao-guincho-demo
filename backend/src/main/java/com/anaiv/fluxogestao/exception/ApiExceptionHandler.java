@@ -43,6 +43,14 @@ public class ApiExceptionHandler {
         return resposta(HttpStatus.BAD_REQUEST, "Operação inválida", exception.getMessage(), request, Map.of());
     }
 
+    @ExceptionHandler(MuitasTentativasException.class)
+    public ResponseEntity<ApiError> tratarMuitasTentativas(
+            MuitasTentativasException exception,
+            HttpServletRequest request
+    ) {
+        return resposta(HttpStatus.TOO_MANY_REQUESTS, "Muitas tentativas", exception.getMessage(), request, Map.of());
+    }
+
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiError> tratarConflito(
             DataIntegrityViolationException exception,

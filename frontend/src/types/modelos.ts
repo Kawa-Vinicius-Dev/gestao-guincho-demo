@@ -20,7 +20,7 @@ export interface Despesa {
   id:number; descricao:string; categoria:string; valor:number; data:string; vencimento?:string;
   dataPagamento?:string; formaPagamento?:string; veiculo?:string; motorista?:string; protocolo?:string;
   comprovante?:string; observacoes?:string; status:'PENDENTE'|'PAGO'|'ATRASADO'|'REJEITADO';
-  aprovada:boolean; criadoPor:string
+  aprovada:boolean; criadoPor:string; comprovanteNomeOriginal?:string; comprovanteTamanhoBytes?:number
 }
 export interface DespesaRecorrente {
   id:number; descricao:string; categoria:string; categoriaId:number; valor:number; diaVencimento:number;
