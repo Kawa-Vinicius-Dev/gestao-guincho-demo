@@ -43,7 +43,7 @@ public final class PortoDtos {
         LocalDate dataRecebimento,@Size(max=1000) String observacao) {}
     public record CalendarioRequest(@NotNull LocalDate dataPagamento,@NotNull LocalDate competenciaInicio,
         @NotNull LocalDate competenciaFim,@NotBlank String descricao,boolean ativo) {}
-    public record CalendarioResponse(Long id,LocalDate dataPagamento,LocalDate competenciaInicio,LocalDate competenciaFim,String descricao,boolean ativo,
+    public record CalendarioResponse(Long id,LocalDate dataPagamento,LocalDate competenciaInicio,LocalDate competenciaFim,String descricao,boolean ativo,boolean estimado,
         OffsetDateTime criadoEm,OffsetDateTime atualizadoEm) {}
     public record PortoFiltros(LocalDate dataInicio,LocalDate dataFim,String numero,String situacaoPagamento,
         StatusConciliacaoPorto statusConciliacao,Boolean recebida,Boolean vencida,Boolean comComposicao,Boolean comDivergencia,

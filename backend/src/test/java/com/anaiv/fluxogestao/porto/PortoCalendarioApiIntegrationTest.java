@@ -37,12 +37,13 @@ class PortoCalendarioApiIntegrationTest {
             .isEqualTo(1);
     }
 
+    // ano fora da janela que a projecao cobre: senao o ciclo projetado ocupa a data antes do teste
     @Test
     void adicionaEditaEDesativaUmaDataSemApagaLa() throws Exception {
         String token=login();
         String criada=mvc.perform(post("/api/porto/calendario").header("Authorization","Bearer "+token)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"dataPagamento\":\"2027-01-15\",\"competenciaInicio\":\"2026-12-16\",\"competenciaFim\":\"2026-12-31\",\"descricao\":\"Ciclo sintético\",\"ativo\":true}"))
+                .content("{\"dataPagamento\":\"2085-01-15\",\"competenciaInicio\":\"2084-12-16\",\"competenciaFim\":\"2084-12-31\",\"descricao\":\"Ciclo sintético\",\"ativo\":true}"))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.ativo").value(true))
             .andReturn().getResponse().getContentAsString();
@@ -50,9 +51,9 @@ class PortoCalendarioApiIntegrationTest {
 
         mvc.perform(put("/api/porto/calendario/{id}",id).header("Authorization","Bearer "+token)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"dataPagamento\":\"2027-01-16\",\"competenciaInicio\":\"2026-12-16\",\"competenciaFim\":\"2026-12-31\",\"descricao\":\"Ciclo revisado\",\"ativo\":true}"))
+                .content("{\"dataPagamento\":\"2085-01-16\",\"competenciaInicio\":\"2084-12-16\",\"competenciaFim\":\"2084-12-31\",\"descricao\":\"Ciclo revisado\",\"ativo\":true}"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.dataPagamento").value("2027-01-16"))
+            .andExpect(jsonPath("$.dataPagamento").value("2085-01-16"))
             .andExpect(jsonPath("$.descricao").value("Ciclo revisado"));
 
         mvc.perform(patch("/api/porto/calendario/{id}/desativar",id).header("Authorization","Bearer "+token))

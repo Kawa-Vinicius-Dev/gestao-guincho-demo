@@ -68,7 +68,7 @@ export interface DashboardPorto extends ResumoOpsPorto { quantidadeTotalServicos
 export interface JustificativaPorto { id:number; motivo:string; observacao:string; valorDiferenca?:number; usuario:string; criadoEm:string }
 export interface HistoricoPorto { id:number; evento:string; descricao:string; usuario?:string; criadoEm:string }
 export interface DetalheOpPorto { ordemPagamento:OrdemPagamentoPorto; ordensServico:OrdemServicoPorto[]; justificativas:JustificativaPorto[]; historico?:HistoricoPorto[] }
-export interface CalendarioPorto { id:number; dataPagamento:string; competenciaInicio:string; competenciaFim:string; descricao:string; ativo:boolean; criadoEm:string; atualizadoEm:string }
+export interface CalendarioPorto { id:number; dataPagamento:string; competenciaInicio:string; competenciaFim:string; descricao:string; ativo:boolean; estimado?:boolean; criadoEm:string; atualizadoEm:string }
 export interface AlimentacaoComissao { id:number; motoristaId:number; data:string; valor:number; situacao:string; aprovada:boolean; observacoes?:string }
 export interface ServicoComissao { id:number; numeroOs:string; especialidade?:string; dataAtendimento:string; numeroOp:string; valorServico:number; comissaoServico:number }
 export interface PagamentoComissao { id:number; motoristaId:number; calendarioPagamentoId:number; despesaId:number; valorPago:number; dataPagamento:string; formaPagamento?:string; observacoes?:string; pagoPor:string; criadoEm:string }
