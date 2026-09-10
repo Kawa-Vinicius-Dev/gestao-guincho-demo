@@ -50,7 +50,7 @@ public class PortoCsvParser {
     private TipoRelatorioPorto detectar(Set<String> h){
         if(h.containsAll(Set.of("numero_op","valor_total","nome_codigo","data_pagamento")))return TipoRelatorioPorto.PREVISAO_RECEBER;
         if(h.containsAll(Set.of("numero_os","especialidade","data_atendimento","data_devolucao","valor_total")))return TipoRelatorioPorto.SERVICOS_DEVOLVIDOS;
-        if(h.containsAll(Set.of("numero_os","valor_total","especialidade","sigla_viatura","socorrista","qra","data_atendimento")))return TipoRelatorioPorto.OS_VINCULADAS;
+        if(h.containsAll(Set.of("numero_os","valor_total","especialidade","sigla_viatura","socorrista","data_atendimento")))return TipoRelatorioPorto.OS_VINCULADAS;
         throw new IllegalArgumentException("Não foi possível detectar um relatório Porto pelos cabeçalhos.");
     }
     private void validar(TipoRelatorioPorto tipo,Map<String,String> d){
