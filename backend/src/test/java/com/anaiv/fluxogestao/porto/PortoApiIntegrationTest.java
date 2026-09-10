@@ -226,8 +226,10 @@ class PortoApiIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON).content("{\"ordemPagamentoId\":"+opId+",\"confirmarDivergencias\":true}"))
             .andExpect(status().isOk()).andExpect(jsonPath("$.importados").value(1));
         mvc.perform(get("/api/porto/ordens-servico").header("Authorization","Bearer "+token))
-            .andExpect(status().isOk()).andExpect(jsonPath("$[0].especialidade").value("REMOÇÃO"))
-            .andExpect(jsonPath("$[0].qra").value("QRA-2")).andExpect(jsonPath("$[0].viatura").value("VTR-1"));
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[?(@.numero == 'OS-901')].especialidade",org.hamcrest.Matchers.contains("REMOÇÃO")))
+            .andExpect(jsonPath("$[?(@.numero == 'OS-901')].qra",org.hamcrest.Matchers.contains("QRA-2")))
+            .andExpect(jsonPath("$[?(@.numero == 'OS-901')].viatura",org.hamcrest.Matchers.contains("VTR-1")));
 
         Integer despesasAntes=jdbc.queryForObject("select count(*) from despesas",Integer.class);
         long devolucao=previa(token,"devolvidos.csv","""
