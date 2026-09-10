@@ -1,0 +1,76 @@
+package com.anaiv.fluxogestao.financeiro;
+
+import com.anaiv.fluxogestao.cadastro.*;
+import com.anaiv.fluxogestao.porto.*;
+import jakarta.persistence.*;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import static com.anaiv.fluxogestao.financeiro.EnumsFinanceiros.*;
+
+@Entity
+@Table(name = "contas_receber")
+public class ContaReceber {
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY) private Long id;
+    @ManyToOne(optional = false) @JoinColumn(name = "contratante_id") private Contratante contratante;
+    private String protocolo;
+    private String descricao;
+    @Column(name = "valor_previsto") private BigDecimal valorPrevisto;
+    @Column(name = "valor_recebido") private BigDecimal valorRecebido;
+    @Column(name = "data_competencia") private LocalDate dataCompetencia;
+    private LocalDate vencimento;
+    @Column(name = "data_recebimento") private LocalDate dataRecebimento;
+    @Enumerated(EnumType.STRING) private StatusContaReceber status = StatusContaReceber.PENDENTE;
+    @ManyToOne @JoinColumn(name = "veiculo_id") private Veiculo veiculo;
+    private String observacoes;
+    @Enumerated(EnumType.STRING) private OrigemLancamento origem;
+    @ManyToOne @JoinColumn(name = "importacao_id") private Importacao importacao;
+    @OneToOne @JoinColumn(name = "ordem_servico_porto_id") private OrdemServicoPorto ordemServicoPorto;
+    @ManyToOne @JoinColumn(name = "ordem_pagamento_porto_id") private OrdemPagamentoPorto ordemPagamentoPorto;
+    @ManyToOne @JoinColumn(name = "motorista_id") private Motorista motorista;
+    @Column(name = "criado_em") private OffsetDateTime criadoEm = OffsetDateTime.now();
+
+    protected ContaReceber() {}
+    public ContaReceber(Contratante contratante, String protocolo, String descricao, BigDecimal valorPrevisto,
+                        LocalDate dataCompetencia, LocalDate vencimento, Veiculo veiculo, String observacoes,
+                        OrigemLancamento origem, Importacao importacao) {
+        this.contratante = contratante; this.protocolo = protocolo; this.descricao = descricao;
+        this.valorPrevisto = valorPrevisto; this.dataCompetencia = dataCompetencia; this.vencimento = vencimento;
+        this.veiculo = veiculo; this.observacoes = observacoes; this.origem = origem; this.importacao = importacao;
+    }
+    public void receber(BigDecimal valor, LocalDate data) { valorRecebido = valor; dataRecebimento = data; status = StatusContaReceber.RECEBIDO; }
+    /** Igual a receita: troca quem executou e a viatura, nunca o valor previsto ou o recebido. */
+    public void atualizarVinculoAdministrativo(Motorista motorista,Veiculo veiculo){
+        this.motorista=motorista;if(veiculo!=null)this.veiculo=veiculo;
+    }
+    public void sincronizarPorto(Contratante contratante,String protocolo,String descricao,BigDecimal valor,
+        LocalDate competencia,LocalDate pagamento,Veiculo veiculo,Motorista motorista,Importacao importacao,
+        OrdemServicoPorto os,OrdemPagamentoPorto op) {
+        this.contratante=contratante;if(preenchido(protocolo))this.protocolo=protocolo;this.descricao=descricao;
+        this.valorPrevisto=valor;this.dataCompetencia=competencia;this.vencimento=pagamento;
+        if(veiculo!=null)this.veiculo=veiculo;if(motorista!=null)this.motorista=motorista;
+        this.origem=OrigemLancamento.IMPORTADA;this.importacao=importacao;this.ordemServicoPorto=os;this.ordemPagamentoPorto=op;
+        receber(valor,pagamento);
+    }
+    private boolean preenchido(String valor){return valor!=null&&!valor.isBlank();}
+    public void atualizarAtraso(LocalDate hoje) { if (status == StatusContaReceber.PENDENTE && vencimento.isBefore(hoje)) status = StatusContaReceber.ATRASADO; }
+    public void cancelar() { status = StatusContaReceber.CANCELADO; }
+    public Long getId() { return id; }
+    public Contratante getContratante() { return contratante; }
+    public String getProtocolo() { return protocolo; }
+    public String getDescricao() { return descricao; }
+    public BigDecimal getValorPrevisto() { return valorPrevisto; }
+    public BigDecimal getValorRecebido() { return valorRecebido; }
+    public LocalDate getDataCompetencia() { return dataCompetencia; }
+    public LocalDate getVencimento() { return vencimento; }
+    public LocalDate getDataRecebimento() { return dataRecebimento; }
+    public StatusContaReceber getStatus() { return status; }
+    public Veiculo getVeiculo() { return veiculo; }
+    public String getObservacoes() { return observacoes; }
+    public OrigemLancamento getOrigem() { return origem; }
+    public Importacao getImportacao() { return importacao; }
+    public OrdemServicoPorto getOrdemServicoPorto(){return ordemServicoPorto;}
+    public OrdemPagamentoPorto getOrdemPagamentoPorto(){return ordemPagamentoPorto;}
+    public Motorista getMotorista(){return motorista;}
+    public BigDecimal diferenca() { return valorRecebido == null ? null : valorRecebido.subtract(valorPrevisto); }
+}

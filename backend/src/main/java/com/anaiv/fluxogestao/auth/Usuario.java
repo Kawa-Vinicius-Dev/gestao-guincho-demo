@@ -1,0 +1,37 @@
+package com.anaiv.fluxogestao.auth;
+
+import jakarta.persistence.*;
+import java.time.OffsetDateTime;
+import java.util.Locale;
+
+@Entity
+@Table(name = "usuarios")
+public class Usuario {
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    private String nome;
+    private String email;
+    @Column(name = "senha_hash") private String senhaHash;
+    @Enumerated(EnumType.STRING) private PerfilUsuario perfil;
+    private boolean ativo = true;
+    @Column(name = "senha_provisoria") private boolean senhaProvisoria = false;
+    @Column(name = "criado_em") private OffsetDateTime criadoEm = OffsetDateTime.now();
+
+    protected Usuario() {}
+    public Usuario(String nome, String email, String senhaHash, PerfilUsuario perfil) {
+        this.nome = nome; this.email = normalizarEmail(email); this.senhaHash = senhaHash; this.perfil = perfil;
+    }
+    public static String normalizarEmail(String email) { return email == null ? null : email.trim().toLowerCase(Locale.ROOT); }
+    public Long getId() { return id; }
+    public String getNome() { return nome; }
+    public String getEmail() { return email; }
+    public String getSenhaHash() { return senhaHash; }
+    public PerfilUsuario getPerfil() { return perfil; }
+    public boolean isAtivo() { return ativo; }
+    public boolean isSenhaProvisoria() { return senhaProvisoria; }
+    /** Troca feita pelo dono da conta: a senha deixa de ser provisoria. */
+    public void trocarSenha(String hash) { this.senhaHash = hash; this.senhaProvisoria = false; }
+    /** Senha gerada por um administrador: vale ate o primeiro acesso, que obriga a troca. */
+    public void definirSenhaProvisoria(String hash) { this.senhaHash = hash; this.senhaProvisoria = true; }
+    public void atualizar(String nome, PerfilUsuario perfil, boolean ativo) { this.nome = nome; this.perfil = perfil; this.ativo = ativo; }
+}
