@@ -12,3 +12,8 @@ app:
   bootstrap:
     admin-email: admin@fluxogestao.local
     admin-password: Admin@123
+  security:
+    login:
+      max-tentativas: 1000
+      janela-minutos: 1
+      bloqueio-minutos: 1
