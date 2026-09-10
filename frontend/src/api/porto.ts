@@ -1,5 +1,6 @@
 import { ApiError, api, tokenStorage } from './http'
 import { apiUrl } from './url'
+import { hojeIso } from '../utils/formatadores'
 import type { CalendarioPorto, ConfirmacaoPorto, DashboardPorto, DetalheOpPorto, JustificativaPorto, OrdemPagamentoPorto, OrdemServicoPorto, PendenciaPorto, PreviaPorto, ResumoOpsPorto } from '../types/modelos'
 
 export function criarPreviaPorto(arquivo:File){const body=new FormData();body.append('arquivo',arquivo);return api<PreviaPorto>('/api/porto/importacoes/previa',{method:'POST',body})}
@@ -36,4 +37,5 @@ export function receberOrdemPagamentoPorto(id:number,valorRecebido:number,dataRe
 async function baixar(caminho:string,nomeArquivo:string,erro:string){const token=tokenStorage.get();const response=await fetch(apiUrl(caminho),{headers:token?{Authorization:`Bearer ${token}`}:{}});if(!response.ok)throw new ApiError(erro,response.status);const url=URL.createObjectURL(await response.blob()),link=document.createElement('a');link.href=url;link.download=nomeArquivo;link.click();URL.revokeObjectURL(url)}
 export const baixarRelatorioPorto=(formato:'excel'|'pdf',params?:URLSearchParams)=>baixar(`/api/porto/relatorios/${formato}${consulta(params)}`,`relatorio-porto.${formato==='excel'?'xlsx':'pdf'}`,'Não foi possível exportar o relatório Porto.')
 export const baixarRelatorioOpPorto=(id:number,formato:'excel'|'pdf')=>baixar(`/api/porto/ordens-pagamento/${id}/relatorios/${formato}`,`op-porto.${formato==='excel'?'xlsx':'pdf'}`,'Não foi possível exportar a ordem de pagamento.')
+export const baixarCopiaDosDados=()=>baixar('/api/backup/excel',`copia-jms-${hojeIso()}.xlsx`,'Não foi possível gerar a cópia dos dados.')
 export const baixarOrdensServicoPorto=(params?:URLSearchParams)=>baixar(`/api/porto/ordens-servico/excel${consulta(params)}`,'ordens-servico-porto.xlsx','Não foi possível exportar as ordens de serviço.')

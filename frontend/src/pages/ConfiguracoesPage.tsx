@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { api } from '../api/http'
+import { baixarCopiaDosDados } from '../api/porto'
 import type { Categoria, Contratante, SenhaRedefinida, Usuario } from '../types/modelos'
 
 export default function ConfiguracoesPage(){
@@ -18,6 +19,11 @@ export default function ConfiguracoesPage(){
     try{setGerada(await api<SenhaRedefinida>(`/api/usuarios/${usuario.id}/redefinir-senha`,{method:'PATCH'}));await carregar()}
     catch(x){setErro((x as Error).message)}
   }
+  // o banco esta num plano sem backup automatico: esta copia e o que fica na mao do dono
+  async function baixarCopia(){setErro('');setMensagem('')
+    try{await baixarCopiaDosDados();setMensagem('Cópia gerada. Guarde o arquivo fora do sistema.')}
+    catch(x){setErro((x as Error).message)}
+  }
   async function copiar(valor:string){try{await navigator.clipboard.writeText(valor);setCopiada(true)}catch{setCopiada(false)}}
   async function senha(e:FormEvent<HTMLFormElement>){e.preventDefault();const formulario=e.currentTarget;const f=new FormData(formulario)
     setErro('');setMensagem('')
@@ -33,6 +39,9 @@ export default function ConfiguracoesPage(){
         <form onSubmit={e=>cadastrar(e,'categorias')} className="inline-form"><input name="nome" aria-label="Nome da categoria" placeholder="Nome da categoria" required/><select name="tipo" aria-label="Tipo da categoria"><option>DESPESA</option><option>RECEITA</option></select><button className="button button-ghost">Adicionar</button></form></section>
       <section className="panel settings-card"><header><h2>Trocar senha</h2><p>A nova senha deve ter pelo menos oito caracteres.</p></header><form onSubmit={senha} className="form-grid"><label className="field"><span>Senha atual</span><input name="senhaAtual" type="password" autoComplete="current-password" required/></label><label className="field"><span>Nova senha</span><input name="novaSenha" type="password" autoComplete="new-password" minLength={8} required/></label><button className="button button-primary">Alterar senha</button></form></section>
       <section className="panel settings-card"><header><h2>Acessos</h2><p>Quem entra no sistema. Esqueceu a senha? Redefina aqui e passe a provisória para a pessoa.</p></header><ul className="simple-list">{usuarios.map(u=><li key={u.id}><strong>{u.nome}</strong><small>{u.email} · {u.perfil==='ADMINISTRADOR'?'Administrador':'Socorrista'}{u.senhaProvisoria?' · senha provisória pendente':''}</small><button className="table-action" onClick={()=>void redefinir(u)}>Redefinir senha</button></li>)}</ul></section>
+      <section className="panel settings-card"><header><h2>Cópia dos dados</h2><p>O banco não tem backup automático. Baixe de tempos em tempos e guarde fora do sistema.</p></header>
+        <p className="empty-inline">Um arquivo do Excel com ordens de pagamento, ordens de serviço, receitas, despesas, contas a receber, socorristas, veículos, quilometragem, calendário e despesas fixas.</p>
+        <button className="button button-primary" onClick={()=>void baixarCopia()}>Baixar cópia de tudo</button></section>
       <section className="panel settings-card"><header><h2>Custos da frota</h2><p>O custo por km é configurado em cada veículo e aplicado ao km morto no momento do registro.</p></header><a className="button button-ghost" href="/veiculos">Configurar veículos</a></section>
     </div>
     {gerada?<div className="modal-backdrop"><section className="modal" role="dialog" aria-modal="true" aria-label="Senha provisória gerada"><header><div><span className="eyebrow">{gerada.nome}</span><h2>Senha provisória</h2></div><button aria-label="Fechar" onClick={()=>setGerada(null)}>×</button></header>
