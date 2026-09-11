@@ -51,7 +51,7 @@ public final class PortoDtos {
         Long calendarioPagamentoId) {}
     public record PortoOsFiltros(LocalDate dataInicio,LocalDate dataFim,String numeroOs,String numeroOp,String especialidade,
         String socorrista,String qra,String viatura,StatusOperacionalPorto statusOperacional,StatusFinanceiroPorto statusFinanceiro,
-        StatusConciliacaoPorto statusConciliacao,Boolean porDataPagamento,Boolean semSocorrista) {}
+        StatusConciliacaoPorto statusConciliacao,Boolean porDataPagamento,Boolean semSocorrista,Boolean semQra) {}
     public record PortoDashboardFiltros(String periodo,String visao,LocalDate referencia,LocalDate dataInicio,LocalDate dataFim,
         String numeroOs,String numeroOp,String numero,String especialidade,String socorrista,String qra,String viatura,
         StatusOperacionalPorto statusOperacional,StatusFinanceiroPorto statusFinanceiro,StatusConciliacaoPorto statusConciliacao) {}

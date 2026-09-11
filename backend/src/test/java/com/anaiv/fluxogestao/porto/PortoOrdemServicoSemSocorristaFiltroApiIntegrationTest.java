@@ -58,6 +58,20 @@ class PortoOrdemServicoSemSocorristaFiltroApiIntegrationTest {
         // sem o filtro, continua trazendo todas
         List<String> todas=JsonPath.read(listar(token,"numeroOs=OS-FILTRO"),"$[*].numero");
         assertThat(todas).hasSize(3);
+
+        // semQra nao se confunde com semSocorrista: a OS sem QRA que ja tem dono continua aparecendo
+        inserir("OS-FILTRO-SEM-QRA-SEM-DONO","2077-04-13",null);
+        jdbc.update("insert into ordens_servico_porto (numero,valor_total,especialidade,qra,data_atendimento,motorista_id) values (?,?,?,?,?,?)",
+            "OS-FILTRO-SEM-QRA-COM-DONO",new java.math.BigDecimal("100.00"),"GUINCHO",null,java.sql.Date.valueOf("2077-05-14"),motorista);
+        jdbc.update("insert into ordens_servico_porto (numero,valor_total,especialidade,qra,data_atendimento) values (?,?,?,?,?)",
+            "OS-FILTRO-QRA-DESCONHECIDO",new java.math.BigDecimal("100.00"),"GUINCHO","999999",java.sql.Date.valueOf("2077-05-15"));
+
+        List<String> semQra=JsonPath.read(listar(token,"semQra=true&numeroOs=OS-FILTRO-SEM-QRA"),"$[*].numero");
+        assertThat(semQra).containsExactlyInAnyOrder("OS-FILTRO-SEM-QRA-SEM-DONO","OS-FILTRO-SEM-QRA-COM-DONO");
+
+        // QRA desconhecido tem valor preenchido: nao e "sem QRA", mesmo sem motorista vinculado
+        List<String> qraDesconhecidoSemQra=JsonPath.read(listar(token,"semQra=true&numeroOs=OS-FILTRO-QRA-DESCONHECIDO"),"$[*].numero");
+        assertThat(qraDesconhecidoSemQra).isEmpty();
     }
 
     private void inserir(String numero,String data,Long motorista){
