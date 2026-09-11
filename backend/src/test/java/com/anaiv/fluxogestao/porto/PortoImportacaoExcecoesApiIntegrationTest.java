@@ -45,9 +45,9 @@ class PortoImportacaoExcecoesApiIntegrationTest {
             .andExpect(jsonPath("$.totalLinhas").value(3))
             .andReturn().getResponse().getContentAsString();
 
-        // a previa antecipa a unica excecao real: linha com QRA ganha cadastro na confirmacao
+        // a previa antecipa as duas excecoes: sem QRA e com QRA que nao esta cadastrado
         List<String> avisoPrevia=JsonPath.read(previa,"$.osSemSocorrista");
-        assertThat(avisoPrevia).containsExactly("OS-EXC-SEM-QRA");
+        assertThat(avisoPrevia).containsExactlyInAnyOrder("OS-EXC-SEM-QRA","OS-EXC-QRA-DESCONHECIDO");
 
         String confirmacao=mvc.perform(post("/api/porto/importacoes/{id}/confirmar",((Number)JsonPath.read(previa,"$.id")).longValue())
                 .header("Authorization","Bearer "+token).contentType(MediaType.APPLICATION_JSON)
@@ -57,7 +57,7 @@ class PortoImportacaoExcecoesApiIntegrationTest {
 
         assertThat((Integer)JsonPath.read(confirmacao,"$.importados")).isEqualTo(3);
         List<String> semSocorrista=JsonPath.read(confirmacao,"$.osSemSocorrista");
-        assertThat(semSocorrista).containsExactly("OS-EXC-SEM-QRA");
+        assertThat(semSocorrista).containsExactlyInAnyOrder("OS-EXC-SEM-QRA","OS-EXC-QRA-DESCONHECIDO");
     }
 
     @Test void importaArquivoDeOsSemColunaQra() throws Exception {

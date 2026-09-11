@@ -30,6 +30,11 @@ Thumbs.db
 !.env.example
 .env.local
 backend/data/
+# Arquivos importados que ficaram no disco de quem rodou o sistema antes de
+# tudo migrar para o Supabase Storage. Nao sao mais gravados, mas continuam
+# existindo em maquina de desenvolvimento - e sao PDFs reais da operacao.
+storage/
+backend/storage/
 playwright-report/
 test-results/
 frontend/test-results/

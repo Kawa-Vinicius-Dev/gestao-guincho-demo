@@ -5,35 +5,25 @@ import com.anaiv.fluxogestao.porto.OrdemServicoPorto;
 import com.anaiv.fluxogestao.cadastro.MotoristaRepository;
 import org.springframework.stereotype.Service;
 
-import java.util.Optional;
-
 @Service
 public class MotoristaPortoResolver {
     private final MotoristaRepository motoristas;
     public MotoristaPortoResolver(MotoristaRepository motoristas){this.motoristas=motoristas;}
 
     /**
-     * A associacao e feita exclusivamente pelo QRA. No relatorio da Porto o mesmo nome aparece com
-     * QRAs diferentes (matricula e identificador interno) e cada QRA corresponde a uma pessoa
-     * distinta, entao casar por nome fundiria cadastros que devem ficar separados.
+     * A associacao e feita exclusivamente pelo QRA, nunca pelo nome: no relatorio da Porto o mesmo
+     * nome aparece com QRAs diferentes, e a equipe tem pessoas de nome quase igual (pai e filho),
+     * entao casar por nome fundiria cadastros que sao pessoas distintas.
      *
-     * Toda OS com QRA sai da importacao com socorrista: se o QRA ainda nao existe, o cadastro e
-     * criado na hora com o nome que veio no relatorio. Sem isso a OS nao entra na comissao nem no
-     * custo por viatura, que e o resto do sistema. O que falta no cadastro novo e a viatura, que a
-     * Porto nao informa - ela e atribuida depois, na tela de Socorristas.
-     *
-     * Excecao unica: OS sem QRA. Essa fica sem socorrista, porque nao ha identidade para criar.
+     * QRA que nao esta cadastrado NAO vira socorrista novo. O relatorio da Porto as vezes traz no
+     * lugar do QRA um identificador interno do sistema deles (ex.: "0033i00001vTCZhAAO"), e criar
+     * cadastro a partir disso duplicava a mesma pessoa e dividia a comissao dela entre os dois
+     * registros. A OS fica sem socorrista e entra na fila de "Associar socorrista" da tela de
+     * Ordens de servico, onde a correcao e feita a mao - e o vinculo manual sobrevive a reimportacao.
      */
     public Motorista resolver(OrdemServicoPorto os){
         if(!preenchido(os.getQra()))return null;
-        String qra=os.getQra().trim();
-        Optional<Motorista> cadastrado=motoristas.findByQraIgnoreCase(qra);
-        // QRA de quem saiu da equipe existe, mas nao recebe vinculo novo - e nao pode virar duplicata
-        if(cadastrado.isPresent())return cadastrado.filter(Motorista::isAtivo).orElse(null);
-        return motoristas.save(new Motorista(nomeDoRelatorio(os,qra),null,null,qra,null,null));
-    }
-    private String nomeDoRelatorio(OrdemServicoPorto os,String qra){
-        return preenchido(os.getSocorrista())?os.getSocorrista().trim():"Socorrista QRA "+qra;
+        return motoristas.findByQraIgnoreCase(os.getQra().trim()).filter(Motorista::isAtivo).orElse(null);
     }
     /**
      * QRA de quem saiu da equipe. Nao serve para vincular OS nova, mas tambem nao pode apagar o

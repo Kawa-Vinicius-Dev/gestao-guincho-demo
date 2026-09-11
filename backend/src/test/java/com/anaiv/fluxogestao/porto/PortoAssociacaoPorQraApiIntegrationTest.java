@@ -18,9 +18,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * No relatorio da Porto o mesmo nome aparece com QRAs diferentes (matricula e identificador interno)
- * e cada QRA e uma pessoa distinta. A associacao e feita so pelo QRA, e a viatura vem do cadastro do
- * socorrista porque a Porto nunca preenche a sigla da viatura.
+ * A associacao e feita so pelo QRA - nunca pelo nome, porque a equipe tem nomes quase iguais (pai e
+ * filho). QRA cadastrado vincula; QRA desconhecido nao cria cadastro nenhum, vira atribuicao manual.
+ * A viatura vem do cadastro do socorrista, porque a Porto nunca preenche a sigla da viatura.
  */
 @SpringBootTest @AutoConfigureMockMvc @ActiveProfiles("test")
 class PortoAssociacaoPorQraApiIntegrationTest {
@@ -53,18 +53,16 @@ class PortoAssociacaoPorQraApiIntegrationTest {
         // cada QRA cai no seu proprio cadastro, mesmo com nome identico
         assertThat(motoristaDa("OS-QRA-MATRICULA")).isEqualTo(comMatricula);
         assertThat(motoristaDa("OS-QRA-IDINTERNO")).isEqualTo(comIdInterno);
-        // QRA nao cadastrado nao cai no nome: ganha cadastro proprio, criado pelo QRA do relatorio
-        Long criado=motoristaDa("OS-QRA-DESCONHECIDO");
-        assertThat(criado).isNotNull().isNotIn(comMatricula,comIdInterno);
-        assertThat(jdbc.queryForObject("select qra from motoristas where id=?",String.class,criado)).isEqualTo("999999");
-        assertThat(jdbc.queryForObject("select nome from motoristas where id=?",String.class,criado)).isEqualTo("CARLOS ALBERTO TESTE");
-        // sem QRA nao ha identidade para criar: essa e a excecao que sobra para o operacional
+        // QRA desconhecido nao cria cadastro: seria a mesma pessoa duplicada, com a comissao dividida
+        assertThat(motoristaDa("OS-QRA-DESCONHECIDO")).isNull();
+        assertThat(jdbc.queryForObject("select count(*) from motoristas where qra='999999'",Integer.class)).isZero();
+        // sem QRA tambem nao ha identidade: as duas excecoes sobram para atribuicao manual
         assertThat(motoristaDa("OS-QRA-VAZIO")).isNull();
 
         // a viatura do socorrista chega ao lancamento financeiro, mesmo sem sigla no arquivo
         assertThat(veiculoDaContaDa("OS-QRA-MATRICULA")).isEqualTo(veiculo);
         assertThat(veiculoDaContaDa("OS-QRA-IDINTERNO")).isEqualTo(veiculo);
-        // o cadastro nasce sem viatura: a Porto nao informa, e ela e atribuida depois em Socorristas
+        // sem socorrista nao ha viatura para levar ao financeiro
         assertThat(veiculoDaContaDa("OS-QRA-DESCONHECIDO")).isNull();
     }
 

@@ -44,8 +44,8 @@ class PortoValorImportadoApiIntegrationTest {
             """).getBytes(StandardCharsets.UTF_8));
         long previa=id(mvc.perform(multipart("/api/porto/importacoes/previa").file(arquivo).header("Authorization","Bearer "+token))
             .andExpect(status().isCreated())
-            .andExpect(jsonPath("$.osSemSocorrista.length()").value(1))
-            .andExpect(jsonPath("$.osSemSocorrista[0]").value("OS-IMUT-SEMQRA"))
+            // sem QRA e com QRA nao cadastrado: nenhum dos dois vira socorrista novo
+            .andExpect(jsonPath("$.osSemSocorrista",org.hamcrest.Matchers.containsInAnyOrder("OS-IMUT-SEMQRA","OS-IMUT-ORFA")))
             .andReturn().getResponse().getContentAsString());
 
         // sem confirmar nada de excecao: QRA ausente ou desconhecido nao e divergencia, e nao trava
@@ -57,13 +57,12 @@ class PortoValorImportadoApiIntegrationTest {
             .andExpect(jsonPath("$.receitasCriadas").value(3))
             .andExpect(jsonPath("$.valorTotalRecebido").value(515.75));
 
-        // QRA preenchido sempre sai com socorrista: o desconhecido ganhou cadastro proprio
-        Long criado=motoristaDa("OS-IMUT-ORFA");
-        assertThat(criado).isNotNull().isNotEqualTo(socorrista);
-        assertThat(jdbc.queryForObject("select qra from motoristas where id=?",String.class,criado)).isEqualTo("QRA-NAO-CADASTRADO");
-        assertThat(jdbc.queryForObject("select nome from motoristas where id=?",String.class,criado)).isEqualTo("QUEM SERA");
+        // QRA desconhecido nao cria cadastro: a OS entra completa, so sem socorrista
+        assertThat(motoristaDa("OS-IMUT-ORFA")).isNull();
+        assertThat(jdbc.queryForObject("select count(*) from motoristas where qra='QRA-NAO-CADASTRADO'",Integer.class)).isZero();
+        assertThat(valorDaOs("OS-IMUT-ORFA")).isEqualByComparingTo("275.50");
 
-        // a excecao que sobra e a OS sem QRA: entra completa, so sem socorrista
+        // mesma coisa para a OS sem QRA nenhum
         assertThat(motoristaDa("OS-IMUT-SEMQRA")).isNull();
         assertThat(valorDaOs("OS-IMUT-SEMQRA")).isEqualByComparingTo("90.25");
         assertThat(valorDaReceitaDa("OS-IMUT-SEMQRA")).isEqualByComparingTo("90.25");
