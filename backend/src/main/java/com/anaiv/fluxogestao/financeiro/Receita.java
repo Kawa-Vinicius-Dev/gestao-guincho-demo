@@ -11,7 +11,8 @@ import static com.anaiv.fluxogestao.financeiro.EnumsFinanceiros.StatusReceita;
 @Table(name = "receitas")
 public class Receita {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY) private Long id;
-    @OneToOne @JoinColumn(name = "conta_receber_id") private ContaReceber contaReceber;
+    /** LAZY pelo mesmo motivo da OS: o extrato carrega centenas de receitas e so o DTO le o id daqui. */
+    @OneToOne(fetch = FetchType.LAZY) @JoinColumn(name = "conta_receber_id") private ContaReceber contaReceber;
     @ManyToOne @JoinColumn(name = "contratante_id") private Contratante contratante;
     @ManyToOne @JoinColumn(name = "categoria_id") private Categoria categoria;
     private String descricao;
@@ -22,7 +23,12 @@ public class Receita {
     private boolean recorrente;
     @ManyToOne @JoinColumn(name = "veiculo_id") private Veiculo veiculo;
     private String observacoes;
-    @OneToOne @JoinColumn(name = "ordem_servico_porto_id") private OrdemServicoPorto ordemServicoPorto;
+    /**
+     * LAZY de proposito: o dashboard e o extrato carregam centenas de receitas e nunca leem a OS.
+     * Em EAGER, cada receita virava uma consulta a mais - 275 consultas extras num mes de Porto.
+     * Quem precisa da OS (PortoFinanceiroService) le so o id, que o proxy devolve sem ir ao banco.
+     */
+    @OneToOne(fetch = FetchType.LAZY) @JoinColumn(name = "ordem_servico_porto_id") private OrdemServicoPorto ordemServicoPorto;
     @ManyToOne @JoinColumn(name = "ordem_pagamento_porto_id") private OrdemPagamentoPorto ordemPagamentoPorto;
     @ManyToOne @JoinColumn(name = "importacao_id") private Importacao importacao;
     @ManyToOne @JoinColumn(name = "motorista_id") private Motorista motorista;

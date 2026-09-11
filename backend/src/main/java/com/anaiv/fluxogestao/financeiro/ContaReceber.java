@@ -25,7 +25,8 @@ public class ContaReceber {
     private String observacoes;
     @Enumerated(EnumType.STRING) private OrigemLancamento origem;
     @ManyToOne @JoinColumn(name = "importacao_id") private Importacao importacao;
-    @OneToOne @JoinColumn(name = "ordem_servico_porto_id") private OrdemServicoPorto ordemServicoPorto;
+    /** LAZY pelo mesmo motivo da Receita: lista grande que nunca le a OS. Ver comentario la. */
+    @OneToOne(fetch = FetchType.LAZY) @JoinColumn(name = "ordem_servico_porto_id") private OrdemServicoPorto ordemServicoPorto;
     @ManyToOne @JoinColumn(name = "ordem_pagamento_porto_id") private OrdemPagamentoPorto ordemPagamentoPorto;
     @ManyToOne @JoinColumn(name = "motorista_id") private Motorista motorista;
     @Column(name = "criado_em") private OffsetDateTime criadoEm = OffsetDateTime.now();
