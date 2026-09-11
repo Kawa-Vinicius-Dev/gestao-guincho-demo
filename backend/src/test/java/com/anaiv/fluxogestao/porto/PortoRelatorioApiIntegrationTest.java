@@ -134,12 +134,21 @@ class PortoRelatorioApiIntegrationTest {
             """),"{}");
         long opId=idOp(token,"OP-EXP-001");
         long calendario=criarCalendario(token,"2099-12-31","2099-12-01","2099-12-31");
+        // QRA so vincula se estiver cadastrado: sem isso estas OS cairiam na fila de atribuicao manual
+        criarSocorrista(token,"SOCORRISTA TESTE 001","QRA-TESTE-001");
+        criarSocorrista(token,"SOCORRISTA TESTE 002","QRA-TESTE-002");
         confirmar(token,previa(token,"os-exportacao.csv","""
             Número da Ordem de Serviço,Valor Total,Especialidade,Sigla da Viatura,Socorrista,QRA,Data de atendimento
             OS-EXP-001,100.00,=2+2,,SOCORRISTA TESTE,QRA-TESTE-001,2026-08-01
             OS-EXP-002,200.00,PANE,VTR-TESTE,SOCORRISTA TESTE,QRA-TESTE-002,2026-08-01
             """),"{\"ordemPagamentoId\":"+opId+",\"calendarioPagamentoId\":"+calendario+"}");
         return token;
+    }
+
+    /** Os tres testes da classe chamam prepararDados no mesmo banco: a partir do segundo o QRA ja existe. */
+    private void criarSocorrista(String token,String nome,String qra) throws Exception {
+        mvc.perform(post("/api/motoristas").header("Authorization","Bearer "+token).contentType(MediaType.APPLICATION_JSON)
+            .content("{\"nome\":\""+nome+"\",\"qra\":\""+qra+"\"}"));
     }
 
     private long idOp(String token,String numero) throws Exception {
