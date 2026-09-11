@@ -1,5 +1,6 @@
 package com.anaiv.fluxogestao.porto;
 
+import com.anaiv.fluxogestao.arquivos.ArmazenamentoArquivos;
 import com.anaiv.fluxogestao.cadastro.*;
 import com.anaiv.fluxogestao.financeiro.*;
 import com.anaiv.fluxogestao.porto.*;
@@ -10,14 +11,12 @@ import com.anaiv.fluxogestao.exception.RecursoNaoEncontradoException;
 import com.anaiv.fluxogestao.security.UsuarioPrincipal;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.*;
 import java.security.MessageDigest;
 import java.time.LocalDate;
 import java.util.*;
@@ -26,10 +25,10 @@ import java.util.*;
 public class PortoImportacaoService {
     private static final Logger log=LoggerFactory.getLogger(PortoImportacaoService.class);
     private final ImportacaoRepository importacoes; private final RegistroImportadoPortoRepository registros;
-    private final PortoCsvParser parser;private final PortoBlocosParser blocos; private final PortoService porto;private final PortoFinanceiroService financeiro; private final Path pasta;
+    private final PortoCsvParser parser;private final PortoBlocosParser blocos; private final PortoService porto;private final PortoFinanceiroService financeiro; private final ArmazenamentoArquivos armazenamento;
     private final MotoristaRepository motoristas;
-    public PortoImportacaoService(ImportacaoRepository i,RegistroImportadoPortoRepository r,PortoCsvParser p,PortoBlocosParser blocos,PortoService porto,PortoFinanceiroService financeiro,MotoristaRepository motoristas,@Value("${app.storage-dir}")String storage){
-        importacoes=i;registros=r;parser=p;this.blocos=blocos;this.porto=porto;this.financeiro=financeiro;this.motoristas=motoristas;pasta=Path.of(storage).toAbsolutePath().normalize().resolve("porto");}
+    public PortoImportacaoService(ImportacaoRepository i,RegistroImportadoPortoRepository r,PortoCsvParser p,PortoBlocosParser blocos,PortoService porto,PortoFinanceiroService financeiro,MotoristaRepository motoristas,ArmazenamentoArquivos armazenamento){
+        importacoes=i;registros=r;parser=p;this.blocos=blocos;this.porto=porto;this.financeiro=financeiro;this.motoristas=motoristas;this.armazenamento=armazenamento;}
     @Transactional public PreviaResponse previa(MultipartFile arquivo){
         if(arquivo.isEmpty())throw new IllegalArgumentException("Selecione um arquivo CSV ou TXT.");String nome=arquivo.getOriginalFilename();
         String nomeNormalizado=nome==null?"":nome.toLowerCase(Locale.ROOT);if(!tabular(nomeNormalizado))throw new IllegalArgumentException("A importação Porto aceita CSV, TXT ou TSV.");
@@ -68,8 +67,8 @@ public class PortoImportacaoService {
                 if(imp.getStatus()==StatusImportacao.CONFIRMADA){regravar(imp,bytes);imp.prepararPorto(previa.tipo(),imp.getTextoExtraido());importacoes.saveAndFlush(imp);return resposta(imp,previa);}
                 throw new IllegalArgumentException("Este arquivo já foi importado.");
             }
-            Files.createDirectories(pasta);Path destino=pasta.resolve(UUID.randomUUID()+(servicosGerais?".txt":".csv")).normalize();if(!destino.startsWith(pasta))throw new IllegalArgumentException("Nome de arquivo inválido.");Files.write(destino,bytes,StandardOpenOption.CREATE_NEW);
-            String conteudo=new String(bytes,StandardCharsets.UTF_8);Importacao imp=new Importacao(nome,hash,destino.toString());
+            String caminho="importacoes-porto/"+UUID.randomUUID()+(servicosGerais?".txt":".csv");armazenamento.enviar(caminho,bytes,servicosGerais?"text/plain":"text/csv");
+            String conteudo=new String(bytes,StandardCharsets.UTF_8);Importacao imp=new Importacao(nome,hash,caminho);
             imp.prepararPorto(previa.tipo(),conteudo.substring(0,Math.min(conteudo.length(),10000)));importacoes.saveAndFlush(imp);return resposta(imp,previa);
         }catch(IllegalArgumentException e){throw e;}catch(Exception e){throw falha("Não foi possível preparar o relatório Porto.",e);}
     }
@@ -113,15 +112,13 @@ public class PortoImportacaoService {
             .map(l->l.texto("numero_os")).filter(Objects::nonNull).distinct().sorted().toList();
     }
     /**
-     * A confirmacao rele o arquivo do disco, mas o disco do Render e efemero: entre a previa e a
-     * confirmacao o processo pode reiniciar e levar o arquivo junto. Reenviar o mesmo arquivo cai
-     * aqui, pelo hash, entao os bytes sao gravados de novo em vez de confiar no que sobrou la.
+     * A confirmacao rele o arquivo do armazenamento. O Supabase Storage e duravel entre deploys e
+     * restarts, mas reenviar o mesmo arquivo ainda cai aqui pelo hash - regrava os bytes de novo,
+     * o que serve de recuperacao caso o objeto tenha sido removido por fora (ex.: manualmente).
      */
-    private void regravar(Importacao imp,byte[] bytes)throws Exception{
-        Path destino=Path.of(imp.getCaminhoArquivo()).toAbsolutePath().normalize();
-        if(!destino.startsWith(pasta))throw new IllegalArgumentException("Caminho de arquivo inválido para esta importação.");
-        Files.createDirectories(destino.getParent());
-        Files.write(destino,bytes,StandardOpenOption.CREATE,StandardOpenOption.WRITE,StandardOpenOption.TRUNCATE_EXISTING);
+    private void regravar(Importacao imp,byte[] bytes){
+        String caminho=imp.getCaminhoArquivo();
+        armazenamento.enviar(caminho,bytes,caminho.endsWith(".txt")?"text/plain":"text/csv");
     }
     /** O operador recebe uma frase curta, mas a causa real precisa sobreviver no log do servidor. */
     private IllegalArgumentException falha(String mensagem,Exception causa){log.warn(mensagem,causa);return new IllegalArgumentException(mensagem,causa);}
@@ -179,7 +176,7 @@ public class PortoImportacaoService {
         try{return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest((linha.hashRegistro()+"|op="+op.getId()).getBytes(StandardCharsets.UTF_8)));}catch(Exception e){throw new IllegalStateException(e);}}
     private boolean importacaoPaga(TipoRelatorioPorto tipo){return tipo==TipoRelatorioPorto.OS_VINCULADAS||tipo==TipoRelatorioPorto.SERVICOS_GERAIS;}
     private PreviaPorto parse(byte[] bytes,boolean conteudoLivre){if(blocos.suporta(bytes))return blocos.parse(bytes);return conteudoLivre?parser.parseServicosGerais(bytes):parser.parse(bytes);}
-    private PreviaPorto reler(Importacao importacao)throws Exception{byte[] bytes=Files.readAllBytes(Path.of(importacao.getCaminhoArquivo()));
+    private PreviaPorto reler(Importacao importacao)throws Exception{byte[] bytes=armazenamento.baixar(importacao.getCaminhoArquivo());
         if(importacao.getTipoRelatorioPorto()==TipoRelatorioPorto.SERVICOS_AGUARDANDO_LANCAMENTO)return blocos.parse(bytes);
         return importacao.getTipoRelatorioPorto()==TipoRelatorioPorto.SERVICOS_GERAIS?parser.parseServicosGerais(bytes):parser.parse(bytes);}
     private String normalizarConteudo(String conteudo){String semBom=conteudo==null?"":conteudo.replace("\uFEFF","").replace("\r\n","\n").replace('\r','\n');

@@ -82,9 +82,24 @@ public class SupabaseArmazenamentoArquivos implements ArmazenamentoArquivos {
         enviar(requisicao, "Nao foi possivel remover o arquivo do armazenamento.");
     }
 
+    @Override
+    public byte[] baixar(String caminho) {
+        exigirConfiguracao();
+        HttpRequest requisicao = HttpRequest.newBuilder(uriObjeto(caminho))
+                .header("Authorization", "Bearer " + chaveServico)
+                .header("apikey", chaveServico)
+                .GET()
+                .build();
+        return enviar(requisicao, BodyHandlers.ofByteArray(), "Nao foi possivel baixar o arquivo do armazenamento.").body();
+    }
+
     private HttpResponse<String> enviar(HttpRequest requisicao, String mensagemDeErro) {
+        return enviar(requisicao, BodyHandlers.ofString(), mensagemDeErro);
+    }
+
+    private <T> HttpResponse<T> enviar(HttpRequest requisicao, HttpResponse.BodyHandler<T> handler, String mensagemDeErro) {
         try {
-            HttpResponse<String> resposta = http.send(requisicao, BodyHandlers.ofString());
+            HttpResponse<T> resposta = http.send(requisicao, handler);
             if (resposta.statusCode() >= 300) {
                 throw new IllegalStateException(mensagemDeErro + " (status " + resposta.statusCode() + ")");
             }

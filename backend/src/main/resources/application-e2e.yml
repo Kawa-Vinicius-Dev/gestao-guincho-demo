@@ -5,5 +5,3 @@ spring:
     password:
   flyway:
     locations: classpath:db/migration/common
-app:
-  storage-dir: ./backend/target/e2e-importacoes
