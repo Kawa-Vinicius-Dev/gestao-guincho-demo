@@ -67,6 +67,34 @@ test('exporta somente as OS sem socorrista com o filtro marcado',async()=>{
   expect(chamadas[0]).not.toContain('dataInicio')
 })
 
+test('destaca, filtra e exporta OS sem QRA',async()=>{
+  const chamadas:string[]=[]
+  servidor.use(
+    http.get('/api/porto/ordens-servico',({request})=>{
+      const url=new URL(request.url)
+      return HttpResponse.json(url.searchParams.get('semQra')
+        ? [{id:19,numero:'OS-SEM-QRA',valorTotal:300,dataAtendimento:'2026-07-02'}]
+        : [{id:2,numero:'OS-COM-QRA',valorTotal:700,qra:'QRA-2',dataAtendimento:'2026-07-30'}])
+    }),
+    http.get('/api/porto/ordens-servico/excel',({request})=>{
+      chamadas.push(new URL(request.url).search)
+      return HttpResponse.text('planilha')
+    }),
+  )
+  URL.createObjectURL=vi.fn(()=>'blob:teste');URL.revokeObjectURL=vi.fn();HTMLAnchorElement.prototype.click=vi.fn()
+  const user=userEvent.setup();render(<PortoOrdensServicoPage/>)
+  await screen.findByText('OS-COM-QRA')
+  await user.click(screen.getByLabelText(/somente os sem qra/i))
+  expect(await screen.findByText('OS-SEM-QRA')).toBeInTheDocument()
+  // "Sem QRA" tambem aparece na coluna Socorrista/QRA como texto simples; o selo de excecao e o elemento com essa classe
+  expect(screen.getByText('Sem QRA',{selector:'.porto-qra-ausente'})).toBeInTheDocument()
+  expect(screen.getByRole('button',{name:/associar socorrista/i})).toBeInTheDocument()
+  await user.click(screen.getByRole('button',{name:/exportar os sem qra/i}))
+  await vi.waitFor(()=>expect(chamadas).toHaveLength(1))
+  expect(chamadas[0]).toContain('semQra=true')
+  expect(chamadas[0]).not.toContain('dataInicio')
+})
+
 test('lista serviço devolvido como pendência financeira',async()=>{
   servidor.use(http.get('/api/porto/pendencias',()=>HttpResponse.json([{tipo:'SERVICO_DEVOLVIDO',referenciaId:2,referencia:'OS-200',valor:700,data:'2026-07-31',situacao:'ABERTA'}])))
   render(<PortoPendenciasPage/>);expect(await screen.findByText('Serviço devolvido')).toBeInTheDocument();expect(screen.getByText('OS-200')).toBeInTheDocument();expect(screen.queryByText(/despesa/i)).not.toBeInTheDocument()
