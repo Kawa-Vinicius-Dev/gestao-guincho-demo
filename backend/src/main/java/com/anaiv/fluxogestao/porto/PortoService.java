@@ -107,9 +107,9 @@ public class PortoService {
     private PeriodoPadraoResponse mes(LocalDate data){return new PeriodoPadraoResponse(inicioDoMes(data),fimDoMes(data));}
     private LocalDate inicioDoMes(LocalDate data){return data.withDayOfMonth(1);}
     private LocalDate fimDoMes(LocalDate data){return data.withDayOfMonth(data.lengthOfMonth());}
-    @Transactional(readOnly=true) public List<OrdemServicoResponse> listarOss(){return listarOss(new PortoOsFiltros(null,null,null,null,null,null,null,null,null,null,null,null,null));}
+    @Transactional(readOnly=true) public List<OrdemServicoResponse> listarOss(){return listarOss(new PortoOsFiltros(null,null,null,null,null,null,null,null,null,null,null,null,null,null));}
     @Transactional(readOnly=true) public List<OrdemServicoResponse> listarOss(PortoOsFiltros filtros){return listarOss(filtros,carregarOps());}
-    private List<OrdemServicoResponse> listarOss(PortoOsFiltros filtros,DadosOps dados){PortoOsFiltros f=filtros==null?new PortoOsFiltros(null,null,null,null,null,null,null,null,null,null,null,null,null):filtros;
+    private List<OrdemServicoResponse> listarOss(PortoOsFiltros filtros,DadosOps dados){PortoOsFiltros f=filtros==null?new PortoOsFiltros(null,null,null,null,null,null,null,null,null,null,null,null,null,null):filtros;
         Map<Long,EnumsFinanceiros.StatusConciliacaoPorto> conciliacoes=dados.ops().stream().collect(java.util.stream.Collectors.toMap(OrdemPagamentoPorto::getId,x->op(x,dados.composicao(x)).statusConciliacao()));
         return carregarServicos(f).stream().sorted(Comparator.comparing(OrdemServicoPorto::getNumero)).map(this::os).filter(x->filtrarOs(x,f,conciliacoes)).toList();}
     @Transactional(readOnly=true) public Map<String,Object> dashboard(PortoFiltros filtrosOp,PortoOsFiltros filtrosOs){DadosOps dados=carregarOps();ResumoOrdensPagamentoResponse resumo=resumo(filtrosOp,dados);List<OrdemServicoResponse> servicos=listarOss(filtrosOs,dados);Map<String,Object> r=new LinkedHashMap<>();adicionarResumo(r,resumo);
@@ -170,6 +170,7 @@ public class PortoService {
         if(f.dataInicio()!=null&&(data==null||data.isBefore(f.dataInicio())))return false;if(f.dataFim()!=null&&(data==null||data.isAfter(f.dataFim())))return false;
         if(!contem(x.numero(),f.numeroOs())||!contem(x.ordemPagamento(),f.numeroOp())||!contem(x.especialidade(),f.especialidade())||!contem(x.socorrista(),f.socorrista())||!contem(x.qra(),f.qra())||!contem(x.viatura(),f.viatura()))return false;
         if(f.semSocorrista()!=null&&f.semSocorrista()!=(x.motoristaId()==null))return false;
+        if(f.semQra()!=null&&f.semQra()!=(x.qra()==null||x.qra().isBlank()))return false;
         if(f.statusOperacional()!=null&&f.statusOperacional()!=x.statusOperacional())return false;if(f.statusFinanceiro()!=null&&f.statusFinanceiro()!=x.statusFinanceiro())return false;
         return f.statusConciliacao()==null||(x.ordemPagamentoId()!=null&&f.statusConciliacao()==conciliacoes.get(x.ordemPagamentoId()));}
     private boolean temDivergencia(OrdemPagamentoResponse x){return x.statusConciliacao()==EnumsFinanceiros.StatusConciliacaoPorto.VALOR_ABAIXO||x.statusConciliacao()==EnumsFinanceiros.StatusConciliacaoPorto.VALOR_ACIMA||x.statusConciliacao()==EnumsFinanceiros.StatusConciliacaoPorto.RECEBIDA_COM_DIVERGENCIA;}

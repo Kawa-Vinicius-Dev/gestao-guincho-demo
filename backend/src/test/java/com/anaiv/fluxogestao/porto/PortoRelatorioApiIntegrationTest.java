@@ -107,6 +107,21 @@ class PortoRelatorioApiIntegrationTest {
             assertThat(texto(linhas.stream().filter(linha->texto(linha,0).equals("OS-EXP-SEM-QRA")).findFirst().orElseThrow(),11))
                 .isEqualTo("Relatório da Porto veio sem QRA nesta OS");
         }
+
+        // semQra e mais preciso que semSocorrista: exclui OS-EXP-001/002, que tem QRA preenchido
+        byte[] semQra=mvc.perform(get("/api/porto/ordens-servico/excel").param("semQra","true")
+                .header("Authorization","Bearer "+token))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
+        try(XSSFWorkbook workbook=new XSSFWorkbook(new ByteArrayInputStream(semQra))){
+            var aba=workbook.getSheet("Ordens de serviço");
+            var linhas=java.util.stream.IntStream.range(1,aba.getLastRowNum()).mapToObj(aba::getRow).toList();
+            // a base de testes e compartilhada; verifica a excecao pelo numero em vez de exigir lista exata
+            List<String> numerosSemQra=linhas.stream().map(linha->texto(linha,0)).toList();
+            assertThat(numerosSemQra).contains("OS-EXP-SEM-QRA").doesNotContain("OS-EXP-001","OS-EXP-002");
+            var linhaSemQra=linhas.stream().filter(linha->texto(linha,0).equals("OS-EXP-SEM-QRA")).findFirst().orElseThrow();
+            assertThat(texto(linhaSemQra,4)).isEmpty();
+            assertThat(texto(linhaSemQra,11)).isEqualTo("Relatório da Porto veio sem QRA nesta OS");
+        }
     }
 
     private String texto(org.apache.poi.ss.usermodel.Row linha,int coluna){var celula=linha.getCell(coluna);return celula==null||celula.getCellType()!=CellType.STRING?"":celula.getStringCellValue();}

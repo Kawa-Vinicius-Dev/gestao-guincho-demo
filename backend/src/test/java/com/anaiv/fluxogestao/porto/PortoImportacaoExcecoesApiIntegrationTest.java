@@ -66,7 +66,7 @@ class PortoImportacaoExcecoesApiIntegrationTest {
             "{\"dataPagamento\":\"2072-10-16\",\"competenciaInicio\":\"2072-10-01\",\"competenciaFim\":\"2072-10-15\",\"descricao\":\"Ciclo sem QRA\",\"ativo\":true}"),"$.id")).longValue();
         MockMultipartFile arquivo=new MockMultipartFile("arquivo","sem-coluna-qra.tsv","text/plain",("""
             Número da Ordem de Serviço\tValor Total\tEspecialidade\tSigla da Viatura\tSocorrista\tData de atendimento
-            OS-EXC-SEM-COLUNA-QRA\t300.00\tGUINCHO\t\tSOCORRISTA SEM QRA\t22/09/2072
+            OS-EXC-SEM-COLUNA-QRA\t300.00\tGUINCHO\t\tSOCORRISTA SEM QRA\t10/10/2072
             """).getBytes(StandardCharsets.UTF_8));
 
         String previa=mvc.perform(multipart("/api/porto/importacoes/previa").file(arquivo).header("Authorization","Bearer "+token))
