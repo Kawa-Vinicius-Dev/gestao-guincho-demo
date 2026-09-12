@@ -16,10 +16,11 @@ public class DashboardService {
     private final ContaReceberRepository contasRepository;private final ReceitaRepository receitasRepository;private final DespesaRepository despesasRepository;private final QuilometragemRepository quilometragensRepository;
     private final ImportacaoRepository importacoes; private final CadastroService cadastros;
     private final com.anaiv.fluxogestao.porto.OrdemServicoPortoRepository oss;
+    private final com.anaiv.fluxogestao.comissao.PagamentoComissaoRepository pagamentosComissao;
     /** A comissao e 20% do servico; mesma regra da tela de comissao (ComissaoService.PERCENTUAL). */
     private static final BigDecimal PERCENTUAL_COMISSAO=new BigDecimal("0.20");
-    public DashboardService(ContaReceberRepository contas,ReceitaRepository receitas,DespesaRepository despesas,QuilometragemRepository quilometragens,ImportacaoRepository i,CadastroService c,com.anaiv.fluxogestao.porto.OrdemServicoPortoRepository oss){
-        contasRepository=contas;receitasRepository=receitas;despesasRepository=despesas;quilometragensRepository=quilometragens;importacoes=i;cadastros=c;this.oss=oss;
+    public DashboardService(ContaReceberRepository contas,ReceitaRepository receitas,DespesaRepository despesas,QuilometragemRepository quilometragens,ImportacaoRepository i,CadastroService c,com.anaiv.fluxogestao.porto.OrdemServicoPortoRepository oss,com.anaiv.fluxogestao.comissao.PagamentoComissaoRepository pagamentosComissao){
+        contasRepository=contas;receitasRepository=receitas;despesasRepository=despesas;quilometragensRepository=quilometragens;importacoes=i;cadastros=c;this.oss=oss;this.pagamentosComissao=pagamentosComissao;
     }
     @Transactional
     public DashboardResponse dashboard(LocalDate inicio,LocalDate fim,Long veiculoId,Long motoristaId,Long categoriaId,String status,Long contratanteId){
@@ -80,12 +81,19 @@ public class DashboardService {
         BigDecimal producaoPendente=soma(pendentes.stream()
             .map(com.anaiv.fluxogestao.porto.OrdemServicoPorto::getValorTotal).toList());
 
-        // Comissao ja devida menos a que ja foi repassada: o que sobra e divida com a equipe,
-        // e entra como gasto previsto. A paga ja esta em despesasPagas - somar de novo duplicaria.
-        BigDecimal comissaoJaPaga=soma(despesas.stream().filter(Despesa::isAprovada)
-            .filter(d->d.getProtocolo()!=null&&d.getProtocolo().startsWith("COMISSAO-"))
-            .map(Despesa::getValor).toList());
-        BigDecimal comissaoAPagar=comissaoSobreProducao.subtract(comissaoJaPaga).max(ZERO);
+        // Comissao que a equipe ainda tem a receber. Nao da para subtrair "comissao paga no periodo"
+        // da "comissao produzida no periodo": a producao e contada pela data do atendimento e o
+        // repasse pela data do pagamento, entao uma comissao de agosto paga em setembro nao bate em
+        // recorte nenhum. Aqui a pergunta e feita servico a servico: o ciclo que pagou esta OS ja
+        // teve repasse para este socorrista? Se teve, ela nao e mais divida.
+        BigDecimal comissaoAPagar=soma(servicosDoPeriodo.stream()
+            .filter(os->os.getStatusFinanceiro()==StatusFinanceiroPorto.RECEBIDO)
+            .filter(os->os.getMotorista()!=null&&os.getOrdemPagamento()!=null)
+            .filter(os->os.getOrdemPagamento().getCalendarioPagamento()!=null)
+            .filter(os->pagamentosComissao.findByMotoristaAndCalendarioPagamento(
+                os.getMotorista(),os.getOrdemPagamento().getCalendarioPagamento()).isEmpty())
+            .map(com.anaiv.fluxogestao.porto.OrdemServicoPorto::getValorTotal).toList())
+            .multiply(PERCENTUAL_COMISSAO).setScale(2,java.math.RoundingMode.HALF_UP);
 
         // Gasto por socorrista: o que cada um custou no periodo - a comissao dele mais as despesas
         // lancadas no nome dele (combustivel, alimentacao). Producao ao lado, pela mesma razao de
