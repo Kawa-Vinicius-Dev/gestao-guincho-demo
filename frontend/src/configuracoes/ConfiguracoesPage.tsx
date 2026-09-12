@@ -5,7 +5,7 @@ import type { Categoria, Contratante, SenhaRedefinida, Usuario } from '../types/
 
 export default function ConfiguracoesPage(){
   const [categorias,setCategorias]=useState<Categoria[]>([]),[contratantes,setContratantes]=useState<Contratante[]>([]),[usuarios,setUsuarios]=useState<Usuario[]>([])
-  const [mensagem,setMensagem]=useState(''),[erro,setErro]=useState(''),[gerada,setGerada]=useState<SenhaRedefinida|null>(null),[copiada,setCopiada]=useState(false)
+  const [mensagem,setMensagem]=useState(''),[erro,setErro]=useState(''),[gerada,setGerada]=useState<SenhaRedefinida|null>(null),[copiada,setCopiada]=useState(false),[baixando,setBaixando]=useState(false)
   const carregar=()=>Promise.all([api<Categoria[]>('/api/categorias'),api<Contratante[]>('/api/contratantes'),api<Usuario[]>('/api/usuarios')])
     .then(([c,o,u])=>{setCategorias(c);setContratantes(o);setUsuarios(u)}).catch(x=>setErro((x as Error).message))
   useEffect(()=>{void carregar()},[])
@@ -20,9 +20,11 @@ export default function ConfiguracoesPage(){
     catch(x){setErro((x as Error).message)}
   }
   // o banco esta num plano sem backup automatico: esta copia e o que fica na mao do dono
-  async function baixarCopia(){setErro('');setMensagem('')
+  async function baixarCopia(){setErro('');setMensagem('');setBaixando(true)
+    // a copia percorre o banco inteiro: sem sinal na tela, parece que o clique nao pegou
     try{await baixarCopiaDosDados();setMensagem('Cópia gerada. Guarde o arquivo fora do sistema.')}
     catch(x){setErro((x as Error).message)}
+    finally{setBaixando(false)}
   }
   async function copiar(valor:string){try{await navigator.clipboard.writeText(valor);setCopiada(true)}catch{setCopiada(false)}}
   async function senha(e:FormEvent<HTMLFormElement>){e.preventDefault();const formulario=e.currentTarget;const f=new FormData(formulario)
@@ -41,7 +43,7 @@ export default function ConfiguracoesPage(){
       <section className="panel settings-card"><header><h2>Acessos</h2><p>Quem entra no sistema. Esqueceu a senha? Redefina aqui e passe a provisória para a pessoa.</p></header><ul className="simple-list">{usuarios.map(u=><li key={u.id}><strong>{u.nome}</strong><small>{u.email} · {u.perfil==='ADMINISTRADOR'?'Administrador':'Socorrista'}{u.senhaProvisoria?' · senha provisória pendente':''}</small><button className="table-action" onClick={()=>void redefinir(u)}>Redefinir senha</button></li>)}</ul></section>
       <section className="panel settings-card"><header><h2>Cópia dos dados</h2><p>O banco não tem backup automático. Baixe de tempos em tempos e guarde fora do sistema.</p></header>
         <p className="empty-inline">Um arquivo do Excel com ordens de pagamento, ordens de serviço, receitas, despesas, contas a receber, socorristas, veículos, quilometragem, calendário e despesas fixas.</p>
-        <button className="button button-primary" onClick={()=>void baixarCopia()}>Baixar cópia de tudo</button></section>
+        <button className="button button-primary" disabled={baixando} onClick={()=>void baixarCopia()}>{baixando?'Preparando cópia…':'Baixar cópia de tudo'}</button></section>
       <section className="panel settings-card"><header><h2>Custos da frota</h2><p>O custo por km é configurado em cada veículo e aplicado ao km morto no momento do registro.</p></header><a className="button button-ghost" href="/veiculos">Configurar veículos</a></section>
     </div>
     {gerada?<div className="modal-backdrop"><section className="modal" role="dialog" aria-modal="true" aria-label="Senha provisória gerada"><header><div><span className="eyebrow">{gerada.nome}</span><h2>Senha provisória</h2></div><button aria-label="Fechar" onClick={()=>setGerada(null)}>×</button></header>

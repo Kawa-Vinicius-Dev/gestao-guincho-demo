@@ -19,6 +19,8 @@ public class CadastroController {
     @GetMapping("/veiculos") public List<VeiculoResponse> veiculos(){ return service.veiculos(); }
     @PostMapping("/veiculos") @ResponseStatus(HttpStatus.CREATED) @PreAuthorize("hasRole('ADMINISTRADOR')")
     public VeiculoResponse veiculo(@Valid @RequestBody VeiculoRequest r){ return service.criar(r); }
+    @PutMapping("/veiculos/{id}") @PreAuthorize("hasRole('ADMINISTRADOR')")
+    public VeiculoResponse atualizarVeiculo(@PathVariable Long id,@Valid @RequestBody VeiculoRequest r){ return service.atualizarVeiculo(id,r); }
     @GetMapping("/contratantes") @PreAuthorize("hasRole('ADMINISTRADOR')") public List<ContratanteResponse> contratantes(){ return service.contratantes(); }
     @PostMapping("/contratantes") @ResponseStatus(HttpStatus.CREATED) @PreAuthorize("hasRole('ADMINISTRADOR')")
     public ContratanteResponse contratante(@Valid @RequestBody ContratanteRequest r){ return service.criar(r); }

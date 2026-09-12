@@ -50,7 +50,7 @@ public final class PortoDtos {
         StatusConciliacaoPorto statusConciliacao,Boolean recebida,Boolean vencida,Boolean comComposicao,Boolean comDivergencia,
         Long calendarioPagamentoId) {}
     public record PortoOsFiltros(LocalDate dataInicio,LocalDate dataFim,String numeroOs,String numeroOp,String especialidade,
-        String socorrista,String qra,String viatura,StatusOperacionalPorto statusOperacional,StatusFinanceiroPorto statusFinanceiro,
+        String socorrista,String qra,String viatura,String seguradora,StatusOperacionalPorto statusOperacional,StatusFinanceiroPorto statusFinanceiro,
         StatusConciliacaoPorto statusConciliacao,Boolean porDataPagamento,Boolean semSocorrista,Boolean semQra) {}
     public record PortoDashboardFiltros(String periodo,String visao,LocalDate referencia,LocalDate dataInicio,LocalDate dataFim,
         String numeroOs,String numeroOp,String numero,String especialidade,String socorrista,String qra,String viatura,
@@ -75,7 +75,13 @@ public final class PortoDtos {
         BigDecimal valorKmExcedente,BigDecimal kmMortoEstimado,StatusOperacionalPorto statusOperacional,
         StatusFinanceiroPorto statusFinanceiro,LocalDate dataDevolucao,LocalDate dataFinalizacaoDevolucao,
         String prestador,String seguradora,String cliente,String placa,OffsetDateTime dataHoraAtendimento,
-        LocalDate dataPrevistaOriginal,LocalDate dataEfetivaPagamento,int ciclosAtraso,Long motoristaId,String motorista) {}
+        LocalDate dataPrevistaOriginal,LocalDate dataEfetivaPagamento,int ciclosAtraso,Long motoristaId,String motorista,
+        /* Palpite para a pessoa confirmar, nunca um vinculo. Null quando o nome empata entre dois
+           socorristas - o painel corta em 20 caracteres e "JEFERSON MARTINS DA SILVA" e o "FILHO"
+           viram a mesma string. Ver MotoristaPortoResolver. */
+        Long sugestaoMotoristaId,String sugestaoMotorista,boolean sugestaoAmbigua,
+        /* OS que passou do ciclo em que era esperada e continua sem pagamento. */
+        boolean atrasadaNoCiclo) {}
     public record AssociarMotoristaRequest(@NotNull Long motoristaId) {}
     public record PendenciaResponse(Long id,String tipo,Long referenciaId,String referencia,BigDecimal valor,LocalDate data,String situacao,
         String motivo,String observacao,String responsavel,LocalDate prazo,String referenciaPorto) {}

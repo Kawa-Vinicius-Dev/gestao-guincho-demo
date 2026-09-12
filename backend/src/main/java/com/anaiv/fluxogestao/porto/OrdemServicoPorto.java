@@ -12,6 +12,8 @@ public class OrdemServicoPorto {
     @Id @GeneratedValue(strategy=GenerationType.IDENTITY) private Long id;
     @ManyToOne @JoinColumn(name="ordem_pagamento_id") private OrdemPagamentoPorto ordemPagamento;
     private String numero; @Column(name="valor_total") private BigDecimal valorTotal=BigDecimal.ZERO;
+    /** Ver {@link #normalizar(String)}: a chave que liga o numero do painel diario ao do relatorio financeiro. */
+    @Column(name="numero_normalizado") private String numeroNormalizado;
     private String especialidade; @Column(name="sigla_viatura") private String siglaViatura;
     private String socorrista; private String qra; @Column(name="data_atendimento") private LocalDate dataAtendimento;
     @ManyToOne @JoinColumn(name="motorista_id") private Motorista motorista;
@@ -37,7 +39,60 @@ public class OrdemServicoPorto {
     @Column(name="criado_em") private OffsetDateTime criadoEm=OffsetDateTime.now();
     @Column(name="atualizado_em") private OffsetDateTime atualizadoEm=OffsetDateTime.now();
     protected OrdemServicoPorto() {}
-    public OrdemServicoPorto(String numero, Importacao importacao){this.numero=numero;this.importacao=importacao;}
+    public OrdemServicoPorto(String numero, Importacao importacao){this.numero=numero;this.numeroNormalizado=normalizar(numero);this.importacao=importacao;}
+
+    /**
+     * A mesma OS chega com dois numeros diferentes dependendo da tela da Porto: o painel
+     * diario mostra "5632135/26" e o relatorio financeiro mostra "01/5632135-26". O prefixo
+     * de dois digitos so existe no relatorio financeiro e nao identifica nada - conferido nas
+     * 275 OS reais, o nucleo de 7 digitos nao colide.
+     *
+     * Devolve nucleo+ano quando reconhece um dos dois formatos, e null quando nao reconhece.
+     * Null de proposito: sem chave, a OS so casa por numero exato. E melhor deixar duas OS
+     * separadas para alguem conferir do que juntar por palpite dois servicos que podem ser
+     * diferentes - o valor de cada um vira comissao de socorrista no fim do mes.
+     */
+    public static String normalizar(String numero){
+        if(numero==null)return null;
+        String limpo=numero.trim();
+        java.util.regex.Matcher financeiro=FORMATO_FINANCEIRO.matcher(limpo);
+        if(financeiro.matches())return financeiro.group(1)+financeiro.group(2);
+        java.util.regex.Matcher diario=FORMATO_PAINEL_DIARIO.matcher(limpo);
+        if(diario.matches())return diario.group(1)+diario.group(2);
+        return null;
+    }
+    private static final java.util.regex.Pattern FORMATO_FINANCEIRO=java.util.regex.Pattern.compile("^\\d{2}/(\\d{7})-(\\d{2})$");
+    private static final java.util.regex.Pattern FORMATO_PAINEL_DIARIO=java.util.regex.Pattern.compile("^(\\d{7})/(\\d{2})$");
+
+    /**
+     * Promove a OS para o numero do relatorio financeiro. Quando o painel diario cadastra a OS
+     * primeiro, ela nasce com o numero curto; ao chegar o relatorio financeiro, o numero de la
+     * passa a ser o oficial, porque e o que aparece no portal da Porto e em todo o resto do
+     * sistema (as 275 OS ja existentes usam esse formato).
+     */
+    public void renumerar(String numeroOficial){
+        if(!valido(numeroOficial)||numeroOficial.equals(numero))return;
+        numero=numeroOficial;numeroNormalizado=normalizar(numeroOficial);atualizadoEm=OffsetDateTime.now();
+    }
+
+    /**
+     * Servico cancelado pela Porto: fica registrado para o historico do dia, mas nunca vai virar
+     * receita, entao nao pode ficar somando em "aguardando OP" ate o fim dos tempos.
+     * Nao espelha na coluna legada porque ela so aceita os tres status originais - mesmo motivo
+     * pelo qual aguardarLancamento e processarEmOp tambem nao espelham.
+     */
+    /**
+     * Marca que a OS nasceu do painel do dia, e nao do relatorio financeiro. Serve para a tela de
+     * pendencias nao tratar "ainda nao chegou o financeiro" como "QRA desconhecido, precisa de
+     * correcao humana" - senao o alarme real some no meio de centenas de OS normais.
+     */
+    public void registrarOrigemPainelDiario(){
+        if(qra==null)origemImportacao="PAINEL_DIARIO";
+    }
+
+    public void marcarCancelado(){
+        statusOperacional=EnumsFinanceiros.StatusOperacionalPorto.CANCELADO;atualizadoEm=OffsetDateTime.now();
+    }
     public void atualizar(OrdemPagamentoPorto op, BigDecimal valor, String especialidade, String viatura,
                           String socorrista, String qra, LocalDate atendimento, BigDecimal kmExcedente,
                           BigDecimal kmMorto, Importacao origem) {
@@ -76,7 +131,7 @@ public class OrdemServicoPorto {
         atualizadoEm=OffsetDateTime.now();}
     private boolean valido(String valor){return valor!=null&&!valor.isBlank();}
     public Long getId(){return id;} public OrdemPagamentoPorto getOrdemPagamento(){return ordemPagamento;}
-    public String getNumero(){return numero;} public BigDecimal getValorTotal(){return valorTotal;}
+    public String getNumero(){return numero;} public String getNumeroNormalizado(){return numeroNormalizado;} public BigDecimal getValorTotal(){return valorTotal;}
     public String getEspecialidade(){return especialidade;} public String getSiglaViatura(){return siglaViatura;}
     public String getSocorrista(){return socorrista;} public String getQra(){return qra;}
     public Motorista getMotorista(){return motorista;}
