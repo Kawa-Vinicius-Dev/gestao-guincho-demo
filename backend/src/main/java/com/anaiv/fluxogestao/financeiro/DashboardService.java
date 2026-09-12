@@ -80,9 +80,35 @@ public class DashboardService {
         BigDecimal producaoPendente=soma(pendentes.stream()
             .map(com.anaiv.fluxogestao.porto.OrdemServicoPorto::getValorTotal).toList());
 
+        // Comissao ja devida menos a que ja foi repassada: o que sobra e divida com a equipe,
+        // e entra como gasto previsto. A paga ja esta em despesasPagas - somar de novo duplicaria.
+        BigDecimal comissaoJaPaga=soma(despesas.stream().filter(Despesa::isAprovada)
+            .filter(d->d.getProtocolo()!=null&&d.getProtocolo().startsWith("COMISSAO-"))
+            .map(Despesa::getValor).toList());
+        BigDecimal comissaoAPagar=comissaoSobreProducao.subtract(comissaoJaPaga).max(ZERO);
+
+        // Gasto por socorrista: o que cada um custou no periodo - a comissao dele mais as despesas
+        // lancadas no nome dele (combustivel, alimentacao). Producao ao lado, pela mesma razao de
+        // sempre: comissao sem o servico que a gerou nao diz nada.
+        Map<Long,List<com.anaiv.fluxogestao.porto.OrdemServicoPorto>> porSocorrista=servicosDoPeriodo.stream()
+            .filter(os->os.getMotorista()!=null)
+            .filter(os->os.getStatusFinanceiro()==StatusFinanceiroPorto.RECEBIDO)
+            .collect(java.util.stream.Collectors.groupingBy(os->os.getMotorista().getId()));
+        List<ResultadoSocorrista> porPessoa=cadastros.motoristas().stream().map(m->{
+            var servicos=porSocorrista.getOrDefault(m.id(),List.of());
+            BigDecimal producao=soma(servicos.stream().map(com.anaiv.fluxogestao.porto.OrdemServicoPorto::getValorTotal).toList());
+            BigDecimal comissao=producao.multiply(PERCENTUAL_COMISSAO).setScale(2,java.math.RoundingMode.HALF_UP);
+            BigDecimal gastos=soma(despesas.stream().filter(Despesa::isAprovada)
+                .filter(d->d.getMotorista()!=null&&d.getMotorista().getId().equals(m.id()))
+                .filter(d->d.getProtocolo()==null||!d.getProtocolo().startsWith("COMISSAO-"))
+                .map(Despesa::getValor).toList());
+            return new ResultadoSocorrista(m.id(),m.nome(),servicos.size(),producao,comissao,gastos,comissao.add(gastos));
+        }).filter(r->r.servicos()>0||r.despesas().signum()!=0).toList();
+
         return new DashboardResponse(recebida,prevista,atrasada,pagas,despPrev,realizado,projetado,
             importados,kmTotal,kmRem,kmMorto,custoMorto,resultados,
-            producaoPaga,comissaoSobreProducao,producaoPendente,pendentes.size(),servicosDoPeriodo.size());
+            producaoPaga,comissaoSobreProducao,producaoPendente,pendentes.size(),servicosDoPeriodo.size(),
+            comissaoAPagar,porPessoa);
     }
     private boolean entre(LocalDate data,LocalDate inicio,LocalDate fim){return data!=null&&!data.isBefore(inicio)&&!data.isAfter(fim);}
     private BigDecimal soma(List<BigDecimal> valores){return valores.stream().filter(Objects::nonNull).reduce(ZERO,BigDecimal::add);}

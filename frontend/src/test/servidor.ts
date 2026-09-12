@@ -39,6 +39,8 @@ export const servidor = setupServer(
     despesasPagas: 200, despesasPrevistas: 0, saldoRealizado: 580, saldoProjetado: 580,
     registrosImportados: 0, quilometragemTotal: 100,
     kmRemunerado: 70, kmMorto: 30, custoKmMorto: 75, resultadoPorVeiculo: [],
+    producaoPaga: 0, comissaoSobreProducao: 0, producaoPendente: 0,
+    servicosPendentes: 0, servicosDoPeriodo: 0, comissaoAPagar: 0, resultadoPorSocorrista: [],
   })),
   http.get('/api/contas-receber', () => HttpResponse.json(contas)),
   http.get('/api/contratantes', () => HttpResponse.json([{ id: 1, nome: 'Porto Seguro', ativo: true }])),

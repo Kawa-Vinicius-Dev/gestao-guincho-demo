@@ -44,7 +44,9 @@ export interface Dashboard {
   kmMorto:number; custoKmMorto:number; resultadoPorVeiculo:ResultadoVeiculo[]
   producaoPaga:number; comissaoSobreProducao:number
   producaoPendente:number; servicosPendentes:number; servicosDoPeriodo:number
+  comissaoAPagar:number; resultadoPorSocorrista:ResultadoSocorrista[]
 }
+export interface ResultadoSocorrista { motoristaId:number; socorrista:string; servicos:number; producao:number; comissao:number; despesas:number; custoTotal:number }
 export interface ItemImportacao {
   id:number; protocolo?:string; dataServico:string; veiculoAtendido?:string; placaAtendida?:string;
   origem?:string; destino?:string; valor:number; kmRemunerado?:number; motorista?:string;
