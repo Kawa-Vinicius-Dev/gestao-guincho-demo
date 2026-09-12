@@ -6,7 +6,7 @@ import { data,moeda } from '../utils/formatadores'
 import { periodoCorrente } from '../utils/periodos'
 
 export default function ComissoesPage(){
-  const [periodos,setPeriodos]=useState<CalendarioPorto[]>([]),[motoristas,setMotoristas]=useState<Motorista[]>([]),[periodoId,setPeriodoId]=useState(0),[motoristaId,setMotoristaId]=useState(0),[itens,setItens]=useState<ResumoComissao[]>([]),[detalhe,setDetalhe]=useState<Comissao|null>(null),[erro,setErro]=useState(''),[mensagem,setMensagem]=useState('')
+  const [periodos,setPeriodos]=useState<CalendarioPorto[]>([]),[motoristas,setMotoristas]=useState<Motorista[]>([]),[periodoId,setPeriodoId]=useState(0),[motoristaId,setMotoristaId]=useState(0),[itens,setItens]=useState<ResumoComissao[]>([]),[detalhe,setDetalhe]=useState<Comissao|null>(null),[erro,setErro]=useState(''),[mensagem,setMensagem]=useState(''),[exportando,setExportando]=useState(false)
   useEffect(()=>{Promise.all([listarPeriodosComissoes(),api<Motorista[]>('/api/motoristas')]).then(([p,m])=>{setPeriodos(p);setMotoristas(m);const atual=periodoCorrente(p);if(atual)setPeriodoId(atual.id)}).catch(e=>setErro(e.message))},[])
   useEffect(()=>{if(periodoId)resumirComissoes(periodoId,motoristaId||undefined).then(setItens).catch(e=>setErro(e.message))},[periodoId,motoristaId])
   async function abrir(id:number){try{setDetalhe(await detalharComissao(id,periodoId))}catch(e){setErro((e as Error).message)}}
@@ -14,7 +14,12 @@ export default function ComissoesPage(){
     try{await registrarPagamentoComissao(detalhe.motoristaId,periodoId,String(form.get('dataPagamento')),String(form.get('formaPagamento')),String(form.get('observacoes')||''));const [atualizado,resumo]=await Promise.all([detalharComissao(detalhe.motoristaId,periodoId),resumirComissoes(periodoId,motoristaId||undefined)]);setDetalhe(atualizado);setItens(resumo);setErro('');setMensagem('Pagamento registrado no financeiro oficial.')}
     catch(e){setErro((e as Error).message)}
   }
-  return <div className="page-enter commission-page"><header className="page-heading"><div><span className="eyebrow">Equipe e pagamentos</span><h1>Comissões</h1><p>Conferência auditável das OS pagas e alimentações aprovadas.</p></div><button className="button button-ghost" disabled={!periodoId} onClick={()=>void baixarRelatorioComissoes(periodoId)}>Exportar CSV</button></header>{erro?<div className="form-alert">{erro}</div>:null}
+  async function exportar(){setErro('');setExportando(true)
+    try{await baixarRelatorioComissoes(periodoId)}
+    catch(e){setErro((e as Error).message)}
+    finally{setExportando(false)}
+  }
+  return <div className="page-enter commission-page"><header className="page-heading"><div><span className="eyebrow">Equipe e pagamentos</span><h1>Comissões</h1><p>Conferência auditável das OS pagas e alimentações aprovadas.</p></div><button className="button button-ghost" disabled={!periodoId||exportando} onClick={()=>void exportar()}>{exportando?'Gerando CSV…':'Exportar CSV'}</button></header>{erro?<div className="form-alert">{erro}</div>:null}
     {mensagem?<div className="success-notice">{mensagem}</div>:null}
     <section className="panel"><div className="ledger-filters"><label><span>Período financeiro</span><select aria-label="Período financeiro" value={periodoId||''} onChange={e=>setPeriodoId(Number(e.target.value))}><option value="">Selecione</option>{periodos.map(p=><option key={p.id} value={p.id}>{p.descricao} · {data(p.competenciaInicio)} a {data(p.competenciaFim)}</option>)}</select></label><label><span>Socorrista</span><select value={motoristaId||''} onChange={e=>setMotoristaId(Number(e.target.value))}><option value="">Todos</option>{motoristas.map(m=><option key={m.id} value={m.id}>{m.nome}</option>)}</select></label></div>
       <div className="table-scroll"><table><thead><tr><th>Socorrista</th><th>Serviços pagos</th><th>Produção paga</th><th>Comissão 20%</th><th>Alimentação</th><th>Líquido</th><th>Pagamento</th><th/></tr></thead><tbody>{itens.map(item=><tr key={item.motoristaId}><td><strong>{item.socorrista}</strong></td><td>{item.quantidadeServicosPagos}</td><td>{moeda(item.producaoPaga)}</td><td>{moeda(item.comissaoBruta)}</td><td>{moeda(item.alimentacaoAprovada)}</td><td className={item.liquido<0?'negative':'positive'}><strong>{moeda(item.liquido)}</strong></td><td>{item.pagamento?`Pago em ${data(item.pagamento.dataPagamento)}`:item.liquido>0?'Pendente':'Sem desembolso'}</td><td><button className="table-action" onClick={()=>void abrir(item.motoristaId)}>Detalhar</button></td></tr>)}</tbody></table></div></section>
