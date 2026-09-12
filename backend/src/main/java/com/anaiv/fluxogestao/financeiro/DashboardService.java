@@ -15,8 +15,11 @@ public class DashboardService {
     private static final BigDecimal ZERO=BigDecimal.ZERO;
     private final ContaReceberRepository contasRepository;private final ReceitaRepository receitasRepository;private final DespesaRepository despesasRepository;private final QuilometragemRepository quilometragensRepository;
     private final ImportacaoRepository importacoes; private final CadastroService cadastros;
-    public DashboardService(ContaReceberRepository contas,ReceitaRepository receitas,DespesaRepository despesas,QuilometragemRepository quilometragens,ImportacaoRepository i,CadastroService c){
-        contasRepository=contas;receitasRepository=receitas;despesasRepository=despesas;quilometragensRepository=quilometragens;importacoes=i;cadastros=c;
+    private final com.anaiv.fluxogestao.porto.OrdemServicoPortoRepository oss;
+    /** A comissao e 20% do servico; mesma regra da tela de comissao (ComissaoService.PERCENTUAL). */
+    private static final BigDecimal PERCENTUAL_COMISSAO=new BigDecimal("0.20");
+    public DashboardService(ContaReceberRepository contas,ReceitaRepository receitas,DespesaRepository despesas,QuilometragemRepository quilometragens,ImportacaoRepository i,CadastroService c,com.anaiv.fluxogestao.porto.OrdemServicoPortoRepository oss){
+        contasRepository=contas;receitasRepository=receitas;despesasRepository=despesas;quilometragensRepository=quilometragens;importacoes=i;cadastros=c;this.oss=oss;
     }
     @Transactional
     public DashboardResponse dashboard(LocalDate inicio,LocalDate fim,Long veiculoId,Long motoristaId,Long categoriaId,String status,Long contratanteId){
@@ -59,8 +62,27 @@ public class DashboardService {
             return new ResultadoVeiculo(v.id(),v.identificacao(),rv,dv,rv.subtract(dv),kmv,cv);
         }).filter(r->r.receitas().signum()!=0||r.despesas().signum()!=0||r.kmMorto().signum()!=0).toList();
         long importados=importacoes.somarTotalRegistrosPorStatus(StatusImportacao.CONFIRMADA);
+
+        // Producao e comissao aparecem lado a lado porque uma e 20% da outra: ver o servico sem a
+        // comissao esconde metade do que aquele dia custou.
+        // Nao entram no saldo: a receita do servico ja esta em receitaRecebida (o pipeline Porto
+        // cria a Receita) e a comissao ja vira Despesa quando e paga - somar de novo contaria duas vezes.
+        var servicosDoPeriodo=oss.findPorAtendimentoEntre(inicio,fim);
+        BigDecimal producaoPaga=soma(servicosDoPeriodo.stream()
+            .filter(os->os.getStatusFinanceiro()==StatusFinanceiroPorto.RECEBIDO)
+            .map(com.anaiv.fluxogestao.porto.OrdemServicoPorto::getValorTotal).toList());
+        BigDecimal comissaoSobreProducao=producaoPaga.multiply(PERCENTUAL_COMISSAO).setScale(2,java.math.RoundingMode.HALF_UP);
+        // Servico cadastrado no dia ainda nao foi pago: a Porto so paga depois de fechar a OP.
+        // Fica visivel como pendente em vez de sumir do dia em que aconteceu.
+        var pendentes=servicosDoPeriodo.stream()
+            .filter(os->os.getStatusFinanceiro()!=StatusFinanceiroPorto.RECEBIDO)
+            .filter(os->os.getStatusOperacional()!=StatusOperacionalPorto.CANCELADO).toList();
+        BigDecimal producaoPendente=soma(pendentes.stream()
+            .map(com.anaiv.fluxogestao.porto.OrdemServicoPorto::getValorTotal).toList());
+
         return new DashboardResponse(recebida,prevista,atrasada,pagas,despPrev,realizado,projetado,
-            importados,kmTotal,kmRem,kmMorto,custoMorto,resultados);
+            importados,kmTotal,kmRem,kmMorto,custoMorto,resultados,
+            producaoPaga,comissaoSobreProducao,producaoPendente,pendentes.size(),servicosDoPeriodo.size());
     }
     private boolean entre(LocalDate data,LocalDate inicio,LocalDate fim){return data!=null&&!data.isBefore(inicio)&&!data.isAfter(fim);}
     private BigDecimal soma(List<BigDecimal> valores){return valores.stream().filter(Objects::nonNull).reduce(ZERO,BigDecimal::add);}

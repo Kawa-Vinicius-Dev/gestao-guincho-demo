@@ -66,5 +66,9 @@ public final class FinanceiroDtos {
         BigDecimal totalAtrasado, BigDecimal despesasPagas, BigDecimal despesasPrevistas,
         BigDecimal saldoRealizado, BigDecimal saldoProjetado,
         long registrosImportados, BigDecimal quilometragemTotal, BigDecimal kmRemunerado,
-        BigDecimal kmMorto, BigDecimal custoKmMorto, List<ResultadoVeiculo> resultadoPorVeiculo) {}
+        BigDecimal kmMorto, BigDecimal custoKmMorto, List<ResultadoVeiculo> resultadoPorVeiculo,
+        /* Producao = valor dos servicos ja pagos no periodo; a comissao e 20% dela e anda junto. */
+        BigDecimal producaoPaga, BigDecimal comissaoSobreProducao,
+        /* Servicos que aconteceram mas a Porto ainda nao pagou (a OP so fecha semanas depois). */
+        BigDecimal producaoPendente, long servicosPendentes, long servicosDoPeriodo) {}
 }

@@ -42,6 +42,8 @@ export interface Dashboard {
   despesasPagas:number; despesasPrevistas:number; saldoRealizado:number; saldoProjetado:number;
   registrosImportados:number; quilometragemTotal:number; kmRemunerado:number;
   kmMorto:number; custoKmMorto:number; resultadoPorVeiculo:ResultadoVeiculo[]
+  producaoPaga:number; comissaoSobreProducao:number
+  producaoPendente:number; servicosPendentes:number; servicosDoPeriodo:number
 }
 export interface ItemImportacao {
   id:number; protocolo?:string; dataServico:string; veiculoAtendido?:string; placaAtendida?:string;
