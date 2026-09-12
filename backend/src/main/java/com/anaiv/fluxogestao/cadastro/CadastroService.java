@@ -20,12 +20,30 @@ public class CadastroService {
     private static final SecureRandom SORTEIO = new SecureRandom();
     // Sem 0/O e 1/l/I: a senha e ditada ou colada num WhatsApp e nao pode depender de fonte.
     private static final String ALFABETO = "abcdefghjkmnpqrstuvwxyz23456789";
+    private final com.anaiv.fluxogestao.porto.PortoService porto;
     public CadastroService(VeiculoRepository v, ContratanteRepository c, CategoriaRepository ca,
-                           MotoristaRepository m, UsuarioRepository u, PasswordEncoder encoder, SessaoRepository sessoes) {
-        veiculos=v; contratantes=c; categorias=ca; motoristas=m; usuarios=u; this.encoder=encoder; this.sessoes=sessoes;
+                           MotoristaRepository m, UsuarioRepository u, PasswordEncoder encoder, SessaoRepository sessoes,
+                           com.anaiv.fluxogestao.porto.PortoService porto) {
+        veiculos=v; contratantes=c; categorias=ca; motoristas=m; usuarios=u; this.encoder=encoder; this.sessoes=sessoes; this.porto=porto;
     }
     @Transactional public VeiculoResponse criar(VeiculoRequest r) {
-        return veiculo(new Veiculo(r.identificacao(), r.placa(), r.modelo(), r.custoPorKm()), true);
+        return veiculo(new Veiculo(r.identificacao(), r.placa(), r.modelo(), r.custoPorKm(), r.siglaPorto()), true);
+    }
+    /**
+     * Editar o veiculo e o que permite declarar a sigla da Porto num cadastro que ja existe -
+     * sem isto, a frota cadastrada antes do painel diario ficaria sem de-para para sempre.
+     */
+    @Transactional public VeiculoResponse atualizarVeiculo(Long id, VeiculoRequest r) {
+        Veiculo alvo = veiculos.findById(id).orElseThrow(() -> naoEncontrado("Veículo", id));
+        validarSiglaPortoUnica(r.siglaPorto(), id);
+        alvo.atualizar(r.identificacao(), r.placa(), r.modelo(), r.custoPorKm(), r.siglaPorto());
+        return veiculo(alvo);
+    }
+    /** Duas viaturas com a mesma sigla fariam a importacao escolher a errada em silencio. */
+    private void validarSiglaPortoUnica(String sigla, Long id) {
+        if (sigla == null || sigla.isBlank()) return;
+        veiculos.findFirstBySiglaPortoIgnoreCase(sigla.trim()).filter(x -> !x.getId().equals(id))
+            .ifPresent(x -> { throw new IllegalArgumentException("A sigla " + sigla.trim().toUpperCase() + " já está em outra viatura (" + x.getIdentificacao() + ")."); });
     }
     public List<VeiculoResponse> veiculos() { return veiculos.findAll().stream().map(this::veiculo).toList(); }
     @Transactional public ContratanteResponse criar(ContratanteRequest r) {
@@ -42,17 +60,23 @@ public class CadastroService {
     @Transactional public MotoristaResponse criar(MotoristaRequest r) {
         Usuario usuario = r.usuarioId() == null ? null : usuario(r.usuarioId());
         validarQraUnico(r.qra(), null);
-        return motorista(motoristas.save(new Motorista(r.nome(), r.telefone(), r.documento(), r.qra(), usuario, obterVeiculo(r.veiculoId()))));
+        Motorista novo = motoristas.save(new Motorista(r.nome(), r.telefone(), r.documento(), r.qra(), usuario, obterVeiculo(r.veiculoId())));
+        // Servicos desse QRA ja podem ter sido importados antes de a pessoa existir no sistema.
+        porto.religarOrfasDoQra(novo);
+        return motorista(novo);
     }
     @Transactional public MotoristaResponse atualizar(Long id, MotoristaRequest r) {
         Motorista alvo = motoristas.findById(id).orElseThrow(() -> naoEncontrado("Socorrista", id));
         validarQraUnico(r.qra(), id);
         alvo.atualizar(r.nome(), r.telefone(), r.documento(), r.qra(),
             r.usuarioId() == null ? null : usuario(r.usuarioId()), obterVeiculo(r.veiculoId()));
+        // Corrigir ou preencher o QRA tem que valer para o que ja esta no banco, nao so para as
+        // proximas importacoes: cada OS orfa desse QRA e comissao que a pessoa nao recebeu.
+        porto.religarOrfasDoQra(alvo);
         return motorista(alvo);
     }
     @Transactional public MotoristaResponse desativar(Long id) { Motorista alvo = motoristas.findById(id).orElseThrow(() -> naoEncontrado("Socorrista", id)); alvo.desativar(); return motorista(alvo); }
-    @Transactional public MotoristaResponse reativar(Long id) { Motorista alvo = motoristas.findById(id).orElseThrow(() -> naoEncontrado("Socorrista", id)); alvo.reativar(); return motorista(alvo); }
+    @Transactional public MotoristaResponse reativar(Long id) { Motorista alvo = motoristas.findById(id).orElseThrow(() -> naoEncontrado("Socorrista", id)); alvo.reativar(); porto.religarOrfasDoQra(alvo); return motorista(alvo); }
     /** O QRA e a identidade do socorrista na Porto: nao pode se repetir, nem depois de uma edicao. */
     private void validarQraUnico(String qra, Long id) {
         if (qra == null || qra.isBlank()) return;
@@ -75,7 +99,7 @@ public class CadastroService {
     private RecursoNaoEncontradoException naoEncontrado(String tipo, Long id) { return new RecursoNaoEncontradoException(tipo + " " + id + " não encontrado."); }
 
     private VeiculoResponse veiculo(Veiculo v, boolean salvar) { return veiculo(salvar ? veiculos.save(v) : v); }
-    public VeiculoResponse veiculo(Veiculo v) { return new VeiculoResponse(v.getId(),v.getIdentificacao(),v.getPlaca(),v.getModelo(),v.getCustoPorKm(),v.isAtivo()); }
+    public VeiculoResponse veiculo(Veiculo v) { return new VeiculoResponse(v.getId(),v.getIdentificacao(),v.getPlaca(),v.getModelo(),v.getCustoPorKm(),v.getSiglaPorto(),v.isAtivo()); }
     public ContratanteResponse contratante(Contratante c) { return new ContratanteResponse(c.getId(),c.getNome(),c.getDocumento(),c.isAtivo()); }
     private CategoriaResponse categoria(Categoria c) { return new CategoriaResponse(c.getId(),c.getNome(),c.getTipo(),c.isAtivo()); }
     private MotoristaResponse motorista(Motorista m) { return new MotoristaResponse(m.getId(),m.getNome(),m.getTelefone(),m.getDocumento(),m.getQra(),m.getUsuario()==null?null:m.getUsuario().getId(),m.isAtivo(),

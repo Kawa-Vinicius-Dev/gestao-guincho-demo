@@ -10,8 +10,8 @@ import java.math.BigDecimal;
 public final class CadastroDtos {
     private CadastroDtos() {}
     public record VeiculoRequest(@NotBlank String identificacao, @NotBlank @Pattern(regexp="[A-Za-z]{3}[0-9][A-Za-z0-9][0-9]{2}") String placa,
-                                 String modelo, @NotNull @DecimalMin("0") BigDecimal custoPorKm) {}
-    public record VeiculoResponse(Long id, String identificacao, String placa, String modelo, BigDecimal custoPorKm, boolean ativo) {}
+                                 String modelo, @NotNull @DecimalMin("0") BigDecimal custoPorKm, String siglaPorto) {}
+    public record VeiculoResponse(Long id, String identificacao, String placa, String modelo, BigDecimal custoPorKm, String siglaPorto, boolean ativo) {}
     public record ContratanteRequest(@NotBlank String nome, String documento) {}
     public record ContratanteResponse(Long id, String nome, String documento, boolean ativo) {}
     public record CategoriaRequest(@NotBlank String nome, @NotNull TipoCategoria tipo) {}

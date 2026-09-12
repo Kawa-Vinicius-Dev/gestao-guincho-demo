@@ -64,7 +64,8 @@ export default function EquipePage(){
         <label className="field field-wide"><span>Nome</span><input name="nome" defaultValue={editando?.nome} required/></label>
         <label className="field"><span>Telefone</span><input name="telefone" defaultValue={editando?.telefone}/></label>
         <label className="field"><span>QRA</span><input name="qra" defaultValue={editando?.qra}/></label>
-        <label className="field"><span>Viatura</span><select name="veiculoId" aria-label="Viatura" defaultValue={editando?.veiculoId??''}><option value="">Sem viatura</option>{veiculos.map(v=><option key={v.id} value={v.id}>{v.identificacao}</option>)}</select></label>
+        {/* Vinculo informativo: quem dirigiu o que e definido em cada OS, nao aqui. */}
+        <label className="field"><span>Viatura habitual</span><select name="veiculoId" aria-label="Viatura habitual" defaultValue={editando?.veiculoId??''}><option value="">Sem viatura</option>{veiculos.map(v=><option key={v.id} value={v.id}>{v.identificacao}</option>)}</select><small>Só referência — a viatura de cada serviço vem da OS, não daqui.</small></label>
         <label className="field field-wide"><span>Documento</span><input name="documento" defaultValue={editando?.documento}/></label>
         <div className="modal-actions field-wide"><button type="button" className="button button-ghost" onClick={fechar}>Cancelar</button><button className="button button-primary" disabled={salvando}>{salvando?'Salvando…':editando?'Salvar alterações':'Salvar socorrista'}</button></div>
       </form></section></div>:null}
