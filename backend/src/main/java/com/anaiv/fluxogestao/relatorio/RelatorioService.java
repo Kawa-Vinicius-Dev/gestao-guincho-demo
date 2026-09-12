@@ -22,6 +22,7 @@ public class RelatorioService {
             case "receita-contratante" -> receitaContratante(inicio,fim);
             case "quilometragem" -> kms(inicio,fim);
             case "resultado-veiculo" -> resultadoVeiculo(inicio,fim);
+            case "dre" -> dre(inicio,fim);
             default -> throw new IllegalArgumentException("Relatório desconhecido.");
         };
     }
@@ -65,6 +66,20 @@ public class RelatorioService {
     private String resultadoVeiculo(LocalDate i,LocalDate f){
         StringBuilder s=cab("Veículo;Receitas;Despesas;Resultado;Km morto;Custo km morto");
         dashboard.dashboard(i,f,null,null,null,null,null).resultadoPorVeiculo().forEach(r->linha(s,r.veiculo(),r.receitas(),r.despesas(),r.resultado(),r.kmMorto(),r.custoKmMorto()));
+        return s.toString();
+    }
+    /**
+     * Mesma leitura da tela de DRE: so entra o que foi efetivamente recebido e pago no periodo.
+     * Previsao e pagamento programado ficam de fora de proposito - faturar nao e lucrar.
+     */
+    private String dre(LocalDate i,LocalDate f){
+        var d=dashboard.dashboard(i,f,null,null,null,null,null);
+        BigDecimal receita=d.receitaRecebida(),despesas=d.despesasPagas();
+        StringBuilder s=cab("Período;Linha;Valor");
+        String periodo=i+" a "+f;
+        linha(s,periodo,"Receita bruta recebida",receita);
+        linha(s,periodo,"Despesas aprovadas e pagas",despesas);
+        linha(s,periodo,"Lucro operacional",receita.subtract(despesas));
         return s.toString();
     }
     private boolean entre(LocalDate d,LocalDate i,LocalDate f){return d!=null&&!d.isBefore(i)&&!d.isAfter(f);}

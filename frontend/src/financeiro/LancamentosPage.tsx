@@ -24,7 +24,9 @@ export default function LancamentosPage() {
   const [motoristas,setMotoristas]=useState<Motorista[]>([])
   const [contratantes,setContratantes]=useState<Contratante[]>([])
   const [modal,setModal]=useState(new URLSearchParams(window.location.search).get('novo')==='1')
-  const [tipoFormulario,setTipoFormulario]=useState<TipoLancamento>('RECEITA')
+  // Receita nao se lanca a mao: a unica receita real vem dos servicos das seguradoras, pelo
+  // pipeline de importacao. O formulario manual existe so para despesa.
+  const [tipoFormulario]=useState<TipoLancamento>('DESPESA')
   const [tipoFiltro,setTipoFiltro]=useState<''|TipoLancamento>('')
   const [pesquisa,setPesquisa]=useState('')
   const [veiculoFiltro,setVeiculoFiltro]=useState('')
@@ -99,7 +101,7 @@ export default function LancamentosPage() {
     {carregando?<p className="loading-card">Carregando lançamentos oficiais…</p>:filtrados.length?<div className="table-scroll"><table><thead><tr><th>Data financeira</th><th>Descrição</th><th>Categoria</th><th>Veículo</th><th>Situação</th><th>Valor</th><th/></tr></thead><tbody>{filtrados.map(item=><tr key={item.id}><td>{data(item.data)}</td><td><strong>{item.descricao}</strong><small>{item.origem}{item.protocolo?` · ${item.protocolo}`:''}</small></td><td>{item.categoria}</td><td>{item.veiculo??'—'}</td><td><span className={`ledger-status ${item.realizado?'ledger-recebido':'ledger-pendente'}`}>{item.realizado?(item.tipo==='RECEITA'?'Recebido':'Pago'):'Previsto'}</span></td><td className={item.tipo==='RECEITA'?'positive':'negative'}><strong>{item.tipo==='RECEITA'?'+':'−'} {moeda(item.valor)}</strong></td><td>{item.tipo==='DESPESA'&&!item.realizado&&item.status!=='REJEITADO'?<button className="table-action" onClick={()=>void pagar(item)}>Registrar pagamento</button>:null}</td></tr>)}</tbody></table></div>:<Vazio titulo="Nenhum lançamento" descricao="O backend não possui movimentos nesta competência."/>}
     </section>
     {modal?<div className="modal-backdrop"><section className="modal modal-financial" role="dialog" aria-modal="true" aria-labelledby="titulo-lancamento"><header><div><span className="eyebrow">Persistência real</span><h2 id="titulo-lancamento">Novo lançamento</h2></div><button aria-label="Fechar" onClick={()=>setModal(false)}>×</button></header>
-      <form onSubmit={salvar} className="form-grid two-columns"><div className="segmented field-wide"><button type="button" className={tipoFormulario==='RECEITA'?'active':''} onClick={()=>setTipoFormulario('RECEITA')}>Receita</button><button type="button" className={tipoFormulario==='DESPESA'?'active':''} onClick={()=>setTipoFormulario('DESPESA')}>Despesa</button></div>
+      <form onSubmit={salvar} className="form-grid two-columns">
         <label className="field field-wide"><span>Descrição</span><input name="descricao" required/></label><label className="field"><span>Valor</span><input name="valor" type="number" min=".01" step=".01" required/></label>
         <label className="field"><span>Categoria</span><select name="categoriaId" required={tipoFormulario==='DESPESA'}><option value="">Sem categoria</option>{categoriasFormulario.map(c=><option key={c.id} value={c.id}>{c.nome}</option>)}</select></label>
         <label className="field"><span>Data</span><input name="data" type="date" defaultValue={hoje()} required/></label><label className="field"><span>Situação</span><select name="status">{tipoFormulario==='RECEITA'?<><option value="RECEBIDA">Recebida</option><option value="PREVISTA">Prevista</option></>:<><option value="PAGO">Paga</option><option value="PENDENTE">Pendente</option></>}</select></label>

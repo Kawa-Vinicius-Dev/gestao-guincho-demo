@@ -33,9 +33,12 @@ test('administrador começa com a base vazia e cria o primeiro lançamento', asy
   expect(await screen.findByRole('heading', { name: /^entradas e saídas$/i })).toBeInTheDocument()
   await user.click(screen.getByRole('button', { name: /nova entrada ou saída/i }))
 
+  // So existe lancamento manual de despesa: receita vem dos servicos das seguradoras,
+  // pela importacao, e por isso a categoria (de despesa) e obrigatoria aqui.
   const dialogo = screen.getByRole('dialog')
   await user.type(within(dialogo).getByLabelText(/descrição/i), 'Serviço particular de teste')
   await user.type(within(dialogo).getByLabelText(/^valor$/i), '300')
+  await user.selectOptions(within(dialogo).getByLabelText(/categoria/i), '2')
   await user.click(within(dialogo).getByRole('button', { name: /salvar lançamento/i }))
 
   expect(await screen.findByText(/totais oficiais foram atualizados/i)).toBeInTheDocument()
