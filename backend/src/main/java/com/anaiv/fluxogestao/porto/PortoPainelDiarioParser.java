@@ -34,7 +34,11 @@ public class PortoPainelDiarioParser {
 
     public boolean suporta(byte[] bytes){
         List<String[]> linhas=linhas(decodificar(bytes));
-        for(int i=0;i<linhas.size()-1;i++) if(inicioDeRegistro(linhas.get(i))&&complemento(linhas.get(i+1))) return true;
+        for(int i=0;i<linhas.size();i++){
+            if(!inicioDeRegistro(linhas.get(i)))continue;
+            if(temData(linhas.get(i)))return true;                                  // registro em uma linha
+            if(i+1<linhas.size()&&complemento(linhas.get(i+1)))return true;          // registro em duas
+        }
         return false;
     }
 
@@ -54,13 +58,20 @@ public class PortoPainelDiarioParser {
                 dados.put("especialidade",tipo);}
             String viatura=coluna(cabeca,3);if(viatura!=null)dados.put("sigla_viatura",viatura);
 
-            String[] corpo=i+1<linhas.size()?linhas.get(i+1):null;
-            if(corpo==null||!complemento(corpo)){
-                String mensagem="Registro "+registro+": falta a segunda linha com data e status.";
-                erros.add(mensagem);resultado.add(new LinhaPorto(Map.copyOf(dados),hash(dados),AcaoLinhaPorto.ERRO,mensagem));
-                continue;
+            // A tela devolve o registro em uma linha so quando a OS ja foi tratada, e em duas
+            // enquanto ela esta em processamento - a quebra e da propria origem, nao do usuario.
+            // Os dois casos trazem as mesmas colunas; muda so onde elas terminam.
+            String[] corpo;
+            if(temData(cabeca)){corpo=cabeca;}
+            else{
+                corpo=i+1<linhas.size()?linhas.get(i+1):null;
+                if(corpo==null||!complemento(corpo)){
+                    String mensagem="Registro "+registro+": falta a data do atendimento.";
+                    erros.add(mensagem);resultado.add(new LinhaPorto(Map.copyOf(dados),hash(dados),AcaoLinhaPorto.ERRO,mensagem));
+                    continue;
+                }
+                i++;
             }
-            i++;
             try{mapearCorpo(corpo,dados);resultado.add(new LinhaPorto(Map.copyOf(dados),hash(dados)));}
             catch(RuntimeException e){String mensagem="Registro "+registro+": "+e.getMessage();
                 erros.add(mensagem);resultado.add(new LinhaPorto(Map.copyOf(dados),hash(dados),AcaoLinhaPorto.ERRO,mensagem));}
@@ -103,6 +114,10 @@ public class PortoPainelDiarioParser {
 
     private boolean inicioDeRegistro(String[] colunas){
         return colunas.length>=3&&NUMERO_PAINEL.matcher(colunas[1].trim()).matches();
+    }
+    private boolean temData(String[] colunas){
+        for(String coluna:colunas) if(DATA.matcher(coluna.trim()).matches()) return true;
+        return false;
     }
     /** A segunda linha de um registro e a que tem a data do atendimento e nao comeca outro registro. */
     private boolean complemento(String[] colunas){

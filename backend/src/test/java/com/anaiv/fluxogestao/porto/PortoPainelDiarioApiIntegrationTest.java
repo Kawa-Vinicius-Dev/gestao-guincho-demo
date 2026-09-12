@@ -176,6 +176,60 @@ class PortoPainelDiarioApiIntegrationTest {
             .andExpect(jsonPath("$[0].socorrista").value("EDUARDO MARTINS DA S"));
     }
 
+    /**
+     * Quando a OS ja foi tratada, a tela da Porto devolve o registro inteiro numa linha so, em vez
+     * de quebrar em duas. Sao as mesmas colunas - o parser precisa aceitar os dois jeitos, senao a
+     * carga do dia falha dependendo de quando o operador copiou.
+     */
+    @Test
+    void aceitaORegistroEmUmaLinhaSoQuandoAOsJaFoiTratada() throws Exception {
+        String token=login();
+        String conteudo="""
+            AZUL SEGUROS\t7200001/26\tSOCORRO\tK85\tNATANAEL JOSE DE FRE\t01/08/2026\t08:30\t08:30\tACIONADO/FINAL\tFINALIZADO\tNão
+            ITAU FROTA E RESIDE.\t7200002/26\tTRANSPORTE\tK85\tNATANAEL JOSE DE FRE\t01/08/2026\t12:10\t12:10\tCANCELADO\tFINALIZADO\tNão
+            AZUL SEGUROS\t7200003/26\tREMOCAO\t\t\t02/08/2026\t19:52\t19:52\tACIONADO/FINAL\tFINALIZADO\tNão
+            """;
+        confirmar(token,previa(token,conteudo,"PAINEL_DIARIO",3));
+
+        mvc.perform(get("/api/porto/ordens-servico").param("numeroOs","7200001/26")
+                .header("Authorization","Bearer "+token))
+            .andExpect(jsonPath("$[0].viatura").value("K85"))
+            .andExpect(jsonPath("$[0].socorrista").value("NATANAEL JOSE DE FRE"))
+            .andExpect(jsonPath("$[0].seguradora").value("AZUL SEGUROS"))
+            .andExpect(jsonPath("$[0].dataAtendimento").value("2026-08-01"));
+        mvc.perform(get("/api/porto/ordens-servico").param("numeroOs","7200002/26")
+                .header("Authorization","Bearer "+token))
+            .andExpect(jsonPath("$[0].statusOperacional").value("CANCELADO"));
+        // Sem viatura e sem socorrista, as duas colunas vazias seguidas nao podem desalinhar a data.
+        mvc.perform(get("/api/porto/ordens-servico").param("numeroOs","7200003/26")
+                .header("Authorization","Bearer "+token))
+            .andExpect(jsonPath("$[0].dataAtendimento").value("2026-08-02"))
+            .andExpect(jsonPath("$[0].especialidade").value("REMOCAO"));
+    }
+
+    /** Numeros reais: o painel diz "4925666/26" e a OP diz "04/4925666-26" - mesma OS. */
+    @Test
+    void numeroDoPainelCasaComONumeroDaOpEmDadosReais() throws Exception {
+        String token=login();
+        confirmar(token,previa(token,"""
+            AZUL SEGUROS\t4925666/26\tREMOCAO\tL845\tANDERSON JORGE RIBEI\t02/08/2026\t18:18\t18:18\tACIONADO/FINAL\tFINALIZADO\tNão
+            ""","PAINEL_DIARIO",1));
+
+        confirmarComOp(token,previa(token,"""
+            "Número da Ordem de Serviço"\t"Valor Total"\t"Especialidade"\t"Sigla da Viatura"\t"Socorrista"\t"QRA"\t"Data de atendimento"
+            "04/4925666-26"\t"536.80"\t"GUINCHO"\t""\t"ANDERSON JORGE RIBEIRO"\t"619238"\t"2026-08-02 19:18:55"
+            ""","SERVICOS_GERAIS",1),"OP-REAL-4925666",calendario(token,"2093-08-14","2093-07-01","2093-07-15"));
+
+        // Uma OS so, com o numero oficial da OP e o valor preenchido.
+        mvc.perform(get("/api/porto/ordens-servico").param("numeroOs","04/4925666-26")
+                .header("Authorization","Bearer "+token))
+            .andExpect(jsonPath("$.length()").value(1))
+            .andExpect(jsonPath("$[0].valorTotal").value(536.80));
+        mvc.perform(get("/api/porto/ordens-servico").param("numeroOs","4925666/26")
+                .header("Authorization","Bearer "+token))
+            .andExpect(jsonPath("$").isEmpty());
+    }
+
     private long previa(String token,String conteudo,String tipoEsperado,int novos) throws Exception {
         String resposta=mvc.perform(post("/api/porto/importacoes/previa-conteudo")
                 .header("Authorization","Bearer "+token).contentType(MediaType.APPLICATION_JSON)
