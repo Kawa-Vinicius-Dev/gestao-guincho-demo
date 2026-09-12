@@ -117,3 +117,89 @@ button,input,select,textarea{font:inherit}button{color:inherit}a{color:inherit}:
 .login-ajuda{margin-top:18px;color:var(--muted);font-size:9px}.login-ajuda summary{cursor:pointer;color:var(--blue-600)}.login-ajuda p{margin:7px 0 0}
 .team-card-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.team-card-actions .team-detail-action{margin:0}
 small.estimado{display:block;margin-top:2px;padding:1px 5px;width:fit-content;border-radius:4px;color:#8a5a00;background:#fff4e0;font-size:8px;text-transform:uppercase;letter-spacing:.4px}
+
+
+/* ===========================================================================
+   Console do dashboard
+   ---------------------------------------------------------------------------
+   Leitura de painel de instrumentos: os indicadores viram superficie escura com
+   numeral monoespacado, e as tabelas longas seguem claras porque sao registro,
+   nao instrumento. Tudo escopado em .dashboard-tech de proposito: .fleet-summary
+   e .finance-lane sao reusadas por Frotas, Ordens de servico e Dashboard Porto,
+   que continuam com o visual claro original.
+   =========================================================================== */
+.dashboard-tech{
+  --console-deep:#08182c; --console-face:#0d1f36; --console-face-alt:#112a47;
+  --console-edge:rgba(70,199,238,.2); --console-label:#84a0bb;
+  --console-support:#7d97b0; --console-figure:#eaf4ff;
+}
+
+/* Numeral de instrumento: mono tabular alinha a casa decimal entre cartoes,
+   linhas e colunas. Mesmo motivo pelo qual .eyebrow ja usava Plex Mono. */
+.dashboard-tech .metric strong,.dashboard-tech .fleet-summary strong,
+.dashboard-tech .finance-lane strong,.dashboard-tech .porto-finance-summary strong,
+.dashboard-tech .panel td{font-variant-numeric:tabular-nums}
+
+/* Grades: eram 3 colunas fixas para 4 indicadores, o que deixava um orfao
+   sozinho na segunda linha. auto-fit resolve e ainda degrada sozinho. */
+.dashboard-tech .metric-grid-v2,.dashboard-tech .fleet-summary{grid-template-columns:repeat(4,minmax(0,1fr))}
+/* Sao 4 indicadores, entao a escada precisa ser 4 -> 2 -> 1. Passar por 3
+   deixaria um orfao sozinho na ultima linha, que era o defeito original. */
+@media(max-width:1180px){.dashboard-tech .metric-grid-v2,.dashboard-tech .fleet-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.dashboard-tech .metric-grid-v2,.dashboard-tech .fleet-summary{grid-template-columns:minmax(0,1fr)}}
+
+/* --- cartao de indicador --- */
+.dashboard-tech .metric{position:relative;overflow:hidden;border-color:var(--console-edge);
+  background:linear-gradient(158deg,var(--console-face),var(--console-face-alt));
+  box-shadow:inset 0 1px 0 rgba(70,199,238,.28),0 14px 32px rgba(7,20,38,.18)}
+/* malha fina, esvaindo na diagonal para nao competir com o numero */
+.dashboard-tech .metric:before{content:'';position:absolute;inset:0;pointer-events:none;opacity:.55;
+  background:linear-gradient(rgba(70,199,238,.16) 1px,transparent 1px) 0 0/100% 26px,
+             linear-gradient(90deg,rgba(70,199,238,.16) 1px,transparent 1px) 0 0/26px 100%;
+  -webkit-mask-image:linear-gradient(158deg,#000,transparent 60%);
+          mask-image:linear-gradient(158deg,#000,transparent 60%)}
+/* marca de canto: leitura de sensor, sem custar espaco */
+.dashboard-tech .metric:after{content:'';position:absolute;right:12px;top:12px;width:6px;height:6px;
+  border-top:1px solid var(--cyan);border-right:1px solid var(--cyan);opacity:.6}
+.dashboard-tech .metric>*{position:relative;z-index:1}
+.dashboard-tech .metric>span{color:var(--console-label)}
+.dashboard-tech .metric strong{margin-top:15px;color:var(--console-figure);
+  font:500 25px/1 'IBM Plex Mono',monospace;letter-spacing:-.025em}
+.dashboard-tech .metric small{color:var(--console-support)}
+.dashboard-tech .metric-neutral{box-shadow:inset 0 1px 0 rgba(141,163,184,.55),0 14px 32px rgba(7,20,38,.18)}
+
+/* --- esteira do resultado --- */
+.dashboard-tech .finance-lane{background:linear-gradient(135deg,var(--console-deep),var(--console-face-alt))}
+.dashboard-tech .finance-lane strong{font:500 clamp(25px,2.5vw,35px)/1 'IBM Plex Mono',monospace;letter-spacing:-.035em}
+.dashboard-tech .finance-lane .lane-result strong{text-shadow:0 0 24px rgba(70,199,238,.4)}
+
+/* --- faixa de producao e comissao --- */
+.dashboard-tech .fleet-summary{border-color:var(--console-edge);background:var(--console-edge)}
+.dashboard-tech .fleet-summary>div{background:linear-gradient(158deg,var(--console-face),var(--console-face-alt))}
+.dashboard-tech .fleet-summary span{color:var(--console-label)}
+.dashboard-tech .fleet-summary strong{color:var(--console-figure);
+  font:500 23px/1 'IBM Plex Mono',monospace;letter-spacing:-.025em}
+.dashboard-tech .fleet-summary small{color:var(--console-support)}
+
+/* --- registro: coluna 1 e nome, o resto e numero e vai para a mono --- */
+.dashboard-tech .panel td:not(:first-child){font:500 12px/1.4 'IBM Plex Mono',monospace}
+.dashboard-tech .empty-inline{padding:18px 24px;font-size:13px}
+
+/* --- resumo Porto, para nao destoar dos indicadores --- */
+.dashboard-tech .porto-finance-summary{border-color:var(--console-edge);
+  background:linear-gradient(135deg,var(--console-deep),var(--console-face-alt))}
+.dashboard-tech .porto-finance-summary h2{color:var(--console-figure)}
+.dashboard-tech .porto-finance-summary header a{color:var(--cyan);font-weight:600;text-decoration:none}
+.dashboard-tech .porto-finance-summary>div span{color:var(--console-label);
+  border:1px solid var(--console-edge);background:rgba(70,199,238,.05)}
+.dashboard-tech .porto-finance-summary strong{color:var(--console-figure);
+  font:500 19px 'IBM Plex Mono',monospace}
+.dashboard-tech .porto-finance-summary small,.dashboard-tech .porto-finance-summary p{color:var(--console-support)}
+
+/* Cabecalho de painel: dois dos tres paineis do dashboard vinham com padding
+   zero no .panel-title, encostando o texto na borda do cartao, enquanto o
+   terceiro (.vehicle-results-v2) tinha 22px. Padroniza os tres. */
+.dashboard-tech .panel>.panel-title{padding:20px 22px 14px;border-bottom:1px solid var(--line)}
+/* A faixa escura preenche o painel de ponta a ponta, em vez de flutuar com
+   borda e raio proprios dentro da borda do painel. */
+.dashboard-tech .panel>.fleet-summary{margin:0;border:0;border-radius:0}
