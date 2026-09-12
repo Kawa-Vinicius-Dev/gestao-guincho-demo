@@ -218,7 +218,7 @@ class PortoPainelDiarioApiIntegrationTest {
         confirmarComOp(token,previa(token,"""
             "Número da Ordem de Serviço"\t"Valor Total"\t"Especialidade"\t"Sigla da Viatura"\t"Socorrista"\t"QRA"\t"Data de atendimento"
             "04/4925666-26"\t"536.80"\t"GUINCHO"\t""\t"ANDERSON JORGE RIBEIRO"\t"619238"\t"2026-08-02 19:18:55"
-            ""","SERVICOS_GERAIS",1),"OP-REAL-4925666",calendario(token,"2093-08-14","2093-07-01","2093-07-15"));
+            ""","SERVICOS_GERAIS",1),"OP-REAL-4925666",calendario(token,"2060-08-14","2060-07-01","2060-07-15"));
 
         // Uma OS so, com o numero oficial da OP e o valor preenchido.
         mvc.perform(get("/api/porto/ordens-servico").param("numeroOs","04/4925666-26")

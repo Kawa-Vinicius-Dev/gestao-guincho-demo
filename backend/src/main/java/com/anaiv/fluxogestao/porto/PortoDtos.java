@@ -75,7 +75,13 @@ public final class PortoDtos {
         BigDecimal valorKmExcedente,BigDecimal kmMortoEstimado,StatusOperacionalPorto statusOperacional,
         StatusFinanceiroPorto statusFinanceiro,LocalDate dataDevolucao,LocalDate dataFinalizacaoDevolucao,
         String prestador,String seguradora,String cliente,String placa,OffsetDateTime dataHoraAtendimento,
-        LocalDate dataPrevistaOriginal,LocalDate dataEfetivaPagamento,int ciclosAtraso,Long motoristaId,String motorista) {}
+        LocalDate dataPrevistaOriginal,LocalDate dataEfetivaPagamento,int ciclosAtraso,Long motoristaId,String motorista,
+        /* Palpite para a pessoa confirmar, nunca um vinculo. Null quando o nome empata entre dois
+           socorristas - o painel corta em 20 caracteres e "JEFERSON MARTINS DA SILVA" e o "FILHO"
+           viram a mesma string. Ver MotoristaPortoResolver. */
+        Long sugestaoMotoristaId,String sugestaoMotorista,boolean sugestaoAmbigua,
+        /* OS que passou do ciclo em que era esperada e continua sem pagamento. */
+        boolean atrasadaNoCiclo) {}
     public record AssociarMotoristaRequest(@NotNull Long motoristaId) {}
     public record PendenciaResponse(Long id,String tipo,Long referenciaId,String referencia,BigDecimal valor,LocalDate data,String situacao,
         String motivo,String observacao,String responsavel,LocalDate prazo,String referenciaPorto) {}

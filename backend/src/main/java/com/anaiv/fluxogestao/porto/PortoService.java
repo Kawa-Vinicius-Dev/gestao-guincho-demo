@@ -159,7 +159,8 @@ public class PortoService {
     @Transactional(readOnly=true) public List<OrdemServicoResponse> listarOss(PortoOsFiltros filtros){return listarOss(filtros,carregarOps());}
     private List<OrdemServicoResponse> listarOss(PortoOsFiltros filtros,DadosOps dados){PortoOsFiltros f=filtros==null?new PortoOsFiltros(null,null,null,null,null,null,null,null,null,null,null,null,null,null,null):filtros;
         Map<Long,EnumsFinanceiros.StatusConciliacaoPorto> conciliacoes=dados.ops().stream().collect(java.util.stream.Collectors.toMap(OrdemPagamentoPorto::getId,x->op(x,dados.composicao(x)).statusConciliacao()));
-        return carregarServicos(f).stream().sorted(Comparator.comparing(OrdemServicoPorto::getNumero)).map(this::os).filter(x->filtrarOs(x,f,conciliacoes)).toList();}
+        Map<String,List<Motorista>> porPrefixo=indiceDeNomes();List<CalendarioPagamentoPorto> ciclos=calendario.findAll();
+        return carregarServicos(f).stream().sorted(Comparator.comparing(OrdemServicoPorto::getNumero)).map(x->os(x,porPrefixo,ciclos)).filter(x->filtrarOs(x,f,conciliacoes)).toList();}
     @Transactional(readOnly=true) public Map<String,Object> dashboard(PortoFiltros filtrosOp,PortoOsFiltros filtrosOs){DadosOps dados=carregarOps();ResumoOrdensPagamentoResponse resumo=resumo(filtrosOp,dados);List<OrdemServicoResponse> servicos=listarOss(filtrosOs,dados);Map<String,Object> r=new LinkedHashMap<>();adicionarResumo(r,resumo);
         r.put("quantidadeTotalServicos",servicos.size());r.put("valorTotalRealizado",somarServicos(servicos));
         List<OrdemServicoResponse> aguardando=servicos.stream().filter(x->x.statusFinanceiro()==EnumsFinanceiros.StatusFinanceiroPorto.AGUARDANDO_OP).toList();r.put("quantidadeAguardandoOp",aguardando.size());r.put("valorAguardandoOp",somarServicos(aguardando));
@@ -226,7 +227,57 @@ public class PortoService {
         EnumsFinanceiros.StatusConciliacaoPorto status=composicao.quantidade()==0?EnumsFinanceiros.StatusConciliacaoPorto.SEM_COMPOSICAO:diferenca.abs().compareTo(new BigDecimal("0.01"))<=0?EnumsFinanceiros.StatusConciliacaoPorto.CONCILIADA:diferenca.signum()>0?EnumsFinanceiros.StatusConciliacaoPorto.VALOR_ABAIXO:EnumsFinanceiros.StatusConciliacaoPorto.VALOR_ACIMA;
         if(x.getValorRecebido()!=null&&x.getValorRecebido().subtract(x.getValorTotal()).abs().compareTo(new BigDecimal("0.01"))>0)status=EnumsFinanceiros.StatusConciliacaoPorto.RECEBIDA_COM_DIVERGENCIA;
         CalendarioPagamentoPorto ciclo=x.getCalendarioPagamento();return new OrdemPagamentoResponse(x.getId(),x.getNumero(),x.getValorTotal(),x.getNomeCodigo(),x.getDataPagamentoProgramada(),x.getValorRecebido(),x.getDataRecebimento(),x.getSituacaoFinanceira().name(),(int)composicao.quantidade(),soma,diferenca,status,x.getStatusPorto(),x.getObservacao(),ciclo==null?null:ciclo.getId(),ciclo==null?null:calendarioService.rotulo(ciclo));}
-    private OrdemServicoResponse os(OrdemServicoPorto x){OrdemPagamentoPorto op=x.getOrdemPagamento();Motorista motorista=x.getMotorista();return new OrdemServicoResponse(x.getId(),op==null?null:op.getId(),op==null?null:op.getNumero(),x.getNumero(),x.getValorTotal(),x.getEspecialidade(),x.getSiglaViatura(),x.getSocorrista(),x.getQra(),x.getDataAtendimento(),x.getValorKmExcedente(),x.getKmMortoEstimado(),x.getStatusOperacional(),x.getStatusFinanceiro(),x.getDataDevolucao(),x.getDataFinalizacaoDevolucao(),x.getPrestador(),x.getSeguradora(),x.getCliente(),x.getPlaca(),x.getDataHoraAtendimento(),x.getDataPrevistaOriginal(),x.getDataEfetivaPagamento(),x.getCiclosAtraso(),motorista==null?null:motorista.getId(),motorista==null?null:motorista.getNome());}
+    private OrdemServicoResponse os(OrdemServicoPorto x){return os(x,indiceDeNomes(),calendario.findAll());}
+    private OrdemServicoResponse os(OrdemServicoPorto x,Map<String,List<Motorista>> porPrefixo,List<CalendarioPagamentoPorto> ciclos){OrdemPagamentoPorto op=x.getOrdemPagamento();Motorista motorista=x.getMotorista();Sugestao sugestao=sugerirPorNome(x,porPrefixo);return new OrdemServicoResponse(x.getId(),op==null?null:op.getId(),op==null?null:op.getNumero(),x.getNumero(),x.getValorTotal(),x.getEspecialidade(),x.getSiglaViatura(),x.getSocorrista(),x.getQra(),x.getDataAtendimento(),x.getValorKmExcedente(),x.getKmMortoEstimado(),x.getStatusOperacional(),x.getStatusFinanceiro(),x.getDataDevolucao(),x.getDataFinalizacaoDevolucao(),x.getPrestador(),x.getSeguradora(),x.getCliente(),x.getPlaca(),x.getDataHoraAtendimento(),x.getDataPrevistaOriginal(),x.getDataEfetivaPagamento(),x.getCiclosAtraso(),motorista==null?null:motorista.getId(),motorista==null?null:motorista.getNome(),
+            sugestao.id(),sugestao.nome(),sugestao.ambigua(),atrasadaNoCiclo(x,ciclos));}
+
+    /**
+     * Palpite de quem atendeu, para uma pessoa confirmar - nunca um vinculo automatico.
+     *
+     * O painel da Porto corta o nome em 20 caracteres, e a equipe tem homonimos: "JEFERSON MARTINS
+     * DA SILVA" e "JEFERSON MARTINS DA SILVA FILHO" viram a MESMA string cortada. Quando o corte
+     * bate em mais de uma pessoa, nao ha palpite - so a escolha de quem conhece a operacao.
+     */
+    private static final int CORTE_DO_PAINEL=20;
+    private Sugestao sugerirPorNome(OrdemServicoPorto os,Map<String,List<Motorista>> porPrefixo){
+        if(os.getMotorista()!=null||os.getSocorrista()==null||os.getSocorrista().isBlank())return Sugestao.nenhuma();
+        List<Motorista> candidatos=porPrefixo.getOrDefault(prefixoDoPainel(os.getSocorrista()),List.of());
+        if(candidatos.size()==1)return new Sugestao(candidatos.getFirst().getId(),candidatos.getFirst().getNome(),false);
+        return candidatos.size()>1?Sugestao.empatada():Sugestao.nenhuma();
+    }
+    private String prefixoDoPainel(String nome){
+        String limpo=nome.trim().toUpperCase(Locale.ROOT);
+        return limpo.substring(0,Math.min(CORTE_DO_PAINEL,limpo.length())).trim();
+    }
+    /** Indice montado uma vez por listagem: consultar por OS era N+1 (225 consultas em 200 OS). */
+    private Map<String,List<Motorista>> indiceDeNomes(){
+        return motoristas.findAll().stream().filter(Motorista::isAtivo).filter(m->m.getNome()!=null)
+            .collect(java.util.stream.Collectors.groupingBy(m->prefixoDoPainel(m.getNome())));
+    }
+    private LocalDate cicloQueCobre(LocalDate data,List<CalendarioPagamentoPorto> ciclos){
+        return ciclos.stream()
+            .filter(c->c.getCompetenciaInicio()!=null&&c.getCompetenciaFim()!=null)
+            .filter(c->!data.isBefore(c.getCompetenciaInicio())&&!data.isAfter(c.getCompetenciaFim()))
+            .map(CalendarioPagamentoPorto::getDataPagamento).findFirst().orElse(null);
+    }
+    private record Sugestao(Long id,String nome,boolean ambigua){
+        static Sugestao nenhuma(){return new Sugestao(null,null,false);}
+        static Sugestao empatada(){return new Sugestao(null,null,true);}
+    }
+    /**
+     * Passou do ciclo em que era esperada e continua sem pagamento. Nao e o mesmo que "cadastrada
+     * hoje de manha": esta ja deveria ter entrado numa OP e nao entrou, entao vai cair na comissao
+     * de um ciclo seguinte - e alguem precisa saber disso antes de fechar o mes.
+     */
+    private boolean atrasadaNoCiclo(OrdemServicoPorto os,List<CalendarioPagamentoPorto> ciclos){
+        if(os.getStatusFinanceiro()==EnumsFinanceiros.StatusFinanceiroPorto.RECEBIDO)return false;
+        if(os.getStatusOperacional()==EnumsFinanceiros.StatusOperacionalPorto.CANCELADO)return false;
+        // Sem consultar o banco: a previsao ja gravada na OS, ou o ciclo que cobre a data do
+        // atendimento, procurado no calendario carregado uma unica vez por listagem.
+        LocalDate prevista=os.getDataPrevistaOriginal()!=null?os.getDataPrevistaOriginal()
+            :os.getDataAtendimento()==null?null:cicloQueCobre(os.getDataAtendimento(),ciclos);
+        return prevista!=null&&prevista.isBefore(LocalDate.now());
+    }
     private boolean filtrar(OrdemPagamentoResponse x,PortoFiltros f){LocalDate hoje=LocalDate.now();boolean vencida=x.dataRecebimento()==null&&x.dataPagamentoProgramada()!=null&&x.dataPagamentoProgramada().isBefore(hoje);
         if(f.dataInicio()!=null&&(x.dataPagamentoProgramada()==null||x.dataPagamentoProgramada().isBefore(f.dataInicio())))return false;
         if(f.dataFim()!=null&&(x.dataPagamentoProgramada()==null||x.dataPagamentoProgramada().isAfter(f.dataFim())))return false;
