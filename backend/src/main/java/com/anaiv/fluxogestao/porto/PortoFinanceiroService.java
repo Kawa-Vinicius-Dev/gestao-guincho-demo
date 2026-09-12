@@ -85,9 +85,26 @@ public class PortoFinanceiroService {
         receitas.findByOrdemServicoPorto(os).ifPresent(x->x.atualizarVinculoAdministrativo(motorista,veiculo));
     }
 
-    /** A Porto nao informa a viatura no relatorio, entao o veiculo vem do cadastro do socorrista. */
+    /**
+     * O veiculo vem do que a Porto reportou naquele servico, nao do cadastro do socorrista.
+     *
+     * O relatorio financeiro nunca traz a viatura (conferido: vazia nas 275 OS reais) - quem traz
+     * e o painel do dia, com o codigo da Porto ("L25"), traduzido aqui pelo de-para declarado no
+     * cadastro do veiculo. Antes isto caia no veiculo fixo do motorista, o que atribuia o servico
+     * ao caminhao errado sempre que a pessoa trocava de viatura - e elas trocam no mesmo dia.
+     *
+     * O veiculo do socorrista continua como ultimo recurso, e so isso: serve para as OS antigas,
+     * que vieram so do financeiro e nunca tiveram viatura. Deixa-las em branco nao as tornaria
+     * mais corretas - so faria sumir a atribuicao que existe hoje. Onde o painel do dia informou
+     * a viatura, o de-para ganha, e o palpite nao chega a ser usado.
+     */
     private Veiculo localizarVeiculo(OrdemServicoPorto os){
-        if(preenchido(os.getSiglaViatura())){Optional<Veiculo> resultado=veiculos.findFirstByIdentificacaoIgnoreCase(os.getSiglaViatura().trim());if(resultado.isPresent())return resultado.get();}
+        if(preenchido(os.getSiglaViatura())){
+            Optional<Veiculo> porSigla=veiculos.findFirstBySiglaPortoIgnoreCase(os.getSiglaViatura().trim());
+            if(porSigla.isPresent())return porSigla.get();
+            Optional<Veiculo> porIdentificacao=veiculos.findFirstByIdentificacaoIgnoreCase(os.getSiglaViatura().trim());
+            if(porIdentificacao.isPresent())return porIdentificacao.get();
+        }
         if(preenchido(os.getPlaca())){Optional<Veiculo> resultado=veiculos.findFirstByPlacaIgnoreCase(os.getPlaca().trim());if(resultado.isPresent())return resultado.get();}
         return os.getMotorista()==null?null:os.getMotorista().getVeiculo();
     }

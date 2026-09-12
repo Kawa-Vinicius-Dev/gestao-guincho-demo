@@ -1,7 +1,7 @@
 export type Perfil = 'ADMINISTRADOR' | 'FUNCIONARIO'
 export interface Usuario { id: number; nome: string; email: string; perfil: Perfil; ativo?: boolean; senhaProvisoria?: boolean }
 export interface SenhaRedefinida { usuarioId: number; nome: string; email: string; senhaProvisoria: string }
-export interface Veiculo { id: number; identificacao: string; placa: string; modelo?: string; custoPorKm: number; ativo: boolean }
+export interface Veiculo { id: number; identificacao: string; placa: string; modelo?: string; custoPorKm: number; siglaPorto?: string; ativo: boolean }
 export interface Contratante { id: number; nome: string; documento?: string; ativo: boolean }
 export interface Categoria { id: number; nome: string; tipo: 'RECEITA' | 'DESPESA'; ativo: boolean }
 export interface Motorista { id: number; nome: string; telefone?: string; documento?: string; qra?:string; usuarioId?: number; ativo: boolean; veiculoId?: number; veiculo?: string }
@@ -48,7 +48,7 @@ export interface ItemImportacao {
   origem?:string; destino?:string; valor:number; kmRemunerado?:number; motorista?:string;
   veiculo?:string; previsaoPagamento:string; observacoes?:string
 }
-export type TipoRelatorioPorto = 'PREVISAO_RECEBER'|'OS_VINCULADAS'|'SERVICOS_DEVOLVIDOS'|'SERVICOS_GERAIS'|'SERVICOS_AGUARDANDO_LANCAMENTO'
+export type TipoRelatorioPorto = 'PREVISAO_RECEBER'|'OS_VINCULADAS'|'SERVICOS_DEVOLVIDOS'|'SERVICOS_GERAIS'|'SERVICOS_AGUARDANDO_LANCAMENTO'|'PAINEL_DIARIO'
 export type AcaoLinhaPorto = 'IMPORTAR'|'ATUALIZAR'|'IGNORAR'|'ERRO'|'DIVERGENCIA'
 export interface LinhaPreviaPorto { dados:Record<string,string>; hashRegistro:string; acao:AcaoLinhaPorto; mensagem?:string }
 export interface ResumoPreviaPorto { linhasAnalisadas:number; opsUnicas:number; registrosNovos:number; registrosExistentes:number; registrosAtualizados:number; duplicidades:number; erros:number; valorTotal:number }
@@ -57,7 +57,7 @@ export interface AnaliseOrdemPagamentoPorto { numero:string; existente:boolean; 
 export interface PreviaPorto { id:number; nomeArquivo:string; tipo:TipoRelatorioPorto; status:string; totalLinhas:number; linhas:LinhaPreviaPorto[]; erros:string[]; requerOrdemPagamento:boolean; resumo?:ResumoPreviaPorto; analiseOrdemPagamento?:AnaliseOrdemPagamentoPorto; osSemSocorrista?:string[] }
 export interface ConfirmacaoPorto { importacaoId:number; tipo:TipoRelatorioPorto; importados:number; ignorados:number; novos?:number; atualizados?:number; receitasCriadas:number; receitasAtualizadas:number; valorTotalRecebido:number; quinzena?:string; dataPagamento?:string; erros:string[]; osSemSocorrista?:string[] }
 export type StatusConciliacaoPorto='SEM_COMPOSICAO'|'CONCILIADA'|'VALOR_ABAIXO'|'VALOR_ACIMA'|'RECEBIDA_COM_DIVERGENCIA'
-export type StatusOperacionalPorto='NORMAL'|'AGUARDANDO_LANCAMENTO'|'PROCESSADO'|'LIBERADO_APOS_ANALISE'|'PENDENTE_PORTO'|'DEVOLVIDO_FINALIZADO'
+export type StatusOperacionalPorto='NORMAL'|'AGUARDANDO_LANCAMENTO'|'PROCESSADO'|'LIBERADO_APOS_ANALISE'|'PENDENTE_PORTO'|'DEVOLVIDO_FINALIZADO'|'CANCELADO'
 export type StatusFinanceiroPorto='AGUARDANDO_OP'|'PAGAMENTO_PROGRAMADO'|'A_CONFIRMAR'|'RECEBIDO'|'BLOQUEADO_PARA_PAGAMENTO'|'VALOR_DIVERGENTE'
 export interface OrdemPagamentoPorto { id:number; numero:string; valorTotal:number; nomeCodigo?:string; dataPagamentoProgramada?:string; valorRecebido?:number; dataRecebimento?:string; situacao:'PROGRAMADO'|'A_CONFIRMAR'|'RECEBIDO'; quantidadeOrdensServico:number; valorOrdensServico:number; divergencia:number; statusConciliacao:StatusConciliacaoPorto; statusPorto?:string; observacao?:string; calendarioPagamentoId?:number; periodoFinanceiro?:string }
 export interface OrdemServicoPorto { id:number; ordemPagamentoId?:number; ordemPagamento?:string; numero:string; valorTotal:number; especialidade?:string; viatura?:string; socorrista?:string; qra?:string; dataAtendimento?:string; valorKmExcedente?:number; kmMortoEstimado?:number; statusOperacional:StatusOperacionalPorto; statusFinanceiro:StatusFinanceiroPorto; dataDevolucao?:string; dataFinalizacaoDevolucao?:string; prestador?:string; seguradora?:string; cliente?:string; placa?:string; dataHoraAtendimento?:string; dataPrevistaOriginal?:string; dataEfetivaPagamento?:string; ciclosAtraso:number; motoristaId?:number; motorista?:string }

@@ -3,7 +3,7 @@ import { avaliarImportacaoPortoPorNumero, cancelarImportacaoPorto, confirmarImpo
 import type { CalendarioPorto, PreviaPorto } from '../types/modelos'
 import { moeda } from '../utils/formatadores'
 
-const rotulos={PREVISAO_RECEBER:'Previsão a receber',OS_VINCULADAS:'OS vinculadas à OP',SERVICOS_DEVOLVIDOS:'Serviços devolvidos',SERVICOS_GERAIS:'Serviços gerais da Porto',SERVICOS_AGUARDANDO_LANCAMENTO:'Serviços aguardando lançamento'}
+const rotulos={PREVISAO_RECEBER:'Previsão a receber',OS_VINCULADAS:'OS vinculadas à OP',SERVICOS_DEVOLVIDOS:'Serviços devolvidos',SERVICOS_GERAIS:'Serviços gerais da Porto',SERVICOS_AGUARDANDO_LANCAMENTO:'Serviços aguardando lançamento',PAINEL_DIARIO:'Painel do dia (todas as seguradoras)'}
 const dataBr=(valor?:string)=>valor?new Date(`${valor}T12:00:00`).toLocaleDateString('pt-BR'):''
 
 export default function PortoImportacoesPage(){
@@ -91,8 +91,10 @@ export default function PortoImportacoesPage(){
           <button type="button" className="button button-ghost" disabled={carregando} onClick={cancelar}>Cancelar prévia</button>
           <button className="button button-primary" disabled={carregando||validando||temErros||!divergenciaConfirmada||temReassociacoes&&!confirmarReassociacoes||previa.requerOrdemPagamento&&(!numeroNormalizado||!periodoId||!analise)||previa.linhas.length===0} onClick={confirmar}>Confirmar importação</button>
         </footer>
-        {previa.osSemSocorrista?.length?<div className="form-alert" role="alert"><strong>{previa.osSemSocorrista.length} {previa.osSemSocorrista.length===1?'ordem de serviço ficará':'ordens de serviço ficarão'} sem QRA no relatório.</strong> Quem tem QRA sai da importação já com socorrista, criado na hora se ainda não existir. Estas não têm identidade para vincular: associe o socorrista na tela Ordens de serviço.<div className="table-scroll"><table><thead><tr><th>Ordem de serviço</th></tr></thead><tbody>{previa.osSemSocorrista.map(n=><tr key={n}><td>{n}</td></tr>)}</tbody></table></div></div>:null}
-        <div className="table-scroll porto-preview-table"><table><thead><tr><th>Ordem</th><th>Especialidade / Nome</th><th>Valor</th><th>Data</th><th>Ação</th></tr></thead><tbody>{previa.linhas.map(l=><tr key={l.hashRegistro}><td><strong>{l.dados.numero_op||l.dados.numero_os}</strong></td><td>{l.dados.especialidade||l.dados.nome_codigo||'—'}</td><td>{l.dados.valor_total}</td><td>{l.dados.data_pagamento||l.dados.data_atendimento}</td><td>{l.mensagem||l.acao}</td></tr>)}</tbody></table></div>
+        {previa.osSemSocorrista?.length?<div className="form-alert" role="alert"><strong>{previa.osSemSocorrista.length} {previa.osSemSocorrista.length===1?'ordem de serviço ficará':'ordens de serviço ficarão'} sem QRA no relatório.</strong> O socorrista é identificado pelo QRA, e só entre os que já estão cadastrados — o sistema nunca cria um cadastro novo a partir de um QRA desconhecido. Estas ficam sem identidade: associe o socorrista na tela Ordens de serviço.<div className="table-scroll"><table><thead><tr><th>Ordem de serviço</th></tr></thead><tbody>{previa.osSemSocorrista.map(n=><tr key={n}><td>{n}</td></tr>)}</tbody></table></div></div>:null}
+        {/* O painel do dia nao tem valor nem OP: a coluna Valor ficaria vazia em toda linha.
+            No lugar dela entram seguradora e situacao, que e o que existe de util ali. */}
+        <div className="table-scroll porto-preview-table"><table><thead><tr><th>Ordem</th><th>Especialidade / Nome</th>{previa.tipo==='PAINEL_DIARIO'?<><th>Seguradora</th><th>Situação</th></>:<th>Valor</th>}<th>Data</th><th>Ação</th></tr></thead><tbody>{previa.linhas.map(l=><tr key={l.hashRegistro}><td><strong>{l.dados.numero_op||l.dados.numero_os}</strong></td><td>{l.dados.especialidade||l.dados.nome_codigo||'—'}</td>{previa.tipo==='PAINEL_DIARIO'?<><td>{l.dados.seguradora||'—'}</td><td>{l.dados.situacao_porto||l.dados.status_porto||'—'}</td></>:<td>{l.dados.valor_total}</td>}<td>{l.dados.data_pagamento||l.dados.data_atendimento}</td><td>{l.mensagem||l.acao}</td></tr>)}</tbody></table></div>
       </div>:null}
     </section>
   </div>

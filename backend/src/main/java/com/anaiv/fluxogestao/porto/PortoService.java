@@ -26,6 +26,24 @@ public class PortoService {
     public Optional<OrdemPagamentoPorto> buscarOp(String numero){return ops.findByNumero(numero.trim());}
     public OrdemPagamentoPorto obterOuCriarOp(String numero,Importacao importacao){return buscarOp(numero).orElseGet(()->ops.save(new OrdemPagamentoPorto(numero.trim(),importacao)));}
     public Optional<OrdemServicoPorto> buscarOs(String numero){return numero==null?Optional.empty():oss.findByNumero(numero);}
+    /**
+     * Acha a OS mesmo quando ela foi cadastrada com o numero da outra tela da Porto: o painel
+     * diario usa "5632135/26" e o relatorio financeiro usa "01/5632135-26" para o mesmo servico.
+     *
+     * O numero exato e sempre tentado primeiro, entao nada muda para as OS que ja existem. O
+     * fallback pela chave normalizada so entra quando o exato falha, e so aceita candidato unico:
+     * se dois registros compartilham a chave, devolve vazio de proposito - cria uma OS separada
+     * para alguem conferir, em vez de escolher no palpite qual servico recebe o valor.
+     */
+    public Optional<OrdemServicoPorto> buscarOsFlexivel(String numero){
+        if(numero==null)return Optional.empty();
+        Optional<OrdemServicoPorto> exata=oss.findByNumero(numero);
+        if(exata.isPresent())return exata;
+        String chave=OrdemServicoPorto.normalizar(numero);
+        if(chave==null)return Optional.empty();
+        List<OrdemServicoPorto> candidatos=oss.findByNumeroNormalizado(chave);
+        return candidatos.size()==1?Optional.of(candidatos.getFirst()):Optional.empty();
+    }
     public Map<String,OrdemServicoPorto> buscarOssEmLote(Collection<String> numeros){return oss.findByNumeroIn(numeros).stream().collect(java.util.stream.Collectors.toMap(OrdemServicoPorto::getNumero,x->x));}
     public Map<String,OrdemPagamentoPorto> buscarOpsEmLote(Collection<String> numeros){return ops.findByNumeroIn(numeros).stream().collect(java.util.stream.Collectors.toMap(OrdemPagamentoPorto::getNumero,x->x));}
     /** Existencia em lote: o resumo da previa percorre centenas de linhas e nao pode consultar uma a uma. */
@@ -40,7 +58,11 @@ public class PortoService {
     public AcaoLinhaPorto classificarOsComposicao(LinhaPorto linha,String numeroOp,OrdemServicoPorto os){if(os==null)return AcaoLinhaPorto.IMPORTAR;if(os.getOrdemPagamento()!=null&&!os.getOrdemPagamento().getNumero().equals(numeroOp))return AcaoLinhaPorto.DIVERGENCIA;boolean conflito=diferentePreenchido(os.getValorTotal(),linha.decimal("valor_total"))||conflita(os.getEspecialidade(),linha.texto("especialidade"))||conflita(os.getSiglaViatura(),linha.texto("sigla_viatura"))||conflita(os.getSocorrista(),linha.texto("socorrista"))||conflita(os.getQra(),linha.texto("qra"));return conflito?AcaoLinhaPorto.DIVERGENCIA:AcaoLinhaPorto.ATUALIZAR;}
     public void importarOp(LinhaPorto l,Importacao i){String numero=l.texto("numero_op");OrdemPagamentoPorto op=ops.findByNumero(numero).orElseGet(()->new OrdemPagamentoPorto(numero,i));
         LocalDate pagamento=l.data("data_pagamento");op.atualizar(l.decimal("valor_total"),l.texto("nome_codigo"),pagamento,i);if(op.getCalendarioPagamento()==null&&pagamento!=null)calendario.findByDataPagamento(pagamento).ifPresent(op::associarCalendario);ops.save(op);}
-    public OrdemServicoPorto importarOs(LinhaPorto l,OrdemPagamentoPorto op,Importacao i,boolean arquivoLiberadoAposAnalise){String numero=l.texto("numero_os");OrdemServicoPorto os=oss.findByNumero(numero).orElseGet(()->new OrdemServicoPorto(numero,i));
+    public OrdemServicoPorto importarOs(LinhaPorto l,OrdemPagamentoPorto op,Importacao i,boolean arquivoLiberadoAposAnalise){String numero=l.texto("numero_os");
+        // Pode ser uma OS que o painel do dia ja cadastrou com o numero curto. Se for, completa
+        // aquela e adota o numero do financeiro, que e o que o cliente ve no portal da Porto.
+        OrdemServicoPorto os=buscarOsFlexivel(numero).orElseGet(()->new OrdemServicoPorto(numero,i));
+        os.renumerar(numero);
         os.atualizar(op,l.decimal("valor_total"),l.texto("especialidade"),l.texto("sigla_viatura"),l.texto("socorrista"),l.texto("qra"),
             l.data("data_atendimento"),l.decimal("valor_km_excedente"),l.decimal("km_morto_estimado"),i);
         vincularMotoristaSeSeguro(os);CalendarioPagamentoPorto periodo=op.getCalendarioPagamento();boolean periodoAnterior=periodo!=null&&os.getDataAtendimento()!=null&&os.getDataAtendimento().isBefore(periodo.getCompetenciaInicio());
@@ -49,6 +71,32 @@ public class PortoService {
     public List<OrdemServicoPorto> ossDaImportacao(Importacao importacao){return oss.findByImportacao(importacao);}
     public List<OrdemServicoPorto> ossDaOp(OrdemPagamentoPorto op){return oss.findByOrdemPagamento(op);}
     public BigDecimal recalcularOp(OrdemPagamentoPorto op){BigDecimal total=ossDaOp(op).stream().map(OrdemServicoPorto::getValorTotal).filter(Objects::nonNull).reduce(BigDecimal.ZERO,BigDecimal::add);op.recalcularComposicao(total);return total;}
+    /**
+     * Cadastra um acionamento do painel do dia: sem valor e sem OP, porque a Porto so gera a OP
+     * quando fecha o pagamento. Quando o relatorio financeiro chegar, ele completa esta mesma OS
+     * (casada pelo numero normalizado) em vez de criar outra.
+     *
+     * Nao vincula motorista: o painel traz o nome cortado pela largura da coluna e a equipe tem
+     * pai e filho com nomes quase iguais. Quem vincula e o QRA, que so vem no financeiro.
+     */
+    public void importarPainelDiario(LinhaPorto l,Importacao i){
+        String numero=l.texto("numero_os");
+        OrdemServicoPorto os=buscarOsFlexivel(numero).orElseGet(()->new OrdemServicoPorto(numero,i));
+        // Se o financeiro ja passou por aqui, ele manda: nao rebaixa nome completo para truncado,
+        // nem especialidade real (GUINCHO) para o tipo do painel (SOCORRO).
+        if(os.getQra()!=null||os.getValorTotal()!=null&&os.getValorTotal().signum()>0)return;
+        os.atualizar(null,null,l.texto("especialidade"),l.texto("sigla_viatura"),l.texto("socorrista"),null,l.data("data_atendimento"),null,null,i);
+        os.atualizarDadosPorto(null,l.texto("seguradora"),null,null,l.dataHora("data_atendimento"));
+        os.registrarOrigemPainelDiario();
+        if(cancelado(l))os.marcarCancelado();
+        oss.save(os);
+    }
+    /** "CANCELADO" no status ou "SERVICO CANCELADO" na situacao: nunca vira receita. */
+    private boolean cancelado(LinhaPorto l){
+        String status=l.texto("status_porto"),situacao=l.texto("situacao_porto");
+        return status!=null&&status.toUpperCase(Locale.ROOT).contains("CANCELAD")
+            ||situacao!=null&&situacao.toUpperCase(Locale.ROOT).contains("CANCELAD");
+    }
     public void importarAguardando(LinhaPorto l,Importacao i){String numero=l.texto("numero_os");OrdemServicoPorto os=oss.findByNumero(numero).orElseGet(()->new OrdemServicoPorto(numero,i));os.atualizar(null,l.decimal("valor_total"),l.texto("especialidade"),null,l.texto("socorrista"),l.texto("qra"),l.data("data_atendimento"),null,null,i);os.atualizarDadosPorto(l.texto("prestador"),l.texto("seguradora"),l.texto("cliente"),l.texto("placa"),l.dataHora("data_atendimento"));vincularMotoristaSeSeguro(os);LocalDate previsao=os.getDataPrevistaOriginal()==null?calendarioService.proximaDataAtiva(l.data("data_atendimento")):os.getDataPrevistaOriginal();os.aguardarLancamento(previsao,i);oss.save(os);}
     public void importarDevolucao(LinhaPorto l,Importacao i){String numero=l.texto("numero_os");OrdemServicoPorto os=oss.findByNumero(numero).orElseGet(()->new OrdemServicoPorto(numero,i));
         os.atualizar(null,l.decimal("valor_total"),l.texto("especialidade"),null,null,null,l.data("data_atendimento"),null,null,i);os=oss.save(os);
@@ -107,9 +155,9 @@ public class PortoService {
     private PeriodoPadraoResponse mes(LocalDate data){return new PeriodoPadraoResponse(inicioDoMes(data),fimDoMes(data));}
     private LocalDate inicioDoMes(LocalDate data){return data.withDayOfMonth(1);}
     private LocalDate fimDoMes(LocalDate data){return data.withDayOfMonth(data.lengthOfMonth());}
-    @Transactional(readOnly=true) public List<OrdemServicoResponse> listarOss(){return listarOss(new PortoOsFiltros(null,null,null,null,null,null,null,null,null,null,null,null,null,null));}
+    @Transactional(readOnly=true) public List<OrdemServicoResponse> listarOss(){return listarOss(new PortoOsFiltros(null,null,null,null,null,null,null,null,null,null,null,null,null,null,null));}
     @Transactional(readOnly=true) public List<OrdemServicoResponse> listarOss(PortoOsFiltros filtros){return listarOss(filtros,carregarOps());}
-    private List<OrdemServicoResponse> listarOss(PortoOsFiltros filtros,DadosOps dados){PortoOsFiltros f=filtros==null?new PortoOsFiltros(null,null,null,null,null,null,null,null,null,null,null,null,null,null):filtros;
+    private List<OrdemServicoResponse> listarOss(PortoOsFiltros filtros,DadosOps dados){PortoOsFiltros f=filtros==null?new PortoOsFiltros(null,null,null,null,null,null,null,null,null,null,null,null,null,null,null):filtros;
         Map<Long,EnumsFinanceiros.StatusConciliacaoPorto> conciliacoes=dados.ops().stream().collect(java.util.stream.Collectors.toMap(OrdemPagamentoPorto::getId,x->op(x,dados.composicao(x)).statusConciliacao()));
         return carregarServicos(f).stream().sorted(Comparator.comparing(OrdemServicoPorto::getNumero)).map(this::os).filter(x->filtrarOs(x,f,conciliacoes)).toList();}
     @Transactional(readOnly=true) public Map<String,Object> dashboard(PortoFiltros filtrosOp,PortoOsFiltros filtrosOs){DadosOps dados=carregarOps();ResumoOrdensPagamentoResponse resumo=resumo(filtrosOp,dados);List<OrdemServicoResponse> servicos=listarOss(filtrosOs,dados);Map<String,Object> r=new LinkedHashMap<>();adicionarResumo(r,resumo);
@@ -139,6 +187,31 @@ public class PortoService {
         p.atualizarTratativa(request.motivo().trim(),request.valor(),request.dataPendencia(),request.observacao().trim(),request.responsavel().trim(),request.prazo(),limpar(request.referenciaPorto()));os.marcarPendente(request.statusFinanceiro());return pendencia(pendencias.save(p));}
     @Transactional public PendenciaResponse resolverPendencia(Long id){PendenciaFinanceiraPorto p=pendencias.findById(id).orElseThrow(()->new RecursoNaoEncontradoException("Pendência Porto não encontrada."));p.resolver();p.getOrdemServico().resolverPendencia();return pendencia(p);}
     @Transactional public OrdemPagamentoResponse receber(Long id,RecebimentoRequest r){OrdemPagamentoPorto op=obterOp(id);if(op.getDataRecebimento()!=null){sincronizarRecebimentoComposto(op,op.getDataRecebimento(),r.calendarioPagamentoId());return op(op);}sincronizarRecebimentoComposto(op,r.dataRecebimento(),r.calendarioPagamentoId());op.confirmarRecebimento(r.valorRecebido(),r.dataRecebimento());return op(op);}
+    /**
+     * Religa as OS que ficaram orfas esperando por este QRA.
+     *
+     * O resolvedor de QRA so roda durante a importacao. Sem isto, cadastrar ou corrigir o QRA de
+     * um socorrista depois que o relatorio ja entrou nao surtia efeito nenhum: as OS daquele QRA
+     * continuavam sem dono ate alguem associar uma por uma - e cada uma dessas e comissao que a
+     * pessoa nao recebe.
+     *
+     * Vinculo feito na mao nao e tocado (vincularMotoristaAutomaticamente respeita a marcacao),
+     * entao quem foi confirmado por uma pessoa continua como estava.
+     *
+     * @return quantas OS passaram a ter dono.
+     */
+    @Transactional public int religarOrfasDoQra(Motorista motorista){
+        if(motorista==null||!motorista.isAtivo()||motorista.getQra()==null||motorista.getQra().isBlank())return 0;
+        List<OrdemServicoPorto> orfas=oss.findOrfasComQra(motorista.getQra());
+        int religadas=0;
+        for(OrdemServicoPorto os:orfas){
+            os.vincularMotoristaAutomaticamente(motorista);
+            if(os.getMotorista()==null)continue;
+            financeiro.atualizarVinculoAdministrativo(os,motorista);
+            oss.save(os);religadas++;
+        }
+        return religadas;
+    }
     @Transactional public OrdemServicoResponse associarMotorista(Long id,AssociarMotoristaRequest request){OrdemServicoPorto os=oss.findById(id).orElseThrow(()->new RecursoNaoEncontradoException("Ordem de serviço não encontrada."));Motorista motorista=motoristas.findById(request.motoristaId()).orElseThrow(()->new RecursoNaoEncontradoException("Motorista não encontrado."));
         if(!motorista.isAtivo())throw new IllegalArgumentException("Este socorrista está desativado e não pode receber novos vínculos.");
         os.vincularMotoristaManual(motorista);financeiro.atualizarVinculoAdministrativo(os,motorista);return os(os);}
@@ -168,7 +241,7 @@ public class PortoService {
     private boolean filtrarOs(OrdemServicoResponse x,PortoOsFiltros f,Map<Long,EnumsFinanceiros.StatusConciliacaoPorto> conciliacoes){
         LocalDate data=Boolean.TRUE.equals(f.porDataPagamento())?x.dataEfetivaPagamento():x.dataAtendimento();
         if(f.dataInicio()!=null&&(data==null||data.isBefore(f.dataInicio())))return false;if(f.dataFim()!=null&&(data==null||data.isAfter(f.dataFim())))return false;
-        if(!contem(x.numero(),f.numeroOs())||!contem(x.ordemPagamento(),f.numeroOp())||!contem(x.especialidade(),f.especialidade())||!contem(x.socorrista(),f.socorrista())||!contem(x.qra(),f.qra())||!contem(x.viatura(),f.viatura()))return false;
+        if(!contem(x.numero(),f.numeroOs())||!contem(x.ordemPagamento(),f.numeroOp())||!contem(x.especialidade(),f.especialidade())||!contem(x.socorrista(),f.socorrista())||!contem(x.qra(),f.qra())||!contem(x.viatura(),f.viatura())||!contem(x.seguradora(),f.seguradora()))return false;
         if(f.semSocorrista()!=null&&f.semSocorrista()!=(x.motoristaId()==null))return false;
         if(f.semQra()!=null&&f.semQra()!=(x.qra()==null||x.qra().isBlank()))return false;
         if(f.statusOperacional()!=null&&f.statusOperacional()!=x.statusOperacional())return false;if(f.statusFinanceiro()!=null&&f.statusFinanceiro()!=x.statusFinanceiro())return false;

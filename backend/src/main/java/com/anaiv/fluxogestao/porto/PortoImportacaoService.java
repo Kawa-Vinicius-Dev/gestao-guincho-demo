@@ -25,10 +25,10 @@ import java.util.*;
 public class PortoImportacaoService {
     private static final Logger log=LoggerFactory.getLogger(PortoImportacaoService.class);
     private final ImportacaoRepository importacoes; private final RegistroImportadoPortoRepository registros;
-    private final PortoCsvParser parser;private final PortoBlocosParser blocos; private final PortoService porto;private final PortoFinanceiroService financeiro; private final ArmazenamentoArquivos armazenamento;
+    private final PortoCsvParser parser;private final PortoBlocosParser blocos; private final PortoPainelDiarioParser painelDiario; private final PortoService porto;private final PortoFinanceiroService financeiro; private final ArmazenamentoArquivos armazenamento;
     private final MotoristaRepository motoristas;
-    public PortoImportacaoService(ImportacaoRepository i,RegistroImportadoPortoRepository r,PortoCsvParser p,PortoBlocosParser blocos,PortoService porto,PortoFinanceiroService financeiro,MotoristaRepository motoristas,ArmazenamentoArquivos armazenamento){
-        importacoes=i;registros=r;parser=p;this.blocos=blocos;this.porto=porto;this.financeiro=financeiro;this.motoristas=motoristas;this.armazenamento=armazenamento;}
+    public PortoImportacaoService(ImportacaoRepository i,RegistroImportadoPortoRepository r,PortoCsvParser p,PortoBlocosParser blocos,PortoPainelDiarioParser painelDiario,PortoService porto,PortoFinanceiroService financeiro,MotoristaRepository motoristas,ArmazenamentoArquivos armazenamento){
+        importacoes=i;registros=r;parser=p;this.blocos=blocos;this.painelDiario=painelDiario;this.porto=porto;this.financeiro=financeiro;this.motoristas=motoristas;this.armazenamento=armazenamento;}
     @Transactional public PreviaResponse previa(MultipartFile arquivo){
         if(arquivo.isEmpty())throw new IllegalArgumentException("Selecione um arquivo CSV ou TXT.");String nome=arquivo.getOriginalFilename();
         String nomeNormalizado=nome==null?"":nome.toLowerCase(Locale.ROOT);if(!tabular(nomeNormalizado))throw new IllegalArgumentException("A importação Porto aceita CSV, TXT ou TSV.");
@@ -94,7 +94,7 @@ public class PortoImportacaoService {
             String chave=chaveProcessamento(previa.tipo(),linha,op);boolean jaProcessada=linha.acao()==AcaoLinhaPorto.IGNORAR;
             if(importacaoPaga(previa.tipo())&&!jaProcessada)porto.importarOs(linha,op,imp,previa.tipo()==TipoRelatorioPorto.SERVICOS_GERAIS);
             if(jaProcessada){ignorados++;continue;}
-            switch(previa.tipo()){case PREVISAO_RECEBER->porto.importarOp(linha,imp);case SERVICOS_GERAIS,OS_VINCULADAS->{ }case SERVICOS_AGUARDANDO_LANCAMENTO->porto.importarAguardando(linha,imp);case SERVICOS_DEVOLVIDOS->porto.importarDevolucao(linha,imp);}
+            switch(previa.tipo()){case PREVISAO_RECEBER->porto.importarOp(linha,imp);case SERVICOS_GERAIS,OS_VINCULADAS->{ }case SERVICOS_AGUARDANDO_LANCAMENTO->porto.importarAguardando(linha,imp);case SERVICOS_DEVOLVIDOS->porto.importarDevolucao(linha,imp);case PAINEL_DIARIO->porto.importarPainelDiario(linha,imp);}
             registros.save(new RegistroImportadoPorto(imp,chave,previa.tipo()));importados++;if(linha.acao()==AcaoLinhaPorto.ATUALIZAR||linha.acao()==AcaoLinhaPorto.DIVERGENCIA)atualizados++;else novos++;}
         BigDecimal totalRecebido=BigDecimal.ZERO;if(op!=null){if(porNumero){totalRecebido=porto.recalcularOp(op);op.atualizar(totalRecebido,null,periodo.calendario().getDataPagamento(),imp);}PortoFinanceiroService.ResultadoLote resultado=financeiro.sincronizarLote(porto.ossDaOp(op),op,imp,periodo.calendario());receitasCriadas+=resultado.receitasCriadas();receitasAtualizadas+=resultado.receitasAtualizadas();if(!porNumero)totalRecebido=totalRecebido.add(resultado.valorTotal());op.sincronizarRecebimento(totalRecebido,periodo.calendario().getDataPagamento(),periodo.calendario());if(porNumero)for(OrdemPagamentoPorto origem:opsOrigem)if(!origem.getId().equals(op.getId()))porto.recalcularOp(origem);if(diferenca!=null&&diferenca.abs().compareTo(new BigDecimal("0.01"))>0&&request!=null&&request.motivoDivergencia()!=null&&request.justificativaDivergencia()!=null&&!request.justificativaDivergencia().isBlank())porto.registrarJustificativaImportacao(op,request.motivoDivergencia(),request.justificativaDivergencia(),diferenca,principal);porto.registrarHistoricoImportacao(op,principal,importados,atualizados);}
         imp.confirmar();return new ConfirmacaoResponse(imp.getId(),previa.tipo(),importados,ignorados,novos,atualizados,receitasCriadas,receitasAtualizadas,totalRecebido,periodo==null?null:periodo.rotulo(),periodo==null?null:periodo.calendario().getDataPagamento(),List.of(),osSemSocorrista(imp));
@@ -178,9 +178,10 @@ public class PortoImportacaoService {
     private String chaveProcessamento(TipoRelatorioPorto tipo,LinhaPorto linha,OrdemPagamentoPorto op){if(!importacaoPaga(tipo)||op==null)return linha.hashRegistro();
         try{return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest((linha.hashRegistro()+"|op="+op.getId()).getBytes(StandardCharsets.UTF_8)));}catch(Exception e){throw new IllegalStateException(e);}}
     private boolean importacaoPaga(TipoRelatorioPorto tipo){return tipo==TipoRelatorioPorto.OS_VINCULADAS||tipo==TipoRelatorioPorto.SERVICOS_GERAIS;}
-    private PreviaPorto parse(byte[] bytes,boolean conteudoLivre){if(blocos.suporta(bytes))return blocos.parse(bytes);return conteudoLivre?parser.parseServicosGerais(bytes):parser.parse(bytes);}
+    private PreviaPorto parse(byte[] bytes,boolean conteudoLivre){if(blocos.suporta(bytes))return blocos.parse(bytes);if(painelDiario.suporta(bytes))return painelDiario.parse(bytes);return conteudoLivre?parser.parseServicosGerais(bytes):parser.parse(bytes);}
     private PreviaPorto reler(Importacao importacao)throws Exception{byte[] bytes=armazenamento.baixar(importacao.getCaminhoArquivo());
         if(importacao.getTipoRelatorioPorto()==TipoRelatorioPorto.SERVICOS_AGUARDANDO_LANCAMENTO)return blocos.parse(bytes);
+        if(importacao.getTipoRelatorioPorto()==TipoRelatorioPorto.PAINEL_DIARIO)return painelDiario.parse(bytes);
         return importacao.getTipoRelatorioPorto()==TipoRelatorioPorto.SERVICOS_GERAIS?parser.parseServicosGerais(bytes):parser.parse(bytes);}
     private String normalizarConteudo(String conteudo){String semBom=conteudo==null?"":conteudo.replace("\uFEFF","").replace("\r\n","\n").replace('\r','\n');
         return String.join("\n",semBom.lines().map(String::stripTrailing).toList()).trim();}
