@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { api } from '../api/http'
-import { Vazio } from '../components/EstadoPagina'
+import { Carregando, Vazio } from '../components/EstadoPagina'
 import type { Motorista, Quilometragem, Veiculo } from '../types/modelos'
 import { data, moeda, numero } from '../utils/formatadores'
 
@@ -19,6 +19,7 @@ export default function QuilometragemPage() {
   const [registros, setRegistros] = useState<Quilometragem[]>([])
   const [veiculos, setVeiculos] = useState<Veiculo[]>([])
   const [motoristas, setMotoristas] = useState<Motorista[]>([])
+  const [carregando, setCarregando] = useState(true)
   const [mes, setMes] = useState(mesAtual)
   const [modal, setModal] = useState(false)
   const [mensagem, setMensagem] = useState('')
@@ -35,7 +36,9 @@ export default function QuilometragemPage() {
   }
 
   useEffect(() => {
-    void carregar().catch(erro => setMensagem((erro as Error).message))
+    void carregar()
+      .catch(erro => setMensagem((erro as Error).message))
+      .finally(() => setCarregando(false))
   }, [])
 
   const registrosDoMes = useMemo(() => registros
@@ -97,14 +100,14 @@ export default function QuilometragemPage() {
     </section>
 
     <section className="panel km-vehicles"><header className="panel-title"><div><span className="eyebrow">Comparativo</span><h2>Eficiência por veículo</h2></div></header>
-      {comparativo.length ? <div className="km-comparison">{comparativo.map(item => {
+      {carregando ? <Carregando/> : comparativo.length ? <div className="km-comparison">{comparativo.map(item => {
         const taxa = item.km > 0 ? (item.morto / item.km) * 100 : 0
         return <article key={item.veiculo} className={taxa > 15 ? 'danger' : ''}><header><strong>{item.veiculo}</strong><strong>{taxa.toFixed(1)}%</strong></header><div className="km-scale"><span style={{ width: `${Math.min(100, taxa)}%` }}/></div><footer><span>{numero(item.morto)} km mortos</span><strong>{moeda(item.custo)}</strong></footer></article>
       })}</div> : <Vazio titulo="Nenhuma quilometragem" descricao="Não há registros no período selecionado."/>}
     </section>
 
     <section className="panel km-ledger"><header className="panel-title"><div><span className="eyebrow">Diário de bordo</span><h2>Registros do período</h2></div></header>
-      {registrosDoMes.length ? <div className="table-scroll"><table><thead><tr><th>Data</th><th>Veículo</th><th>Socorrista</th><th>Hodômetros</th><th>Km rodado</th><th>Km remunerado</th><th>Km morto</th><th>Custo</th></tr></thead><tbody>
+      {carregando ? <Carregando/> : registrosDoMes.length ? <div className="table-scroll"><table><thead><tr><th>Data</th><th>Veículo</th><th>Socorrista</th><th>Hodômetros</th><th>Km rodado</th><th>Km remunerado</th><th>Km morto</th><th>Custo</th></tr></thead><tbody>
         {registrosDoMes.map(item => <tr key={item.id}><td>{data(item.data)}</td><td><strong>{item.veiculo}</strong></td><td>{item.motorista ?? '—'}</td><td>{numero(item.hodometroInicial)} → {numero(item.hodometroFinal)}</td><td>{numero(item.quilometragemTotal)} km</td><td>{numero(item.quilometragemRemunerada)} km</td><td><strong>{numero(item.kmMorto)} km</strong></td><td>{moeda(item.custoKmMorto)}</td></tr>)}
       </tbody></table></div> : <Vazio titulo="Sem registros no período" descricao="Selecione outra competência ou registre a primeira quilometragem."/>}
     </section>

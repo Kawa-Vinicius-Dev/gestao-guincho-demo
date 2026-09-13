@@ -1,14 +1,14 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { api } from '../api/http'
 import { StatusBadge } from '../components/StatusBadge'
-import { Vazio } from '../components/EstadoPagina'
+import { Carregando, Vazio } from '../components/EstadoPagina'
 import type { Categoria, Contratante, Receita, Veiculo } from '../types/modelos'
 import { data, hojeIso, moeda } from '../utils/formatadores'
 
 export default function ReceitasPage(){
   const [lista,setLista]=useState<Receita[]>([]),[cadastros,setCadastros]=useState<{categorias:Categoria[];contratantes:Contratante[];veiculos:Veiculo[]}>({categorias:[],contratantes:[],veiculos:[]})
-  const [form,setForm]=useState(false),[editando,setEditando]=useState<Receita|null>(null),[excluindo,setExcluindo]=useState<Receita|null>(null),[erro,setErro]=useState('')
-  const carregar=()=>api<Receita[]>('/api/receitas').then(setLista)
+  const [form,setForm]=useState(false),[editando,setEditando]=useState<Receita|null>(null),[excluindo,setExcluindo]=useState<Receita|null>(null),[erro,setErro]=useState(''),[carregando,setCarregando]=useState(true)
+  const carregar=()=>api<Receita[]>('/api/receitas').then(setLista).finally(()=>setCarregando(false))
   useEffect(()=>{carregar().catch(x=>setErro((x as Error).message))
     Promise.all([api<Categoria[]>('/api/categorias?tipo=RECEITA'),api<Contratante[]>('/api/contratantes'),api<Veiculo[]>('/api/veiculos')])
       .then(([categorias,contratantes,veiculos])=>setCadastros({categorias,contratantes,veiculos})).catch(x=>setErro((x as Error).message))},[])
@@ -22,7 +22,7 @@ export default function ReceitasPage(){
   }
   async function excluir(){if(!excluindo)return;try{await api(`/api/receitas/${excluindo.id}`,{method:'DELETE'});setExcluindo(null);await carregar()}catch(x){setErro((x as Error).message)}}
   return <div className="page-enter"><header className="page-heading"><div><span className="eyebrow">Entradas</span><h1>Receitas</h1><p>Toda receita vem dos serviços das seguradoras, pela importação — não se lança à mão.</p></div></header>
-    {erro?<div className="form-alert">{erro}</div>:null}<section className="panel">{lista.length?<div className="table-scroll"><table><thead><tr><th>Descrição</th><th>Competência</th><th>Contratante</th><th>Status</th><th>Valor</th><th/></tr></thead><tbody>
+    {erro?<div className="form-alert">{erro}</div>:null}<section className="panel">{carregando?<Carregando/>:lista.length?<div className="table-scroll"><table><thead><tr><th>Descrição</th><th>Competência</th><th>Contratante</th><th>Status</th><th>Valor</th><th/></tr></thead><tbody>
       {lista.map(r=><tr key={r.id}><td><strong>{r.descricao}</strong><small>{r.contaReceberId?`Conta #${r.contaReceberId}`:r.recorrente?'Recorrente':'Avulsa'}</small></td><td>{data(r.dataCompetencia)}</td><td>{r.contratante||'—'}</td><td><StatusBadge status={r.status}/></td><td>{moeda(r.valor)}</td><td>{r.manual?<div className="heading-actions"><button className="table-action" onClick={()=>{setEditando(r);setForm(true)}}>Editar</button><button className="table-action table-action-danger" onClick={()=>setExcluindo(r)}>Excluir</button></div>:null}</td></tr>)}
     </tbody></table></div>:<Vazio titulo="Nenhuma receita" descricao="Recebimentos de contas e receitas manuais aparecerão aqui."/>}</section>
     {form?<div className="modal-backdrop"><section className="modal" role="dialog" aria-modal="true"><header><div><span className="eyebrow">Entrada manual</span><h2>{editando?'Editar receita':'Nova receita'}</h2></div><button aria-label="Fechar" onClick={()=>{setForm(false);setEditando(null)}}>×</button></header>

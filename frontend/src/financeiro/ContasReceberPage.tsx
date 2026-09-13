@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { api } from '../api/http'
 import { StatusBadge } from '../components/StatusBadge'
-import { Vazio } from '../components/EstadoPagina'
+import { Carregando, Vazio } from '../components/EstadoPagina'
 import type { ContaReceber, Contratante, Veiculo } from '../types/modelos'
 import { hojeIso, moeda } from '../utils/formatadores'
 
@@ -10,12 +10,12 @@ const proximoMes=()=>{const [ano,mes,dia]=hojeIso().split('-').map(Number);const
 export default function ContasReceberPage(){
   const [contas,setContas]=useState<ContaReceber[]>([]),[contratantes,setContratantes]=useState<Contratante[]>([])
   const [veiculos,setVeiculos]=useState<Veiculo[]>([]),[status,setStatus]=useState(''),[pesquisa,setPesquisa]=useState('')
-  const [modal,setModal]=useState<'nova'|'receber'|null>(null),[selecionada,setSelecionada]=useState<ContaReceber|null>(null)
+  const [modal,setModal]=useState<'nova'|'receber'|null>(null),[selecionada,setSelecionada]=useState<ContaReceber|null>(null),[carregando,setCarregando]=useState(true)
   const [erro,setErro]=useState(''),[versao,setVersao]=useState(0)
   useEffect(()=>{
-    const controller=new AbortController()
+    const controller=new AbortController();setCarregando(true)
     api<ContaReceber[]>(`/api/contas-receber?${new URLSearchParams({...(status&&{status}),...(pesquisa&&{pesquisa})})}`,{signal:controller.signal})
-      .then(setContas).catch(e=>{if(e.name!=='AbortError')setErro(e.message)})
+      .then(setContas).catch(e=>{if(e.name!=='AbortError')setErro(e.message)}).finally(()=>{if(!controller.signal.aborted)setCarregando(false)})
     return()=>controller.abort()
   },[status,pesquisa,versao])
   useEffect(()=>{Promise.all([api<Contratante[]>('/api/contratantes'),api<Veiculo[]>('/api/veiculos')]).then(([c,v])=>{setContratantes(c);setVeiculos(v)}).catch(e=>setErro((e as Error).message))},[])
@@ -37,7 +37,7 @@ export default function ContasReceberPage(){
     <section className="panel">
       <div className="filters"><label className="search-field"><span>Pesquisar</span><input value={pesquisa} onChange={e=>setPesquisa(e.target.value)} placeholder="Protocolo ou referência, contratante ou descrição"/></label>
         <label className="filter-select"><span>Situação</span><select value={status} onChange={e=>setStatus(e.target.value)}><option value="">Todos</option><option>PENDENTE</option><option>ATRASADO</option><option>RECEBIDO</option><option>CANCELADO</option></select></label></div>
-      {contas.length?<div className="table-scroll"><table><thead><tr><th>Protocolo ou referência</th><th>Contratante</th><th>Vencimento</th><th>Situação</th><th>Previsto</th><th>Recebido</th><th/></tr></thead>
+      {carregando?<Carregando/>:contas.length?<div className="table-scroll"><table><thead><tr><th>Protocolo ou referência</th><th>Contratante</th><th>Vencimento</th><th>Situação</th><th>Previsto</th><th>Recebido</th><th/></tr></thead>
         <tbody>{contas.map(c=><tr key={c.id}><td><strong>{c.protocolo||'Sem protocolo'}</strong><small>{c.descricao}</small></td><td>{c.contratante.nome}</td><td>{new Date(`${c.vencimento}T12:00:00`).toLocaleDateString('pt-BR')}</td><td><StatusBadge status={c.status}/></td><td>{moeda(c.valorPrevisto)}</td><td>{c.valorRecebido!=null?<><strong>{moeda(c.valorRecebido)}</strong>{c.diferenca?<small className="negative">Dif. {moeda(c.diferenca)}</small>:null}</>:'—'}</td><td>{c.status!=='RECEBIDO'&&c.status!=='CANCELADO'?<button className="table-action" onClick={()=>{setSelecionada(c);setModal('receber')}}>Registrar pagamento</button>:null}</td></tr>)}</tbody></table></div>
         :<Vazio titulo="Nenhuma conta encontrada" descricao="Cadastre uma conta manualmente ou confirme uma importação da Porto Seguro."/>}
     </section>

@@ -1,10 +1,13 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { api } from '../api/http'
 import { baixarCopiaDosDados } from '../api/porto'
+import { aplicarTema, temaAtual, type Tema } from '../tema'
 import type { Categoria, Contratante, SenhaRedefinida, Usuario } from '../types/modelos'
 
 export default function ConfiguracoesPage(){
   const [categorias,setCategorias]=useState<Categoria[]>([]),[contratantes,setContratantes]=useState<Contratante[]>([]),[usuarios,setUsuarios]=useState<Usuario[]>([])
+  const [tema,setTema]=useState<Tema>(temaAtual)
+  function trocarTema(novo:Tema){setTema(novo);aplicarTema(novo)}
   const [mensagem,setMensagem]=useState(''),[erro,setErro]=useState(''),[gerada,setGerada]=useState<SenhaRedefinida|null>(null),[copiada,setCopiada]=useState(false),[baixando,setBaixando]=useState(false)
   const carregar=()=>Promise.all([api<Categoria[]>('/api/categorias'),api<Contratante[]>('/api/contratantes'),api<Usuario[]>('/api/usuarios')])
     .then(([c,o,u])=>{setCategorias(c);setContratantes(o);setUsuarios(u)}).catch(x=>setErro((x as Error).message))
@@ -35,6 +38,7 @@ export default function ConfiguracoesPage(){
   }
   return <div className="page-enter"><header className="page-heading"><div><span className="eyebrow">Base financeira</span><h1>Configurações</h1><p>Contratantes, categorias e segurança da conta.</p></div></header>
     {erro?<div className="form-alert">{erro}</div>:null}{mensagem?<div className="success-notice">{mensagem}</div>:null}<div className="settings-grid">
+      <section className="panel settings-card"><header><h2>Aparência</h2><p>Vale só neste computador e neste navegador.</p></header><div className="segmented tema-escolha" role="group" aria-label="Tema visual"><button className={tema==='claro'?'active':''} aria-pressed={tema==='claro'} onClick={()=>trocarTema('claro')}>Claro</button><button className={tema==='escuro'?'active':''} aria-pressed={tema==='escuro'} onClick={()=>trocarTema('escuro')}>Escuro</button></div><p className="empty-inline">O sistema não segue o tema do computador: a cor só muda quando você escolhe aqui.</p></section>
       <section className="panel settings-card"><header><h2>Contratantes</h2><p>Porto Seguro e demais clientes pagadores.</p></header><ul className="simple-list">{contratantes.map(c=><li key={c.id}><strong>{c.nome}</strong><small>{c.documento||'Sem documento'}</small></li>)}</ul>
         <form onSubmit={e=>cadastrar(e,'contratantes')} className="inline-form"><input name="nome" aria-label="Nome do contratante" placeholder="Nome do contratante" required/><input name="documento" aria-label="CNPJ ou CPF" placeholder="CNPJ/CPF"/><button className="button button-ghost">Adicionar</button></form></section>
       <section className="panel settings-card"><header><h2>Categorias</h2><p>Classifique para entender para onde o dinheiro vai.</p></header><ul className="simple-list">{categorias.map(c=><li key={c.id}><strong>{c.nome}</strong><small>{c.tipo}</small></li>)}</ul>
