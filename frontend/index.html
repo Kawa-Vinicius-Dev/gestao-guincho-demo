@@ -12,6 +12,12 @@
     <meta name="description" content="Painel administrativo J M S" />
     <title>J M S</title>
   </head>
+  <script>
+      // Le o tema antes do React montar: sem isto a tela pisca branca a cada carga.
+      // Mesma chave de src/tema.ts - se mudar la, mude aqui.
+      try { if (localStorage.getItem('fluxo-gestao:tema:v1') === 'escuro')
+              document.documentElement.dataset.tema = 'escuro' } catch (e) {}
+    </script>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>

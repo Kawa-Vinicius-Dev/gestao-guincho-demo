@@ -2,6 +2,7 @@ import { useEffect,useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from './api/http'
 import { resumirOrdensPagamentoPorto } from './api/porto'
+import { CustoPorSocorrista,ProporcaoServicos,ResultadoPorVeiculo } from './components/Graficos'
 import type { Dashboard,ResumoOpsPorto } from './types/modelos'
 import { moeda,numero } from './utils/formatadores'
 
@@ -48,14 +49,16 @@ export default function DashboardPage(){
           <div><span>Ainda não pagos</span><strong>{financeiro.servicosPendentes??0} de {financeiro.servicosDoPeriodo??0}</strong><small>{(financeiro.producaoPendente??0)>0?`${moeda(financeiro.producaoPendente)} aguardando OP`:'Valor só sai quando a Porto fecha a OP'}</small></div>
           <div><span>Comissão a repassar</span><strong>{moeda(financeiro.comissaoAPagar??0)}</strong><small>Já devida, ainda não paga à equipe</small></div>
         </div>
+        <ProporcaoServicos pagos={(financeiro.servicosDoPeriodo??0)-(financeiro.servicosPendentes??0)} pendentes={financeiro.servicosPendentes??0} valorPago={financeiro.producaoPaga??0} valorPendente={financeiro.producaoPendente??0}/>
         {(financeiro.servicosPendentes??0)>0?<p className="empty-inline">Serviço prestado não é serviço pago: a Porto só fecha a OP semanas depois. Estes entram na comissão do ciclo em que forem pagos, não no ciclo em que aconteceram.</p>:null}
       </section>
       <section className="panel"><header className="panel-title"><div><span className="eyebrow">Custo por pessoa</span><h2>Gasto por socorrista</h2></div><Link to="/equipe">Abrir socorristas</Link></header>
+        <CustoPorSocorrista itens={financeiro.resultadoPorSocorrista??[]}/>
         {financeiro.resultadoPorSocorrista?.length?<div className="table-scroll"><table><thead><tr><th>Socorrista</th><th>Serviços</th><th>Produção</th><th>Comissão</th><th>Outras despesas</th><th>Custo total</th></tr></thead>
           <tbody>{financeiro.resultadoPorSocorrista.map(p=><tr key={p.motoristaId}><td><strong>{p.socorrista}</strong></td><td>{p.servicos}</td><td>{moeda(p.producao)}</td><td>{moeda(p.comissao)}</td><td>{moeda(p.despesas)}</td><td><strong>{moeda(p.custoTotal)}</strong></td></tr>)}</tbody></table></div>
-          :<p className="empty-inline">Nenhum serviço pago com socorrista vinculado neste período.</p>}
+          :null}
       </section>
-      <section className="panel vehicle-results vehicle-results-v2"><header className="panel-title"><div><span className="eyebrow">Resultado individual</span><h2>Resultado real por veículo</h2></div><Link to="/veiculos">Abrir veículos</Link></header>{financeiro.resultadoPorVeiculo.length?<div className="table-scroll"><table><thead><tr><th>Veículo</th><th>Receitas</th><th>Despesas</th><th>Resultado</th><th>Km morto</th><th>Custo km morto</th></tr></thead><tbody>{financeiro.resultadoPorVeiculo.map(item=><tr key={item.veiculoId}><td><strong>{item.veiculo}</strong></td><td>{moeda(item.receitas)}</td><td>{moeda(item.despesas)}</td><td className={item.resultado>=0?'positive':'negative'}><strong>{moeda(item.resultado)}</strong></td><td>{numero(item.kmMorto)} km</td><td>{moeda(item.custoKmMorto)}</td></tr>)}</tbody></table></div>:<p className="empty-inline">Nenhum resultado por veículo no período.</p>}</section></>:<div className="loading-card">Carregando indicadores financeiros oficiais…</div>}
+      <section className="panel vehicle-results vehicle-results-v2"><header className="panel-title"><div><span className="eyebrow">Resultado individual</span><h2>Resultado real por veículo</h2></div><Link to="/veiculos">Abrir veículos</Link></header><ResultadoPorVeiculo itens={financeiro.resultadoPorVeiculo}/>{financeiro.resultadoPorVeiculo.length?<div className="table-scroll"><table><thead><tr><th>Veículo</th><th>Receitas</th><th>Despesas</th><th>Resultado</th><th>Km morto</th><th>Custo km morto</th></tr></thead><tbody>{financeiro.resultadoPorVeiculo.map(item=><tr key={item.veiculoId}><td><strong>{item.veiculo}</strong></td><td>{moeda(item.receitas)}</td><td>{moeda(item.despesas)}</td><td className={item.resultado>=0?'positive':'negative'}><strong>{moeda(item.resultado)}</strong></td><td>{numero(item.kmMorto)} km</td><td>{moeda(item.custoKmMorto)}</td></tr>)}</tbody></table></div>:null}</section></>:<div className="loading-card">Carregando indicadores financeiros oficiais…</div>}
     {porto?<section className="porto-finance-summary" aria-label="Faturamento Porto"><header><div><span className="eyebrow">Porto Seguro</span><h2>Faturamento separado do caixa</h2></div><Link to="/porto/dashboard">Abrir módulo Porto →</Link></header><div><span>Previsto<strong>{moeda(porto.valorTotalPrevisto)}</strong><small>{porto.quantidadeTotalOps} OPs</small></span><span>Programado<strong>{moeda(porto.valorProgramado)}</strong><small>Ainda não recebido</small></span><span>Recebido no banco<strong>{moeda(porto.valorRecebido)}</strong><small>Confirmação financeira</small></span></div><p>Valores previstos e programados não compõem o caixa, a DRE ou o lucro até o recebimento confirmado.</p></section>:null}
     <p className="calculation-note"><strong>Como calculamos:</strong> lucro operacional = receitas recebidas − despesas aprovadas e pagas. A data financeira da OP vem do recebimento, não da data do atendimento.</p>
   </div>
