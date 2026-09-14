@@ -57,7 +57,8 @@ public class DashboardService {
         BigDecimal custoMorto=soma(kms.stream().map(Quilometragem::getCustoKmMorto).toList());
         List<ResultadoVeiculo> resultados=cadastros.veiculos().stream().map(v->{
             BigDecimal rv=soma(receitas.stream().filter(r->r.getVeiculo()!=null&&r.getVeiculo().getId().equals(v.id())&&r.getStatus()==StatusReceita.RECEBIDA).map(Receita::getValor).toList());
-            BigDecimal dv=soma(despesas.stream().filter(Despesa::isAprovada).filter(d->d.getVeiculo()!=null&&d.getVeiculo().getId().equals(v.id())&&d.getStatus()==StatusDespesa.PAGO).map(Despesa::getValor).toList());
+            BigDecimal dv=soma(despesas.stream().filter(Despesa::isAprovada).filter(d->d.getVeiculo()!=null&&d.getVeiculo().getId().equals(v.id())&&d.getStatus()==StatusDespesa.PAGO)
+                .filter(d->d.getNatureza()!=EnumsFinanceiros.NaturezaDespesa.ALIMENTACAO_FUNCIONARIO).map(Despesa::getValor).toList());
             BigDecimal kmv=soma(kms.stream().filter(q->q.getVeiculo().getId().equals(v.id())).map(Quilometragem::getKmMorto).toList());
             BigDecimal cv=soma(kms.stream().filter(q->q.getVeiculo().getId().equals(v.id())).map(Quilometragem::getCustoKmMorto).toList());
             return new ResultadoVeiculo(v.id(),v.identificacao(),rv,dv,rv.subtract(dv),kmv,cv);
@@ -96,8 +97,12 @@ public class DashboardService {
             .multiply(PERCENTUAL_COMISSAO).setScale(2,java.math.RoundingMode.HALF_UP);
 
         // Gasto por socorrista: o que cada um custou no periodo - a comissao dele mais as despesas
-        // lancadas no nome dele (combustivel, alimentacao). Producao ao lado, pela mesma razao de
-        // sempre: comissao sem o servico que a gerou nao diz nada.
+        // que sao DELE. Despesa com viatura e custo da viatura, mesmo lancada pelo socorrista:
+        // combustivel e manutencao do L168 abastecido pelo Natanael sao gasto do L168, nao do
+        // Natanael. Antes contava nos dois lugares - o mesmo abastecimento aparecia no custo do
+        // veiculo e no custo da pessoa. Fica com a pessoa so o que nao tem viatura, e a
+        // alimentacao, que e da pessoa mesmo com viatura anotada. Assim cada despesa cai em um
+        // lugar so. Producao ao lado, pela razao de sempre: comissao sem o servico nao diz nada.
         Map<Long,List<com.anaiv.fluxogestao.porto.OrdemServicoPorto>> porSocorrista=servicosDoPeriodo.stream()
             .filter(os->os.getMotorista()!=null)
             .filter(os->os.getStatusFinanceiro()==StatusFinanceiroPorto.RECEBIDO)
@@ -108,6 +113,7 @@ public class DashboardService {
             BigDecimal comissao=producao.multiply(PERCENTUAL_COMISSAO).setScale(2,java.math.RoundingMode.HALF_UP);
             BigDecimal gastos=soma(despesas.stream().filter(Despesa::isAprovada)
                 .filter(d->d.getMotorista()!=null&&d.getMotorista().getId().equals(m.id()))
+                .filter(d->d.getVeiculo()==null||d.getNatureza()==EnumsFinanceiros.NaturezaDespesa.ALIMENTACAO_FUNCIONARIO)
                 .filter(d->d.getProtocolo()==null||!d.getProtocolo().startsWith("COMISSAO-"))
                 .map(Despesa::getValor).toList());
             return new ResultadoSocorrista(m.id(),m.nome(),servicos.size(),producao,comissao,gastos,comissao.add(gastos));

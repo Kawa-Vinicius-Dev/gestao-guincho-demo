@@ -4,7 +4,7 @@ import { useAuth } from '../auth/AuthContext'
 
 const itens = [
   ['/', 'Visão geral', true, 'financeiro'],
-  ['/lancamentos', 'Entradas e saídas', true, 'financeiro'],
+  ['/lancamentos', 'Extrato', true, 'financeiro'],
   ['/contas-receber', 'Contas a receber', true, 'financeiro'],
   ['/dre', 'DRE mensal', true, 'financeiro'],
   ['/despesas', 'Registrar despesas', false, 'operacao'],

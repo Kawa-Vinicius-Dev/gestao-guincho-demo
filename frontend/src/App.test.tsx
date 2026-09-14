@@ -29,9 +29,9 @@ test('administrador começa com a base vazia e cria o primeiro lançamento', asy
   expect(within(fluxo).getByText('R$ 200,00')).toBeInTheDocument()
   expect(within(fluxo).getByText('R$ 580,00')).toBeInTheDocument()
 
-  await user.click(screen.getByRole('link', { name: /^entradas e saídas$/i }))
-  expect(await screen.findByRole('heading', { name: /^entradas e saídas$/i })).toBeInTheDocument()
-  await user.click(screen.getByRole('button', { name: /nova entrada ou saída/i }))
+  await user.click(screen.getByRole('link', { name: /^extrato$/i }))
+  expect(await screen.findByRole('heading', { name: /^extrato$/i })).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: /nova despesa/i }))
 
   // So existe lancamento manual de despesa: receita vem dos servicos das seguradoras,
   // pela importacao, e por isso a categoria (de despesa) e obrigatoria aqui.
@@ -79,7 +79,7 @@ test('mede a transição entre rotas no navegador', async () => {
     await screen.findByRole('heading', { name: /visão financeira/i })
     medida.mockClear()
     marcacao.mockClear()
-    const link = screen.getByRole('link', { name: /^entradas e saídas$/i })
+    const link = screen.getByRole('link', { name: /^extrato$/i })
     let inicioMarcadoNoClique = false
     const conferirInicio = () => {
       inicioMarcadoNoClique = marcacao.mock.calls.some(([nome]) => String(nome).startsWith('route:/lancamentos:start:'))
@@ -87,7 +87,7 @@ test('mede a transição entre rotas no navegador', async () => {
     link.addEventListener('click', conferirInicio)
     await user.click(link)
     link.removeEventListener('click', conferirInicio)
-    expect(await screen.findByRole('heading', { name: /^entradas e saídas$/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /^extrato$/i })).toBeInTheDocument()
     expect(inicioMarcadoNoClique).toBe(true)
 
     await waitFor(() => expect(medida).toHaveBeenCalledWith(

@@ -31,7 +31,7 @@ test('PostgreSQL vazio ignora lançamentos financeiros antigos do localStorage',
 
   abrir('/lancamentos')
 
-  expect(await screen.findByRole('heading', { name: /entradas e saídas/i })).toBeInTheDocument()
+  expect(await screen.findByRole('heading', { name: /^extrato$/i })).toBeInTheDocument()
   expect(screen.queryByText('Gasolina')).not.toBeInTheDocument()
   expect(screen.queryByText('Atendimento')).not.toBeInTheDocument()
   expect(localStorage.getItem('gestao-guincho:demo:v4')).toBeNull()
@@ -54,7 +54,7 @@ test('/lancamentos consulta o extrato financeiro real', async () => {
 
   abrir('/lancamentos')
 
-  expect(await screen.findByRole('heading', { name: /entradas e saídas/i })).toBeInTheDocument()
+  expect(await screen.findByRole('heading', { name: /^extrato$/i })).toBeInTheDocument()
   expect(consultou).toHaveBeenCalledOnce()
 })
 
