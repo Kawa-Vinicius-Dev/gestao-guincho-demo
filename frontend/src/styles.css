@@ -1020,3 +1020,64 @@ tbody tr{transition:background-color .14s ease}
 .app-shell .page-enter>section+.panel,
 .app-shell .page-enter>.panel+article,
 .app-shell .page-enter>.table-scroll+.panel{margin-top:var(--espaco-2)}
+
+/* Nada verde na tela de Despesas.
+   Verde no sistema inteiro significa dinheiro entrando. Numa tela em que toda
+   linha e dinheiro saindo, o "Pago" verde dizia o contrario do que a linha e —
+   e ficava ao lado de um valor ja em vermelho, um contradizendo o outro. Aqui o
+   pago acompanha a natureza da tela; pendente e atraso continuam no ambar e no
+   vermelho forte, que sao avisos e nao mudam de sentido. */
+.pagina-despesas .status-pago{color:var(--red);background:var(--erro-fundo)}
+.pagina-despesas .approved{color:var(--muted)}
+.pagina-despesas .positive{color:var(--red)!important}
+
+/* ===========================================================================
+   Veiculos e custos
+   =========================================================================== */
+/* O bloco de acoes do cabecalho escuro nao tinha layout nenhum: o selo "Ativo" e
+   o botao "Editar" ficavam encostados, sem um pixel entre eles. */
+.app-shell .vehicle-hero>div:last-child{
+  display:flex;align-items:center;gap:12px;flex:0 0 auto}
+/* Selo em 8px era menor que qualquer outro texto da tela. */
+.app-shell .vehicle-status{padding:6px 10px;border-radius:99px;font-size:10.5px;letter-spacing:.02em}
+/* O "Editar" usava a acao de tabela, azul claro sobre fundo claro: aqui ele cai
+   sobre o navy do cabecalho e some. Ganha a versao para fundo escuro. */
+.app-shell .vehicle-hero .table-action{
+  min-height:34px;padding:0 14px;
+  border:1px solid rgba(255,255,255,.22);border-radius:7px;
+  color:#fff;background:rgba(255,255,255,.08);font-size:12.5px}
+.app-shell .vehicle-hero .table-action:hover{background:rgba(255,255,255,.16)}
+/* As duas colunas corriam com ritmos diferentes — 7px de vao na lista da
+   esquerda contra 14px nos blocos da direita —, e a cada item elas se
+   afastavam mais uma da outra. Mesmo vao nas duas. */
+.app-shell .fleet-list{gap:var(--espaco-2)}
+.app-shell .fleet-detail{gap:var(--espaco-2)}
+
+/* ===========================================================================
+   Dashboard Porto: cabecalho do painel
+   ---------------------------------------------------------------------------
+   As duas visoes (Producao / Pagamentos) eram dois botoes soltos encostados no
+   canto do cartao, sem recuo nenhum, e o ativo era um retangulo escuro pousado
+   ali. Viram um seletor segmentado de verdade, dentro de uma faixa com recuo e
+   uma linha separando-o dos filtros que vem abaixo.
+   =========================================================================== */
+.app-shell .porto-view-switch{
+  display:inline-flex;gap:0;margin:0;
+  padding:4px;border-radius:9px;background:var(--superficie-2);
+  border:1px solid var(--line)}
+.app-shell .panel>.porto-view-switch{
+  margin:var(--espaco-2) var(--painel-pad) 0}
+.app-shell .porto-view-switch button{
+  min-height:34px;padding:0 18px;
+  border:0;border-radius:7px;background:transparent;
+  color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;
+  transition:background .14s ease,color .14s ease}
+.app-shell .porto-view-switch button:hover{color:var(--ink)}
+.app-shell .porto-view-switch button.active{
+  color:var(--ink);background:var(--superficie);
+  box-shadow:0 1px 2px rgba(7,20,38,.12)}
+:root[data-tema="escuro"] .app-shell .porto-view-switch button.active{background:var(--superficie-hover)}
+@media(prefers-reduced-motion:reduce){.app-shell .porto-view-switch button{transition:none}}
+/* A linha de filtros vem logo abaixo do seletor: a borda de cima seria uma
+   segunda divisoria a poucos pixels da primeira. */
+.app-shell .porto-view-switch+.ledger-filters{border-top:0}
