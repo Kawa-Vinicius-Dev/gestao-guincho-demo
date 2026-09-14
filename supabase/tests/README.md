@@ -1,0 +1,42 @@
+# Testes do esquema
+
+Validam as migrations num Postgres local, sem depender de um projeto Supabase.
+
+- `00_ambiente_supabase.sql` — emula o que o Supabase oferece pronto: os papeis
+  `anon` / `authenticated` / `service_role`, o schema `auth` com `auth.users` e
+  `auth.uid()`, e o schema `storage`. Nao vai para producao; existe para as
+  migrations poderem rodar fora do Supabase.
+- `10_seguranca.sql` — 46 asserções de RLS: quem ve o que, quem escreve o que, e
+  as tentativas de escalada que precisam falhar.
+- `20_funcional.sql` — 34 asserções sobre os numeros: dashboard, extrato,
+  comissao e pagamento de comissao conferidos contra valores calculados a mao.
+
+## Rodar
+
+Precisa de um Postgres 16 acessivel. Com o binario em `/usr/lib/postgresql/16/bin`:
+
+```sh
+initdb -D /tmp/pg/data -U postgres --auth=trust
+pg_ctl -D /tmp/pg/data -o "-p 55432 -k /tmp/pg -c listen_addresses=" start
+
+createdb -h /tmp/pg -p 55432 -U postgres teste
+psql -h /tmp/pg -p 55432 -U postgres -d teste -v ON_ERROR_STOP=1 \
+     -f tests/00_ambiente_supabase.sql
+for f in migrations/*.sql; do
+  psql -h /tmp/pg -p 55432 -U postgres -d teste -v ON_ERROR_STOP=1 -f "$f"
+done
+psql -h /tmp/pg -p 55432 -U postgres -d teste -v ON_ERROR_STOP=1 -f tests/10_seguranca.sql
+```
+
+Cada suite quer um banco recem-criado: as fixtures usam ids fixos e reaplicar
+sobre um banco ja populado falha na chave primaria — que e o que se espera.
+
+Uma asserção que falha aborta com `FALHOU | <o que era esperado>`; no fim de uma
+rodada boa sai `TODOS OS TESTES PASSARAM`.
+
+## Por que o helper mede linhas afetadas
+
+Um `UPDATE` barrado por RLS nao levanta erro: ele nao encontra a linha e afeta
+zero. Um teste que so verificasse "nao lancou excecao" leria isso como permissao
+concedida. Por isso `pg_temp.tentar()` olha o `row_count` — a pergunta e se a
+escrita teve efeito, nao se ela reclamou.
