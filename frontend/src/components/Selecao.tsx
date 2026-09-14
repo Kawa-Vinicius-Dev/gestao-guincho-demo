@@ -181,19 +181,40 @@ function Painel({ rotulo, opcoes, ancora, selecionado, aoEscolher, aoFechar }: P
     }
   }, [aoFechar])
 
+  /**
+   * Abre para baixo quando ha espaco, para cima quando nao ha.
+   *
+   * Um campo no rodape de um formulario longo — a categoria da despesa fixa, por
+   * exemplo — tem poucos pixels abaixo de si, e o painel saia cortado pela borda
+   * da janela. A conta usa a altura que o painel pode pedir, nao a que ele tem:
+   * na hora de decidir ele ainda nao foi medido.
+   */
+  const alturaProvavel = Math.min(420, 52 + opcoes.length * 42 + (comBusca ? 60 : 0))
+  const espacoAbaixo = window.innerHeight - ancora.bottom
+  const espacoAcima = ancora.top
+  const paraCima = espacoAbaixo < alturaProvavel && espacoAcima > espacoAbaixo
+
+  // A largura minima do painel e maior que a de alguns campos: ancorado pela
+  // esquerda, um campo colado na borda direita empurraria o painel para fora.
+  const larguraMinima = 260
+  const largura = Math.max(ancora.width, larguraMinima)
+  const esquerda = Math.min(ancora.left, window.innerWidth - largura - 8)
+
   // Coordenadas do campo viajam como variaveis de CSS: assim a folha decide se
   // as usa (ancorado, no desktop) ou as ignora (centralizado, no celular).
   const posicao = {
     '--campo-topo': `${ancora.bottom}px`,
     '--campo-base': `${ancora.top}px`,
-    '--campo-esquerda': `${ancora.left}px`,
+    '--campo-esquerda': `${Math.max(esquerda, 8)}px`,
     '--campo-largura': `${ancora.width}px`,
+    '--campo-espaco': `${Math.max(espacoAbaixo, espacoAcima) - 16}px`,
   } as React.CSSProperties
 
   return createPortal(
     <div className="selecao-fundo" style={posicao}
       onPointerDown={evento => { if (evento.target === evento.currentTarget) aoFechar() }}>
-      <div className="selecao-painel" ref={caixa} role="dialog" aria-label={rotulo} onKeyDown={teclado}>
+      <div className={paraCima ? 'selecao-painel para-cima' : 'selecao-painel'}
+        ref={caixa} role="dialog" aria-label={rotulo} onKeyDown={teclado}>
         <header>
           <span>{rotulo}</span>
           <button type="button" aria-label="Fechar" onClick={aoFechar}>×</button>

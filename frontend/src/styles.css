@@ -994,3 +994,29 @@ tbody tr{transition:background-color .14s ease}
   .dashboard-tech .par-escala>span:empty{display:none}
   .dashboard-tech .par-escala>.escala-eixo{grid-column:1/-1}
 }
+
+/* Painel aberto para cima, quando nao ha espaco abaixo (ver Selecao.tsx). A
+   altura maxima passa a ser o espaco que existe de fato, e nao um valor fixo:
+   um campo no meio da tela tem menos folga que um no topo. */
+.selecao-painel{max-height:min(52vh,420px,var(--campo-espaco,52vh))}
+.selecao-painel.para-cima{
+  top:auto;bottom:calc(100vh - var(--campo-base) + 6px)}
+@media(prefers-reduced-motion:no-preference){
+  .selecao-painel.para-cima{animation-name:selecao-entra-cima}
+  @keyframes selecao-entra-cima{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+}
+/* No celular o painel e centralizado: as duas regras acima nao valem la. */
+@media(max-width:620px),(pointer:coarse){
+  .selecao-painel,.selecao-painel.para-cima{
+    top:auto;bottom:auto;max-height:min(72vh,560px)}
+}
+
+/* Respiro entre cartoes empilhados numa pagina. .panel nunca teve margem, e cada
+   tela dependia de o filho anterior ter uma: onde nao tinha — a tabela de
+   despesas e o cartao de despesas fixas logo abaixo dela — os dois encostavam,
+   e a borda de um virava a borda do outro. */
+.app-shell .page-enter>.panel+.panel,
+.app-shell .page-enter>.panel+section,
+.app-shell .page-enter>section+.panel,
+.app-shell .page-enter>.panel+article,
+.app-shell .page-enter>.table-scroll+.panel{margin-top:var(--espaco-2)}
