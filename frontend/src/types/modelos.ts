@@ -44,8 +44,10 @@ export interface Dashboard {
   kmMorto:number; custoKmMorto:number; resultadoPorVeiculo:ResultadoVeiculo[]
   producaoPaga:number; comissaoSobreProducao:number
   producaoPendente:number; servicosPendentes:number; servicosDoPeriodo:number
-  comissaoAPagar:number; resultadoPorSocorrista:ResultadoSocorrista[]
+  comissaoAPagar:number; despesasPorCategoria:GastoPorCategoria[]; resultadoPorSocorrista:ResultadoSocorrista[]
 }
+/** Para onde o dinheiro foi: despesa paga do periodo somada por categoria. */
+export interface GastoPorCategoria { categoriaId:number; categoria:string; valor:number; participacao:number }
 export interface ResultadoSocorrista { motoristaId:number; socorrista:string; servicos:number; producao:number; comissao:number; despesas:number; custoTotal:number }
 export interface ItemImportacao {
   id:number; protocolo?:string; dataServico:string; veiculoAtendido?:string; placaAtendida?:string;

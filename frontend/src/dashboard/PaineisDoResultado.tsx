@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
-import { FaturamentoECusto, ProporcaoServicos } from '../components/Graficos'
+import { FaturamentoECusto, GastosPorCategoria, ProporcaoServicos } from '../components/Graficos'
 import type { Dashboard, ResumoOpsPorto } from '../types/modelos'
-import { moeda, numero } from '../utils/formatadores'
+import { moeda, numero, percentual } from '../utils/formatadores'
 
 /**
  * Os blocos da Visao geral. Ficam aqui porque a pagina era uma unica funcao com
@@ -20,7 +20,7 @@ export function CartaoMetrica(
 /** Receita − despesas = lucro, escrito como uma conta, que e como se le. */
 export function FaixaDoResultado({ dados, margem }: { dados: Dashboard; margem: number }) {
   const proporcaoDespesa = dados.receitaRecebida
-    ? ((dados.despesasPagas / dados.receitaRecebida) * 100).toFixed(1) : 0
+    ? percentual((dados.despesasPagas / dados.receitaRecebida) * 100) : '0%'
   return <section className="finance-lane" aria-label="Fluxo do resultado operacional">
     <div>
       <span>Receita do mês</span><strong>{moeda(dados.receitaRecebida)}</strong>
@@ -29,24 +29,54 @@ export function FaixaDoResultado({ dados, margem }: { dados: Dashboard; margem: 
     <i className="lane-separator">−</i>
     <div>
       <span>Despesas do mês</span><strong>{moeda(dados.despesasPagas)}</strong>
-      <small>{proporcaoDespesa}% da receita</small>
+      <small>{proporcaoDespesa} da receita</small>
     </div>
     <i className="lane-separator">=</i>
     <div className="lane-result">
       <span>Lucro operacional</span><strong>{moeda(dados.saldoRealizado)}</strong>
-      <small>Margem de {margem.toFixed(1)}%</small>
+      <small>Margem de {percentual(margem)}</small>
     </div>
+  </section>
+}
+
+/**
+ * Para onde o dinheiro foi. Fica logo abaixo da conta do mes de proposito: a
+ * faixa acima responde "quanto sobrou" e esta responde "no que foi", que e a
+ * pergunta seguinte de quem abre o sistema. As duas juntas cabem na primeira
+ * tela, sem rolar.
+ */
+export function PainelDeGastos({ dados }: { dados: Dashboard }) {
+  const categorias = dados.despesasPorCategoria ?? []
+  const maior = categorias[0]
+  return <section className="panel painel-gastos">
+    <header className="panel-title">
+      <div>
+        <span className="eyebrow">Para onde o dinheiro foi</span>
+        <h2>Maiores gastos do período</h2>
+        {maior
+          ? <p>
+              <strong>{maior.categoria}</strong> puxou {percentual(maior.participacao)} de tudo
+              que saiu — {moeda(maior.valor)}.
+            </p>
+          : <p>Nenhuma despesa paga no período.</p>}
+      </div>
+      <Link to="/despesas">Abrir despesas</Link>
+    </header>
+    <GastosPorCategoria total={dados.despesasPagas}
+      linhas={categorias.map(c => ({
+        id: c.categoriaId, rotulo: c.categoria, valor: c.valor, participacao: c.participacao,
+      }))}/>
   </section>
 }
 
 export function IndicadoresDeKm({ dados }: { dados: Dashboard }) {
   const proporcaoKmMorto = dados.quilometragemTotal
-    ? (dados.kmMorto / dados.quilometragemTotal * 100).toFixed(1) : 0
+    ? percentual(dados.kmMorto / dados.quilometragemTotal * 100) : '0%'
   return <section className="metric-grid metric-grid-v2">
     <CartaoMetrica titulo="Km rodado" valor={`${numero(dados.quilometragemTotal)} km`}
       apoio="Percurso total da frota"/>
     <CartaoMetrica titulo="Km morto" valor={`${numero(dados.kmMorto)} km`}
-      apoio={`${proporcaoKmMorto}% do percurso total`}/>
+      apoio={`${proporcaoKmMorto} do percurso total`}/>
     <CartaoMetrica titulo="Custo do km morto" valor={moeda(dados.custoKmMorto)}
       apoio="Km improdutivo × custo por km"/>
     <CartaoMetrica titulo="Despesas previstas" valor={moeda(dados.despesasPrevistas)}

@@ -2,8 +2,8 @@ import { useEffect,useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from './api/http'
 import { resumirOrdensPagamentoPorto } from './api/porto'
-import { FaixaDoResultado, IndicadoresDeKm, PainelDaProducao, PainelPorSocorrista,
-  PainelPorVeiculo, ResumoPorto } from './dashboard/PaineisDoResultado'
+import { FaixaDoResultado, IndicadoresDeKm, PainelDaProducao, PainelDeGastos,
+  PainelPorSocorrista, PainelPorVeiculo, ResumoPorto } from './dashboard/PaineisDoResultado'
 import type { Dashboard,ResumoOpsPorto } from './types/modelos'
 
 
@@ -75,6 +75,7 @@ export default function DashboardPage(){
     {financeiro
       ? <>
           <FaixaDoResultado dados={financeiro} margem={margem}/>
+          <PainelDeGastos dados={financeiro}/>
           <IndicadoresDeKm dados={financeiro}/>
           <PainelDaProducao dados={financeiro}/>
           <PainelPorSocorrista dados={financeiro}/>

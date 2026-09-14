@@ -1,4 +1,4 @@
-import { moeda } from '../utils/formatadores'
+import { moeda, percentual } from '../utils/formatadores'
 
 /**
  * Graficos do dashboard. Sao desenhados com grid e divs, nao com uma biblioteca:
@@ -74,5 +74,38 @@ export function ProporcaoServicos({pagos,pendentes,valorPago,valorPendente}:
       <div><dt><i className="marca-pago"/>Pagos</dt><dd>{pagos}<small>{moeda(valorPago)}</small></dd></div>
       <div><dt><i className="marca-pendente"/>Aguardando OP</dt><dd>{pendentes}<small>{moeda(valorPendente)}</small></dd></div>
     </dl>
+  </div>
+}
+
+export type LinhaCategoria={id:number;rotulo:string;valor:number;participacao:number}
+
+/**
+ * Para onde o dinheiro foi: despesa paga somada por categoria, da maior para a
+ * menor. E a primeira pergunta de quem abre o sistema — "o que pesou no mes" —,
+ * e ate aqui ela exigia abrir a tela de despesas e somar na mao.
+ *
+ * Barra deitada, e nao rosca: com sete ou oito categorias a rosca vira um
+ * carrossel de cores que so se le pela legenda, e comparar duas fatias vizinhas
+ * de tamanho parecido e impossivel. Em barra, a ordem ja e a resposta.
+ */
+export function GastosPorCategoria({linhas,total}:{linhas:LinhaCategoria[];total:number}){
+  if(!linhas.length)return <Vazio texto="Nenhuma despesa paga neste período."/>
+  const maior=escala(linhas.map(l=>l.valor))
+  return <div className="grafico gastos-categoria">
+    <p className="gastos-total">
+      <span>Total pago no período</span><strong>{moeda(total)}</strong>
+    </p>
+    {linhas.map((linha,posicao)=>
+      <div className="barra-linha" key={linha.id}>
+        <span className="barra-rotulo" title={linha.rotulo}>{linha.rotulo}</span>
+        <span className="barra-trilho">
+          {/* A maior categoria e a unica em vermelho cheio: e nela que a conversa
+              sobre corte de custo comeca. As outras acompanham em tom neutro. */}
+          <i className={posicao===0?'barra-preenche barra-maior':'barra-preenche'}
+            style={{width:`${Math.max(linha.valor/maior*100,2)}%`}}/>
+        </span>
+        <span className="barra-valor">{moeda(linha.valor)}</span>
+        <span className="barra-parcela">{percentual(linha.participacao)}</span>
+      </div>)}
   </div>
 }

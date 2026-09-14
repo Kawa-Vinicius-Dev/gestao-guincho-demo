@@ -941,3 +941,56 @@ tbody tr{transition:background-color .14s ease}
   display:block;padding:11px 12px 10px;
   color:var(--cyan);font:500 8px 'IBM Plex Mono',monospace;
   letter-spacing:.14em;text-transform:uppercase}
+
+/* ===========================================================================
+   Para onde o dinheiro foi
+   ---------------------------------------------------------------------------
+   Barra deitada por categoria, da maior para a menor. A maior sai em vermelho
+   cheio: e nela que a conversa sobre corte de custo comeca.
+   =========================================================================== */
+.dashboard-tech .painel-gastos{margin-bottom:var(--espaco-2)}
+.dashboard-tech .gastos-categoria{padding:var(--espaco-1) var(--painel-pad) var(--espaco-3)}
+.dashboard-tech .gastos-total{
+  display:flex;align-items:baseline;justify-content:space-between;gap:12px;
+  margin:0 0 var(--espaco-2);padding-bottom:10px;
+  border-bottom:1px solid var(--linha-suave)}
+.dashboard-tech .gastos-total span{color:var(--muted);font-size:11px;
+  letter-spacing:.07em;text-transform:uppercase}
+.dashboard-tech .gastos-total strong{
+  font:600 22px 'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;color:var(--ink)}
+/* Quatro colunas: nome, barra, valor e participacao. A participacao e o que
+   responde "isso e muito?" sem a pessoa fazer a conta de cabeca. */
+.dashboard-tech .gastos-categoria .barra-linha{
+  grid-template-columns:minmax(96px,168px) minmax(0,1fr) minmax(92px,auto) 52px}
+.dashboard-tech .gastos-categoria .barra-trilho{height:15px}
+.dashboard-tech .barra-maior{background:var(--red)}
+.dashboard-tech .gastos-categoria .barra-preenche{background:#8aa4bf}
+.dashboard-tech .gastos-categoria .barra-maior{background:var(--red)}
+.dashboard-tech .barra-parcela{
+  text-align:right;color:var(--muted);
+  font:500 12px/1 'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums}
+@media(max-width:620px){
+  /* Em tela estreita o nome sobe e a barra ocupa a largura toda: espremer quatro
+     colunas em 390px deixaria o nome com duas letras. */
+  .dashboard-tech .gastos-categoria .barra-linha{
+    grid-template-columns:minmax(0,1fr) auto;gap:4px 10px}
+  .dashboard-tech .gastos-categoria .barra-rotulo{grid-column:1/-1;font-weight:600}
+  .dashboard-tech .gastos-categoria .barra-trilho{grid-column:1/-1;order:3}
+  .dashboard-tech .gastos-categoria .barra-valor{text-align:left}
+}
+
+/* O grafico de faturamento x custo tem quatro colunas (nome, barras, valores,
+   resultado) e a regra de tela estreita so cobria os de tres — entao em 390px as
+   quatro continuavam la, transbordando umas por cima das outras: o rodape de
+   escala saia como "R$R$ 13.740,50". Empilha, como o de categorias. */
+@media(max-width:620px){
+  .dashboard-tech .par-linha,.dashboard-tech .par-escala{
+    grid-template-columns:minmax(0,1fr) auto;gap:4px 10px}
+  .dashboard-tech .par-linha>.barra-rotulo{grid-column:1/-1;font-weight:600}
+  .dashboard-tech .par-trilhos{grid-column:1/-1;order:3}
+  .dashboard-tech .par-valores{order:4;text-align:left}
+  .dashboard-tech .par-resultado{order:5}
+  /* Os vaos vazios da linha de escala nao tem o que mostrar aqui. */
+  .dashboard-tech .par-escala>span:empty{display:none}
+  .dashboard-tech .par-escala>.escala-eixo{grid-column:1/-1}
+}
