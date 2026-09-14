@@ -3,6 +3,7 @@ import { api } from '../api/http'
 import { Carregando, Vazio } from '../components/EstadoPagina'
 import type { Motorista, Quilometragem, Veiculo } from '../types/modelos'
 import { data, moeda, numero } from '../utils/formatadores'
+import { Selecao } from '../components/Campos'
 
 function mesAtual() {
   const hoje = new Date()
@@ -115,8 +116,10 @@ export default function QuilometragemPage() {
     {modal ? <div className="modal-backdrop"><section className="modal modal-wide" role="dialog" aria-modal="true"><header><div><span className="eyebrow">Diário de bordo</span><h2>Registrar quilometragem</h2></div><button aria-label="Fechar" onClick={() => setModal(false)}>×</button></header>
       <form onSubmit={salvar} className="form-grid three-columns">
         <label className="field"><span>Data</span><input name="data" type="date" defaultValue={hojeLocal()} required/></label>
-        <label className="field"><span>Veículo</span><select name="veiculoId" required><option value="">Selecione</option>{veiculos.map(item => <option value={item.id} key={item.id}>{item.identificacao}{item.modelo ? ` · ${item.modelo}` : ''}</option>)}</select></label>
-        <label className="field"><span>Socorrista</span><select name="motoristaId"><option value="">Não informado</option>{motoristas.map(item => <option value={item.id} key={item.id}>{item.nome}</option>)}</select></label>
+        <Selecao rotulo="Veículo" name="veiculoId" required vazio="Selecione"
+          opcoes={veiculos.map(item => ({valor:item.id, texto:`${item.identificacao}${item.modelo ? ` · ${item.modelo}` : ''}`}))}/>
+        <Selecao rotulo="Socorrista" name="motoristaId" vazio="Não informado"
+          opcoes={motoristas.map(item => ({valor:item.id, texto:item.nome}))}/>
         <label className="field"><span>Hodômetro inicial</span><input name="hodometroInicial" type="number" min="0" step=".01" required/></label>
         <label className="field"><span>Hodômetro final</span><input name="hodometroFinal" type="number" min="0" step=".01" required/></label>
         <label className="field"><span>Quilometragem remunerada</span><input name="quilometragemRemunerada" type="number" min="0" step=".01" required/></label>

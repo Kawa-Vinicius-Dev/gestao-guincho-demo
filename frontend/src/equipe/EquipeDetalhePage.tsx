@@ -1,5 +1,6 @@
 import { useEffect,useState } from 'react'
 import { Link,useParams } from 'react-router-dom'
+import { Selecao } from '../components/Campos'
 import { listarPeriodosComissoes,obterDetalheSocorrista } from '../api/comissoes'
 import { Carregando,ErroPagina } from '../components/EstadoPagina'
 import type { CalendarioPorto,DetalheSocorrista } from '../types/modelos'
@@ -19,7 +20,8 @@ export default function EquipeDetalhePage(){
   return <div className="page-enter employee-detail-page">
     <header className="employee-detail-heading">
       <div><Link className="back-link" to="/equipe">← Voltar para socorristas</Link><span className="eyebrow">Ficha administrativa</span><h1>{detalhe?.nome||'Socorrista'}</h1><p>Histórico operacional e composição financeira por fechamento Porto.</p></div>
-      <label className="month-picker"><span>Período Porto</span><select aria-label="Período Porto" value={periodoId||''} onChange={event=>setPeriodoId(Number(event.target.value))}><option value="">Selecione</option>{periodos.map(periodo=><option key={periodo.id} value={periodo.id}>{periodo.descricao} · {data(periodo.competenciaInicio)} a {data(periodo.competenciaFim)}</option>)}</select></label>
+      <Selecao rotulo="Período Porto" className="month-picker" vazio="Selecione" value={periodoId||''} onChange={event=>setPeriodoId(Number(event.target.value))}
+        opcoes={periodos.map(periodo=>({valor:periodo.id,texto:`${periodo.descricao} · ${data(periodo.competenciaInicio)} a ${data(periodo.competenciaFim)}`}))}/>
     </header>
     {erro?<div className="form-alert" role="alert">{erro}</div>:null}
     {carregandoDetalhe&&!detalhe?<Carregando/>:null}

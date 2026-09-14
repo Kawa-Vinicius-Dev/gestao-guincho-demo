@@ -450,3 +450,246 @@ tbody tr{transition:background-color .14s ease}
 .dashboard-tech .par-valores{display:grid;gap:2px;text-align:right;font:500 11.5px/1.25 'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;color:var(--ink)}
 .dashboard-tech .par-valor-custo{color:var(--muted)}
 .dashboard-tech .par-resultado{text-align:right;font:600 12.5px/1 'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums}
+
+/* ===========================================================================
+   Camada de padronizacao — controles, respiro e toque
+   ---------------------------------------------------------------------------
+   O resto da folha cresceu por acrescimo: cada tela que nasceu trouxe a propria
+   medida. Conferindo o que estava no ar, o mesmo controle aparecia com cinco
+   alturas (35, 38, 40, 41 e 42px), o rotulo do campo com quatro tamanhos
+   (8, 9, 10 e 11px) e o texto dentro do <select> com 10px enquanto o <input> ao
+   lado herdava 14px. Numa mesma linha de filtro isso e visivel a olho nu: os
+   campos nao alinham e a maior parte deles nao da para ler.
+
+   Esta camada vem por ultimo de proposito. Ela nao reescreve as telas: fixa uma
+   escala unica e deixa que a ordem da cascata sobreponha as medidas antigas.
+   Mexer aqui muda todas as telas de uma vez, que e justamente o ponto.
+   =========================================================================== */
+:root{
+  /* Escala de espaco. Quatro degraus bastam para esta aplicacao; o que existia
+     antes eram 15 valores entre 5px e 40px escolhidos um a um. */
+  --espaco-1:8px; --espaco-2:14px; --espaco-3:22px; --espaco-4:32px;
+  /* Altura unica de controle, igual a do botao, para campo e botao alinharem
+     quando dividem a mesma linha de filtro. */
+  --controle-altura:42px;
+  --controle-raio:7px;
+  --controle-borda:#cdd8e4;
+  /* Respiro interno do cartao. Ver a regra de .panel mais abaixo. */
+  --painel-pad:22px;
+  /* Seta do <select>. Vai como data-URI porque currentColor nao atravessa para
+     dentro de uma imagem de fundo — por isso o tema escuro redefine a sua. */
+  --seta-campo:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5l5-5' fill='none' stroke='%2364748b' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+:root[data-tema="escuro"]{
+  /* Diz ao navegador para desenhar no escuro o que e dele e nao nosso: o icone
+     do calendario dentro do <input type=date>, o proprio calendario que ele
+     abre e as barras de rolagem. Sem isto o icone sai preto sobre o campo
+     escuro e some. */
+  color-scheme:dark;
+  --controle-borda:#2f4761;
+  --seta-campo:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5l5-5' fill='none' stroke='%2393a9c0' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+/* --- Campo de texto, data, numero, select e textarea -----------------------
+   Um so tamanho para todos. Os seletores comecam em .app-shell / .login-panel
+   para ganhar da dezena de regras antigas por especificidade de empate + ordem,
+   sem precisar de !important. Caixas de marcar e campo de arquivo ficam de fora:
+   altura fixa e recuo lateral nao fazem sentido neles. */
+.app-shell input:not([type=checkbox]):not([type=radio]):not([type=file]),
+.app-shell select,
+.app-shell textarea,
+.login-panel input{
+  width:100%;min-width:0;
+  padding:0 12px;
+  border:1px solid var(--controle-borda);border-radius:var(--controle-raio);
+  background:var(--superficie);color:var(--ink);
+  font-size:14px;line-height:1.2;
+}
+.app-shell input:not([type=checkbox]):not([type=radio]):not([type=file]),
+.app-shell select,
+.login-panel input{height:var(--controle-altura)}
+.app-shell textarea{min-height:96px;padding:11px 12px;line-height:1.45;resize:vertical}
+.app-shell input::placeholder,.app-shell textarea::placeholder{color:var(--muted);opacity:1}
+.app-shell input:disabled,.app-shell select:disabled,.app-shell textarea:disabled{
+  cursor:not-allowed;opacity:.6;background:var(--superficie-2)}
+
+/* Seta propria no lugar da do sistema operacional, que muda de desenho entre
+   Windows, macOS e Android e era o que mais destoava entre um campo e outro.
+   O recuo a direita reserva o espaco dela para o texto nao passar por baixo. */
+.app-shell select{
+  appearance:none;-webkit-appearance:none;
+  padding-right:34px;
+  background-image:var(--seta-campo);
+  background-repeat:no-repeat;
+  background-position:right 13px center;
+  cursor:pointer;
+}
+/* Um unico anel de foco, visivel nos dois temas. */
+.app-shell input:focus,.app-shell select:focus,.app-shell textarea:focus,
+.login-panel input:focus{
+  outline:none;border-color:var(--blue-500);box-shadow:0 0 0 3px rgba(46,144,250,.18)}
+
+/* --- Rotulo do campo ------------------------------------------------------
+   Os rotulos de filtro estavam em 8px e 9px maiusculo: legiveis na tela de quem
+   desenhou, nao na de quem opera. Vao todos para 11px, com o mesmo peso e a
+   mesma distancia do campo. */
+.app-shell .field>span,
+.app-shell .filter-select>span,
+.app-shell .search-field>span,
+.app-shell .ledger-filters label>span,
+.app-shell .month-picker>span,
+.app-shell .dashboard-filters span,
+.app-shell .date-range label,
+.app-shell .report-toolbar label{
+  display:block;margin-bottom:6px;
+  color:var(--muted);
+  font-size:11px;font-weight:600;line-height:1.3;
+  letter-spacing:.01em;text-transform:none;
+}
+
+/* --- Linhas de filtro -----------------------------------------------------
+   Viravam grades de larguras fixas que estouravam ou espremiam conforme a tela.
+   Passam a ser uma grade que quebra sozinha, com largura minima util por campo. */
+.app-shell .ledger-filters,
+.app-shell .dashboard-filters,
+.app-shell .filters{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+  gap:var(--espaco-2);
+  align-items:end;
+  padding:var(--espaco-2) var(--painel-pad);
+}
+.app-shell .ledger-filters label,
+.app-shell .ledger-filters .filter-grow{min-width:0}
+/* Campo de busca ocupa a linha inteira quando sobra espaco. */
+.app-shell .ledger-filters .filter-grow,
+.app-shell .filters .search-field{grid-column:1/-1}
+@media(min-width:900px){
+  .app-shell .ledger-filters .filter-grow,
+  .app-shell .filters .search-field{grid-column:span 2}
+}
+/* O botao da linha de filtro alinha com os campos, nao cai sozinho embaixo. */
+.app-shell .ledger-filters .button,
+.app-shell .dashboard-filters .button{align-self:end}
+
+/* --- Respiro dentro do cartao ---------------------------------------------
+   .panel nunca teve recuo proprio: cada tela punha padding no filho que lembrava.
+   Os que nao lembraram — a lista de despesas fixas e o formulario embaixo dela —
+   ficaram com o texto encostado na borda do cartao. Aqui o recuo passa a valer
+   para o conteudo corrido de qualquer painel; cabecalho, linha de filtro e
+   tabela com rolagem continuam de fora, porque eles devem mesmo ir ate a borda.
+
+   A lista do :not() sao as variantes de painel que ja declaram padding proprio
+   e ganhariam recuo em dobro. Quem criar uma variante nova com padding proprio
+   precisa acrescenta-la aqui. */
+.app-shell .panel:not(.settings-card,.vehicle-history,.km-ledger,.vehicle-results,
+                      .chart-card,.conference-form,.team-card,.porto-import-card)
+  >:is(.simple-list,.inline-form,p,ul,.form-alert,.success-notice,
+       form:not(.ledger-filters,.filters)){
+  padding-left:var(--painel-pad);padding-right:var(--painel-pad)}
+.app-shell .panel:not(.settings-card,.vehicle-history,.km-ledger,.vehicle-results,
+                      .chart-card,.conference-form,.team-card,.porto-import-card)
+  >:is(.inline-form,form:not(.ledger-filters,.filters)){padding-bottom:var(--painel-pad)}
+.app-shell .panel>.empty-inline{padding:var(--espaco-4) var(--painel-pad)}
+/* Cabecalho de painel: a folha redefinia .panel-title oito vezes, com recuos de
+   18 a 22px. Uma medida so. */
+.app-shell .panel>.panel-title,
+.app-shell .dashboard-tech .panel>.panel-title{
+  padding:var(--espaco-3) var(--painel-pad) var(--espaco-2);
+  gap:var(--espaco-2)}
+.app-shell .panel>.panel-title p{margin:4px 0 0;font-size:12.5px;line-height:1.45}
+
+/* Anexar comprovante: era um <input type=file> cru na celula da tabela, e o
+   navegador desenha nele o proprio botao — "Choose File / No file chosen", em
+   ingles, no meio de uma tela em portugues, com largura que muda por sistema.
+   Vira um rotulo com cara de acao de tabela; o campo continua la, so que oculto,
+   e o clique no rotulo o aciona. */
+.app-shell label.file-action{max-width:none;cursor:pointer}
+.app-shell label.file-action input[type=file]{
+  position:absolute;width:1px;height:1px;padding:0;margin:-1px;
+  overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.app-shell label.file-action:focus-within{
+  outline:3px solid rgba(46,144,250,.32);outline-offset:3px}
+
+/* Tabela: o cabecalho saia em 9px maiusculo e a celula em 12px. Sobe os dois um
+   degrau — e uma tela de conferir dinheiro, lida o dia inteiro. */
+.app-shell table{font-size:13px}
+.app-shell th{font-size:10.5px;letter-spacing:.06em}
+.app-shell td small{font-size:11.5px}
+
+/* Texto de ajuda do campo, no mesmo lugar e no mesmo tom em todas as telas. */
+.app-shell .field>small{
+  display:block;margin-top:5px;color:var(--muted);font-size:11.5px;line-height:1.4;font-weight:400}
+
+/* Formulario em linha (cadastro rapido no rodape do cartao): as colunas fixas
+   1fr 1fr auto espremiam cinco campos em duas colunas, e os campos nao tinham
+   rotulo visivel — so placeholder, que some assim que a pessoa digita. Agora
+   quebra sozinho e cada campo diz o que e. */
+.app-shell .inline-form{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+  gap:var(--espaco-2) var(--espaco-1);align-items:end}
+.app-shell .inline-form .button{min-width:120px;align-self:end}
+
+/* --- Botoes ---------------------------------------------------------------
+   Mesma altura do campo, para a linha de filtro fechar certo. */
+.app-shell .button{min-height:var(--controle-altura);padding:0 18px;font-size:13.5px;gap:7px}
+.app-shell .button-sm{min-height:34px;padding:0 12px;font-size:12.5px}
+/* Acoes dentro da tabela tinham 10px e area de clique de 24px de altura: passa
+   perto num mouse, nao num polegar. */
+.app-shell .table-action{
+  min-height:32px;padding:0 11px;border-radius:6px;font-size:12px;
+  display:inline-flex;align-items:center;justify-content:center}
+.app-shell td .table-action+.table-action{margin-left:6px}
+/* Grupo de botoes no cabecalho da pagina: espaco igual e quebra de linha em vez
+   de transbordo quando sao tres (Exportar PDF / Exportar Excel / Nova ordem). */
+.app-shell .heading-actions,.app-shell .modal-actions{
+  display:flex;flex-wrap:wrap;align-items:center;gap:var(--espaco-1)}
+.app-shell .modal-actions{justify-content:flex-end;margin-top:var(--espaco-2)}
+
+/* --- Barra lateral --------------------------------------------------------
+   Com os 18 itens abertos, o ultimo do menu ficava cortado ao meio pelo rodape
+   fixo da barra. A lista rola e o rodape deixa de comer a ultima linha. */
+.sidebar{padding-bottom:var(--espaco-1)}
+.primary-nav{flex:1;min-height:0;padding-bottom:var(--espaco-1);overscroll-behavior:contain}
+.sidebar-foot{flex:0 0 auto}
+
+/* --- Telas estreitas ------------------------------------------------------ */
+/* Cabecalho de painel em tela estreita: titulo e acao dividiam a mesma linha,
+   e a acao — "Lancar as fixas do mes", "Abrir socorristas" — sobrava numa coluna
+   de 90px, quebrando em quatro linhas dentro do botao. Empilha. */
+@media(max-width:760px){
+  .app-shell .panel>.panel-title{align-items:stretch;flex-direction:column}
+  .app-shell .panel>.panel-title>.heading-actions,
+  .app-shell .panel>.panel-title>a{align-self:stretch}
+  .app-shell .panel>.panel-title .field,
+  .app-shell .panel>.panel-title .month-picker{width:100%}
+}
+@media(max-width:620px){
+  :root{--painel-pad:16px}
+  /* Oito cartoes de indicador, um por linha, faziam da Visao geral uma tela de
+     3300px de altura. Dois por linha cortam isso pela metade sem apertar o
+     numero, que e o que a pessoa vai ler. */
+  .app-shell .metric-grid,.app-shell .metric-grid-v2,
+  .app-shell .porto-dashboard-metrics,.app-shell .commission-metrics{
+    grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--espaco-1)}
+  .app-shell .metric,.app-shell .metric-v2{min-height:0;padding:var(--espaco-2)}
+  .app-shell .metric strong{margin:var(--espaco-1) 0 4px}
+  /* Recuo lateral da pagina, igual dos dois lados em qualquer largura. */
+  .content{padding:var(--espaco-3) var(--espaco-2) 56px}
+  /* Botao de acao do cabecalho ocupa a largura toda: e o alvo principal da tela. */
+  .app-shell .page-heading>.button,
+  .app-shell .heading-actions>.button{width:100%}
+  .app-shell .heading-actions{display:grid;grid-template-columns:1fr;gap:var(--espaco-1)}
+  /* A primeira coluna fica ancorada quando a tabela rola de lado. Sem largura
+     minima ela encolhia ate o limite e a descricao quebrava em cinco linhas
+     ("Pedagio BR-101 — remocao Cabo de Santo Agostinho"). */
+  .app-shell .table-scroll th:first-child,
+  .app-shell .table-scroll td:first-child{min-width:150px}
+}
+/* Dedo, nao mouse: o minimo confortavel de alvo de toque e 44px. Vale por tipo
+   de apontador, nao por largura de tela — um tablet de 1024px tambem e toque. */
+@media(pointer:coarse){
+  :root{--controle-altura:46px}
+  .app-shell .table-action{min-height:40px;padding:0 14px}
+  .app-shell .button-sm{min-height:40px}
+}

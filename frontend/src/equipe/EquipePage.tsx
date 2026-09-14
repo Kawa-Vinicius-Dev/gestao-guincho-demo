@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { api } from '../api/http'
 import { Carregando,ErroPagina,Vazio } from '../components/EstadoPagina'
 import type { Motorista,SenhaRedefinida,Veiculo } from '../types/modelos'
+import { Selecao } from '../components/Campos'
 
 export default function EquipePage(){
   const [motoristas,setMotoristas]=useState<Motorista[]>([])
@@ -65,7 +66,9 @@ export default function EquipePage(){
         <label className="field"><span>Telefone</span><input name="telefone" defaultValue={editando?.telefone}/></label>
         <label className="field"><span>QRA</span><input name="qra" defaultValue={editando?.qra}/></label>
         {/* Vinculo informativo: quem dirigiu o que e definido em cada OS, nao aqui. */}
-        <label className="field"><span>Viatura habitual</span><select name="veiculoId" aria-label="Viatura habitual" defaultValue={editando?.veiculoId??''}><option value="">Sem viatura</option>{veiculos.map(v=><option key={v.id} value={v.id}>{v.identificacao}</option>)}</select><small>Só referência — a viatura de cada serviço vem da OS, não daqui.</small></label>
+        <Selecao rotulo="Viatura habitual" name="veiculoId" defaultValue={editando?.veiculoId??''} vazio="Sem viatura"
+          ajuda="Só referência — a viatura de cada serviço vem da OS, não daqui."
+          opcoes={veiculos.map(v=>({valor:v.id,texto:v.identificacao}))}/>
         <label className="field field-wide"><span>Documento</span><input name="documento" defaultValue={editando?.documento}/></label>
         <div className="modal-actions field-wide"><button type="button" className="button button-ghost" onClick={fechar}>Cancelar</button><button className="button button-primary" disabled={salvando}>{salvando?'Salvando…':editando?'Salvar alterações':'Salvar socorrista'}</button></div>
       </form></section></div>:null}

@@ -1,10 +1,17 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { api } from '../api/http'
+import { Campo, Selecao } from '../components/Campos'
 import { Vazio } from '../components/EstadoPagina'
 import type { Categoria, Contratante, Despesa, LancamentoFinanceiro, Motorista, Veiculo } from '../types/modelos'
 import { data, moeda } from '../utils/formatadores'
 
 type TipoLancamento = 'RECEITA' | 'DESPESA'
+
+/** Mesma lista em Lancamentos e em Despesas; ficava escrita nas duas telas. */
+export const FORMAS_PAGAMENTO = [
+  {valor:'PIX',texto:'PIX'},{valor:'Cartão',texto:'Cartão'},
+  {valor:'Dinheiro',texto:'Dinheiro'},{valor:'Boleto',texto:'Boleto'},
+] as const
 
 const hoje = () => {
   const atual = new Date()
@@ -93,21 +100,30 @@ export default function LancamentosPage() {
       <div className="heading-total-with-action"><span><small>Saldo realizado filtrado</small><strong className={realizado>=0?'positive':'negative'}>{moeda(realizado)}</strong></span><button className="button button-primary" onClick={()=>setModal(true)}>+ Nova despesa</button></div></header>
     {mensagem?<div className="success-notice">{mensagem}</div>:null}
     <section className="panel"><div className="ledger-filters">
-      <label><span>Competência</span><input aria-label="Competência" type="month" value={mes} onChange={e=>setMes(e.target.value)}/></label>
-      <label><span>Tipo</span><select value={tipoFiltro} onChange={e=>setTipoFiltro(e.target.value as ''|TipoLancamento)}><option value="">Todos</option><option value="RECEITA">Receitas</option><option value="DESPESA">Despesas</option></select></label>
-      <label><span>Veículo</span><select value={veiculoFiltro} onChange={e=>setVeiculoFiltro(e.target.value)}><option value="">Todos</option>{veiculos.map(v=><option key={v.id} value={v.id}>{v.identificacao}</option>)}</select></label>
-      <label className="filter-grow"><span>Buscar</span><input value={pesquisa} onChange={e=>setPesquisa(e.target.value)} placeholder="Descrição, categoria ou protocolo"/></label>
+      <Campo rotulo="Competência"><input type="month" value={mes} onChange={e=>setMes(e.target.value)}/></Campo>
+      <Selecao rotulo="Tipo" vazio="Todos" value={tipoFiltro} onChange={e=>setTipoFiltro(e.target.value as ''|TipoLancamento)}
+        opcoes={[{valor:'RECEITA',texto:'Receitas'},{valor:'DESPESA',texto:'Despesas'}]}/>
+      <Selecao rotulo="Veículo" vazio="Todos" value={veiculoFiltro} onChange={e=>setVeiculoFiltro(e.target.value)}
+        opcoes={veiculos.map(v=>({valor:v.id,texto:v.identificacao}))}/>
+      <Campo rotulo="Buscar" className="filter-grow"><input value={pesquisa} onChange={e=>setPesquisa(e.target.value)} placeholder="Descrição, categoria ou protocolo"/></Campo>
     </div>
     {carregando?<p className="loading-card">Carregando lançamentos oficiais…</p>:filtrados.length?<div className="table-scroll"><table><thead><tr><th>Data financeira</th><th>Descrição</th><th>Categoria</th><th>Veículo</th><th>Situação</th><th>Valor</th><th/></tr></thead><tbody>{filtrados.map(item=><tr key={item.id}><td>{data(item.data)}</td><td><strong>{item.descricao}</strong><small>{item.origem}{item.protocolo?` · ${item.protocolo}`:''}</small></td><td>{item.categoria}</td><td>{item.veiculo??'—'}</td><td><span className={`ledger-status ${item.realizado?'ledger-recebido':'ledger-pendente'}`}>{item.realizado?(item.tipo==='RECEITA'?'Recebido':'Pago'):'Previsto'}</span></td><td className={item.tipo==='RECEITA'?'positive':'negative'}><strong>{item.tipo==='RECEITA'?'+':'−'} {moeda(item.valor)}</strong></td><td>{item.tipo==='DESPESA'&&!item.realizado&&item.status!=='REJEITADO'?<button className="table-action" onClick={()=>void pagar(item)}>Registrar pagamento</button>:null}</td></tr>)}</tbody></table></div>:<Vazio titulo="Nenhum lançamento" descricao="O backend não possui movimentos nesta competência."/>}
     </section>
     {modal?<div className="modal-backdrop"><section className="modal modal-financial" role="dialog" aria-modal="true" aria-labelledby="titulo-lancamento"><header><div><span className="eyebrow">Persistência real</span><h2 id="titulo-lancamento">Novo lançamento</h2></div><button aria-label="Fechar" onClick={()=>setModal(false)}>×</button></header>
       <form onSubmit={salvar} className="form-grid two-columns">
-        <label className="field field-wide"><span>Descrição</span><input name="descricao" required/></label><label className="field"><span>Valor</span><input name="valor" type="number" min=".01" step=".01" required/></label>
-        <label className="field"><span>Categoria</span><select name="categoriaId" required={tipoFormulario==='DESPESA'}><option value="">Sem categoria</option>{categoriasFormulario.map(c=><option key={c.id} value={c.id}>{c.nome}</option>)}</select></label>
-        <label className="field"><span>Data</span><input name="data" type="date" defaultValue={hoje()} required/></label><label className="field"><span>Situação</span><select name="status">{tipoFormulario==='RECEITA'?<><option value="RECEBIDA">Recebida</option><option value="PREVISTA">Prevista</option></>:<><option value="PAGO">Paga</option><option value="PENDENTE">Pendente</option></>}</select></label>
-        <label className="field"><span>Veículo</span><select name="veiculoId"><option value="">Não relacionado</option>{veiculos.map(v=><option key={v.id} value={v.id}>{v.identificacao}</option>)}</select></label>
-        {tipoFormulario==='RECEITA'?<label className="field"><span>Contratante</span><select name="contratanteId"><option value="">Não informado</option>{contratantes.map(c=><option key={c.id} value={c.id}>{c.nome}</option>)}</select></label>:<><label className="field"><span>Motorista</span><select name="motoristaId"><option value="">Não relacionado</option>{motoristas.map(m=><option key={m.id} value={m.id}>{m.nome}</option>)}</select></label><label className="field"><span>Forma de pagamento</span><select name="formaPagamento"><option value="">Não informada</option><option>PIX</option><option>Cartão</option><option>Dinheiro</option><option>Boleto</option></select></label></>}
-        <label className="field field-wide"><span>Observações</span><textarea name="observacoes" rows={3}/></label><div className="modal-actions field-wide"><button className="button button-ghost" type="button" onClick={()=>setModal(false)}>Cancelar</button><button className="button button-primary">Salvar lançamento</button></div>
+        <Campo rotulo="Descrição" className="field-wide"><input name="descricao" required/></Campo><Campo rotulo="Valor"><input name="valor" type="number" min=".01" step=".01" required/></Campo>
+        <Selecao rotulo="Categoria" name="categoriaId" required={tipoFormulario==='DESPESA'} vazio="Sem categoria"
+          opcoes={categoriasFormulario.map(c=>({valor:c.id,texto:c.nome}))}/>
+        <Campo rotulo="Data"><input name="data" type="date" defaultValue={hoje()} required/></Campo>
+        <Selecao rotulo="Situação" name="status" opcoes={tipoFormulario==='RECEITA'
+          ?[{valor:'RECEBIDA',texto:'Recebida'},{valor:'PREVISTA',texto:'Prevista'}]
+          :[{valor:'PAGO',texto:'Paga'},{valor:'PENDENTE',texto:'Pendente'}]}/>
+        <Selecao rotulo="Veículo" name="veiculoId" vazio="Não relacionado" opcoes={veiculos.map(v=>({valor:v.id,texto:v.identificacao}))}/>
+        {tipoFormulario==='RECEITA'
+          ?<Selecao rotulo="Contratante" name="contratanteId" vazio="Não informado" opcoes={contratantes.map(c=>({valor:c.id,texto:c.nome}))}/>
+          :<><Selecao rotulo="Motorista" name="motoristaId" vazio="Não relacionado" opcoes={motoristas.map(m=>({valor:m.id,texto:m.nome}))}/>
+            <Selecao rotulo="Forma de pagamento" name="formaPagamento" vazio="Não informada" opcoes={FORMAS_PAGAMENTO}/></>}
+        <Campo rotulo="Observações" className="field-wide"><textarea name="observacoes" rows={3}/></Campo><div className="modal-actions field-wide"><button className="button button-ghost" type="button" onClick={()=>setModal(false)}>Cancelar</button><button className="button button-primary">Salvar lançamento</button></div>
       </form></section></div>:null}
   </div>
 }

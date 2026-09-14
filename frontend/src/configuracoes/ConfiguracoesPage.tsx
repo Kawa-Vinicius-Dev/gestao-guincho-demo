@@ -3,6 +3,7 @@ import { api } from '../api/http'
 import { baixarCopiaDosDados } from '../api/porto'
 import { aplicarTema, temaAtual, type Tema } from '../tema'
 import type { Categoria, Contratante, SenhaRedefinida, Usuario } from '../types/modelos'
+import { Campo, Selecao } from '../components/Campos'
 
 export default function ConfiguracoesPage(){
   const [categorias,setCategorias]=useState<Categoria[]>([]),[contratantes,setContratantes]=useState<Contratante[]>([]),[usuarios,setUsuarios]=useState<Usuario[]>([])
@@ -40,9 +41,15 @@ export default function ConfiguracoesPage(){
     {erro?<div className="form-alert">{erro}</div>:null}{mensagem?<div className="success-notice">{mensagem}</div>:null}<div className="settings-grid">
       <section className="panel settings-card"><header><h2>Aparência</h2><p>Vale só neste computador e neste navegador.</p></header><div className="segmented tema-escolha" role="group" aria-label="Tema visual"><button className={tema==='claro'?'active':''} aria-pressed={tema==='claro'} onClick={()=>trocarTema('claro')}>Claro</button><button className={tema==='escuro'?'active':''} aria-pressed={tema==='escuro'} onClick={()=>trocarTema('escuro')}>Escuro</button></div><p className="empty-inline">O sistema não segue o tema do computador: a cor só muda quando você escolhe aqui.</p></section>
       <section className="panel settings-card"><header><h2>Contratantes</h2><p>Porto Seguro e demais clientes pagadores.</p></header><ul className="simple-list">{contratantes.map(c=><li key={c.id}><strong>{c.nome}</strong><small>{c.documento||'Sem documento'}</small></li>)}</ul>
-        <form onSubmit={e=>cadastrar(e,'contratantes')} className="inline-form"><input name="nome" aria-label="Nome do contratante" placeholder="Nome do contratante" required/><input name="documento" aria-label="CNPJ ou CPF" placeholder="CNPJ/CPF"/><button className="button button-ghost">Adicionar</button></form></section>
+        <form onSubmit={e=>cadastrar(e,'contratantes')} className="inline-form">
+          <Campo rotulo="Nome do contratante"><input name="nome" required/></Campo>
+          <Campo rotulo="CNPJ ou CPF"><input name="documento"/></Campo>
+          <button className="button button-ghost">Adicionar</button></form></section>
       <section className="panel settings-card"><header><h2>Categorias</h2><p>Classifique para entender para onde o dinheiro vai.</p></header><ul className="simple-list">{categorias.map(c=><li key={c.id}><strong>{c.nome}</strong><small>{c.tipo}</small></li>)}</ul>
-        <form onSubmit={e=>cadastrar(e,'categorias')} className="inline-form"><input name="nome" aria-label="Nome da categoria" placeholder="Nome da categoria" required/><select name="tipo" aria-label="Tipo da categoria"><option>DESPESA</option><option>RECEITA</option></select><button className="button button-ghost">Adicionar</button></form></section>
+        <form onSubmit={e=>cadastrar(e,'categorias')} className="inline-form">
+          <Campo rotulo="Nome da categoria"><input name="nome" required/></Campo>
+          <Selecao rotulo="Tipo da categoria" name="tipo" opcoes={[{valor:'DESPESA',texto:'Despesa'},{valor:'RECEITA',texto:'Receita'}]}/>
+          <button className="button button-ghost">Adicionar</button></form></section>
       <section className="panel settings-card"><header><h2>Trocar senha</h2><p>A nova senha deve ter pelo menos oito caracteres.</p></header><form onSubmit={senha} className="form-grid"><label className="field"><span>Senha atual</span><input name="senhaAtual" type="password" autoComplete="current-password" required/></label><label className="field"><span>Nova senha</span><input name="novaSenha" type="password" autoComplete="new-password" minLength={8} required/></label><button className="button button-primary">Alterar senha</button></form></section>
       <section className="panel settings-card"><header><h2>Acessos</h2><p>Quem entra no sistema. Esqueceu a senha? Redefina aqui e passe a provisória para a pessoa.</p></header><ul className="simple-list">{usuarios.map(u=><li key={u.id}><strong>{u.nome}</strong><small>{u.email} · {u.perfil==='ADMINISTRADOR'?'Administrador':'Socorrista'}{u.senhaProvisoria?' · senha provisória pendente':''}</small><button className="table-action" onClick={()=>void redefinir(u)}>Redefinir senha</button></li>)}</ul></section>
       <section className="panel settings-card"><header><h2>Cópia dos dados</h2><p>O banco não tem backup automático. Baixe de tempos em tempos e guarde fora do sistema.</p></header>

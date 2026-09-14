@@ -4,6 +4,7 @@ import { StatusBadge } from '../components/StatusBadge'
 import { Carregando, Vazio } from '../components/EstadoPagina'
 import type { Categoria, Contratante, Receita, Veiculo } from '../types/modelos'
 import { data, hojeIso, moeda } from '../utils/formatadores'
+import { Selecao } from '../components/Campos'
 
 export default function ReceitasPage(){
   const [lista,setLista]=useState<Receita[]>([]),[cadastros,setCadastros]=useState<{categorias:Categoria[];contratantes:Contratante[];veiculos:Veiculo[]}>({categorias:[],contratantes:[],veiculos:[]})
@@ -28,12 +29,16 @@ export default function ReceitasPage(){
     {form?<div className="modal-backdrop"><section className="modal" role="dialog" aria-modal="true"><header><div><span className="eyebrow">Receita avulsa</span><h2>{editando?'Editar receita':'Nova receita'}</h2></div><button aria-label="Fechar" onClick={()=>{setForm(false);setEditando(null)}}>×</button></header>
       <form key={editando?.id??'nova'} onSubmit={salvar} className="form-grid two-columns"><label className="field field-wide"><span>Descrição</span><input name="descricao" defaultValue={editando?.descricao} required/></label>
         <label className="field"><span>Valor</span><input name="valor" type="number" step=".01" min=".01" defaultValue={editando?.valor} required/></label>
-        <label className="field"><span>Status</span><select name="status" defaultValue={editando?.status??'RECEBIDA'}><option>RECEBIDA</option><option>PREVISTA</option></select></label>
+        <Selecao rotulo="Status" name="status" defaultValue={editando?.status??'RECEBIDA'}
+          opcoes={[{valor:'RECEBIDA',texto:'Recebida'},{valor:'PREVISTA',texto:'Prevista'}]}/>
         <label className="field"><span>Competência</span><input name="dataCompetencia" type="date" defaultValue={editando?.dataCompetencia??hojeIso()} required/></label>
         <label className="field"><span>Data do recebimento</span><input name="dataRecebimento" type="date" defaultValue={editando?.dataRecebimento??hojeIso()}/></label>
-        <label className="field"><span>Contratante</span><select name="contratanteId" defaultValue={editando?.contratanteId??''}><option value="">Não informado</option>{cadastros.contratantes.map(x=><option key={x.id} value={x.id}>{x.nome}</option>)}</select></label>
-        <label className="field"><span>Categoria</span><select name="categoriaId" defaultValue={editando?.categoriaId??''}><option value="">Sem categoria</option>{cadastros.categorias.map(x=><option key={x.id} value={x.id}>{x.nome}</option>)}</select></label>
-        <label className="field"><span>Veículo</span><select name="veiculoId" defaultValue={editando?.veiculoId??''}><option value="">Não relacionado</option>{cadastros.veiculos.map(x=><option key={x.id} value={x.id}>{x.identificacao}</option>)}</select></label>
+        <Selecao rotulo="Contratante" name="contratanteId" defaultValue={editando?.contratanteId??''} vazio="Não informado"
+          opcoes={cadastros.contratantes.map(x=>({valor:x.id,texto:x.nome}))}/>
+        <Selecao rotulo="Categoria" name="categoriaId" defaultValue={editando?.categoriaId??''} vazio="Sem categoria"
+          opcoes={cadastros.categorias.map(x=>({valor:x.id,texto:x.nome}))}/>
+        <Selecao rotulo="Veículo" name="veiculoId" defaultValue={editando?.veiculoId??''} vazio="Não relacionado"
+          opcoes={cadastros.veiculos.map(x=>({valor:x.id,texto:x.identificacao}))}/>
         <label className="check-field"><input name="recorrente" type="checkbox" defaultChecked={editando?.recorrente}/> Receita recorrente</label>
         <label className="field field-wide"><span>Observações</span><textarea name="observacoes" rows={3} defaultValue={editando?.observacoes}/></label>
         <div className="modal-actions field-wide"><button type="button" className="button button-ghost" onClick={()=>{setForm(false);setEditando(null)}}>Cancelar</button><button className="button button-primary">{editando?'Salvar alterações':'Salvar receita'}</button></div>
