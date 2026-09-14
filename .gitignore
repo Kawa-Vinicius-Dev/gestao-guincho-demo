@@ -18,6 +18,10 @@ frontend/vite.config.d.ts
 
 # IDE e sistema
 .worktrees/
+# Worktrees de agente: 332 MB de repositorios git aninhados. O launch.json
+# ao lado deles e versionado de proposito - e ele que descreve como subir
+# o sistema localmente.
+.claude/worktrees/
 .idea/
 .vscode/
 *.iml

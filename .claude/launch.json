@@ -1,0 +1,35 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
+      "cwd": "frontend",
+      "port": 5173
+    },
+    {
+      "name": "api",
+      "runtimeExecutable": ".\\mvnw.cmd",
+      "runtimeArgs": [
+        "spring-boot:run",
+        "-Dspring-boot.run.profiles=local"
+      ],
+      "cwd": "backend",
+      "port": 8080
+    },
+    {
+      "name": "api-mem",
+      "runtimeExecutable": ".\\mvnw.cmd",
+      "runtimeArgs": [
+        "spring-boot:run",
+        "-Dspring-boot.run.profiles=local,test"
+      ],
+      "cwd": "backend",
+      "port": 8080
+    }
+  ]
+}
