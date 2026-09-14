@@ -223,7 +223,8 @@ export default function PortoOrdensPagamentoPage() {
     {detalhe
       ? <ModalDetalheOp detalhe={detalhe} periodos={periodos} periodo={periodoComposicao}
           aoTrocarPeriodo={setPeriodoComposicao} previa={previaComposicao}
-          arquivoEscolhido={arquivoComposicao !== null} aoEscolherArquivo={setArquivoComposicao}
+          arquivoEscolhido={arquivoComposicao !== null} nomeArquivo={arquivoComposicao?.name}
+          aoEscolherArquivo={setArquivoComposicao}
           aoAnalisar={() => void analisarComposicao()} aoConfirmarComposicao={confirmarComposicao}
           aoJustificar={justificar} aoExportar={formato => void exportarOp(formato)} baixando={baixando}
           aoEditar={() => { setEditando(detalhe.ordemPagamento); setDetalhe(null) }}

@@ -4,6 +4,7 @@ import { Modal } from '../../components/Modal'
 import type { CalendarioPorto, DetalheOpPorto, PreviaPorto } from '../../types/modelos'
 import { moeda } from '../../utils/formatadores'
 import { MOTIVOS_COMPOSICAO, MOTIVOS_DIVERGENCIA, data, rotulo } from './opcoes'
+import { CampoArquivo } from '../../components/CampoArquivo'
 
 type Props = {
   detalhe: DetalheOpPorto
@@ -13,6 +14,8 @@ type Props = {
   previa: PreviaPorto | null
   aoEscolherArquivo: (arquivo: File | null) => void
   arquivoEscolhido: boolean
+  /** Nome do arquivo escolhido, para a tela dizer qual e. */
+  nomeArquivo?: string
   aoAnalisar: () => void
   aoConfirmarComposicao: (evento: FormEvent<HTMLFormElement>) => void
   aoJustificar: (evento: FormEvent<HTMLFormElement>) => void
@@ -24,7 +27,7 @@ type Props = {
 
 export function ModalDetalheOp(props: Props) {
   const { detalhe, periodos, periodo, aoTrocarPeriodo, previa, aoEscolherArquivo,
-    arquivoEscolhido, aoAnalisar, aoConfirmarComposicao, aoJustificar, aoEditar,
+    arquivoEscolhido, nomeArquivo, aoAnalisar, aoConfirmarComposicao, aoJustificar, aoEditar,
     aoExportar, baixando, aoFechar } = props
   const op = detalhe.ordemPagamento
 
@@ -51,10 +54,8 @@ export function ModalDetalheOp(props: Props) {
     </div>
 
     <div className="porto-composition-upload">
-      <Campo rotulo="Composição CSV/TXT da OP">
-        <input type="file" accept=".csv,.txt"
-          onChange={evento => aoEscolherArquivo(evento.target.files?.[0] ?? null)}/>
-      </Campo>
+      <CampoArquivo rotulo="Composição CSV/TXT da OP" accept=".csv,.txt"
+        nome={nomeArquivo} aoEscolher={aoEscolherArquivo}/>
       <button className="button button-ghost" disabled={!arquivoEscolhido} onClick={aoAnalisar}>
         Analisar composição
       </button>

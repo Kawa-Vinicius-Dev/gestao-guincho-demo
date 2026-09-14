@@ -642,8 +642,13 @@ tbody tr{transition:background-color .14s ease}
 .app-shell td .table-action+.table-action{margin-left:6px}
 /* Grupo de botoes no cabecalho da pagina: espaco igual e quebra de linha em vez
    de transbordo quando sao tres (Exportar PDF / Exportar Excel / Nova ordem). */
+/* align-items:end, nao center: o grupo mistura botao pelado com campo rotulado,
+   e no centro o botao flutua na altura do rotulo em vez de assentar na linha de
+   base do campo ao lado. Foi assim que "Registrar quilometragem" e "Lancar as
+   fixas do mes" sairam desalinhados do campo que vinha antes deles. */
 .app-shell .heading-actions,.app-shell .modal-actions{
-  display:flex;flex-wrap:wrap;align-items:center;gap:var(--espaco-1)}
+  display:flex;flex-wrap:wrap;align-items:end;gap:var(--espaco-1)}
+.app-shell .modal-actions{align-items:center}
 .app-shell .modal-actions{justify-content:flex-end;margin-top:var(--espaco-2)}
 
 /* --- Barra lateral --------------------------------------------------------
@@ -803,7 +808,9 @@ tbody tr{transition:background-color .14s ease}
    =========================================================================== */
 .nav-group-titulo{
   display:flex;align-items:center;justify-content:space-between;gap:8px;
-  width:100%;padding:7px 12px 6px;
+  /* Alvo de clique com alguma folga: o rotulo tem 8px de altura de texto, e os
+     7px de recuo original davam 23px de alvo, apertado para a mira do mouse. */
+  width:100%;padding:11px 12px 10px;
   border:0;border-radius:6px;background:transparent;cursor:pointer;
   color:#7d93a8;font:500 8px 'IBM Plex Mono',monospace;
   letter-spacing:.14em;text-transform:uppercase;text-align:left;
@@ -837,3 +844,68 @@ tbody tr{transition:background-color .14s ease}
    duzentos milissegundos. */
 .app-shell .table-scroll.atualizando{opacity:.55;transition:opacity .12s ease;pointer-events:none}
 @media(prefers-reduced-motion:reduce){.app-shell .table-scroll.atualizando{transition:none}}
+
+/* ===========================================================================
+   Paineis e avisos que nunca ganharam estilo
+   =========================================================================== */
+
+/* .report-actions existia na marcacao dos Relatorios Porto e nao tinha uma regra
+   sequer: os dois blocos sairam encostados na borda do cartao, colados um no
+   outro e sem separacao entre o titulo de um e o texto do outro. */
+.app-shell .report-actions{
+  display:grid;gap:var(--espaco-3);padding:var(--painel-pad)}
+.app-shell .report-actions>article{display:grid;gap:var(--espaco-1);justify-items:start}
+.app-shell .report-actions>article+article{
+  padding-top:var(--espaco-3);border-top:1px solid var(--linha-suave)}
+.app-shell .report-actions h2{margin:0;font:600 23px 'Barlow Condensed',sans-serif}
+.app-shell .report-actions p{margin:0;color:var(--muted);font-size:13px}
+.app-shell .report-actions .heading-actions{margin-top:2px}
+
+/* Aviso explicativo no corpo da pagina. Vinha marcado como .empty-inline, que e
+   o texto de lista vazia: cinza, centralizado e sem fundo, entao um aviso que
+   vale a pena ler tinha cara de "nao ha nada aqui". */
+.app-shell .aviso-pagina{
+  margin:0 0 var(--espaco-2);padding:14px 16px;
+  border:1px solid var(--info-texto);border-left-width:3px;border-radius:8px;
+  color:var(--info-texto);background:var(--info-fundo);
+  font-size:13px;line-height:1.5;text-align:left}
+.app-shell .aviso-pagina strong{font-weight:600}
+
+/* Escolha de arquivo: ver CampoArquivo.tsx. O campo real fica escondido (mas
+   focavel, entao nada de display:none), e o que se ve e este par botao + nome. */
+.app-shell .campo-arquivo{
+  display:flex;align-items:center;gap:12px;
+  min-height:var(--controle-altura);padding:0 12px 0 0;
+  border:1px solid var(--controle-borda);border-radius:var(--controle-raio);
+  background:var(--superficie);cursor:pointer;overflow:hidden}
+.app-shell .campo-arquivo input[type=file]{
+  position:absolute;width:1px;height:1px;padding:0;margin:-1px;
+  overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.app-shell .campo-arquivo-botao{
+  display:inline-flex;align-items:center;flex:0 0 auto;
+  align-self:stretch;padding:0 14px;
+  border-right:1px solid var(--controle-borda);
+  background:var(--superficie-2);color:var(--ink);
+  font-size:13px;font-weight:600;white-space:nowrap}
+.app-shell .campo-arquivo-nome{
+  min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  color:var(--muted);font-size:13.5px}
+.app-shell .campo-arquivo:hover .campo-arquivo-botao{background:var(--blue-50);color:var(--blue-600)}
+.app-shell .campo-arquivo:focus-within{
+  border-color:var(--blue-500);box-shadow:0 0 0 3px rgba(46,144,250,.18)}
+/* Os 41px do item vinham de quando o menu era uma lista corrida. Com os titulos
+   de grupo agora clicaveis e com recuo proprio, 38 mantem o item confortavel no
+   mouse e devolvem os 20px que o alvo maior custou no 1366x768. No toque o item
+   volta a crescer, que e onde o milimetro conta. */
+.primary-nav a{min-height:38px}
+@media(pointer:coarse){.primary-nav a{min-height:46px}}
+
+/* .field>span mira todo span filho direto do campo, e o rotulo e so o primeiro.
+   Os invólucros de valor e de arquivo tambem sao span, entao herdavam recuo de
+   rotulo, peso 600 e cor de rotulo — o botao "Escolher arquivo" saia sem fundo e
+   o nome do arquivo em negrito. Estas regras devolvem o que e deles. */
+.app-shell .field>.campo-arquivo,
+.app-shell .field>.campo-valor{
+  margin:0;color:var(--ink);font-size:inherit;font-weight:400;letter-spacing:normal;text-transform:none}
+.app-shell .field>.campo-arquivo{display:flex}
+.app-shell .field>.campo-valor{display:block}
