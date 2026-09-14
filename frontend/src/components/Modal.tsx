@@ -53,8 +53,10 @@ export function Modal({ titulo, etiqueta, nomeAcessivel, aoFechar, acoes, largo,
     else if (evento.shiftKey && document.activeElement === primeiro) { evento.preventDefault(); ultimo.focus() }
   }
 
-  return <div className="modal-backdrop"
-    onPointerDown={evento => { if (evento.target === evento.currentTarget) aoFechar() }}>
+  // Clicar no fundo NAO fecha, de proposito. E facil errar o clique ao lado de um
+  // formulario de dez campos, e fechar ali perde tudo o que a pessoa digitou.
+  // Para sair: o botao ×, o Cancelar, ou o Esc — os tres sao deliberados.
+  return <div className="modal-backdrop">
     <section
       ref={caixa}
       className={['modal', largo ? 'modal-wide' : '', className ?? ''].filter(Boolean).join(' ')}

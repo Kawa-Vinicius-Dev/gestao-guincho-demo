@@ -52,6 +52,9 @@ test('requisição Porto usa Authorization Bearer com o token real', async () =>
 
   render(<App />)
   const user = await entrar()
+  // O grupo Porto comeca recolhido quando a pessoa esta na Visao geral: abre-se
+  // antes de chegar no item, que e o caminho de quem usa.
+  await user.click(await screen.findByRole('button', { name: /porto seguro/i }))
   await user.click(await screen.findByRole('link', { name: /ordens de pagamento/i }))
 
   expect(await screen.findByRole('heading', { name: /ordens de pagamento/i })).toBeInTheDocument()

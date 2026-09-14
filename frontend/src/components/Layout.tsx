@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 
 const itens = [
@@ -56,10 +56,41 @@ function Icone({rota}:{rota:string}){
   </svg>
 }
 
+/**
+ * Grupos recolhiveis na barra lateral, um aberto por vez.
+ *
+ * Com os dezoito itens abertos o menu ocupa 947px, e a barra so tem 888px numa
+ * tela de 1080 — 708px numa de 900, 576px num notebook de 768, 448px num
+ * 1366x768 com a barra do navegador. A lista nao cabia em tela nenhuma, e a
+ * rolagem interna era o sintoma. Encolher os itens nao resolvia: para caber em
+ * 768 cada um teria de ir de 41px para 25px.
+ *
+ * E um aberto por vez, e nao varios, porque com dois abertos a conta volta a
+ * estourar: Financeiro (4 itens) mais Porto (7) dao 676px, 100 a mais do que
+ * cabe num 768. Acordeao e o unico arranjo que garante que nunca ha o que rolar.
+ *
+ * O grupo aberto acompanha a rota: chegando numa tela do Porto, o grupo do Porto
+ * abre sozinho. Esconder de onde a pessoa esta desorienta.
+ */
+
 export function Layout() {
   const { usuario, logout } = useAuth()
+  const { pathname } = useLocation()
   const [aberto,setAberto]=useState(false)
   const admin=usuario?.perfil==='ADMINISTRADOR'
+
+  // Qual grupo contem a tela atual. E ele que abre quando nao ha escolha guardada,
+  // e ele nunca fica fechado — esconder de onde a pessoa esta desorienta.
+  const grupoAtual=(itens.find(([rota])=>rota==='/'?pathname==='/':pathname.startsWith(rota))?.[3]
+    ?? 'financeiro') as keyof typeof grupos
+
+  const [grupoAberto,setGrupoAberto]=useState<string>(grupoAtual)
+  const [rotaVista,setRotaVista]=useState(pathname)
+  // Navegou para outra area: o grupo dela assume. Durante a renderizacao mesmo,
+  // sem efeito, para a barra nunca aparecer um quadro com o grupo errado aberto.
+  if(rotaVista!==pathname){ setRotaVista(pathname); setGrupoAberto(grupoAtual) }
+
+  const alternarGrupo=(grupo: string)=>setGrupoAberto(atual=>atual===grupo?'':grupo)
   return <div className="app-shell">
     <aside className={`sidebar ${aberto?'sidebar-open':''}`}>
       <div className="brand">
@@ -69,10 +100,21 @@ export function Layout() {
       <nav className="primary-nav" aria-label="Navegação principal">
         {(Object.keys(grupos) as Array<keyof typeof grupos>).map(grupo => {
           const disponiveis=itens.filter(([, ,somenteAdmin,itemGrupo])=>itemGrupo===grupo&&(admin||!somenteAdmin))
-          return disponiveis.length?<div className="nav-group" key={grupo}><span>{grupos[grupo]}</span>{disponiveis.map(([to,label])=>
-            <NavLink key={to} to={to} end={to==='/'} onClick={()=>setAberto(false)}>
-              <Icone rota={to}/><span>{label}</span>
-            </NavLink>)}</div>:null
+          if(!disponiveis.length)return null
+          const expandido=grupoAberto===grupo
+          return <div className="nav-group" key={grupo}>
+            <button type="button" className="nav-group-titulo" aria-expanded={expandido}
+              onClick={()=>alternarGrupo(grupo)}>
+              <span>{grupos[grupo]}</span>
+              <i className="nav-seta" aria-hidden="true"/>
+            </button>
+            <div className="nav-group-itens" hidden={!expandido}>
+              {disponiveis.map(([to,label])=>
+                <NavLink key={to} to={to} end={to==='/'} onClick={()=>setAberto(false)}>
+                  <Icone rota={to}/><span>{label}</span>
+                </NavLink>)}
+            </div>
+          </div>
         })}
       </nav>
       <div className="sidebar-foot"><span>Gestão financeira para guinchos</span><small>Sistema de gestão · ANAIV</small></div>

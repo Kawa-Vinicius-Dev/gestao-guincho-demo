@@ -787,3 +787,40 @@ tbody tr{transition:background-color .14s ease}
 .app-shell .campo-valor input{
   padding-left:38px;text-align:right;
   font-variant-numeric:tabular-nums;font-size:15px;font-weight:600}
+
+/* ===========================================================================
+   Barra lateral: grupos recolhiveis
+   ---------------------------------------------------------------------------
+   Ver Layout.tsx para o motivo. Aqui o rotulo do grupo, que era um <span> morto,
+   vira o botao que abre e fecha — mesma aparencia, agora clicavel de ponta a
+   ponta, com a seta indicando o estado.
+   =========================================================================== */
+.nav-group-titulo{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  width:100%;padding:7px 12px 6px;
+  border:0;border-radius:6px;background:transparent;cursor:pointer;
+  color:#7d93a8;font:500 8px 'IBM Plex Mono',monospace;
+  letter-spacing:.14em;text-transform:uppercase;text-align:left;
+}
+.nav-group-titulo:hover{color:#b9cadb;background:rgba(255,255,255,.04)}
+.nav-seta{
+  width:7px;height:7px;flex:0 0 7px;
+  border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;
+  /* Apontando para baixo quando aberto, para a direita quando fechado. */
+  transform:rotate(45deg);transform-origin:60% 60%;transition:transform .16s ease;
+}
+.nav-group-titulo[aria-expanded="false"] .nav-seta{transform:rotate(-45deg)}
+@media(prefers-reduced-motion:reduce){.nav-seta{transition:none}}
+/* O display:grid abaixo venceria o [hidden] embutido do navegador. */
+.nav-group-itens{display:grid;gap:3px}
+.nav-group-itens[hidden]{display:none}
+/* Alvo de toque no celular, onde o menu vira gaveta. */
+@media(pointer:coarse){.nav-group-titulo{padding:12px}}
+/* Folga entre grupos: com os titulos agora clicaveis e com area propria, os 15px
+   que separavam rotulos mortos viraram espaco sobrando. Oito bastam, e os 28px
+   economizados sao o que garante o grupo do Porto inteiro num 1366x768. */
+.nav-group+.nav-group{margin-top:8px}
+/* Num 1366x768 com a barra do navegador sobram 448px de barra lateral, e o grupo
+   do Porto — o maior, com sete itens — pedia 475. O rodape da barra e assinatura,
+   nao navegacao: some para o menu caber inteiro. Acima disso ele volta. */
+@media(max-height:700px){.sidebar-foot{display:none}}
