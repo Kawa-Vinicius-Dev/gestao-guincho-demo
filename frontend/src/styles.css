@@ -650,7 +650,13 @@ tbody tr{transition:background-color .14s ease}
    Com os 18 itens abertos, o ultimo do menu ficava cortado ao meio pelo rodape
    fixo da barra. A lista rola e o rodape deixa de comer a ultima linha. */
 .sidebar{padding-bottom:var(--espaco-1)}
-.primary-nav{flex:1;min-height:0;padding-bottom:var(--espaco-1);overscroll-behavior:contain}
+.primary-nav{flex:1;min-height:0;padding-bottom:var(--espaco-1);overscroll-behavior:contain;
+  /* O .primary-nav e uma grade, e grade estica as linhas para preencher a altura
+     quando sobra espaco (align-content:stretch e o padrao). Enquanto os dezoito
+     itens transbordavam isso nunca apareceu; com os grupos recolhidos passou a
+     sobrar altura, e os cinco grupos esticaram ate virar blocos de 70px com o
+     rotulo perdido no meio. Ancora no topo. */
+  align-content:start}
 .sidebar-foot{flex:0 0 auto}
 
 /* --- Telas estreitas ------------------------------------------------------ */
@@ -824,3 +830,10 @@ tbody tr{transition:background-color .14s ease}
    do Porto — o maior, com sete itens — pedia 475. O rodape da barra e assinatura,
    nao navegacao: some para o menu caber inteiro. Acima disso ele volta. */
 @media(max-height:700px){.sidebar-foot{display:none}}
+
+/* Tabela sendo reconsultada por causa de um filtro: continua na tela, so avisa
+   que o numero pode mudar. Antes ela era substituida pelo esqueleto de carga a
+   cada troca de filtro, e a tela inteira piscava por causa de uma requisicao de
+   duzentos milissegundos. */
+.app-shell .table-scroll.atualizando{opacity:.55;transition:opacity .12s ease;pointer-events:none}
+@media(prefers-reduced-motion:reduce){.app-shell .table-scroll.atualizando{transition:none}}
