@@ -1106,3 +1106,55 @@ tbody tr{transition:background-color .14s ease}
   display:flex;flex-wrap:wrap;align-items:center;gap:var(--espaco-1) var(--espaco-3);
   padding:var(--espaco-1) var(--painel-pad);
   border-bottom:1px solid var(--line);background:var(--superficie-hover)}
+
+/* ===========================================================================
+   Visao geral: arranjo de painel
+   ---------------------------------------------------------------------------
+   A tela era uma pilha: um bloco embaixo do outro, cada um da largura toda,
+   e para comparar viatura com socorrista era preciso rolar de um ate o outro.
+   Agora os blocos que respondem perguntas vizinhas ficam lado a lado, e a
+   leitura de dez segundos — os quatro indicadores — vem antes de tudo.
+   =========================================================================== */
+.dashboard-tech .grade-painel{display:grid;gap:var(--espaco-2);margin-bottom:var(--espaco-2)}
+.dashboard-tech .grade-8-4{grid-template-columns:minmax(0,2fr) minmax(0,1fr)}
+.dashboard-tech .grade-6-6{grid-template-columns:repeat(2,minmax(0,1fr))}
+.dashboard-tech .grade-painel>*{min-width:0;margin-bottom:0}
+/* Abaixo disto a comparacao lado a lado deixa de caber: duas colunas de 330px
+   espremem o nome da viatura ate o ponto de nao se ler mais. Empilha. */
+@media(max-width:1100px){
+  .dashboard-tech .grade-8-4,.dashboard-tech .grade-6-6{grid-template-columns:minmax(0,1fr)}
+}
+
+/* --- Os quatro indicadores do topo ---------------------------------------- */
+.dashboard-tech .kpi-grid{
+  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:var(--espaco-2);margin-bottom:var(--espaco-2)}
+.dashboard-tech .kpi{
+  display:flex;flex-direction:column;gap:6px;
+  padding:var(--espaco-3) var(--espaco-3) var(--espaco-2);
+  border:1px solid var(--line);border-radius:10px;background:var(--superficie)}
+.dashboard-tech .kpi>span{
+  color:var(--muted);font-size:10.5px;font-weight:600;
+  letter-spacing:.08em;text-transform:uppercase}
+.dashboard-tech .kpi>strong{
+  font:600 clamp(19px,1.75vw,28px)/1.1 'IBM Plex Mono',monospace;
+  font-variant-numeric:tabular-nums;color:var(--ink);
+  /* Sem isto o sinal de menos de um prejuizo quebrava sozinho para a linha de
+     baixo, e o cartao mostrava um "-" orfao em cima do numero. */
+  white-space:nowrap}
+.dashboard-tech .kpi>small{color:var(--muted);font-size:12px}
+/* O lucro e a conta que se abre o sistema para ver: fundo proprio e faixa na
+   lateral. Vermelho quando negativo — prejuizo em azul nao parece prejuizo. */
+.dashboard-tech .kpi-destaque{
+  border-color:var(--blue-500);background:var(--blue-50);
+  box-shadow:inset 3px 0 var(--blue-600)}
+.dashboard-tech .kpi-destaque>strong{color:var(--blue-600)}
+.dashboard-tech .kpi-negativo{
+  border-color:var(--red);background:var(--erro-fundo);box-shadow:inset 3px 0 var(--red)}
+.dashboard-tech .kpi-negativo>strong{color:var(--red)}
+@media(max-width:900px){.dashboard-tech .kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:520px){.dashboard-tech .kpi-grid{grid-template-columns:minmax(0,1fr)}}
+
+/* Fatia de km morto na barra de proporcao: mesma cor do dinheiro que sai. */
+.dashboard-tech .proporcao-morto{background:var(--red)}
+.dashboard-tech .marca-morto{background:var(--red)}

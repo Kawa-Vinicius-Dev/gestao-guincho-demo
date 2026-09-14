@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
-import { FaturamentoECusto, GastosPorCategoria, ProporcaoServicos } from '../components/Graficos'
+import { FaturamentoECusto, GastosPorCategoria, ProporcaoKm, ProporcaoServicos } from '../components/Graficos'
 import type { Dashboard, ResumoOpsPorto } from '../types/modelos'
-import { moeda, numero, percentual } from '../utils/formatadores'
+import { moeda, percentual } from '../utils/formatadores'
 
 /**
  * Os blocos da Visao geral. Ficam aqui porque a pagina era uma unica funcao com
@@ -9,41 +9,53 @@ import { moeda, numero, percentual } from '../utils/formatadores'
  * onde ela comecava no meio da outra.
  */
 
-export function CartaoMetrica(
-  { titulo, valor, apoio, tom = '' }: { titulo: string; valor: string; apoio: string; tom?: string },
-) {
-  return <article className={`metric metric-v2 ${tom}`}>
-    <span>{titulo}</span><strong>{valor}</strong><small>{apoio}</small>
-  </article>
-}
-
-/** Receita − despesas = lucro, escrito como uma conta, que e como se le. */
-export function FaixaDoResultado({ dados, margem }: { dados: Dashboard; margem: number }) {
-  const proporcaoDespesa = dados.receitaRecebida
-    ? percentual((dados.despesasPagas / dados.receitaRecebida) * 100) : '0%'
-  return <section className="finance-lane" aria-label="Fluxo do resultado operacional">
-    <div>
-      <span>Receita do mês</span><strong>{moeda(dados.receitaRecebida)}</strong>
-      <small>Recebimentos confirmados no financeiro</small>
-    </div>
-    <i className="lane-separator">−</i>
-    <div>
-      <span>Despesas do mês</span><strong>{moeda(dados.despesasPagas)}</strong>
-      <small>{proporcaoDespesa} da receita</small>
-    </div>
-    <i className="lane-separator">=</i>
-    <div className="lane-result">
-      <span>Lucro operacional</span><strong>{moeda(dados.saldoRealizado)}</strong>
+/**
+ * Os quatro numeros que respondem "como esta o mes" antes de qualquer grafico.
+ *
+ * Ficam acima de tudo porque sao a leitura de quem so tem dez segundos; os
+ * graficos abaixo explicam de onde cada um saiu. O lucro e o unico com destaque
+ * proprio: e a conta que o dono do guincho abre o sistema para ver, e muda de
+ * cor conforme o sinal, porque prejuizo em azul nao parece prejuizo.
+ */
+export function FaixaDeIndicadores({ dados, margem }: { dados: Dashboard; margem: number }) {
+  const aReceber = dados.receitaPrevista + dados.totalAtrasado
+  const lucro = dados.saldoRealizado
+  return <section className="kpi-grid" aria-label="Indicadores do período">
+    <article className="kpi">
+      <span>Receita recebida</span>
+      <strong>{moeda(dados.receitaRecebida)}</strong>
+      <small>Confirmada no financeiro</small>
+    </article>
+    <article className="kpi">
+      <span>Despesas pagas</span>
+      <strong className="negative">{moeda(dados.despesasPagas)}</strong>
+      <small>
+        {dados.receitaRecebida
+          ? `${percentual(dados.despesasPagas / dados.receitaRecebida * 100)} da receita`
+          : 'Aprovadas e quitadas'}
+      </small>
+    </article>
+    <article className={lucro < 0 ? 'kpi kpi-destaque kpi-negativo' : 'kpi kpi-destaque'}>
+      <span>Lucro operacional</span>
+      <strong>{moeda(lucro)}</strong>
       <small>Margem de {percentual(margem)}</small>
-    </div>
+    </article>
+    <article className="kpi">
+      <span>A receber</span>
+      <strong>{moeda(aReceber)}</strong>
+      <small>
+        {dados.totalAtrasado > 0
+          ? `${moeda(dados.totalAtrasado)} em atraso`
+          : 'Nada em atraso'}
+      </small>
+    </article>
   </section>
 }
 
 /**
- * Para onde o dinheiro foi. Fica logo abaixo da conta do mes de proposito: a
- * faixa acima responde "quanto sobrou" e esta responde "no que foi", que e a
- * pergunta seguinte de quem abre o sistema. As duas juntas cabem na primeira
- * tela, sem rolar.
+ * Para onde o dinheiro foi. Fica logo abaixo dos indicadores de proposito: eles
+ * respondem "quanto sobrou" e este responde "no que foi", que e a pergunta
+ * seguinte de quem abre o sistema.
  */
 export function PainelDeGastos({ dados }: { dados: Dashboard }) {
   const categorias = dados.despesasPorCategoria ?? []
@@ -69,18 +81,22 @@ export function PainelDeGastos({ dados }: { dados: Dashboard }) {
   </section>
 }
 
-export function IndicadoresDeKm({ dados }: { dados: Dashboard }) {
-  const proporcaoKmMorto = dados.quilometragemTotal
-    ? percentual(dados.kmMorto / dados.quilometragemTotal * 100) : '0%'
-  return <section className="metric-grid metric-grid-v2">
-    <CartaoMetrica titulo="Km rodado" valor={`${numero(dados.quilometragemTotal)} km`}
-      apoio="Percurso total da frota"/>
-    <CartaoMetrica titulo="Km morto" valor={`${numero(dados.kmMorto)} km`}
-      apoio={`${proporcaoKmMorto} do percurso total`}/>
-    <CartaoMetrica titulo="Custo do km morto" valor={moeda(dados.custoKmMorto)}
-      apoio="Km improdutivo × custo por km"/>
-    <CartaoMetrica titulo="Despesas previstas" valor={moeda(dados.despesasPrevistas)}
-      apoio="Aprovadas e ainda não pagas" tom="metric-neutral"/>
+/**
+ * Quanto do rodado nao foi pago. Eram quatro cartoes com quatro numeros soltos —
+ * rodado, morto, custo e despesa prevista — e a relacao entre eles, que e a
+ * unica coisa que importa ali, ficava por conta de quem lia.
+ */
+export function PainelDeKm({ dados }: { dados: Dashboard }) {
+  return <section className="panel">
+    <header className="panel-title">
+      <div>
+        <span className="eyebrow">Deslocamento</span>
+        <h2>Km rodado × km morto</h2>
+      </div>
+      <Link to="/quilometragem">Abrir quilometragem</Link>
+    </header>
+    <ProporcaoKm remunerado={dados.kmRemunerado} morto={dados.kmMorto}
+      custoMorto={dados.custoKmMorto}/>
   </section>
 }
 
@@ -132,7 +148,6 @@ export function PainelDaProducao({ dados }: { dados: Dashboard }) {
 }
 
 export function PainelPorSocorrista({ dados }: { dados: Dashboard }) {
-  const linhas = dados.resultadoPorSocorrista ?? []
   return <section className="panel">
     <header className="panel-title">
       <div><span className="eyebrow">Por pessoa</span><h2>Faturamento e custo por socorrista</h2></div>
@@ -140,31 +155,13 @@ export function PainelPorSocorrista({ dados }: { dados: Dashboard }) {
     </header>
     <FaturamentoECusto descricao="Faturamento e custo por socorrista"
       vazio="Nenhum serviço pago com socorrista vinculado neste período."
-      linhas={linhas.map(p => ({
+      linhas={(dados.resultadoPorSocorrista ?? []).map(p => ({
         id: p.motoristaId, rotulo: p.socorrista, faturamento: p.producao, custo: p.custoTotal,
       }))}/>
-    {linhas.length
-      ? <div className="table-scroll">
-          <table>
-            <thead><tr>
-              <th>Socorrista</th><th>Serviços</th><th>Produção</th><th>Comissão</th>
-              <th>Despesas próprias</th><th>Custo total</th>
-            </tr></thead>
-            <tbody>
-              {linhas.map(p => <tr key={p.motoristaId}>
-                <td><strong>{p.socorrista}</strong></td>
-                <td>{p.servicos}</td><td>{moeda(p.producao)}</td><td>{moeda(p.comissao)}</td>
-                <td>{moeda(p.despesas)}</td><td><strong>{moeda(p.custoTotal)}</strong></td>
-              </tr>)}
-            </tbody>
-          </table>
-        </div>
-      : null}
   </section>
 }
 
 export function PainelPorVeiculo({ dados }: { dados: Dashboard }) {
-  const linhas = dados.resultadoPorVeiculo
   return <section className="panel vehicle-results vehicle-results-v2">
     <header className="panel-title">
       <div><span className="eyebrow">Por viatura</span><h2>Faturamento e custo por veículo</h2></div>
@@ -172,31 +169,12 @@ export function PainelPorVeiculo({ dados }: { dados: Dashboard }) {
     </header>
     <FaturamentoECusto descricao="Faturamento e custo por veículo"
       vazio="Nenhum resultado por veículo no período."
-      linhas={linhas.map(v => ({
+      linhas={dados.resultadoPorVeiculo.map(v => ({
         id: v.veiculoId, rotulo: v.veiculo, faturamento: v.receitas, custo: v.despesas,
       }))}/>
-    {linhas.length
-      ? <div className="table-scroll">
-          <table>
-            <thead><tr>
-              <th>Veículo</th><th>Faturamento</th><th>Custo</th><th>Resultado</th>
-              <th>Km morto</th><th>Custo km morto</th>
-            </tr></thead>
-            <tbody>
-              {linhas.map(item => <tr key={item.veiculoId}>
-                <td><strong>{item.veiculo}</strong></td>
-                <td>{moeda(item.receitas)}</td><td>{moeda(item.despesas)}</td>
-                <td className={item.resultado >= 0 ? 'positive' : 'negative'}>
-                  <strong>{moeda(item.resultado)}</strong>
-                </td>
-                <td>{numero(item.kmMorto)} km</td><td>{moeda(item.custoKmMorto)}</td>
-              </tr>)}
-            </tbody>
-          </table>
-        </div>
-      : null}
   </section>
 }
+
 
 /** Faturamento Porto fica fora do caixa ate o recebimento confirmado. */
 export function ResumoPorto({ porto }: { porto: ResumoOpsPorto }) {

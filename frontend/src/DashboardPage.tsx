@@ -2,7 +2,7 @@ import { useEffect,useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from './api/http'
 import { resumirOrdensPagamentoPorto } from './api/porto'
-import { FaixaDoResultado, IndicadoresDeKm, PainelDaProducao, PainelDeGastos,
+import { FaixaDeIndicadores, PainelDaProducao, PainelDeGastos, PainelDeKm,
   PainelPorSocorrista, PainelPorVeiculo, ResumoPorto } from './dashboard/PaineisDoResultado'
 import type { Dashboard,ResumoOpsPorto } from './types/modelos'
 
@@ -74,12 +74,24 @@ export default function DashboardPage(){
 
     {financeiro
       ? <>
-          <FaixaDoResultado dados={financeiro} margem={margem}/>
-          <PainelDeGastos dados={financeiro}/>
-          <IndicadoresDeKm dados={financeiro}/>
+          {/* Leitura de dez segundos primeiro; o resto explica de onde ela saiu. */}
+          <FaixaDeIndicadores dados={financeiro} margem={margem}/>
+
+          {/* Duas perguntas que andam juntas: no que o dinheiro foi, e quanto do
+              rodado nao foi pago. Lado a lado enquanto couber. */}
+          <div className="grade-painel grade-8-4">
+            <PainelDeGastos dados={financeiro}/>
+            <PainelDeKm dados={financeiro}/>
+          </div>
+
+          {/* Desempenho, o pedido do cliente: viatura e pessoa, mesma forma,
+              lado a lado para comparar sem rolar de um para o outro. */}
+          <div className="grade-painel grade-6-6">
+            <PainelPorVeiculo dados={financeiro}/>
+            <PainelPorSocorrista dados={financeiro}/>
+          </div>
+
           <PainelDaProducao dados={financeiro}/>
-          <PainelPorSocorrista dados={financeiro}/>
-          <PainelPorVeiculo dados={financeiro}/>
         </>
       : <div className="loading-card">Carregando indicadores financeiros oficiais…</div>}
 

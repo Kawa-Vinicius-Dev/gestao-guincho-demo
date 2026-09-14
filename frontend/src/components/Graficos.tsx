@@ -1,4 +1,4 @@
-import { moeda, percentual } from '../utils/formatadores'
+import { moeda, numero, percentual } from '../utils/formatadores'
 
 /**
  * Graficos do dashboard. Sao desenhados com grid e divs, nao com uma biblioteca:
@@ -107,5 +107,37 @@ export function GastosPorCategoria({linhas,total}:{linhas:LinhaCategoria[];total
         <span className="barra-valor">{moeda(linha.valor)}</span>
         <span className="barra-parcela">{percentual(linha.participacao)}</span>
       </div>)}
+  </div>
+}
+
+/**
+ * Km rodado repartido entre remunerado e morto.
+ *
+ * Mesma forma da proporcao de servicos: uma barra unica repartida diz "quanto do
+ * meu rodado nao foi pago" mais rapido do que dois numeros lado a lado, porque a
+ * comparacao ja esta desenhada. O custo do km morto vem junto, que e a parte que
+ * vira dinheiro na conta do mes.
+ */
+export function ProporcaoKm({remunerado,morto,custoMorto}:
+  {remunerado:number;morto:number;custoMorto:number}){
+  const total=remunerado+morto
+  if(!total)return <Vazio texto="Nenhuma quilometragem registrada neste período."/>
+  const fatia=(n:number)=>n/total*100
+  return <div className="grafico grafico-proporcao" role="img"
+    aria-label={`${numero(morto)} km improdutivos de ${numero(total)} km rodados.`}>
+    <div className="proporcao-trilho">
+      {remunerado>0?<span className="proporcao-pago" style={{width:`${fatia(remunerado)}%`}}/>:null}
+      {morto>0?<span className="proporcao-morto" style={{width:`${fatia(morto)}%`}}/>:null}
+    </div>
+    <dl className="proporcao-legenda">
+      <div>
+        <dt><i className="marca-pago"/>Remunerado</dt>
+        <dd>{numero(remunerado)} km<small>{percentual(fatia(remunerado))} do rodado</small></dd>
+      </div>
+      <div>
+        <dt><i className="marca-morto"/>Km morto</dt>
+        <dd>{numero(morto)} km<small>{moeda(custoMorto)} de custo</small></dd>
+      </div>
+    </dl>
   </div>
 }

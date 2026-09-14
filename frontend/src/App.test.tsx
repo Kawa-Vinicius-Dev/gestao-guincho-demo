@@ -25,7 +25,7 @@ test('administrador começa com a base vazia e cria o primeiro lançamento', asy
   await user.click(screen.getByRole('button', { name: /entrar no sistema/i }))
 
   expect(await screen.findByRole('heading', { name: /visão financeira/i })).toBeInTheDocument()
-  const fluxo = await screen.findByRole('region', { name: /fluxo do resultado operacional/i })
+  const fluxo = await screen.findByRole('region', { name: /indicadores do período/i })
   expect(within(fluxo).getByText('R$ 780,00')).toBeInTheDocument()
   expect(within(fluxo).getByText('R$ 200,00')).toBeInTheDocument()
   expect(within(fluxo).getByText('R$ 580,00')).toBeInTheDocument()
@@ -47,7 +47,7 @@ test('administrador começa com a base vazia e cria o primeiro lançamento', asy
 
   await user.click(screen.getByRole('link', { name: /visão geral/i }))
   expect(await screen.findByRole('heading', { name: /visão financeira/i })).toBeInTheDocument()
-  expect(await screen.findByRole('region', { name: /fluxo do resultado operacional/i })).toBeInTheDocument()
+  expect(await screen.findByRole('region', { name: /indicadores do período/i })).toBeInTheDocument()
 })
 
 test('socorrista vê apenas os lançamentos operacionais permitidos', async () => {
