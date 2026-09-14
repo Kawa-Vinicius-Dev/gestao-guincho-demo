@@ -2,6 +2,7 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, expect, test, vi } from 'vitest'
 import App from './App'
+import { escolher } from './test/dropdown'
 
 beforeEach(() => {
   localStorage.clear()
@@ -38,7 +39,7 @@ test('administrador começa com a base vazia e cria o primeiro lançamento', asy
   const dialogo = screen.getByRole('dialog')
   await user.type(within(dialogo).getByLabelText(/descrição/i), 'Serviço particular de teste')
   await user.type(within(dialogo).getByLabelText(/^valor$/i), '300')
-  await user.selectOptions(within(dialogo).getByLabelText(/categoria/i), '2')
+  await escolher(user, /categoria/i, 'Combustível', dialogo)
   await user.click(within(dialogo).getByRole('button', { name: /salvar lançamento/i }))
 
   expect(await screen.findByText(/totais oficiais foram atualizados/i)).toBeInTheDocument()

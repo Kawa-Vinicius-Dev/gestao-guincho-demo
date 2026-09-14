@@ -33,7 +33,8 @@ test('cadastra uma despesa fixa', async () => {
   abrir()
 
   await user.type(await screen.findByLabelText(/descrição da despesa fixa/i), 'Aluguel do pátio')
-  await user.type(screen.getByLabelText(/valor da despesa fixa/i), '2500')
+  // Mascara de centavos: 250000 digitado vira R$ 2.500,00.
+  await user.type(screen.getByLabelText(/valor da despesa fixa/i), '250000')
   await user.type(screen.getByLabelText(/dia do vencimento/i), '10')
   await user.click(screen.getByRole('button', { name: /adicionar/i }))
 

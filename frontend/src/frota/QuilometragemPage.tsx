@@ -4,6 +4,7 @@ import { Carregando, Vazio } from '../components/EstadoPagina'
 import type { Motorista, Quilometragem, Veiculo } from '../types/modelos'
 import { data, moeda, numero } from '../utils/formatadores'
 import { Selecao } from '../components/Campos'
+import { Modal } from '../components/Modal'
 
 function mesAtual() {
   const hoje = new Date()
@@ -113,7 +114,7 @@ export default function QuilometragemPage() {
       </tbody></table></div> : <Vazio titulo="Sem registros no período" descricao="Selecione outra competência ou registre a primeira quilometragem."/>}
     </section>
 
-    {modal ? <div className="modal-backdrop"><section className="modal modal-wide" role="dialog" aria-modal="true"><header><div><span className="eyebrow">Diário de bordo</span><h2>Registrar quilometragem</h2></div><button aria-label="Fechar" onClick={() => setModal(false)}>×</button></header>
+    {modal ? <Modal etiqueta="Diário de bordo" titulo="Registrar quilometragem" largo aoFechar={() => setModal(false)}>
       <form onSubmit={salvar} className="form-grid three-columns">
         <label className="field"><span>Data</span><input name="data" type="date" defaultValue={hojeLocal()} required/></label>
         <Selecao rotulo="Veículo" name="veiculoId" required vazio="Selecione"
@@ -128,6 +129,6 @@ export default function QuilometragemPage() {
         <label className="check-line field-wide"><input name="confirmarExcesso" type="checkbox"/><span>Confirmo eventual quilometragem remunerada acima do total.</span></label>
         <div className="modal-actions field-wide"><button type="button" className="button button-ghost" onClick={() => setModal(false)}>Cancelar</button><button className="button button-primary">Salvar registro</button></div>
       </form>
-    </section></div> : null}
+    </Modal> : null}
   </div>
 }

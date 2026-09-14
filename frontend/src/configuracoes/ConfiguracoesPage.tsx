@@ -4,6 +4,7 @@ import { baixarCopiaDosDados } from '../api/porto'
 import { aplicarTema, temaAtual, type Tema } from '../tema'
 import type { Categoria, Contratante, SenhaRedefinida, Usuario } from '../types/modelos'
 import { Campo, Selecao } from '../components/Campos'
+import { Modal } from '../components/Modal'
 
 export default function ConfiguracoesPage(){
   const [categorias,setCategorias]=useState<Categoria[]>([]),[contratantes,setContratantes]=useState<Contratante[]>([]),[usuarios,setUsuarios]=useState<Usuario[]>([])
@@ -57,11 +58,11 @@ export default function ConfiguracoesPage(){
         <button className="button button-primary" disabled={baixando} onClick={()=>void baixarCopia()}>{baixando?'Preparando cópia…':'Baixar cópia de tudo'}</button></section>
       <section className="panel settings-card"><header><h2>Custos da frota</h2><p>O custo por km é configurado em cada veículo e aplicado ao km morto no momento do registro.</p></header><a className="button button-ghost" href="/veiculos">Configurar veículos</a></section>
     </div>
-    {gerada?<div className="modal-backdrop"><section className="modal" role="dialog" aria-modal="true" aria-label="Senha provisória gerada"><header><div><span className="eyebrow">{gerada.nome}</span><h2>Senha provisória</h2></div><button aria-label="Fechar" onClick={()=>setGerada(null)}>×</button></header>
+    {gerada?<Modal etiqueta={gerada.nome} titulo="Senha provisória" aoFechar={()=>setGerada(null)}>
       <p>Passe esta senha para {gerada.nome}. Ela aparece <strong>uma única vez</strong> e só serve para o próximo acesso: o sistema vai obrigar a troca antes de liberar qualquer tela.</p>
       <p className="senha-provisoria"><code>{gerada.senhaProvisoria}</code></p>
       {copiada?<div className="success-notice">Senha copiada.</div>:null}
       <div className="modal-actions"><button className="button button-ghost" onClick={()=>void copiar(gerada.senhaProvisoria)}>Copiar</button><button className="button button-primary" onClick={()=>setGerada(null)}>Já anotei</button></div>
-    </section></div>:null}
+    </Modal>:null}
   </div>
 }

@@ -693,3 +693,97 @@ tbody tr{transition:background-color .14s ease}
   .app-shell .table-action{min-height:40px;padding:0 14px}
   .app-shell .button-sm{min-height:40px}
 }
+
+/* ===========================================================================
+   Dropdown proprio
+   ---------------------------------------------------------------------------
+   A lista do <select> e a unica parte do formulario que o CSS nao alcanca: ela
+   e desenhada pelo sistema operacional. No celular vira uma roleta colada no
+   rodape, com linhas baixas — e o celular e onde o socorrista vai usar isto.
+
+   O <select> continua sendo o campo (ver Selecao.tsx); o que segue estiliza o
+   painel que abre no lugar da lista nativa. Duas formas, mesma marcacao:
+   ancorado ao campo no desktop, centralizado sobre fundo escurecido no celular.
+   As coordenadas do campo chegam em --campo-*, postas pelo componente.
+   =========================================================================== */
+.selecao{position:relative}
+.app-shell .selecao-campo{width:100%}
+
+.selecao-fundo{position:fixed;z-index:60;inset:0}
+.selecao-painel{
+  position:fixed;
+  top:calc(var(--campo-topo) + 6px);
+  left:var(--campo-esquerda);
+  width:max(var(--campo-largura),260px);
+  max-height:min(52vh,420px);
+  display:flex;flex-direction:column;
+  overflow:hidden;
+  border:1px solid var(--line);border-radius:10px;
+  background:var(--superficie);
+  box-shadow:0 22px 50px rgba(7,20,38,.22);
+}
+/* O cabecalho repete o rotulo do campo. No desktop e redundante — o campo esta
+   logo acima, visivel; no celular o painel cobre a tela e ele e a unica pista
+   do que se esta escolhendo. Some num, fica no outro. */
+.selecao-painel>header{display:none}
+.selecao-busca{padding:10px 10px 6px;border-bottom:1px solid var(--linha-suave)}
+.selecao-busca input{width:100%;height:38px;padding:0 11px;
+  border:1px solid var(--controle-borda);border-radius:7px;
+  background:var(--superficie);color:var(--ink);font-size:14px}
+.selecao-busca input:focus{outline:none;border-color:var(--blue-500);
+  box-shadow:0 0 0 3px rgba(46,144,250,.18)}
+.selecao-opcoes{flex:1;min-height:0;padding:6px;overflow-y:auto;overscroll-behavior:contain}
+.selecao-opcoes:focus{outline:none}
+.selecao-opcoes>[role=option]{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  width:100%;min-height:40px;padding:8px 11px;
+  border:0;border-radius:7px;
+  background:transparent;color:var(--ink);
+  font-size:14px;text-align:left;cursor:pointer;
+}
+/* Um realce so, do teclado e do ponteiro: o componente move o destaque no
+   pointerenter, entao :hover seria uma segunda marca competindo com a primeira. */
+.selecao-opcoes>[data-destacado=sim]{background:var(--blue-50)}
+.selecao-opcoes>[aria-selected=true]{font-weight:600}
+.selecao-marca{width:7px;height:7px;flex:0 0 7px;border-radius:50%;background:var(--blue-600)}
+.selecao-vazio{margin:0;padding:22px 12px;color:var(--muted);font-size:13px;text-align:center}
+
+/* Celular: painel no centro da tela, sobre fundo escurecido, largura e altura
+   coladas na janela para servir do aparelho pequeno ao grande. Linha de 52px,
+   que e o que se acerta com o polegar sem mirar. */
+@media(max-width:620px),(pointer:coarse){
+  .selecao-fundo{
+    display:grid;place-items:center;padding:16px;
+    background:rgba(7,20,38,.55);backdrop-filter:blur(3px)}
+  .selecao-painel{
+    position:relative;top:auto;left:auto;
+    width:min(420px,100%);max-height:min(72vh,560px);
+    border-radius:14px;box-shadow:0 30px 70px rgba(0,0,0,.4)}
+  .selecao-painel>header{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    padding:14px 8px 14px 16px;border-bottom:1px solid var(--line)}
+  .selecao-painel>header span{font-weight:600;font-size:14px}
+  .selecao-painel>header button{
+    width:40px;height:40px;flex:0 0 40px;
+    border:0;border-radius:9px;background:transparent;
+    color:var(--muted);font-size:24px;line-height:1;cursor:pointer}
+  .selecao-busca{padding:12px 12px 8px}
+  .selecao-busca input{height:46px}
+  .selecao-opcoes{padding:8px}
+  .selecao-opcoes>[role=option]{min-height:52px;padding:12px 14px;font-size:15px}
+}
+@media(prefers-reduced-motion:no-preference){
+  .selecao-painel{animation:selecao-entra .13s cubic-bezier(.22,1,.36,1) both}
+  @keyframes selecao-entra{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+}
+
+/* Campo de dinheiro: o "R$" e um adorno do CSS, para nao entrar no nome
+   acessivel do campo (ver CampoValor.tsx), e o numero sai alinhado a direita,
+   com algarismos de mesma largura — coluna de valor se confere de cima a baixo. */
+.app-shell .campo-valor{position:relative;display:block}
+.app-shell .campo-valor:before{
+  content:'R$';position:absolute;left:12px;top:50%;transform:translateY(-50%);
+  color:var(--muted);font-size:13px;font-weight:600;pointer-events:none}
+.app-shell .campo-valor input{
+  padding-left:38px;text-align:right;
+  font-variant-numeric:tabular-nums;font-size:15px;font-weight:600}

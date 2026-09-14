@@ -5,6 +5,8 @@ import { Campo, Selecao } from '../components/Campos'
 import { Carregando, Vazio } from '../components/EstadoPagina'
 import type { ContaReceber, Contratante, Veiculo } from '../types/modelos'
 import { hojeIso, moeda } from '../utils/formatadores'
+import { CampoValor } from '../components/CampoValor'
+import { Modal } from '../components/Modal'
 
 const hoje=hojeIso
 const proximoMes=()=>{const [ano,mes,dia]=hojeIso().split('-').map(Number);const d=new Date(ano,mes-1,dia);d.setMonth(d.getMonth()+1);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
@@ -43,12 +45,12 @@ export default function ContasReceberPage(){
         <tbody>{contas.map(c=><tr key={c.id}><td><strong>{c.protocolo||'Sem protocolo'}</strong><small>{c.descricao}</small></td><td>{c.contratante.nome}</td><td>{new Date(`${c.vencimento}T12:00:00`).toLocaleDateString('pt-BR')}</td><td><StatusBadge status={c.status}/></td><td>{moeda(c.valorPrevisto)}</td><td>{c.valorRecebido!=null?<><strong>{moeda(c.valorRecebido)}</strong>{c.diferenca?<small className="negative">Dif. {moeda(c.diferenca)}</small>:null}</>:'—'}</td><td>{c.status!=='RECEBIDO'&&c.status!=='CANCELADO'?<button className="table-action" onClick={()=>{setSelecionada(c);setModal('receber')}}>Registrar pagamento</button>:null}</td></tr>)}</tbody></table></div>
         :<Vazio titulo="Nenhuma conta encontrada" descricao="Cadastre uma conta manualmente ou confirme uma importação da Porto Seguro."/>}
     </section>
-    {modal?<div className="modal-backdrop" role="presentation"><section className="modal" role="dialog" aria-modal="true"><header><div><span className="eyebrow">Contas a receber</span><h2>{modal==='nova'?'Nova conta':'Registrar recebimento'}</h2></div><button aria-label="Fechar" onClick={()=>setModal(null)}>×</button></header>
+    {modal?<Modal etiqueta="Contas a receber" titulo={modal==='nova'?'Nova conta':'Registrar recebimento'} aoFechar={()=>setModal(null)}>
       {modal==='nova'?<form onSubmit={salvar} className="form-grid two-columns">
         <Selecao rotulo="Contratante" name="contratanteId" required opcoes={contratantes.map(c=>({valor:c.id,texto:c.nome}))}/>
         <label className="field"><span>Protocolo ou referência</span><input name="protocolo"/></label>
         <label className="field field-wide"><span>Descrição</span><input name="descricao" required/></label>
-        <label className="field"><span>Valor previsto</span><input name="valorPrevisto" type="number" min=".01" step=".01" required/></label>
+        <CampoValor rotulo="Valor previsto" name="valorPrevisto" required/>
         <Selecao rotulo="Veículo" name="veiculoId" vazio="Não relacionado" opcoes={veiculos.map(v=>({valor:v.id,texto:v.identificacao}))}/>
         <label className="field"><span>Competência</span><input name="dataCompetencia" type="date" defaultValue={hoje()} required/></label>
         <label className="field"><span>Vencimento</span><input name="vencimento" type="date" defaultValue={proximoMes()} required/></label>
@@ -59,6 +61,6 @@ export default function ContasReceberPage(){
         <label className="field"><span>Data do recebimento</span><input name="dataRecebimento" type="date" defaultValue={hoje()} required/></label>
         <div className="modal-actions"><button type="button" className="button button-ghost" onClick={()=>setModal(null)}>Cancelar</button><button className="button button-primary">Confirmar recebimento</button></div>
       </form>}
-    </section></div>:null}
+    </Modal>:null}
   </div>
 }

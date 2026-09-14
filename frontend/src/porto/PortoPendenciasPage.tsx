@@ -3,14 +3,91 @@ import { criarPendenciaPorto, listarPendenciasPorto, resolverPendenciaPorto } fr
 import { Carregando, Vazio } from '../components/EstadoPagina'
 import type { PendenciaPorto } from '../types/modelos'
 import { moeda } from '../utils/formatadores'
+import { FormularioPendencia } from './pendencias/FormularioPendencia'
+import { data } from './ops/opcoes'
 
-const tipo=(valor:PendenciaPorto['tipo'])=>valor==='SERVICO_PENDENTE'?'Serviço pendente':valor==='SERVICO_DEVOLVIDO'?'Serviço devolvido':valor==='OS_SEM_SOCORRISTA'?'OS sem socorrista':'Recebimento de OP'
-export default function PortoPendenciasPage(){
-  const [itens,setItens]=useState<PendenciaPorto[]>([]),[erro,setErro]=useState(''),[aberta,setAberta]=useState(false),[carregando,setCarregando]=useState(true)
-  async function carregar(){try{setItens(await listarPendenciasPorto())}catch(e){setErro((e as Error).message)}finally{setCarregando(false)}}useEffect(()=>{void carregar()},[])
-  async function salvar(event:FormEvent<HTMLFormElement>){event.preventDefault();const f=new FormData(event.currentTarget);try{await criarPendenciaPorto({numeroOs:f.get('numeroOs'),motivo:f.get('motivo'),valor:Number(f.get('valor')),dataPendencia:f.get('dataPendencia'),observacao:f.get('observacao'),responsavel:f.get('responsavel'),statusFinanceiro:f.get('statusFinanceiro'),prazo:f.get('prazo')||null,referenciaPorto:f.get('referenciaPorto')||null});setAberta(false);await carregar()}catch(e){setErro((e as Error).message)}}
-  async function resolver(id:number){try{await resolverPendenciaPorto(id);await carregar()}catch(e){setErro((e as Error).message)}}
-  return <div className="page-enter"><header className="page-heading"><div><span className="eyebrow">Porto Seguro</span><h1>Pendências financeiras</h1><p>Tratativas que continuam sendo executadas diretamente no portal da Porto.</p></div><button className="button button-primary" onClick={()=>setAberta(true)}>Nova pendência</button></header>{erro?<div className="form-alert">{erro}</div>:null}<section className="panel">{carregando?<Carregando/>:itens.length?<div className="table-scroll"><table><thead><tr><th>Tipo</th><th>Referência</th><th>Motivo</th><th>Data</th><th>Valor</th><th>Responsável</th><th>Prazo</th><th>Situação</th><th/></tr></thead><tbody>{itens.map((p,i)=><tr key={`${p.tipo}-${p.referenciaId}-${i}`}><td><strong>{tipo(p.tipo)}</strong></td><td>{p.referencia}</td><td>{p.motivo||'—'}</td><td>{p.data?new Date(`${p.data}T12:00:00`).toLocaleDateString('pt-BR'):'—'}</td><td>{moeda(p.valor)}</td><td>{p.responsavel||'—'}</td><td>{p.prazo?new Date(`${p.prazo}T12:00:00`).toLocaleDateString('pt-BR'):'—'}</td><td><span className="ledger-status ledger-pendente">{p.situacao}</span></td><td>{p.id&&p.tipo==='SERVICO_PENDENTE'?<button className="table-action" onClick={()=>void resolver(p.id as number)}>Resolver</button>:null}</td></tr>)}</tbody></table></div>:<Vazio titulo="Nenhuma pendência" descricao="Não há pagamentos ou tratativas em aberto."/>}</section>
-    {aberta?<div className="modal-backdrop"><section className="modal" role="dialog" aria-modal="true"><header><div><span className="eyebrow">Porto Seguro</span><h2>Nova pendência</h2></div><button aria-label="Fechar" onClick={()=>setAberta(false)}>×</button></header><form className="form-grid" onSubmit={salvar}><label className="field"><span>Número da OS</span><input name="numeroOs" required/></label><label className="field"><span>Motivo</span><input name="motivo" required/></label><label className="field"><span>Valor</span><input name="valor" type="number" min="0" step=".01" required/></label><label className="field"><span>Data da pendência</span><input name="dataPendencia" type="date" required/></label><label className="field"><span>Responsável</span><input name="responsavel" required/></label><label className="field"><span>Situação financeira</span><select name="statusFinanceiro" required><option value="BLOQUEADO_PARA_PAGAMENTO">Bloqueado para pagamento</option><option value="VALOR_DIVERGENTE">Valor divergente</option><option value="AGUARDANDO_OP">Aguardando OP</option></select></label><label className="field"><span>Prazo</span><input name="prazo" type="date"/></label><label className="field"><span>Referência Porto</span><input name="referenciaPorto"/></label><label className="field field-wide"><span>Observação</span><textarea name="observacao" required/></label><div className="modal-actions"><button type="button" className="button button-ghost" onClick={()=>setAberta(false)}>Cancelar</button><button className="button button-primary">Salvar pendência</button></div></form></section></div>:null}
+const tipo = (valor: PendenciaPorto['tipo']) =>
+  valor === 'SERVICO_PENDENTE' ? 'Serviço pendente'
+  : valor === 'SERVICO_DEVOLVIDO' ? 'Serviço devolvido'
+  : valor === 'OS_SEM_SOCORRISTA' ? 'OS sem socorrista'
+  : 'Recebimento de OP'
+
+export default function PortoPendenciasPage() {
+  const [itens, setItens] = useState<PendenciaPorto[]>([])
+  const [erro, setErro] = useState('')
+  const [aberta, setAberta] = useState(false)
+  const [carregando, setCarregando] = useState(true)
+
+  async function carregar() {
+    try { setItens(await listarPendenciasPorto()) }
+    catch (e) { setErro((e as Error).message) } finally { setCarregando(false) }
+  }
+  useEffect(() => { void carregar() }, [])
+
+  async function salvar(evento: FormEvent<HTMLFormElement>) {
+    evento.preventDefault()
+    const campos = new FormData(evento.currentTarget)
+    try {
+      await criarPendenciaPorto({
+        numeroOs: campos.get('numeroOs'), motivo: campos.get('motivo'),
+        valor: Number(campos.get('valor')), dataPendencia: campos.get('dataPendencia'),
+        observacao: campos.get('observacao'), responsavel: campos.get('responsavel'),
+        statusFinanceiro: campos.get('statusFinanceiro'),
+        prazo: campos.get('prazo') || null,
+        referenciaPorto: campos.get('referenciaPorto') || null,
+      })
+      setAberta(false)
+      await carregar()
+    } catch (e) { setErro((e as Error).message) }
+  }
+
+  async function resolver(id: number) {
+    try { await resolverPendenciaPorto(id); await carregar() }
+    catch (e) { setErro((e as Error).message) }
+  }
+
+  return <div className="page-enter">
+    <header className="page-heading">
+      <div>
+        <span className="eyebrow">Porto Seguro</span>
+        <h1>Pendências financeiras</h1>
+        <p>Tratativas que continuam sendo executadas diretamente no portal da Porto.</p>
+      </div>
+      <button className="button button-primary" onClick={() => setAberta(true)}>Nova pendência</button>
+    </header>
+
+    {erro ? <div className="form-alert">{erro}</div> : null}
+
+    <section className="panel">
+      {carregando ? <Carregando/> : itens.length
+        ? <div className="table-scroll">
+            <table>
+              <thead><tr>
+                <th>Tipo</th><th>Referência</th><th>Motivo</th><th>Data</th><th>Valor</th>
+                <th>Responsável</th><th>Prazo</th><th>Situação</th><th/>
+              </tr></thead>
+              <tbody>
+                {itens.map((p, indice) => <tr key={`${p.tipo}-${p.referenciaId}-${indice}`}>
+                  <td><strong>{tipo(p.tipo)}</strong></td>
+                  <td>{p.referencia}</td>
+                  <td>{p.motivo || '—'}</td>
+                  <td>{data(p.data)}</td>
+                  <td>{moeda(p.valor)}</td>
+                  <td>{p.responsavel || '—'}</td>
+                  <td>{data(p.prazo)}</td>
+                  <td><span className="ledger-status ledger-pendente">{p.situacao}</span></td>
+                  <td>
+                    {p.id && p.tipo === 'SERVICO_PENDENTE'
+                      ? <button className="table-action" onClick={() => void resolver(p.id as number)}>Resolver</button>
+                      : null}
+                  </td>
+                </tr>)}
+              </tbody>
+            </table>
+          </div>
+        : <Vazio titulo="Nenhuma pendência" descricao="Não há pagamentos ou tratativas em aberto."/>}
+    </section>
+
+    {aberta ? <FormularioPendencia aoEnviar={salvar} aoFechar={() => setAberta(false)}/> : null}
   </div>
 }

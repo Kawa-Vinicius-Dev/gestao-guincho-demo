@@ -1,4 +1,4 @@
-import type { ReactNode, SelectHTMLAttributes } from 'react'
+import type { ReactNode } from 'react'
 
 /**
  * Campo e Selecao: o par que padroniza rotulo + controle.
@@ -30,26 +30,9 @@ export function Campo({ rotulo, className, ajuda, children }: CampoProps) {
   </label>
 }
 
-export type Opcao = { valor: string | number; texto: string }
-
-type SelecaoProps = Omit<SelectHTMLAttributes<HTMLSelectElement>, 'children'> & {
-  rotulo: string
-  className?: string
-  ajuda?: string
-  /**
-   * Primeira opcao, de valor vazio. Existe porque quase todo <select> da
-   * aplicacao precisava de uma ("Todos", "Selecione", "Nao relacionado") e cada
-   * tela escrevia a sua na mao, com valor ora "" ora ausente.
-   */
-  vazio?: string
-  opcoes: ReadonlyArray<Opcao>
-}
-
-export function Selecao({ rotulo, className, ajuda, vazio, opcoes, ...resto }: SelecaoProps) {
-  return <Campo rotulo={rotulo} className={className} ajuda={ajuda}>
-    <select {...resto}>
-      {vazio === undefined ? null : <option value="">{vazio}</option>}
-      {opcoes.map(o => <option key={o.valor} value={o.valor}>{o.texto}</option>)}
-    </select>
-  </Campo>
-}
+/**
+ * O dropdown mora em Selecao.tsx, que e maior. Fica reexportado aqui para as
+ * telas continuarem importando o par inteiro de um lugar so.
+ */
+export { Selecao } from './Selecao'
+export type { Opcao } from './Selecao'

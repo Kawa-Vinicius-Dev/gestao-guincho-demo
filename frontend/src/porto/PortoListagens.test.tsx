@@ -25,7 +25,7 @@ test('cria OP processada sem marcar como recebida',async()=>{
   let payload:Record<string,unknown>={},criada:Record<string,unknown>|null=null
   servidor.use(http.get('/api/porto/ordens-pagamento',()=>HttpResponse.json(criada?[criada]:[])),http.post('/api/porto/ordens-pagamento',async({request})=>{payload=await request.json() as Record<string,unknown>;criada={id:4,numero:payload.numero,valorTotal:payload.valorInformado,dataPagamentoProgramada:payload.dataPrevista,situacao:'A_CONFIRMAR',statusPorto:'PROCESSADO',quantidadeOrdensServico:0,valorOrdensServico:0,divergencia:payload.valorInformado,statusConciliacao:'SEM_COMPOSICAO'};return HttpResponse.json(criada,{status:201})}))
   const user=userEvent.setup();render(<PortoOrdensPagamentoPage/>);await screen.findByText('Nenhuma OP');await user.click(screen.getByRole('button',{name:/nova ordem de pagamento/i}));const dialogo=screen.getByRole('dialog')
-  await user.type(within(dialogo).getByLabelText(/número da op/i),'OP-MANUAL-4');await user.type(within(dialogo).getByLabelText(/data prevista/i),'2026-09-16');await user.type(within(dialogo).getByLabelText(/valor informado/i),'480');await user.selectOptions(within(dialogo).getByLabelText(/status porto/i),'PROCESSADO');await user.selectOptions(within(dialogo).getByLabelText(/situação financeira/i),'A_CONFIRMAR');await user.click(within(dialogo).getByRole('button',{name:/salvar ordem/i}))
+  await user.type(within(dialogo).getByLabelText(/número da op/i),'OP-MANUAL-4');await user.type(within(dialogo).getByLabelText(/data prevista/i),'2026-09-16');await user.type(within(dialogo).getByLabelText(/valor informado/i),'48000');await user.selectOptions(within(dialogo).getByLabelText(/status porto/i),'PROCESSADO');await user.selectOptions(within(dialogo).getByLabelText(/situação financeira/i),'A_CONFIRMAR');await user.click(within(dialogo).getByRole('button',{name:/salvar ordem/i}))
   expect(payload.pagamentoConfirmado).toBe(false);expect(await screen.findByText('OP-MANUAL-4')).toBeInTheDocument();expect(screen.getByText('A confirmar')).toBeInTheDocument()
 })
 
@@ -40,7 +40,7 @@ test('edita uma OP manual e oferece os relatórios individuais',async()=>{
   const user=userEvent.setup();render(<PortoOrdensPagamentoPage/>);await user.click(await screen.findByRole('button',{name:'OP-EDIT-41'}))
   expect(await screen.findByRole('button',{name:/baixar excel da op/i})).toBeInTheDocument();expect(screen.getByRole('button',{name:/baixar pdf da op/i})).toBeInTheDocument()
   await user.click(screen.getByRole('button',{name:/editar op/i}));const dialogo=screen.getByRole('dialog')
-  const valor=within(dialogo).getByLabelText(/valor informado/i);await user.clear(valor);await user.type(valor,'825')
+  const valor=within(dialogo).getByLabelText(/valor informado/i);await user.clear(valor);await user.type(valor,'82500')
   await user.click(within(dialogo).getByRole('button',{name:/salvar alterações/i}))
   expect(payload).toMatchObject({numero:'OP-EDIT-41',valorInformado:825,pagamentoConfirmado:false})
 })

@@ -7,6 +7,8 @@ import type { Categoria, Despesa, DespesaRecorrente, LancamentoRecorrente, Motor
 import { data, hojeIso, moeda } from '../utils/formatadores'
 import { Campo, Selecao } from '../components/Campos'
 import { FORMAS_PAGAMENTO } from './LancamentosPage'
+import { CampoValor } from '../components/CampoValor'
+import { AcoesModal, Modal } from '../components/Modal'
 
 const mesAtual=()=>hojeIso().slice(0,7)
 
@@ -73,14 +75,14 @@ export default function DespesasPage(){
       <form onSubmit={salvarFixa} className="inline-form">
         <Campo rotulo="Descrição da despesa fixa"><input name="descricao" placeholder="Ex.: Aluguel do pátio" required/></Campo>
         <Selecao rotulo="Categoria da despesa fixa" name="categoriaId" required opcoes={categorias.map(x=>({valor:x.id,texto:x.nome}))}/>
-        <Campo rotulo="Valor da despesa fixa"><input name="valor" type="number" step=".01" min=".01" required/></Campo>
+        <CampoValor rotulo="Valor da despesa fixa" name="valor" required/>
         <Campo rotulo="Dia do vencimento"><input name="diaVencimento" type="number" min="1" max="31" required/></Campo>
         <Selecao rotulo="Veículo da despesa fixa" name="veiculoId" vazio="Sem veículo" opcoes={veiculos.map(x=>({valor:x.id,texto:x.identificacao}))}/>
         <button className="button button-ghost">Adicionar</button></form></section>:null}
-    {form?<div className="modal-backdrop"><section className="modal modal-wide" role="dialog" aria-modal="true"><header><div><span className="eyebrow">Comprovante operacional</span><h2>Registrar despesa</h2></div><button aria-label="Fechar" onClick={()=>setForm(false)}>×</button></header>
+    {form?<Modal etiqueta="Comprovante operacional" titulo="Registrar despesa" largo aoFechar={()=>setForm(false)}>
       <form onSubmit={salvar} className="form-grid three-columns"><label className="field field-wide"><span>Descrição</span><input name="descricao" required/></label>
         <Selecao rotulo="Categoria" name="categoriaId" required opcoes={categorias.map(x=>({valor:x.id,texto:x.nome}))}/>
-        <label className="field"><span>Valor</span><input name="valor" type="number" step=".01" min=".01" required/></label>
+        <CampoValor rotulo="Valor" name="valor" required/>
         <Selecao rotulo="Situação" name="status" opcoes={[{valor:'PAGO',texto:'Paga'},{valor:'PENDENTE',texto:'Pendente'}]}/>
         <label className="field"><span>Data</span><input name="data" type="date" defaultValue={hoje()} required/></label>
         <label className="field"><span>Vencimento</span><input name="vencimento" type="date"/></label><label className="field"><span>Data do pagamento</span><input name="dataPagamento" type="date"/></label>
@@ -89,7 +91,10 @@ export default function DespesasPage(){
         <Selecao rotulo="Motorista" name="motoristaId" vazio="Não relacionado" opcoes={motoristas.map(x=>({valor:x.id,texto:x.nome}))}/>
         <label className="field"><span>Protocolo ou referência</span><input name="protocolo"/></label><label className="field two-span"><span>Comprovante (referência)</span><input name="comprovante" placeholder="Nome ou caminho do arquivo"/></label>
         <label className="field field-wide"><span>Observações</span><textarea name="observacoes" rows={3}/></label>
-        <div className="modal-actions field-wide"><button type="button" className="button button-ghost" onClick={()=>setForm(false)}>Cancelar</button><button className="button button-primary">Enviar despesa</button></div>
-      </form></section></div>:null}
+        <AcoesModal aoCancelar={()=>setForm(false)}>
+          <button className="button button-primary">Enviar despesa</button>
+        </AcoesModal>
+      </form>
+    </Modal>:null}
   </div>
 }

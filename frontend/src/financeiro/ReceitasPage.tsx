@@ -4,7 +4,9 @@ import { StatusBadge } from '../components/StatusBadge'
 import { Carregando, Vazio } from '../components/EstadoPagina'
 import type { Categoria, Contratante, Receita, Veiculo } from '../types/modelos'
 import { data, hojeIso, moeda } from '../utils/formatadores'
-import { Selecao } from '../components/Campos'
+import { Campo, Selecao } from '../components/Campos'
+import { CampoValor } from '../components/CampoValor'
+import { AcoesModal, Modal } from '../components/Modal'
 
 export default function ReceitasPage(){
   const [lista,setLista]=useState<Receita[]>([]),[cadastros,setCadastros]=useState<{categorias:Categoria[];contratantes:Contratante[];veiculos:Veiculo[]}>({categorias:[],contratantes:[],veiculos:[]})
@@ -26,9 +28,10 @@ export default function ReceitasPage(){
     {erro?<div className="form-alert">{erro}</div>:null}<section className="panel">{carregando?<Carregando/>:lista.length?<div className="table-scroll"><table><thead><tr><th>Descrição</th><th>Competência</th><th>Contratante</th><th>Status</th><th>Valor</th><th/></tr></thead><tbody>
       {lista.map(r=><tr key={r.id}><td><strong>{r.descricao}</strong><small>{r.contaReceberId?`Conta #${r.contaReceberId}`:r.recorrente?'Recorrente':'Avulsa'}</small></td><td>{data(r.dataCompetencia)}</td><td>{r.contratante||'—'}</td><td><StatusBadge status={r.status}/></td><td>{moeda(r.valor)}</td><td>{r.manual?<div className="heading-actions"><button className="table-action" onClick={()=>{setEditando(r);setForm(true)}}>Editar</button><button className="table-action table-action-danger" onClick={()=>setExcluindo(r)}>Excluir</button></div>:null}</td></tr>)}
     </tbody></table></div>:<Vazio titulo="Nenhuma receita" descricao="Recebimentos de contas e receitas manuais aparecerão aqui."/>}</section>
-    {form?<div className="modal-backdrop"><section className="modal" role="dialog" aria-modal="true"><header><div><span className="eyebrow">Receita avulsa</span><h2>{editando?'Editar receita':'Nova receita'}</h2></div><button aria-label="Fechar" onClick={()=>{setForm(false);setEditando(null)}}>×</button></header>
+    {form?<Modal etiqueta="Receita avulsa" titulo={editando?'Editar receita':'Nova receita'}
+      aoFechar={()=>{setForm(false);setEditando(null)}}>
       <form key={editando?.id??'nova'} onSubmit={salvar} className="form-grid two-columns"><label className="field field-wide"><span>Descrição</span><input name="descricao" defaultValue={editando?.descricao} required/></label>
-        <label className="field"><span>Valor</span><input name="valor" type="number" step=".01" min=".01" defaultValue={editando?.valor} required/></label>
+        <CampoValor rotulo="Valor" name="valor" defaultValue={editando?.valor} required/>
         <Selecao rotulo="Status" name="status" defaultValue={editando?.status??'RECEBIDA'}
           opcoes={[{valor:'RECEBIDA',texto:'Recebida'},{valor:'PREVISTA',texto:'Prevista'}]}/>
         <label className="field"><span>Competência</span><input name="dataCompetencia" type="date" defaultValue={editando?.dataCompetencia??hojeIso()} required/></label>
@@ -40,9 +43,23 @@ export default function ReceitasPage(){
         <Selecao rotulo="Veículo" name="veiculoId" defaultValue={editando?.veiculoId??''} vazio="Não relacionado"
           opcoes={cadastros.veiculos.map(x=>({valor:x.id,texto:x.identificacao}))}/>
         <label className="check-field"><input name="recorrente" type="checkbox" defaultChecked={editando?.recorrente}/> Receita recorrente</label>
-        <label className="field field-wide"><span>Observações</span><textarea name="observacoes" rows={3} defaultValue={editando?.observacoes}/></label>
-        <div className="modal-actions field-wide"><button type="button" className="button button-ghost" onClick={()=>{setForm(false);setEditando(null)}}>Cancelar</button><button className="button button-primary">{editando?'Salvar alterações':'Salvar receita'}</button></div>
-      </form></section></div>:null}
-    {excluindo?<div className="modal-backdrop"><section className="modal confirm-delete" role="dialog" aria-modal="true" aria-labelledby="titulo-excluir-receita"><header><div><span className="eyebrow">Ação irreversível</span><h2 id="titulo-excluir-receita">Excluir receita?</h2></div><button aria-label="Fechar" onClick={()=>setExcluindo(null)}>×</button></header><p>Tem certeza que deseja excluir esta receita? O lançamento será removido e os valores da Visão Geral e dos relatórios serão recalculados.</p><div className="modal-actions"><button className="button button-ghost" onClick={()=>setExcluindo(null)}>Cancelar</button><button className="button button-danger" onClick={()=>void excluir()}>Excluir receita</button></div></section></div>:null}
+        <Campo rotulo="Observações" className="field-wide">
+          <textarea name="observacoes" rows={3} defaultValue={editando?.observacoes}/>
+        </Campo>
+        <AcoesModal aoCancelar={()=>{setForm(false);setEditando(null)}}>
+          <button className="button button-primary">{editando?'Salvar alterações':'Salvar receita'}</button>
+        </AcoesModal>
+      </form>
+    </Modal>:null}
+    {excluindo?<Modal etiqueta="Ação irreversível" titulo="Excluir receita?" className="confirm-delete"
+      aoFechar={()=>setExcluindo(null)}>
+      <p>
+        Tem certeza que deseja excluir esta receita? O lançamento será removido e os valores da
+        Visão Geral e dos relatórios serão recalculados.
+      </p>
+      <AcoesModal aoCancelar={()=>setExcluindo(null)}>
+        <button className="button button-danger" onClick={()=>void excluir()}>Excluir receita</button>
+      </AcoesModal>
+    </Modal>:null}
   </div>
 }

@@ -4,6 +4,7 @@ import { http,HttpResponse } from 'msw'
 import { beforeEach,expect,test } from 'vitest'
 import App from '../App'
 import { servidor } from '../test/servidor'
+import { escolher } from '../test/dropdown'
 
 const TOKEN_KEY='fluxo-gestao:token:v1'
 const periodos=[
@@ -63,7 +64,7 @@ test('administrador abre o socorrista pela Equipe e consulta composição oficia
   expect(within(within(resumo).getByText('Alimentação').closest('article')!).getByText('R$ 30,00')).toBeInTheDocument()
   expect(within(within(resumo).getByText('Líquido').closest('article')!).getByText('R$ 70,00')).toBeInTheDocument()
 
-  await user.selectOptions(screen.getByRole('combobox',{name:/período porto/i}),'6')
+  await escolher(user, /período porto/i, /Julho/)
   expect(await screen.findByText('OS-ANTIGA')).toBeInTheDocument()
   expect(screen.getAllByText('VTR-99')).not.toHaveLength(0)
   expect(screen.queryByText('OS-PENDENTE')).not.toBeInTheDocument()

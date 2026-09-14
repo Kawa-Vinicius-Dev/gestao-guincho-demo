@@ -1,64 +1,155 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { associarMotoristaPorto,baixarOrdensServicoPorto,listarOrdensServicoPorto,periodoPadraoOrdensServicoPorto } from '../api/porto'
 import { api } from '../api/http'
-import { Vazio } from '../components/EstadoPagina'
-import type { Motorista,OrdemServicoPorto } from '../types/modelos'
-import { moeda } from '../utils/formatadores'
+import { associarMotoristaPorto, baixarOrdensServicoPorto, listarOrdensServicoPorto,
+  periodoPadraoOrdensServicoPorto } from '../api/porto'
+import { Campo, Selecao } from '../components/Campos'
+import type { Motorista, OrdemServicoPorto } from '../types/modelos'
+import { ModalAssociarSocorrista } from './os/ModalAssociarSocorrista'
+import { TabelaOrdensServico } from './os/TabelaOrdensServico'
+import { FILTROS_OS, STATUS_FINANCEIRO, STATUS_OPERACIONAL } from './os/opcoes'
 
-const rotulo=(valor?:string)=>valor?valor.toLowerCase().replaceAll('_',' ').replace(/^./,x=>x.toUpperCase()):'—'
-/**
- * O painel da Porto corta o nome do socorrista na largura da coluna ("QEBSON RAMOS
- * DA SILV"), entao o nome do cadastro deve comecar com o que veio de la. Quando nao
- * comeca, as duas fontes discordam e o operador precisa ver: o vinculo continua sendo
- * so pelo QRA, mas divergencia de nome e sinal de que o QRA pode estar no cadastro
- * errado - a equipe tem pai e filho com nomes quase iguais.
- */
-const mesmaPessoa=(daPorto?:string|null,vinculado?:string|null)=>{
-  if(!daPorto?.trim()||!vinculado?.trim())return true
-  const limpar=(v:string)=>v.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/\s+/g,' ').trim()
-  return limpar(vinculado).startsWith(limpar(daPorto))
-}
+export default function PortoOrdensServicoPage() {
+  const [itens, setItens] = useState<OrdemServicoPorto[]>([])
+  const [motoristas, setMotoristas] = useState<Motorista[]>([])
+  const [associando, setAssociando] = useState<OrdemServicoPorto | null>(null)
+  const [motoristaId, setMotoristaId] = useState(0)
+  const [somenteNaoIdentificados, setSomenteNaoIdentificados] = useState(false)
+  const [somenteSemQra, setSomenteSemQra] = useState(false)
+  const [erro, setErro] = useState('')
+  const [salvando, setSalvando] = useState(false)
+  const [exportando, setExportando] = useState(false)
+  const [periodo, setPeriodo] = useState({ dataInicio: '', dataFim: '' })
+  const [parametros, setParametros] = useState(new URLSearchParams())
 
-export default function PortoOrdensServicoPage(){
-  const [itens,setItens]=useState<OrdemServicoPorto[]>([]),[motoristas,setMotoristas]=useState<Motorista[]>([]),[associando,setAssociando]=useState<OrdemServicoPorto|null>(null),[motoristaId,setMotoristaId]=useState(0),[somenteNaoIdentificados,setSomenteNaoIdentificados]=useState(false),[somenteSemQra,setSomenteSemQra]=useState(false),[erro,setErro]=useState(''),[salvando,setSalvando]=useState(false),[exportando,setExportando]=useState(false)
-  const [periodo,setPeriodo]=useState({dataInicio:'',dataFim:''})
-  const [parametros,setParametros]=useState(new URLSearchParams())
-  async function carregar(params=new URLSearchParams()){setErro('');setParametros(new URLSearchParams(params));try{setItens(await listarOrdensServicoPorto(params))}catch(e){setErro((e as Error).message)}}
-  useEffect(()=>{
+  async function carregar(params = new URLSearchParams()) {
+    setErro(''); setParametros(new URLSearchParams(params))
+    try { setItens(await listarOrdensServicoPorto(params)) }
+    catch (e) { setErro((e as Error).message) }
+  }
+
+  useEffect(() => {
     // a tela abre num mes so, para nao trazer a tabela inteira
     periodoPadraoOrdensServicoPorto()
-      .then(p=>{setPeriodo(p);return carregar(new URLSearchParams({dataInicio:p.dataInicio,dataFim:p.dataFim}))})
-      .catch(e=>{setErro((e as Error).message);return carregar()})
-    api<Motorista[]>('/api/motoristas').then(setMotoristas).catch(e=>setErro(e.message))
-  },[])
-  async function aplicar(event:FormEvent<HTMLFormElement>){event.preventDefault();const form=new FormData(event.currentTarget),params=new URLSearchParams();for(const nome of ['dataInicio','dataFim','numeroOs','numeroOp','especialidade','socorrista','qra','viatura','seguradora','statusOperacional','statusFinanceiro']){const valor=String(form.get(nome)??'');if(valor)params.set(nome,valor)}if(somenteNaoIdentificados)params.set('semSocorrista','true');if(somenteSemQra)params.set('semQra','true');await carregar(params)}
-  const impacto=motoristaId?motoristas.find(m=>m.id===motoristaId)?.nome??'':''
-  async function confirmarAssociacao(){if(!associando||!motoristaId)return;setSalvando(true);setErro('');try{const atualizada=await associarMotoristaPorto(associando.id,motoristaId);setItens(lista=>somenteNaoIdentificados?lista.filter(os=>os.id!==atualizada.id):lista.map(os=>os.id===atualizada.id?atualizada:os));setAssociando(null);setMotoristaId(0)}catch(e){setErro((e as Error).message)}finally{setSalvando(false)}}
-  async function alternarOrfas(marcado:boolean){
-    setSomenteNaoIdentificados(marcado)
-    // sem socorrista e um filtro do servidor: filtrar em memoria alcancaria so o mes carregado.
-    // ao marcar, tira o recorte de data para o operacional ver todo o acumulado.
-    const params=new URLSearchParams(parametros)
-    if(marcado){params.set('semSocorrista','true');params.delete('dataInicio');params.delete('dataFim');setPeriodo({dataInicio:'',dataFim:''})}
-    else params.delete('semSocorrista')
+      .then(p => { setPeriodo(p); return carregar(new URLSearchParams({ dataInicio: p.dataInicio, dataFim: p.dataFim })) })
+      .catch(e => { setErro((e as Error).message); return carregar() })
+    api<Motorista[]>('/api/motoristas').then(setMotoristas).catch(e => setErro(e.message))
+  }, [])
+
+  async function aplicar(evento: FormEvent<HTMLFormElement>) {
+    evento.preventDefault()
+    const campos = new FormData(evento.currentTarget), params = new URLSearchParams()
+    for (const nome of FILTROS_OS) {
+      const valor = String(campos.get(nome) ?? '')
+      if (valor) params.set(nome, valor)
+    }
+    if (somenteNaoIdentificados) params.set('semSocorrista', 'true')
+    if (somenteSemQra) params.set('semQra', 'true')
     await carregar(params)
   }
-  async function alternarSemQra(marcado:boolean){
-    setSomenteSemQra(marcado)
-    // mesma logica de semSocorrista: semQra tambem e resolvido no servidor e alcanca todos os periodos
-    const params=new URLSearchParams(parametros)
-    if(marcado){params.set('semQra','true');params.delete('dataInicio');params.delete('dataFim');setPeriodo({dataInicio:'',dataFim:''})}
-    else params.delete('semQra')
+
+  async function confirmarAssociacao() {
+    if (!associando || !motoristaId) return
+    setSalvando(true); setErro('')
+    try {
+      const atualizada = await associarMotoristaPorto(associando.id, motoristaId)
+      setItens(lista => somenteNaoIdentificados
+        ? lista.filter(os => os.id !== atualizada.id)
+        : lista.map(os => os.id === atualizada.id ? atualizada : os))
+      setAssociando(null); setMotoristaId(0)
+    } catch (e) { setErro((e as Error).message) } finally { setSalvando(false) }
+  }
+
+  /**
+   * "Sem socorrista" e "sem QRA" sao filtros do servidor: peneirar em memoria
+   * alcancaria so o mes carregado. Ao marcar, o recorte de data sai para o
+   * operacional ver todo o acumulado.
+   */
+  async function alternarRecorte(chave: 'semSocorrista' | 'semQra', marcado: boolean) {
+    if (chave === 'semSocorrista') setSomenteNaoIdentificados(marcado)
+    else setSomenteSemQra(marcado)
+    const params = new URLSearchParams(parametros)
+    if (marcado) {
+      params.set(chave, 'true')
+      params.delete('dataInicio'); params.delete('dataFim')
+      setPeriodo({ dataInicio: '', dataFim: '' })
+    } else params.delete(chave)
     await carregar(params)
   }
+
   // exporta exatamente o recorte na tela: os filtros aplicados ja estao em parametros
-  async function exportar(){setExportando(true);setErro('');try{await baixarOrdensServicoPorto(parametros)}catch(e){setErro((e as Error).message)}finally{setExportando(false)}}
-  const visiveis=itens
-  return <div className="page-enter"><header className="page-heading"><div><span className="eyebrow">Porto Seguro</span><h1>Ordens de serviço</h1><p>Serviços individuais importados, com previsão original e ciclo efetivo.</p></div><div className="heading-actions"><button className="button button-primary" disabled={exportando} onClick={()=>void exportar()}>{exportando?'Gerando arquivo…':somenteSemQra?'Exportar OS sem QRA':somenteNaoIdentificados?'Exportar OS sem socorrista':'Exportar Excel'}</button></div></header>{erro?<div className="form-alert">{erro}</div>:null}<section className="panel"><form className="ledger-filters porto-os-filters" onSubmit={aplicar}><label><span>De</span><input aria-label="Data inicial" name="dataInicio" type="date" defaultValue={periodo.dataInicio} key={`i${periodo.dataInicio}`}/></label><label><span>Até</span><input aria-label="Data final" name="dataFim" type="date" defaultValue={periodo.dataFim} key={`f${periodo.dataFim}`}/></label><label className="filter-grow"><span>Número da OS</span><input name="numeroOs"/></label><label><span>Número da OP</span><input name="numeroOp"/></label><label><span>Especialidade</span><input aria-label="Especialidade" name="especialidade"/></label><label><span>Socorrista</span><input name="socorrista"/></label><label><span>Seguradora</span><input aria-label="Seguradora" name="seguradora" placeholder="Porto, Azul, Itaú…"/></label><label><span>Status operacional</span><select name="statusOperacional"><option value="">Todos</option><option value="AGUARDANDO_LANCAMENTO">Aguardando lançamento</option><option value="PROCESSADO">Processado</option><option value="LIBERADO_APOS_ANALISE">Liberado após análise</option><option value="NORMAL">Normal</option><option value="PENDENTE_PORTO">Pendente Porto</option><option value="DEVOLVIDO_FINALIZADO">Devolvido finalizado</option><option value="CANCELADO">Cancelado</option></select></label><label><span>Status financeiro</span><select name="statusFinanceiro"><option value="">Todos</option><option value="AGUARDANDO_OP">Aguardando OP</option><option value="PAGAMENTO_PROGRAMADO">Pagamento programado</option><option value="A_CONFIRMAR">A confirmar</option><option value="RECEBIDO">Recebido</option><option value="BLOQUEADO_PARA_PAGAMENTO">Bloqueado</option><option value="VALOR_DIVERGENTE">Valor divergente</option></select></label><button className="button button-primary">Aplicar filtros</button></form>
-    <label className="check-field"><input type="checkbox" checked={somenteNaoIdentificados} onChange={e=>void alternarOrfas(e.target.checked)}/> Somente OS sem socorrista</label>
-    <label className="check-field"><input type="checkbox" checked={somenteSemQra} onChange={e=>void alternarSemQra(e.target.checked)}/> Somente OS sem QRA</label>
-    {somenteNaoIdentificados?<p className="empty-inline">Mostrando as OS sem socorrista de todos os períodos. Associe cada uma ao socorrista responsável, ou exporte a lista para tratar fora do sistema.</p>:null}
-    {visiveis.length?<div className="table-scroll porto-os-table"><table><thead><tr><th>OS</th><th>OP</th><th>Seguradora</th><th>Especialidade</th><th>Viatura</th><th>Socorrista</th><th>Atendimento</th><th>Previsão original</th><th>Ciclo efetivo</th><th>Valor</th><th>Operacional</th><th>Financeiro</th></tr></thead><tbody>{visiveis.map(os=><tr key={os.id}><td><strong>{os.numero}</strong>{!os.qra?.trim()?<span className="porto-qra-ausente">Sem QRA</span>:null}{os.atrasadaNoCiclo?<span className="porto-qra-ausente">Passou do ciclo</span>:null}</td><td>{os.ordemPagamento||'—'}</td><td>{os.seguradora||'—'}</td><td>{os.especialidade||'—'}</td><td>{os.viatura||'Sem viatura'}</td><td className="porto-socorrista"><strong>{os.motorista||os.socorrista||'—'}</strong><small>{os.qra||'Sem QRA'}</small>{os.motorista&&!mesmaPessoa(os.socorrista,os.motorista)?<small className="porto-divergencia">Porto: {os.socorrista}</small>:null}{os.motorista?<button className="table-action" onClick={()=>{setAssociando(os);setMotoristaId(os.motoristaId??0)}}>Alterar</button>:<button className="table-action table-action-danger" onClick={()=>{setAssociando(os);setMotoristaId(os.sugestaoMotoristaId??0)}}>Associar socorrista</button>}</td><td>{os.dataAtendimento?new Date(`${os.dataAtendimento}T12:00:00`).toLocaleDateString('pt-BR'):'—'}</td><td>{os.dataPrevistaOriginal?new Date(`${os.dataPrevistaOriginal}T12:00:00`).toLocaleDateString('pt-BR'):'—'}</td><td>{os.dataEfetivaPagamento?new Date(`${os.dataEfetivaPagamento}T12:00:00`).toLocaleDateString('pt-BR'):'—'}{os.ciclosAtraso?<small>{os.ciclosAtraso} ciclo(s) depois</small>:null}</td><td>{moeda(os.valorTotal)}</td><td>{rotulo(os.statusOperacional)}</td><td>{rotulo(os.statusFinanceiro)}</td></tr>)}</tbody></table></div>:<Vazio titulo="Nenhuma OS" descricao="Cole serviços da Porto ou ajuste os filtros."/>}</section>
-    {associando?<div className="modal-backdrop"><section className="modal" role="dialog" aria-modal="true" aria-label={`Associar socorrista à ${associando.numero}`}><header><div><span className="eyebrow">{associando.numero}</span><h2>Associar socorrista</h2></div><button aria-label="Fechar" onClick={()=>setAssociando(null)}>×</button></header><p>Confirme quem atendeu. A escolha manual é preservada nas próximas importações — o relatório financeiro não a sobrescreve.</p>{associando.sugestaoAmbigua?<div className="form-alert" role="alert">O nome que a Porto enviou (<strong>{associando.socorrista}</strong>) serve para mais de um socorrista cadastrado. A tela da Porto corta o nome em 20 caracteres, então pai e filho ficam idênticos aqui — só quem acompanhou a operação sabe quem foi.</div>:associando.sugestaoMotorista?<p className="empty-inline">A Porto enviou “{associando.socorrista}”, que corresponde a <strong>{associando.sugestaoMotorista}</strong>. Confirme ou troque.</p>:null}<label className="field"><span>Socorrista</span><select aria-label="Socorrista responsável" value={motoristaId||''} onChange={e=>setMotoristaId(Number(e.target.value))} required><option value="">Selecione</option>{motoristas.filter(m=>m.ativo).map(m=><option key={m.id} value={m.id}>{m.nome}{m.qra?` · ${m.qra}`:''}</option>)}</select></label>{impacto?<div className="fleet-summary"><div><span>Serviço</span><strong>{moeda(associando.valorTotal)}</strong><small>{associando.valorTotal>0?"Valor da OS":"Valor só entra quando a Porto pagar"}</small></div><div><span>Comissão em jogo</span><strong>{moeda(associando.valorTotal*0.2)}</strong><small>20% do serviço</small></div><div><span>Sai de</span><strong>{associando.motorista||"—"}</strong><small>{associando.motorista?"Perde esta comissão":"Ninguém vinculado hoje"}</small></div><div><span>Entra para</span><strong>{impacto}</strong><small>Passa a receber</small></div></div>:null}<div className="modal-actions"><button className="button button-ghost" onClick={()=>{setAssociando(null);setMotoristaId(0)}}>Cancelar</button><button className="button button-primary" disabled={!motoristaId||salvando} onClick={()=>void confirmarAssociacao()}>{salvando?"Confirmando…":"Confirmar associação"}</button></div></section></div>:null}
+  async function exportar() {
+    setExportando(true); setErro('')
+    try { await baixarOrdensServicoPorto(parametros) }
+    catch (e) { setErro((e as Error).message) } finally { setExportando(false) }
+  }
+
+  const rotuloExportar = exportando ? 'Gerando arquivo…'
+    : somenteSemQra ? 'Exportar OS sem QRA'
+    : somenteNaoIdentificados ? 'Exportar OS sem socorrista'
+    : 'Exportar Excel'
+
+  return <div className="page-enter">
+    <header className="page-heading">
+      <div>
+        <span className="eyebrow">Porto Seguro</span>
+        <h1>Ordens de serviço</h1>
+        <p>Serviços individuais importados, com previsão original e ciclo efetivo.</p>
+      </div>
+      <div className="heading-actions">
+        <button className="button button-primary" disabled={exportando} onClick={() => void exportar()}>
+          {rotuloExportar}
+        </button>
+      </div>
+    </header>
+
+    {erro ? <div className="form-alert">{erro}</div> : null}
+
+    <section className="panel">
+      <form className="ledger-filters porto-os-filters" onSubmit={aplicar}>
+        <Campo rotulo="De">
+          <input aria-label="Data inicial" name="dataInicio" type="date"
+            defaultValue={periodo.dataInicio} key={`i${periodo.dataInicio}`}/>
+        </Campo>
+        <Campo rotulo="Até">
+          <input aria-label="Data final" name="dataFim" type="date"
+            defaultValue={periodo.dataFim} key={`f${periodo.dataFim}`}/>
+        </Campo>
+        <Campo rotulo="Número da OS" className="filter-grow"><input name="numeroOs"/></Campo>
+        <Campo rotulo="Número da OP"><input name="numeroOp"/></Campo>
+        <Campo rotulo="Especialidade"><input name="especialidade"/></Campo>
+        <Campo rotulo="Socorrista"><input name="socorrista"/></Campo>
+        <Campo rotulo="Seguradora"><input name="seguradora" placeholder="Porto, Azul, Itaú…"/></Campo>
+        <Selecao rotulo="Status operacional" name="statusOperacional" vazio="Todos" opcoes={STATUS_OPERACIONAL}/>
+        <Selecao rotulo="Status financeiro" name="statusFinanceiro" vazio="Todos" opcoes={STATUS_FINANCEIRO}/>
+        <button className="button button-primary">Aplicar filtros</button>
+      </form>
+
+      <label className="check-field">
+        <input type="checkbox" checked={somenteNaoIdentificados}
+          onChange={e => void alternarRecorte('semSocorrista', e.target.checked)}/>
+        {' '}Somente OS sem socorrista
+      </label>
+      <label className="check-field">
+        <input type="checkbox" checked={somenteSemQra}
+          onChange={e => void alternarRecorte('semQra', e.target.checked)}/>
+        {' '}Somente OS sem QRA
+      </label>
+
+      {somenteNaoIdentificados
+        ? <p className="empty-inline">
+            Mostrando as OS sem socorrista de todos os períodos. Associe cada uma ao socorrista
+            responsável, ou exporte a lista para tratar fora do sistema.
+          </p>
+        : null}
+
+      <TabelaOrdensServico itens={itens}
+        aoAssociar={(ordem, sugestao) => { setAssociando(ordem); setMotoristaId(sugestao) }}/>
+    </section>
+
+    {associando
+      ? <ModalAssociarSocorrista ordem={associando} motoristas={motoristas} motoristaId={motoristaId}
+          aoTrocar={setMotoristaId} aoConfirmar={() => void confirmarAssociacao()} salvando={salvando}
+          aoFechar={() => { setAssociando(null); setMotoristaId(0) }}/>
+      : null}
   </div>
 }

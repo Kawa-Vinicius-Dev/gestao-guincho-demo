@@ -4,6 +4,7 @@ import { api } from '../api/http'
 import { Carregando,ErroPagina,Vazio } from '../components/EstadoPagina'
 import type { Motorista,SenhaRedefinida,Veiculo } from '../types/modelos'
 import { Selecao } from '../components/Campos'
+import { Modal } from '../components/Modal'
 
 export default function EquipePage(){
   const [motoristas,setMotoristas]=useState<Motorista[]>([])
@@ -60,7 +61,8 @@ export default function EquipePage(){
         {!motorista.usuarioId&&motorista.ativo?<button className="table-action" onClick={()=>{setErro('');setDandoAcesso(motorista)}}>Criar acesso</button>:null}</div>
     </article>)}</section>:<Vazio titulo="Nenhum socorrista cadastrado" descricao="Cadastre o primeiro socorrista para vinculá-lo às ordens de serviço."/>}
 
-    {modal?<div className="modal-backdrop"><section className="modal" role="dialog" aria-modal="true" aria-label={editando?`Editar ${editando.nome}`:'Cadastrar socorrista'}><header><div><span className="eyebrow">Equipe</span><h2>{editando?'Editar socorrista':'Novo socorrista'}</h2></div><button aria-label="Fechar" onClick={fechar}>×</button></header>
+    {modal?<Modal etiqueta="Equipe" titulo={editando?'Editar socorrista':'Novo socorrista'}
+      nomeAcessivel={editando?`Editar ${editando.nome}`:'Cadastrar socorrista'} aoFechar={fechar}>
       <form onSubmit={salvar} className="form-grid two-columns" key={editando?.id??'novo'}>
         <label className="field field-wide"><span>Nome</span><input name="nome" defaultValue={editando?.nome} required/></label>
         <label className="field"><span>Telefone</span><input name="telefone" defaultValue={editando?.telefone}/></label>
@@ -71,20 +73,20 @@ export default function EquipePage(){
           opcoes={veiculos.map(v=>({valor:v.id,texto:v.identificacao}))}/>
         <label className="field field-wide"><span>Documento</span><input name="documento" defaultValue={editando?.documento}/></label>
         <div className="modal-actions field-wide"><button type="button" className="button button-ghost" onClick={fechar}>Cancelar</button><button className="button button-primary" disabled={salvando}>{salvando?'Salvando…':editando?'Salvar alterações':'Salvar socorrista'}</button></div>
-      </form></section></div>:null}
+      </form></Modal>:null}
 
-    {dandoAcesso?<div className="modal-backdrop"><section className="modal" role="dialog" aria-modal="true" aria-label={`Criar acesso para ${dandoAcesso.nome}`}><header><div><span className="eyebrow">{dandoAcesso.nome}</span><h2>Criar acesso</h2></div><button aria-label="Fechar" onClick={()=>setDandoAcesso(null)}>×</button></header>
+    {dandoAcesso?<Modal etiqueta={dandoAcesso.nome} titulo="Criar acesso" aoFechar={()=>setDandoAcesso(null)}>
       <p>{dandoAcesso.nome} vai poder registrar as próprias despesas e ver a comissão dele. O sistema gera uma senha provisória para você repassar.</p>
       <form onSubmit={criarAcesso} className="form-grid">
         <label className="field"><span>E-mail de acesso</span><input name="email" type="email" required/></label>
         <div className="modal-actions"><button type="button" className="button button-ghost" onClick={()=>setDandoAcesso(null)}>Cancelar</button><button className="button button-primary" disabled={salvando}>{salvando?'Criando…':'Criar acesso'}</button></div>
-      </form></section></div>:null}
+      </form></Modal>:null}
 
-    {acesso?<div className="modal-backdrop"><section className="modal" role="dialog" aria-modal="true" aria-label="Senha provisória gerada"><header><div><span className="eyebrow">{acesso.nome}</span><h2>Acesso criado</h2></div><button aria-label="Fechar" onClick={()=>setAcesso(null)}>×</button></header>
+    {acesso?<Modal etiqueta={acesso.nome} titulo="Acesso criado" aoFechar={()=>setAcesso(null)}>
       <p>Passe estes dados para {acesso.nome}. A senha aparece <strong>uma única vez</strong> e só serve para o primeiro acesso: o sistema obriga a troca antes de liberar qualquer tela.</p>
       <p className="senha-provisoria"><code>{acesso.email}</code></p>
       <p className="senha-provisoria"><code>{acesso.senhaProvisoria}</code></p>
       <div className="modal-actions"><button className="button button-primary" onClick={()=>setAcesso(null)}>Já anotei</button></div>
-    </section></div>:null}
+    </Modal>:null}
   </div>
 }
