@@ -89,8 +89,8 @@ export default function LancamentosPage() {
   }
 
   return <div className="page-enter">
-    <header className="page-heading"><div><span className="eyebrow">Financeiro operacional</span><h1>Entradas e saídas</h1><p>Extrato formado exclusivamente por receitas, contas a receber e despesas persistidas no backend.</p></div>
-      <div className="heading-total-with-action"><span><small>Saldo realizado filtrado</small><strong className={realizado>=0?'positive':'negative'}>{moeda(realizado)}</strong></span><button className="button button-primary" onClick={()=>setModal(true)}>+ Nova entrada ou saída</button></div></header>
+    <header className="page-heading"><div><span className="eyebrow">Financeiro operacional</span><h1>Extrato</h1><p>Extrato formado exclusivamente por receitas, contas a receber e despesas persistidas no backend.</p></div>
+      <div className="heading-total-with-action"><span><small>Saldo realizado filtrado</small><strong className={realizado>=0?'positive':'negative'}>{moeda(realizado)}</strong></span><button className="button button-primary" onClick={()=>setModal(true)}>+ Nova despesa</button></div></header>
     {mensagem?<div className="success-notice">{mensagem}</div>:null}
     <section className="panel"><div className="ledger-filters">
       <label><span>Competência</span><input aria-label="Competência" type="month" value={mes} onChange={e=>setMes(e.target.value)}/></label>

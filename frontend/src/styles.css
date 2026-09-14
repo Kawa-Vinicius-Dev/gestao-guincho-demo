@@ -427,3 +427,26 @@ tbody tr{transition:background-color .14s ease}
 /* Contraste da barra lateral: os rotulos de grupo davam 3.85:1 e o rodape 3.29:1
    sobre o navy, abaixo do minimo 4.5:1 do WCAG AA. Era assim desde antes do tema
    escuro - a barra sempre foi escura - e vale para os dois temas. */
+
+/* ===========================================================================
+   Faturamento x custo, para veiculo e para socorrista
+   ---------------------------------------------------------------------------
+   Duas barras por linha na mesma escala: a distancia entre elas e o resultado.
+   Substitui os graficos de metrica unica (custo so, resultado so), que mostravam
+   metade da conta.
+   =========================================================================== */
+.dashboard-tech .par-legenda{display:flex;align-items:center;gap:18px;margin:0 0 12px;color:var(--muted);font-size:11.5px}
+.dashboard-tech .par-legenda span{display:flex;align-items:center;gap:7px}
+.dashboard-tech .par-legenda i{width:9px;height:9px;border-radius:2px;flex:0 0 9px}
+.dashboard-tech .marca-faturamento,.dashboard-tech .par-faturamento{background:var(--blue-600)}
+.dashboard-tech .marca-custo,.dashboard-tech .par-custo{background:var(--red)}
+.dashboard-tech .par-legenda-resultado{margin-left:auto}
+.dashboard-tech .par-linha,.dashboard-tech .par-escala{display:grid;
+  grid-template-columns:minmax(84px,150px) minmax(0,1fr) minmax(92px,auto) minmax(92px,auto);gap:14px;align-items:center}
+.dashboard-tech .par-linha{padding:6px 0}
+.dashboard-tech .par-trilhos{display:grid;gap:3px}
+.dashboard-tech .par-trilho{height:9px}
+.dashboard-tech .par-trilho .barra-preenche{left:0}
+.dashboard-tech .par-valores{display:grid;gap:2px;text-align:right;font:500 11.5px/1.25 'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;color:var(--ink)}
+.dashboard-tech .par-valor-custo{color:var(--muted)}
+.dashboard-tech .par-resultado{text-align:right;font:600 12.5px/1 'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums}
