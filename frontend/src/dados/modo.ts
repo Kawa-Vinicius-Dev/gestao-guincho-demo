@@ -27,6 +27,8 @@ export type Modulo =
   | 'contratantes'
   | 'despesas'
   | 'receitas'
+  | 'dashboard'
+  | 'comissoes'
 
 const configurados = new Set(
   (import.meta.env.VITE_SUPABASE_MODULOS ?? '')
@@ -53,6 +55,7 @@ export function moduloNoSupabase(modulo: Modulo) {
 export function modulosLigados(): Modulo[] {
   const todos: Modulo[] = [
     'auth', 'veiculos', 'motoristas', 'categorias', 'contratantes', 'despesas', 'receitas',
+    'dashboard', 'comissoes',
   ]
   if (!autenticacaoNoSupabase()) return []
   return todos.filter(m => m === 'auth' || moduloNoSupabase(m))

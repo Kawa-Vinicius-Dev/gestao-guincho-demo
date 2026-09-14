@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
-import { api } from '../api/http'
+import { lerIndicadores } from '../dados/dashboard'
+import { lerExtrato } from '../dados/extrato'
 import { atualizarVeiculo, criarVeiculo, listarVeiculos } from '../dados/veiculos'
 import { Vazio } from '../components/EstadoPagina'
 import type { Dashboard, LancamentoFinanceiro, Veiculo } from '../types/modelos'
@@ -13,7 +14,7 @@ export default function FrotasPage(){
   const [mes,setMes]=useState(mesAtual),[veiculos,setVeiculos]=useState<Veiculo[]>([]),[financeiro,setFinanceiro]=useState<Dashboard|null>(null)
   const [lancamentos,setLancamentos]=useState<LancamentoFinanceiro[]>([]),[selecionado,setSelecionado]=useState(0),[modal,setModal]=useState(false),[mensagem,setMensagem]=useState('')
   const [editando,setEditando]=useState<Veiculo|null>(null),[salvando,setSalvando]=useState(false)
-  const carregar=useCallback(async()=>{const {inicio,fim}=intervalo(mes);try{const [v,d,l]=await Promise.all([listarVeiculos(),api<Dashboard>(`/api/dashboard?inicio=${inicio}&fim=${fim}`),api<LancamentoFinanceiro[]>(`/api/lancamentos?inicio=${inicio}&fim=${fim}`)]);setVeiculos(v);setFinanceiro(d);setLancamentos(l);setSelecionado(atual=>v.some(x=>x.id===atual)?atual:(v[0]?.id??0))}catch(e){setMensagem((e as Error).message)}},[mes])
+  const carregar=useCallback(async()=>{const {inicio,fim}=intervalo(mes);try{const [v,d,l]=await Promise.all([listarVeiculos(),lerIndicadores(inicio,fim),lerExtrato(inicio,fim)]);setVeiculos(v);setFinanceiro(d);setLancamentos(l);setSelecionado(atual=>v.some(x=>x.id===atual)?atual:(v[0]?.id??0))}catch(e){setMensagem((e as Error).message)}},[mes])
   useEffect(()=>{void carregar()},[carregar])
   const veiculo=veiculos.find(v=>v.id===selecionado)
   const resultado=financeiro?.resultadoPorVeiculo.find(r=>r.veiculoId===selecionado)

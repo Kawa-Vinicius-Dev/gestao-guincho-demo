@@ -1,5 +1,6 @@
 import { api } from '../api/http'
 import type { Receita } from '../types/modelos'
+import { invalidarCacheFinanceiro } from './dashboard'
 import { ou, supabase } from './cliente'
 import { moduloNoSupabase } from './modo'
 
@@ -111,6 +112,7 @@ export async function listarReceitas(): Promise<Receita[]> {
 }
 
 export async function criarReceita(dados: DadosReceita): Promise<Receita> {
+  invalidarCacheFinanceiro()
   if (!moduloNoSupabase('receitas')) {
     return api<Receita>('/api/receitas', { method: 'POST', body: JSON.stringify(dados) })
   }
@@ -122,6 +124,7 @@ export async function criarReceita(dados: DadosReceita): Promise<Receita> {
 }
 
 export async function atualizarReceita(id: number, dados: DadosReceita): Promise<Receita> {
+  invalidarCacheFinanceiro()
   if (!moduloNoSupabase('receitas')) {
     return api<Receita>(`/api/receitas/${id}`, { method: 'PUT', body: JSON.stringify(dados) })
   }
@@ -140,6 +143,7 @@ export async function atualizarReceita(id: number, dados: DadosReceita): Promise
  * a tela fecharia o dialogo e a linha continuaria na lista.
  */
 export async function excluirReceita(id: number): Promise<void> {
+  invalidarCacheFinanceiro()
   if (!moduloNoSupabase('receitas')) {
     await api(`/api/receitas/${id}`, { method: 'DELETE' })
     return

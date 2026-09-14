@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { api } from '../api/http'
+import { lerExtrato } from '../dados/extrato'
 import { aprovarDespesa, criarDespesa, pagarDespesa } from '../dados/despesas'
 import { listarCategorias, listarContratantes } from '../dados/cadastros'
 import { listarMotoristas } from '../dados/motoristas'
@@ -49,7 +50,7 @@ export default function LancamentosPage() {
   const carregar=useCallback(async()=>{
     const {inicio,fim}=intervalo(mes)
     setCarregando(true)
-    try{setLista(await api<LancamentoFinanceiro[]>(`/api/lancamentos?inicio=${inicio}&fim=${fim}`))}
+    try{setLista(await lerExtrato(inicio,fim))}
     catch(e){setMensagem((e as Error).message)}finally{setCarregando(false)}
   },[mes])
 

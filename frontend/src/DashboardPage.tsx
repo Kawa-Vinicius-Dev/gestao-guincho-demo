@@ -1,10 +1,9 @@
 import { useEffect,useState } from 'react'
 import { Link } from 'react-router-dom'
-import { api } from './api/http'
-import { resumirOrdensPagamentoPorto } from './api/porto'
+import { dashboardEmCache, lerDashboard, type ResumoPortoDashboard } from './dados/dashboard'
 import { FaixaDeIndicadores, PainelDaProducao, PainelDeGastos, PainelDeKm,
   PainelPorSocorrista, PainelPorVeiculo, ResumoPorto } from './dashboard/PaineisDoResultado'
-import type { Dashboard,ResumoOpsPorto } from './types/modelos'
+import type { Dashboard } from './types/modelos'
 
 
 const meses=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez']
@@ -23,25 +22,32 @@ function rotuloPeriodo(inicio:string,fim:string){
 
 export default function DashboardPage(){
   const [{inicio,fim},setPeriodo]=useState(mesCorrente)
-  const [porto,setPorto]=useState<ResumoOpsPorto|null>(null)
+  const [porto,setPorto]=useState<ResumoPortoDashboard|null>(null)
   const [financeiro,setFinanceiro]=useState<Dashboard|null>(null)
   const [erro,setErro]=useState('')
+  // Enquanto revalida, a tela fica de pe com os numeros de antes em vez de
+  // piscar o esqueleto a cada troca de periodo.
+  const [atualizando,setAtualizando]=useState(false)
 
   useEffect(()=>{
     if(!inicio||!fim||inicio>fim)return
-    const params=new URLSearchParams({dataInicio:inicio,dataFim:fim})
-    setErro('');setFinanceiro(null);setPorto(null)
-    resumirOrdensPagamentoPorto(params).then(setPorto)
-      .catch(e=>setErro(atual=>atual||`Porto: ${e.message}`))
-    api<Dashboard>(`/api/dashboard?inicio=${inicio}&fim=${fim}`).then(setFinanceiro)
-      .catch(e=>setErro(atual=>atual||`Financeiro: ${e.message}`))
+    let valeu=true
+    const guardado=dashboardEmCache(inicio,fim)
+    if(guardado){setFinanceiro(guardado.financeiro);setPorto(guardado.porto);setAtualizando(true)}
+    else{setFinanceiro(null);setPorto(null)}
+    setErro('')
+    lerDashboard(inicio,fim)
+      .then(r=>{if(!valeu)return;setFinanceiro(r.financeiro);setPorto(r.porto)})
+      .catch(e=>{if(valeu)setErro(e.message)})
+      .finally(()=>{if(valeu)setAtualizando(false)})
+    return()=>{valeu=false}
   },[inicio,fim])
 
   const margem=financeiro?.receitaRecebida
     ? financeiro.saldoRealizado/financeiro.receitaRecebida*100
     : 0
 
-  return <div className="page-enter dashboard-tech">
+  return <div className={atualizando?'page-enter dashboard-tech atualizando':'page-enter dashboard-tech'}>
     <header className="page-heading dashboard-heading">
       <div>
         <span className="eyebrow">Central financeira · {rotuloPeriodo(inicio,fim)}</span>
@@ -93,7 +99,9 @@ export default function DashboardPage(){
 
           <PainelDaProducao dados={financeiro}/>
         </>
-      : <div className="loading-card">Carregando indicadores financeiros oficiais…</div>}
+      : erro
+        ? <div className="loading-card">Não foi possível carregar os indicadores deste período.</div>
+        : <div className="loading-card">Carregando indicadores financeiros oficiais…</div>}
 
     {porto ? <ResumoPorto porto={porto}/> : null}
 

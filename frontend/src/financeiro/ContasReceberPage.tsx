@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { api } from '../api/http'
+import { listarContas, receberConta } from '../dados/contas'
 import { listarContratantes } from '../dados/cadastros'
 import { listarVeiculos } from '../dados/veiculos'
 import { StatusBadge } from '../components/StatusBadge'
@@ -23,7 +24,7 @@ export default function ContasReceberPage(){
   const buscaAdiada=useValorAdiado(pesquisa)
   useEffect(()=>{
     const controller=new AbortController();setCarregando(true)
-    api<ContaReceber[]>(`/api/contas-receber?${new URLSearchParams({...(status&&{status}),...(buscaAdiada&&{pesquisa:buscaAdiada})})}`,{signal:controller.signal})
+    listarContas({status,pesquisa:buscaAdiada,sinal:controller.signal})
       .then(setContas).catch(e=>{if(e.name!=='AbortError')setErro(e.message)})
       .finally(()=>{if(!controller.signal.aborted){setCarregando(false);setPrimeiraCarga(false)}})
     return()=>controller.abort()
@@ -38,7 +39,7 @@ export default function ContasReceberPage(){
   }
   async function receber(event:FormEvent<HTMLFormElement>){
     event.preventDefault();if(!selecionada)return;const f=new FormData(event.currentTarget)
-    try{await api(`/api/contas-receber/${selecionada.id}/receber`,{method:'PATCH',body:JSON.stringify({valorRecebido:Number(f.get('valorRecebido')),dataRecebimento:f.get('dataRecebimento')})});setModal(null);setVersao(v=>v+1)}catch(e){setErro((e as Error).message)}
+    try{await receberConta(selecionada.id,Number(f.get('valorRecebido')),String(f.get('dataRecebimento')));setModal(null);setVersao(v=>v+1)}catch(e){setErro((e as Error).message)}
   }
   return <div className="page-enter">
     <header className="page-heading"><div><span className="eyebrow">Financeiro</span><h1>Contas a receber</h1><p>Previsões, atrasos e recebimentos conciliados.</p></div>

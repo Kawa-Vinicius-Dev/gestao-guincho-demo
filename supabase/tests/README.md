@@ -10,6 +10,10 @@ Validam as migrations num Postgres local, sem depender de um projeto Supabase.
   as tentativas de escalada que precisam falhar.
 - `20_funcional.sql` — 34 asserções sobre os numeros: dashboard, extrato,
   comissao e pagamento de comissao conferidos contra valores calculados a mao.
+- `30_financeiro.sql` — 33 asserções sobre as regras que mexem em dinheiro:
+  recorte de periodo e suas bordas, atraso derivado do vencimento, despesa nao
+  aprovada fora do resultado, custo do km congelado no registro, producao e
+  comissao, resumo Porto (previsto x programado x recebido) e periodo vazio.
 
 ## Rodar
 

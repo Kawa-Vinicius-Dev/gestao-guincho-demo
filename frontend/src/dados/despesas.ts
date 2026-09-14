@@ -1,5 +1,6 @@
 import { api } from '../api/http'
 import type { Despesa } from '../types/modelos'
+import { invalidarCacheFinanceiro } from './dashboard'
 import { ou, supabase, usuarioAtualId } from './cliente'
 import { moduloNoSupabase } from './modo'
 
@@ -116,6 +117,10 @@ export async function listarDespesas(): Promise<Despesa[]> {
 }
 
 export async function criarDespesa(dados: DadosDespesa): Promise<Despesa> {
+  // Toda escrita que mexe em dinheiro derruba o cache do dashboard: servir por
+  // ate um minuto um total que a propria pessoa acabou de alterar e pior do que
+  // esperar a consulta.
+  invalidarCacheFinanceiro()
   if (!moduloNoSupabase('despesas')) {
     return api<Despesa>('/api/despesas', { method: 'POST', body: JSON.stringify(dados) })
   }
@@ -147,6 +152,7 @@ export async function criarDespesa(dados: DadosDespesa): Promise<Despesa> {
 }
 
 export async function aprovarDespesa(id: number): Promise<void> {
+  invalidarCacheFinanceiro()
   if (!moduloNoSupabase('despesas')) {
     await api(`/api/despesas/${id}/aprovar`, { method: 'PATCH' })
     return
@@ -160,6 +166,7 @@ export async function aprovarDespesa(id: number): Promise<void> {
 export async function pagarDespesa(
   id: number, dataPagamento: string, formaPagamento?: string | null,
 ): Promise<void> {
+  invalidarCacheFinanceiro()
   if (!moduloNoSupabase('despesas')) {
     await api(`/api/despesas/${id}/pagar`, {
       method: 'PATCH', body: JSON.stringify({ dataPagamento, formaPagamento }),

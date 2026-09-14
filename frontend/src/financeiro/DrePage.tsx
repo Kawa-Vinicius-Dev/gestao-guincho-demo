@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { api } from '../api/http'
+import { lerIndicadores } from '../dados/dashboard'
 import { baixarRelatorioCsv } from '../api/relatorios'
 import type { Dashboard } from '../types/modelos'
 import { moeda } from '../utils/formatadores'
@@ -16,7 +16,7 @@ export default function DrePage() {
   const [exportando,setExportando]=useState(false)
   useEffect(()=>{
     if(!inicio||!fim||inicio>fim)return
-    api<Dashboard>(`/api/dashboard?inicio=${inicio}&fim=${fim}`).then(setFinanceiro).catch(e=>setErro(e.message))
+    lerIndicadores(inicio,fim).then(setFinanceiro).catch(e=>setErro(e.message))
   },[inicio,fim])
   const calculo = useMemo(() => {
     const receitaBruta=financeiro?.receitaRecebida??0

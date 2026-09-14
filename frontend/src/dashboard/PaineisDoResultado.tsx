@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { FaturamentoECusto, GastosPorCategoria, ProporcaoKm, ProporcaoServicos } from '../components/Graficos'
-import type { Dashboard, ResumoOpsPorto } from '../types/modelos'
+import type { ResumoPortoDashboard } from '../dados/dashboard'
+import type { Dashboard } from '../types/modelos'
 import { moeda, percentual } from '../utils/formatadores'
 
 /**
@@ -176,8 +177,14 @@ export function PainelPorVeiculo({ dados }: { dados: Dashboard }) {
 }
 
 
-/** Faturamento Porto fica fora do caixa ate o recebimento confirmado. */
-export function ResumoPorto({ porto }: { porto: ResumoOpsPorto }) {
+/**
+ * Faturamento Porto fica fora do caixa ate o recebimento confirmado.
+ *
+ * O tipo pede os quatro numeros que este bloco mostra, e nao o resumo inteiro da
+ * conciliacao: exigir vinte e dois campos para ler quatro obrigaria quem chama a
+ * buscar dezoito que ninguem desenha.
+ */
+export function ResumoPorto({ porto }: { porto: ResumoPortoDashboard }) {
   return <section className="porto-finance-summary" aria-label="Faturamento Porto">
     <header>
       <div><span className="eyebrow">Porto Seguro</span><h2>Faturamento separado do caixa</h2></div>

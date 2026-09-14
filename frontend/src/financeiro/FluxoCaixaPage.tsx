@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { api } from '../api/http'
+import { lerExtrato } from '../dados/extrato'
 import { Carregando, Vazio } from '../components/EstadoPagina'
 import type { LancamentoFinanceiro } from '../types/modelos'
 import { data, moeda } from '../utils/formatadores'
@@ -9,7 +9,7 @@ const intervalo=(mes:string)=>{const [ano,m]=mes.split('-').map(Number);return {
 
 export default function FluxoCaixaPage(){
   const [mes,setMes]=useState(mesAtual),[lancamentos,setLancamentos]=useState<LancamentoFinanceiro[]>([]),[erro,setErro]=useState(''),[carregando,setCarregando]=useState(true)
-  const carregar=useCallback(async()=>{setCarregando(true);const {inicio,fim}=intervalo(mes);try{setLancamentos(await api<LancamentoFinanceiro[]>(`/api/lancamentos?inicio=${inicio}&fim=${fim}`));setErro('')}catch(e){setErro((e as Error).message)}finally{setCarregando(false)}},[mes])
+  const carregar=useCallback(async()=>{setCarregando(true);const {inicio,fim}=intervalo(mes);try{setLancamentos(await lerExtrato(inicio,fim));setErro('')}catch(e){setErro((e as Error).message)}finally{setCarregando(false)}},[mes])
   useEffect(()=>{void carregar()},[carregar])
   const realizados=useMemo(()=>lancamentos.filter(item=>item.realizado),[lancamentos])
   const saldo=realizados.reduce((total,item)=>total+(item.tipo==='RECEITA'?item.valor:-item.valor),0)
