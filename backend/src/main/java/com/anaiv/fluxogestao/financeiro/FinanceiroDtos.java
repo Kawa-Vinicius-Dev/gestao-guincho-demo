@@ -62,6 +62,13 @@ public final class FinanceiroDtos {
 
     public record ResultadoVeiculo(Long veiculoId, String veiculo, BigDecimal receitas, BigDecimal despesas,
         BigDecimal resultado, BigDecimal kmMorto, BigDecimal custoKmMorto) {}
+    /**
+     * Uma categoria de despesa no periodo. A participacao vem pronta do servidor
+     * porque ela e sobre o total de despesa paga, e a tela nao tem esse total
+     * separado do que ja mostra.
+     */
+    public record GastoPorCategoria(Long categoriaId, String categoria, BigDecimal valor, BigDecimal participacao) {}
+
     public record DashboardResponse(BigDecimal receitaRecebida, BigDecimal receitaPrevista,
         BigDecimal totalAtrasado, BigDecimal despesasPagas, BigDecimal despesasPrevistas,
         BigDecimal saldoRealizado, BigDecimal saldoProjetado,
@@ -73,6 +80,8 @@ public final class FinanceiroDtos {
         BigDecimal producaoPendente, long servicosPendentes, long servicosDoPeriodo,
         /* Comissao ja devida sobre servicos pagos, mas ainda nao repassada ao socorrista. */
         BigDecimal comissaoAPagar,
+        /* Para onde o dinheiro foi: despesa paga somada por categoria, da maior para a menor. */
+        List<GastoPorCategoria> despesasPorCategoria,
         List<ResultadoSocorrista> resultadoPorSocorrista) {}
     /** Producao anda colada na comissao: ver uma sem a outra esconde metade do custo do servico. */
     public record ResultadoSocorrista(Long motoristaId, String socorrista, long servicos,

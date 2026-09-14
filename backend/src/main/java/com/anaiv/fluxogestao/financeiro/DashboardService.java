@@ -119,11 +119,32 @@ public class DashboardService {
             return new ResultadoSocorrista(m.id(),m.nome(),servicos.size(),producao,comissao,gastos,comissao.add(gastos));
         }).filter(r->r.servicos()>0||r.despesas().signum()!=0).toList();
 
+        // Para onde o dinheiro foi. Mesma base do numero grande de "despesas pagas"
+        // logo acima - aprovada e paga -, so que quebrada por categoria, para a
+        // pergunta "o que mais pesou no mes" ter resposta sem abrir outra tela.
+        // Agrupa a lista que ja esta em memoria: nao ha consulta nova.
+        List<GastoPorCategoria> porCategoria=despesas.stream()
+            .filter(Despesa::isAprovada)
+            .filter(d->d.getStatus()==StatusDespesa.PAGO)
+            .filter(d->d.getCategoria()!=null)
+            .collect(java.util.stream.Collectors.groupingBy(Despesa::getCategoria,
+                java.util.stream.Collectors.reducing(ZERO,Despesa::getValor,BigDecimal::add)))
+            .entrySet().stream()
+            .map(e->new GastoPorCategoria(e.getKey().getId(),e.getKey().getNome(),e.getValue(),
+                participacao(e.getValue(),pagas)))
+            .sorted(java.util.Comparator.comparing(GastoPorCategoria::valor).reversed())
+            .toList();
+
         return new DashboardResponse(recebida,prevista,atrasada,pagas,despPrev,realizado,projetado,
             importados,kmTotal,kmRem,kmMorto,custoMorto,resultados,
             producaoPaga,comissaoSobreProducao,producaoPendente,pendentes.size(),servicosDoPeriodo.size(),
-            comissaoAPagar,porPessoa);
+            comissaoAPagar,porCategoria,porPessoa);
     }
     private boolean entre(LocalDate data,LocalDate inicio,LocalDate fim){return data!=null&&!data.isBefore(inicio)&&!data.isAfter(fim);}
+    /** Quanto a categoria representa do total pago, em pontos percentuais. Total zero da zero. */
+    private BigDecimal participacao(BigDecimal valor,BigDecimal total){
+        if(total==null||total.signum()==0)return ZERO;
+        return valor.multiply(new BigDecimal("100")).divide(total,1,java.math.RoundingMode.HALF_UP);
+    }
     private BigDecimal soma(List<BigDecimal> valores){return valores.stream().filter(Objects::nonNull).reduce(ZERO,BigDecimal::add);}
 }

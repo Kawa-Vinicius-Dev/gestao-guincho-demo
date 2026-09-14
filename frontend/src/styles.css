@@ -909,3 +909,35 @@ tbody tr{transition:background-color .14s ease}
   margin:0;color:var(--ink);font-size:inherit;font-weight:400;letter-spacing:normal;text-transform:none}
 .app-shell .field>.campo-arquivo{display:flex}
 .app-shell .field>.campo-valor{display:block}
+
+/* ===========================================================================
+   Atalhos do menu
+   ---------------------------------------------------------------------------
+   O menu tem dezoito itens e quem opera usa de tres a cinco o dia inteiro. A
+   estrela de cada linha fixa o item num bloco no topo; a lista e da pessoa e
+   fica no banco (ver FavoritoMenuController).
+   =========================================================================== */
+.nav-item{position:relative;display:block}
+/* Espaco a direita do link para a estrela morar, sem passar por cima do texto. */
+.nav-item>a{padding-right:34px}
+.nav-estrela{
+  position:absolute;right:4px;top:50%;transform:translateY(-50%);
+  display:grid;place-items:center;width:26px;height:26px;
+  border:0;border-radius:6px;background:transparent;
+  color:#7d93a8;cursor:pointer;
+  /* Invisivel ate a linha ser tocada pelo mouse ou pelo teclado: dezoito
+     estrelas acesas ao mesmo tempo competiriam com os nomes das telas. */
+  opacity:0;transition:opacity .14s ease,color .14s ease}
+.nav-estrela svg{width:15px;height:15px}
+.nav-item:hover .nav-estrela,.nav-estrela:focus-visible,.nav-estrela.fixada{opacity:1}
+.nav-estrela:hover{color:var(--cyan);background:rgba(255,255,255,.07)}
+.nav-estrela.fixada{color:var(--cyan)}
+/* No toque nao existe hover: a estrela fica sempre visivel. */
+@media(pointer:coarse){.nav-estrela{opacity:1}}
+@media(prefers-reduced-motion:reduce){.nav-estrela{transition:none}}
+
+.nav-atalhos{padding-bottom:var(--espaco-1);border-bottom:1px solid rgba(255,255,255,.09)}
+.nav-atalhos-titulo{
+  display:block;padding:11px 12px 10px;
+  color:var(--cyan);font:500 8px 'IBM Plex Mono',monospace;
+  letter-spacing:.14em;text-transform:uppercase}

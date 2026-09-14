@@ -48,6 +48,9 @@ export const servidor = setupServer(
   http.get('/api/receitas', () => HttpResponse.json([])),
   http.get('/api/despesas', () => HttpResponse.json(despesas)),
   http.get('/api/despesas-recorrentes', () => HttpResponse.json([])),
+  // Atalhos do menu: a barra lateral pede assim que monta, em toda tela.
+  http.get('/api/favoritos', () => HttpResponse.json({ rotas: [] })),
+  http.put('/api/favoritos', async ({ request }) => HttpResponse.json(await request.json())),
   http.get('/api/quilometragens', () => HttpResponse.json(quilometragens)),
   http.get('/api/veiculos', () => HttpResponse.json(veiculos)),
   http.get('/api/motoristas', () => HttpResponse.json([])),

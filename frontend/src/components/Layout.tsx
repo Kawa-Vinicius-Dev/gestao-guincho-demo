@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { listarFavoritos, salvarFavoritos } from '../api/favoritos'
 import { useAuth } from '../auth/AuthContext'
 
 const itens = [
@@ -22,6 +23,9 @@ const itens = [
   ['/porto/relatorios', 'Relatórios Porto', true, 'porto'],
   ['/configuracoes', 'Configurações', true, 'sistema'],
 ] as const
+/** Mesmo teto do backend (FavoritoMenuController.MAXIMO): o topo do menu tem de continuar curto. */
+const LIMITE_FAVORITOS = 8
+
 const grupos = { financeiro: 'Financeiro', operacao: 'Operação', equipe: 'Equipe', porto: 'Porto Seguro', sistema: 'Sistema' } as const
 
 /**
@@ -50,6 +54,36 @@ const icones: Record<string,string> = {
   '/porto/relatorios':'M6 3h8l4 4v14H6zM14 3v4h4M9 17v-3M12 17v-6M15 17v-2',
   '/configuracoes':'M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1',
 }
+/** Estrela de fixar: cheia quando o atalho esta na lista, contorno quando nao. */
+function Estrela({fixado}:{fixado:boolean}){
+  return <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 9.7l5.9-.9z"
+      fill={fixado?'currentColor':'none'} stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/>
+  </svg>
+}
+
+/**
+ * Uma linha do menu: o link e, colada nele, a estrela que fixa ou solta o atalho.
+ * A estrela e um botao separado de proposito - dentro do link, clicar nela
+ * navegaria junto.
+ */
+function ItemDoMenu({rota,titulo,fixado,aoFixar,aoNavegar}:{
+  rota:string; titulo:string; fixado:boolean;
+  aoFixar:(rota:string)=>void; aoNavegar:()=>void
+}){
+  return <span className="nav-item">
+    <NavLink to={rota} end={rota==='/'} onClick={aoNavegar}>
+      <Icone rota={rota}/><span>{titulo}</span>
+    </NavLink>
+    <button type="button" className={fixado?'nav-estrela fixada':'nav-estrela'}
+      aria-pressed={fixado}
+      aria-label={fixado?`Tirar ${titulo} dos atalhos`:`Fixar ${titulo} nos atalhos`}
+      onClick={()=>aoFixar(rota)}>
+      <Estrela fixado={fixado}/>
+    </button>
+  </span>
+}
+
 function Icone({rota}:{rota:string}){
   return <svg className="nav-icone" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
     <path d={icones[rota]??''}/>
@@ -84,6 +118,31 @@ export function Layout() {
   const grupoAtual=(itens.find(([rota])=>rota==='/'?pathname==='/':pathname.startsWith(rota))?.[3]
     ?? 'financeiro') as keyof typeof grupos
 
+  /**
+   * Atalhos da pessoa, vindos do backend. Enquanto nao chegam a lista e nula, e o
+   * bloco nao aparece: piscar uma secao vazia e depois preenche-la e pior do que
+   * ela chegar pronta um instante depois.
+   */
+  const [favoritos,setFavoritos]=useState<string[]|null>(null)
+  useEffect(()=>{listarFavoritos().then(setFavoritos).catch(()=>setFavoritos([]))},[])
+
+  function alternarFavorito(rota:string){
+    const atuais=favoritos??[]
+    const novos=atuais.includes(rota)?atuais.filter(r=>r!==rota):[...atuais,rota].slice(0,LIMITE_FAVORITOS)
+    // Pinta na hora e manda depois: fixar um atalho nao deve esperar a rede. Se o
+    // servidor recusar, volta ao que estava em vez de mentir que salvou.
+    setFavoritos(novos)
+    salvarFavoritos(novos).then(setFavoritos).catch(()=>setFavoritos(atuais))
+  }
+
+  // Favorito de um item que o perfil nao enxerga, ou de uma rota que saiu do
+  // sistema, e ignorado aqui em vez de virar um link quebrado no topo do menu.
+  const permitidos=itens.filter(([, ,somenteAdmin])=>admin||!somenteAdmin)
+  const fixados=new Set(favoritos??[])
+  const atalhos=(favoritos??[])
+    .map(rota=>permitidos.find(([to])=>to===rota))
+    .filter((item):item is typeof permitidos[number] => item!==undefined)
+
   const [grupoAberto,setGrupoAberto]=useState<string>(grupoAtual)
   const [rotaVista,setRotaVista]=useState(pathname)
   // Navegou para outra area: o grupo dela assume. Durante a renderizacao mesmo,
@@ -98,6 +157,16 @@ export function Layout() {
         <div><strong>J M S</strong></div>
       </div>
       <nav className="primary-nav" aria-label="Navegação principal">
+        {atalhos.length
+          ? <div className="nav-group nav-atalhos">
+              <span className="nav-atalhos-titulo">Atalhos</span>
+              <div className="nav-group-itens">
+                {atalhos.map(([to,label])=>
+                  <ItemDoMenu key={to} rota={to} titulo={label} fixado
+                    aoFixar={alternarFavorito} aoNavegar={()=>setAberto(false)}/>)}
+              </div>
+            </div>
+          : null}
         {(Object.keys(grupos) as Array<keyof typeof grupos>).map(grupo => {
           const disponiveis=itens.filter(([, ,somenteAdmin,itemGrupo])=>itemGrupo===grupo&&(admin||!somenteAdmin))
           if(!disponiveis.length)return null
@@ -110,9 +179,8 @@ export function Layout() {
             </button>
             <div className="nav-group-itens" hidden={!expandido}>
               {disponiveis.map(([to,label])=>
-                <NavLink key={to} to={to} end={to==='/'} onClick={()=>setAberto(false)}>
-                  <Icone rota={to}/><span>{label}</span>
-                </NavLink>)}
+                <ItemDoMenu key={to} rota={to} titulo={label} fixado={fixados.has(to)}
+                  aoFixar={alternarFavorito} aoNavegar={()=>setAberto(false)}/>)}
             </div>
           </div>
         })}
