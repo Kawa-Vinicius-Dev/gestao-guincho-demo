@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { api } from '../api/http'
-import { Campo, Selecao } from '../components/Campos'
-import { Vazio } from '../components/EstadoPagina'
-import type { Categoria, Contratante, Despesa, LancamentoFinanceiro, Motorista, Veiculo } from '../types/modelos'
-import { data, moeda } from '../utils/formatadores'
 import { CampoValor } from '../components/CampoValor'
+import { Campo, Selecao } from '../components/Campos'
 import { AcoesModal, Modal } from '../components/Modal'
+import type { Categoria, Contratante, Despesa, LancamentoFinanceiro, Motorista, Veiculo } from '../types/modelos'
+import { moeda } from '../utils/formatadores'
+import { TabelaExtrato } from './extrato/TabelaExtrato'
 
 type TipoLancamento = 'RECEITA' | 'DESPESA'
 
@@ -109,7 +109,7 @@ export default function LancamentosPage() {
         opcoes={veiculos.map(v=>({valor:v.id,texto:v.identificacao}))}/>
       <Campo rotulo="Buscar" className="filter-grow"><input value={pesquisa} onChange={e=>setPesquisa(e.target.value)} placeholder="Descrição, categoria ou protocolo"/></Campo>
     </div>
-    {carregando?<p className="loading-card">Carregando lançamentos oficiais…</p>:filtrados.length?<div className="table-scroll"><table><thead><tr><th>Data financeira</th><th>Descrição</th><th>Categoria</th><th>Veículo</th><th>Situação</th><th>Valor</th><th/></tr></thead><tbody>{filtrados.map(item=><tr key={item.id}><td>{data(item.data)}</td><td><strong>{item.descricao}</strong><small>{item.origem}{item.protocolo?` · ${item.protocolo}`:''}</small></td><td>{item.categoria}</td><td>{item.veiculo??'—'}</td><td><span className={`ledger-status ${item.realizado?'ledger-recebido':'ledger-pendente'}`}>{item.realizado?(item.tipo==='RECEITA'?'Recebido':'Pago'):'Previsto'}</span></td><td className={item.tipo==='RECEITA'?'positive':'negative'}><strong>{item.tipo==='RECEITA'?'+':'−'} {moeda(item.valor)}</strong></td><td>{item.tipo==='DESPESA'&&!item.realizado&&item.status!=='REJEITADO'?<button className="table-action" onClick={()=>void pagar(item)}>Registrar pagamento</button>:null}</td></tr>)}</tbody></table></div>:<Vazio titulo="Nenhum lançamento" descricao="O backend não possui movimentos nesta competência."/>}
+    <TabelaExtrato itens={filtrados} carregando={carregando} aoPagar={item=>void pagar(item)}/>
     </section>
     {modal?<Modal etiqueta="Persistência real" titulo="Novo lançamento" className="modal-financial"
       aoFechar={()=>setModal(false)}>
