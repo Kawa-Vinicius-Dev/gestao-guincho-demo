@@ -133,8 +133,14 @@ function Painel({ rotulo, opcoes, ancora, selecionado, aoEscolher, aoFechar }: P
   })
 
   // A busca encurta a lista: o destaque volta para o topo para nao apontar para
-  // uma linha que saiu de vista.
-  useEffect(() => { setDestaque(0) }, [busca])
+  // uma linha que saiu de vista. So a partir da segunda busca, porem: na
+  // montagem este efeito jogava fora o destaque calculado acima e todo campo
+  // abria na primeira linha, nunca na opcao que ja estava escolhida.
+  const primeiraBusca = useRef(true)
+  useEffect(() => {
+    if (primeiraBusca.current) { primeiraBusca.current = false; return }
+    setDestaque(0)
+  }, [busca])
 
   useLayoutEffect(() => {
     // Sem foco dentro do painel o Esc e as setas continuariam indo para a pagina.
