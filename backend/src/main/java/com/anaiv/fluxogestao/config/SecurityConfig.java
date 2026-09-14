@@ -85,6 +85,9 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
                 .requestMatchers("/error").permitAll()
+                // Ping do agendador externo, que mantem o servico acordado no plano
+                // gratuito do Render. Publico porque robo nao faz login.
+                .requestMatchers(HttpMethod.GET, "/api/health").permitAll()
                 .anyRequest().authenticated()
             )
             .exceptionHandling(errors -> errors
