@@ -124,16 +124,20 @@ export default function PortoOrdensServicoPage() {
         <button className="button button-primary">Aplicar filtros</button>
       </form>
 
-      <label className="check-field">
-        <input type="checkbox" checked={somenteNaoIdentificados}
-          onChange={e => void alternarRecorte('semSocorrista', e.target.checked)}/>
-        {' '}Somente OS sem socorrista
-      </label>
-      <label className="check-field">
-        <input type="checkbox" checked={somenteSemQra}
-          onChange={e => void alternarRecorte('semQra', e.target.checked)}/>
-        {' '}Somente OS sem QRA
-      </label>
+      {/* Recortes que o servidor resolve, e por isso ficam junto dos filtros e
+          nao dentro do formulario: marcar um deles ja refaz a consulta. */}
+      <div className="filtros-marcadores">
+        <label className="check-field">
+          <input type="checkbox" checked={somenteNaoIdentificados}
+            onChange={e => void alternarRecorte('semSocorrista', e.target.checked)}/>
+          <span>Somente OS sem socorrista</span>
+        </label>
+        <label className="check-field">
+          <input type="checkbox" checked={somenteSemQra}
+            onChange={e => void alternarRecorte('semQra', e.target.checked)}/>
+          <span>Somente OS sem QRA</span>
+        </label>
+      </div>
 
       {somenteNaoIdentificados
         ? <p className="empty-inline">

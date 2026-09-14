@@ -1081,3 +1081,28 @@ tbody tr{transition:background-color .14s ease}
 /* A linha de filtros vem logo abaixo do seletor: a borda de cima seria uma
    segunda divisoria a poucos pixels da primeira. */
 .app-shell .porto-view-switch+.ledger-filters{border-top:0}
+
+/* ===========================================================================
+   Caixas de marcar
+   ---------------------------------------------------------------------------
+   As duas das Ordens de servico eram <label> soltos entre a linha de filtros e
+   a tabela: recuo zero, texto de 11px e a caixa no tamanho cru do navegador,
+   com 13px de lado. Ficavam encostadas na borda do cartao, sem separacao de
+   nada, parecendo sobra de marcacao.
+   =========================================================================== */
+.app-shell .check-field{
+  display:inline-flex;align-items:center;gap:9px;
+  min-height:34px;padding:0 4px;
+  color:var(--ink);font-size:13px;font-weight:500;cursor:pointer}
+.app-shell .check-field input[type=checkbox]{
+  width:17px;height:17px;flex:0 0 17px;margin:0;cursor:pointer;
+  /* accent-color deixa o navegador desenhar a caixa nativa com a cor do tema:
+     e a marca do sistema operacional, que a pessoa reconhece, no nosso azul. */
+  accent-color:var(--blue-600)}
+.app-shell .check-field:hover{color:var(--blue-600)}
+
+/* Faixa dos recortes, entre os filtros e a tabela. */
+.app-shell .filtros-marcadores{
+  display:flex;flex-wrap:wrap;align-items:center;gap:var(--espaco-1) var(--espaco-3);
+  padding:var(--espaco-1) var(--painel-pad);
+  border-bottom:1px solid var(--line);background:var(--superficie-hover)}
