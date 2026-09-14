@@ -10,6 +10,11 @@ Validam as migrations num Postgres local, sem depender de um projeto Supabase.
   as tentativas de escalada que precisam falhar.
 - `20_funcional.sql` — 34 asserções sobre os numeros: dashboard, extrato,
   comissao e pagamento de comissao conferidos contra valores calculados a mao.
+- `40_ataque.sql` — 52 asserções adversariais: tudo roda direto no banco, como
+  quem abre o console do navegador e usa a anon key na mao. A interface nao
+  participa. Visitante sem login, funcionario em operacao de administrador,
+  troca de id, arquivos alheios e as tentativas de contornar a segregacao de
+  funcoes escrevendo direto na coluna.
 - `30_financeiro.sql` — 33 asserções sobre as regras que mexem em dinheiro:
   recorte de periodo e suas bordas, atraso derivado do vencimento, despesa nao
   aprovada fora do resultado, custo do km congelado no registro, producao e

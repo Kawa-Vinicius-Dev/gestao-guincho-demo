@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { api } from '../api/http'
+import { trocarSenha } from '../dados/sessao'
 import { useAuth } from '../auth/AuthContext'
 
 export default function TrocarSenhaPage(){
@@ -7,7 +7,7 @@ export default function TrocarSenhaPage(){
   const [erro,setErro]=useState(''),[trocada,setTrocada]=useState(false),[enviando,setEnviando]=useState(false)
   async function trocar(e:FormEvent<HTMLFormElement>){
     e.preventDefault();const f=new FormData(e.currentTarget);setErro('');setEnviando(true)
-    try{await api('/api/auth/senha',{method:'PUT',body:JSON.stringify({senhaAtual:f.get('senhaAtual'),novaSenha:f.get('novaSenha')})});setTrocada(true)}
+    try{await trocarSenha(String(f.get('senhaAtual')),String(f.get('novaSenha')));setTrocada(true)}
     catch(x){setErro((x as Error).message)}finally{setEnviando(false)}
   }
   return <main className="login-page">

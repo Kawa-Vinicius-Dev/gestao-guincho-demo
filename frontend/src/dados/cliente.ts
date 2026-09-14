@@ -27,6 +27,7 @@ export function supabase(): SupabaseClient {
       'Conexão com o banco não configurada. Avise o administrador.', 500,
     )
   }
+  recusarChaveDeServico(chave)
   cliente = createClient(url, chave, {
     auth: {
       // A sessao antiga vivia em sessionStorage e terminava ao fechar a aba.
@@ -55,6 +56,41 @@ export async function usuarioAtualId(): Promise<string> {
   if (!id) throw new ApiError('Sessão expirada. Entre novamente.', 401)
   return id
 }
+
+/**
+ * Recusa subir com uma chave de servico.
+ *
+ * Tudo que comeca com VITE_ vai para o bundle que qualquer visitante baixa. Se
+ * alguem colar a service_role em VITE_SUPABASE_ANON_KEY — um erro de copiar e
+ * colar entre dois campos vizinhos no painel —, o sistema funcionaria
+ * perfeitamente, e por isso ninguem notaria: a chave ignora RLS, entao todas as
+ * telas abririam. O vazamento so apareceria quando alguem lesse o bundle.
+ *
+ * Duas formas de chave: as novas trazem o prefixo `sb_secret_`; as classicas sao
+ * JWT com `"role":"service_role"` no payload, legivel sem verificar assinatura,
+ * porque base64 nao e cifra.
+ */
+function recusarChaveDeServico(chave: string) {
+  const parece = (texto: string) =>
+    texto.startsWith('sb_secret_') || texto.includes('service_role')
+
+  if (parece(chave)) throw new ApiError(erroDeChaveDeServico, 500)
+
+  const payload = chave.split('.')[1]
+  if (!payload) return
+  try {
+    if (parece(atob(payload.replace(/-/g, '+').replace(/_/g, '/')))) {
+      throw new ApiError(erroDeChaveDeServico, 500)
+    }
+  } catch (erro) {
+    // Payload que nao e base64 valido nao e uma chave de servico; seguir.
+    if (erro instanceof ApiError) throw erro
+  }
+}
+
+const erroDeChaveDeServico =
+  'Configuração insegura: a chave de serviço não pode ser usada no navegador. ' +
+  'Use a chave anon/publishable.'
 
 /** Usado pelos testes entre um caso e outro. */
 export function esquecerCliente() {

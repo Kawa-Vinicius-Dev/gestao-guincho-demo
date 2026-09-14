@@ -1,6 +1,11 @@
 export type Perfil = 'ADMINISTRADOR' | 'FUNCIONARIO'
-export interface Usuario { id: number; nome: string; email: string; perfil: Perfil; ativo?: boolean; senhaProvisoria?: boolean }
-export interface SenhaRedefinida { usuarioId: number; nome: string; email: string; senhaProvisoria: string }
+/**
+ * `id` aceita numero ou texto: no backend antigo era o id da tabela `usuarios`,
+ * no Supabase e o uuid de auth.users. Nenhuma tela exibe esse valor — ele so
+ * viaja em rota e comparacao —, entao os dois convivem durante a migracao.
+ */
+export interface Usuario { id: number | string; nome: string; email: string; perfil: Perfil; ativo?: boolean; senhaProvisoria?: boolean }
+export interface SenhaRedefinida { usuarioId: number | string; nome: string; email: string; senhaProvisoria: string }
 export interface Veiculo { id: number; identificacao: string; placa: string; modelo?: string; custoPorKm: number; siglaPorto?: string; ativo: boolean }
 export interface Contratante { id: number; nome: string; documento?: string; ativo: boolean }
 export interface Categoria { id: number; nome: string; tipo: 'RECEITA' | 'DESPESA'; ativo: boolean }

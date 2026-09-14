@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { api } from '../api/http'
 import { criarCategoria, criarContratante, listarCategorias, listarContratantes } from '../dados/cadastros'
+import { trocarSenha } from '../dados/sessao'
 import { baixarCopiaDosDados } from '../api/porto'
 import { aplicarTema, temaAtual, type Tema } from '../tema'
 import type { Categoria, Contratante, SenhaRedefinida, Usuario } from '../types/modelos'
@@ -39,7 +40,7 @@ export default function ConfiguracoesPage(){
   async function copiar(valor:string){try{await navigator.clipboard.writeText(valor);setCopiada(true)}catch{setCopiada(false)}}
   async function senha(e:FormEvent<HTMLFormElement>){e.preventDefault();const formulario=e.currentTarget;const f=new FormData(formulario)
     setErro('');setMensagem('')
-    try{await api('/api/auth/senha',{method:'PUT',body:JSON.stringify({senhaAtual:f.get('senhaAtual'),novaSenha:f.get('novaSenha')})})
+    try{await trocarSenha(String(f.get('senhaAtual')),String(f.get('novaSenha')))
       formulario.reset();setMensagem('Senha alterada. Os acessos abertos em outros dispositivos foram encerrados.')}
     catch(x){setErro((x as Error).message)}
   }
