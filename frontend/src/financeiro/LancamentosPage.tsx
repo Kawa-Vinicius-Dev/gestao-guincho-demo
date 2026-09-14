@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { api } from '../api/http'
+import { aprovarDespesa, criarDespesa, pagarDespesa } from '../dados/despesas'
+import { listarCategorias, listarContratantes } from '../dados/cadastros'
+import { listarMotoristas } from '../dados/motoristas'
+import { listarVeiculos } from '../dados/veiculos'
 import { CampoValor } from '../components/CampoValor'
 import { Campo, Selecao } from '../components/Campos'
 import { AcoesModal, Modal } from '../components/Modal'
@@ -53,8 +57,8 @@ export default function LancamentosPage() {
   useEffect(()=>{
     let ativo=true
     Promise.all([
-      api<Categoria[]>('/api/categorias'),api<Veiculo[]>('/api/veiculos'),
-      api<Motorista[]>('/api/motoristas'),api<Contratante[]>('/api/contratantes'),
+      listarCategorias(),listarVeiculos(),
+      listarMotoristas(),listarContratantes(),
     ]).then(([c,v,m,co])=>{if(ativo){setCategorias(c);setVeiculos(v);setMotoristas(m);setContratantes(co)}})
       .catch(e=>{if(ativo)setMensagem(e.message)})
     return()=>{ativo=false}
@@ -80,20 +84,22 @@ export default function LancamentosPage() {
           veiculoId:form.get('veiculoId')?Number(form.get('veiculoId')):null,observacoes:form.get('observacoes')||null,
         })})
       }else{
-        const despesa=await api<Despesa>('/api/despesas',{method:'POST',body:JSON.stringify({
-          descricao:form.get('descricao'),categoriaId:Number(form.get('categoriaId')),valor:Number(form.get('valor')),
+        const despesa=await criarDespesa({
+          descricao:String(form.get('descricao')),categoriaId:Number(form.get('categoriaId')),valor:Number(form.get('valor')),
           data:dataLancamento,vencimento:status==='PENDENTE'?dataLancamento:null,dataPagamento:status==='PAGO'?dataLancamento:null,
-          formaPagamento:form.get('formaPagamento')||null,veiculoId:form.get('veiculoId')?Number(form.get('veiculoId')):null,
-          motoristaId:form.get('motoristaId')?Number(form.get('motoristaId')):null,observacoes:form.get('observacoes')||null,status,
-        })})
-        await api(`/api/despesas/${despesa.id}/aprovar`,{method:'PATCH'})
+          formaPagamento:String(form.get('formaPagamento')||'')||null,veiculoId:form.get('veiculoId')?Number(form.get('veiculoId')):null,
+          motoristaId:form.get('motoristaId')?Number(form.get('motoristaId')):null,observacoes:String(form.get('observacoes')||'')||null,status:status as Despesa['status'],
+        })
+        // Lancar e aprovar na mesma acao: no Supabase isto esbarra na regra de que
+        // ninguem aprova o proprio lancamento. Ver dados/despesas.test.ts.
+        await aprovarDespesa(despesa.id)
       }
       setModal(false);setMensagem('Lançamento persistido. Os totais oficiais foram atualizados.');await carregar()
     }catch(e){setMensagem((e as Error).message)}
   }
 
   async function pagar(item:LancamentoFinanceiro){
-    try{await api(`/api/despesas/${item.referenciaId}/pagar`,{method:'PATCH',body:JSON.stringify({dataPagamento:hoje(),formaPagamento:'PIX'})});setMensagem('Pagamento registrado no caixa real.');await carregar()}
+    try{await pagarDespesa(item.referenciaId,hoje(),'PIX');setMensagem('Pagamento registrado no caixa real.');await carregar()}
     catch(e){setMensagem((e as Error).message)}
   }
 

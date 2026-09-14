@@ -1,5 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { api } from '../api/http'
+import { listarContratantes } from '../dados/cadastros'
+import { listarVeiculos } from '../dados/veiculos'
 import { StatusBadge } from '../components/StatusBadge'
 import { Campo, Selecao } from '../components/Campos'
 import { Carregando, Vazio } from '../components/EstadoPagina'
@@ -26,7 +28,7 @@ export default function ContasReceberPage(){
       .finally(()=>{if(!controller.signal.aborted){setCarregando(false);setPrimeiraCarga(false)}})
     return()=>controller.abort()
   },[status,buscaAdiada,versao])
-  useEffect(()=>{Promise.all([api<Contratante[]>('/api/contratantes'),api<Veiculo[]>('/api/veiculos')]).then(([c,v])=>{setContratantes(c);setVeiculos(v)}).catch(e=>setErro((e as Error).message))},[])
+  useEffect(()=>{Promise.all([listarContratantes(),listarVeiculos()]).then(([c,v])=>{setContratantes(c);setVeiculos(v)}).catch(e=>setErro((e as Error).message))},[])
   async function salvar(event:FormEvent<HTMLFormElement>){
     event.preventDefault();const f=new FormData(event.currentTarget)
     const body={contratanteId:Number(f.get('contratanteId')),protocolo:f.get('protocolo')||null,descricao:f.get('descricao'),

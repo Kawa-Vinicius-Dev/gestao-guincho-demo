@@ -1,5 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { api } from '../api/http'
+import { aprovarDespesa, criarDespesa, listarDespesas, pagarDespesa } from '../dados/despesas'
+import { listarCategorias } from '../dados/cadastros'
+import { listarMotoristas } from '../dados/motoristas'
+import { listarVeiculos } from '../dados/veiculos'
 import { useAuth } from '../auth/AuthContext'
 import { StatusBadge } from '../components/StatusBadge'
 import { Vazio } from '../components/EstadoPagina'
@@ -19,18 +23,19 @@ export default function DespesasPage(){
   const [lista,setLista]=useState<Despesa[]>([]),[categorias,setCategorias]=useState<Categoria[]>([]),[veiculos,setVeiculos]=useState<Veiculo[]>([]),[motoristas,setMotoristas]=useState<Motorista[]>([])
   const [form,setForm]=useState(false),[mensagem,setMensagem]=useState(''),[erro,setErro]=useState('')
   const [fixas,setFixas]=useState<DespesaRecorrente[]>([]),[mes,setMes]=useState(mesAtual()),[lancando,setLancando]=useState(false)
-  const carregar=()=>admin?api<Despesa[]>('/api/despesas').then(setLista):Promise.resolve()
+  const carregar=()=>admin?listarDespesas().then(setLista):Promise.resolve()
   useEffect(()=>{carregar().catch(x=>setErro((x as Error).message))
-    Promise.all([api<Categoria[]>('/api/categorias?tipo=DESPESA'),api<Veiculo[]>('/api/veiculos'),api<Motorista[]>('/api/motoristas')])
+    Promise.all([listarCategorias('DESPESA'),listarVeiculos(),listarMotoristas()])
       .then(([c,v,m])=>{setCategorias(c);setVeiculos(v);setMotoristas(m)}).catch(x=>setErro((x as Error).message))
     carregarFixas().catch(x=>setErro((x as Error).message))},[admin])
   async function salvar(e:FormEvent<HTMLFormElement>){e.preventDefault();const f=new FormData(e.currentTarget)
-    const body={descricao:f.get('descricao'),categoriaId:Number(f.get('categoriaId')),valor:Number(f.get('valor')),data:f.get('data'),
-      vencimento:f.get('vencimento')||null,dataPagamento:f.get('dataPagamento')||null,formaPagamento:f.get('formaPagamento')||null,
+    const texto=(campo:string)=>String(f.get(campo)||'')||null
+    const body={descricao:String(f.get('descricao')),categoriaId:Number(f.get('categoriaId')),valor:Number(f.get('valor')),data:String(f.get('data')),
+      vencimento:texto('vencimento'),dataPagamento:texto('dataPagamento'),formaPagamento:texto('formaPagamento'),
       veiculoId:f.get('veiculoId')?Number(f.get('veiculoId')):null,motoristaId:f.get('motoristaId')?Number(f.get('motoristaId')):null,
-      protocolo:f.get('protocolo')||null,comprovante:f.get('comprovante')||null,observacoes:f.get('observacoes')||null,status:f.get('status')}
+      protocolo:texto('protocolo'),observacoes:texto('observacoes'),status:(texto('status')??'PENDENTE') as Despesa['status']}
     setErro('');setMensagem('')
-    try{await api('/api/despesas',{method:'POST',body:JSON.stringify(body)});setForm(false);setMensagem(admin?'Despesa registrada. Aprove para incluí-la nos totais.':'Despesa enviada para aprovação do administrador.');await carregar()}catch(x){setErro((x as Error).message)}
+    try{await criarDespesa(body);setForm(false);setMensagem(admin?'Despesa registrada. Aprove para incluí-la nos totais.':'Despesa enviada para aprovação do administrador.');await carregar()}catch(x){setErro((x as Error).message)}
   }
   const carregarFixas=()=>admin?api<DespesaRecorrente[]>('/api/despesas-recorrentes').then(setFixas):Promise.resolve()
   async function salvarFixa(e:FormEvent<HTMLFormElement>){e.preventDefault();const formulario=e.currentTarget;const f=new FormData(formulario)
@@ -49,9 +54,9 @@ export default function DespesasPage(){
       await carregar()}
     catch(x){setErro((x as Error).message)}finally{setLancando(false)}
   }
-  async function aprovar(id:number){setErro('');try{await api(`/api/despesas/${id}/aprovar`,{method:'PATCH'});await carregar()}catch(x){setErro((x as Error).message)}}
+  async function aprovar(id:number){setErro('');try{await aprovarDespesa(id);await carregar()}catch(x){setErro((x as Error).message)}}
   async function pagar(id:number){setErro('');setMensagem('')
-    try{await api(`/api/despesas/${id}/pagar`,{method:'PATCH',body:JSON.stringify({dataPagamento:hoje(),formaPagamento:'PIX'})});setMensagem('Pagamento registrado no caixa oficial.');await carregar()}catch(x){setErro((x as Error).message)}}
+    try{await pagarDespesa(id,hoje(),'PIX');setMensagem('Pagamento registrado no caixa oficial.');await carregar()}catch(x){setErro((x as Error).message)}}
   async function anexarComprovante(id:number,arquivo:File){setErro('')
     const dados=new FormData();dados.append('arquivo',arquivo)
     try{await api(`/api/despesas/${id}/comprovante`,{method:'POST',body:dados});await carregar()}catch(x){setErro((x as Error).message)}}

@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { api } from '../api/http'
+import { listarMotoristas } from '../dados/motoristas'
 import { associarMotoristaPorto, baixarOrdensServicoPorto, listarOrdensServicoPorto,
   periodoPadraoOrdensServicoPorto } from '../api/porto'
 import { Campo, Selecao } from '../components/Campos'
@@ -32,7 +32,7 @@ export default function PortoOrdensServicoPage() {
     periodoPadraoOrdensServicoPorto()
       .then(p => { setPeriodo(p); return carregar(new URLSearchParams({ dataInicio: p.dataInicio, dataFim: p.dataFim })) })
       .catch(e => { setErro((e as Error).message); return carregar() })
-    api<Motorista[]>('/api/motoristas').then(setMotoristas).catch(e => setErro(e.message))
+    listarMotoristas().then(setMotoristas).catch(e => setErro(e.message))
   }, [])
 
   async function aplicar(evento: FormEvent<HTMLFormElement>) {

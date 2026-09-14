@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { api } from '../api/http'
+import { listarMotoristas } from '../dados/motoristas'
+import { listarVeiculos } from '../dados/veiculos'
 import { Carregando, Vazio } from '../components/EstadoPagina'
 import type { Motorista, Quilometragem, Veiculo } from '../types/modelos'
 import { data, moeda, numero } from '../utils/formatadores'
@@ -29,8 +31,8 @@ export default function QuilometragemPage() {
   async function carregar() {
     const [quilometragens, veiculosCadastrados, motoristasCadastrados] = await Promise.all([
       api<Quilometragem[]>('/api/quilometragens'),
-      api<Veiculo[]>('/api/veiculos'),
-      api<Motorista[]>('/api/motoristas'),
+      listarVeiculos(),
+      listarMotoristas(),
     ])
     setRegistros(quilometragens)
     setVeiculos(veiculosCadastrados)

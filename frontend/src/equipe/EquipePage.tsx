@@ -1,6 +1,8 @@
 import { useEffect,useState,type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api/http'
+import { listarVeiculos } from '../dados/veiculos'
+import { alternarAtivoMotorista, atualizarMotorista, criarMotorista, listarMotoristas } from '../dados/motoristas'
 import { Carregando,ErroPagina,Vazio } from '../components/EstadoPagina'
 import type { Motorista,SenhaRedefinida,Veiculo } from '../types/modelos'
 import { Selecao } from '../components/Campos'
@@ -12,20 +14,20 @@ export default function EquipePage(){
   const [carregando,setCarregando]=useState(true),[modal,setModal]=useState(false),[salvando,setSalvando]=useState(false),[erro,setErro]=useState('')
   const [editando,setEditando]=useState<Motorista|null>(null)
   const [dandoAcesso,setDandoAcesso]=useState<Motorista|null>(null),[acesso,setAcesso]=useState<SenhaRedefinida|null>(null)
-  const carregar=()=>{setCarregando(true);setErro('');api<Motorista[]>('/api/motoristas').then(setMotoristas).catch(e=>setErro(e.message)).finally(()=>setCarregando(false))}
+  const carregar=()=>{setCarregando(true);setErro('');listarMotoristas().then(setMotoristas).catch(e=>setErro(e.message)).finally(()=>setCarregando(false))}
   useEffect(carregar,[])
-  useEffect(()=>{api<Veiculo[]>('/api/veiculos').then(setVeiculos).catch(()=>setVeiculos([]))},[])
+  useEffect(()=>{listarVeiculos().then(setVeiculos).catch(()=>setVeiculos([]))},[])
 
   function abrirCadastro(){setEditando(null);setErro('');setModal(true)}
   function abrirEdicao(motorista:Motorista){setEditando(motorista);setErro('');setModal(true)}
   function fechar(){setModal(false);setEditando(null)}
   async function salvar(evento:FormEvent<HTMLFormElement>){
     evento.preventDefault();const form=new FormData(evento.currentTarget);setSalvando(true);setErro('')
-    const corpo={nome:String(form.get('nome')),telefone:String(form.get('telefone')||'')||null,documento:String(form.get('documento')||'')||null,qra:String(form.get('qra')||'')||null,usuarioId:editando?.usuarioId??null,veiculoId:Number(form.get('veiculoId'))||null}
+    const corpo={nome:String(form.get('nome')),telefone:String(form.get('telefone')||'')||null,documento:String(form.get('documento')||'')||null,qra:String(form.get('qra')||'')||null,veiculoId:Number(form.get('veiculoId'))||null}
     try{
       const motorista=editando
-        ?await api<Motorista>(`/api/motoristas/${editando.id}`,{method:'PUT',body:JSON.stringify(corpo)})
-        :await api<Motorista>('/api/motoristas',{method:'POST',body:JSON.stringify(corpo)})
+        ?await atualizarMotorista(editando.id,corpo)
+        :await criarMotorista(corpo)
       setMotoristas(lista=>editando?lista.map(item=>item.id===motorista.id?motorista:item):[...lista,motorista])
       fechar()
     }catch(e){setErro((e as Error).message)}finally{setSalvando(false)}
@@ -42,7 +44,7 @@ export default function EquipePage(){
   async function alternarAtivo(motorista:Motorista){
     setErro('')
     try{
-      const atualizado=await api<Motorista>(`/api/motoristas/${motorista.id}/${motorista.ativo?'desativar':'reativar'}`,{method:'PATCH'})
+      const atualizado=await alternarAtivoMotorista(motorista)
       setMotoristas(lista=>lista.map(item=>item.id===atualizado.id?atualizado:item))
     }catch(e){setErro((e as Error).message)}
   }

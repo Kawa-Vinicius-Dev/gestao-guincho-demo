@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { api } from '../api/http'
+import { atualizarVeiculo, criarVeiculo, listarVeiculos } from '../dados/veiculos'
 import { Vazio } from '../components/EstadoPagina'
 import type { Dashboard, LancamentoFinanceiro, Veiculo } from '../types/modelos'
 import { data, moeda, numero } from '../utils/formatadores'
@@ -12,7 +13,7 @@ export default function FrotasPage(){
   const [mes,setMes]=useState(mesAtual),[veiculos,setVeiculos]=useState<Veiculo[]>([]),[financeiro,setFinanceiro]=useState<Dashboard|null>(null)
   const [lancamentos,setLancamentos]=useState<LancamentoFinanceiro[]>([]),[selecionado,setSelecionado]=useState(0),[modal,setModal]=useState(false),[mensagem,setMensagem]=useState('')
   const [editando,setEditando]=useState<Veiculo|null>(null),[salvando,setSalvando]=useState(false)
-  const carregar=useCallback(async()=>{const {inicio,fim}=intervalo(mes);try{const [v,d,l]=await Promise.all([api<Veiculo[]>('/api/veiculos'),api<Dashboard>(`/api/dashboard?inicio=${inicio}&fim=${fim}`),api<LancamentoFinanceiro[]>(`/api/lancamentos?inicio=${inicio}&fim=${fim}`)]);setVeiculos(v);setFinanceiro(d);setLancamentos(l);setSelecionado(atual=>v.some(x=>x.id===atual)?atual:(v[0]?.id??0))}catch(e){setMensagem((e as Error).message)}},[mes])
+  const carregar=useCallback(async()=>{const {inicio,fim}=intervalo(mes);try{const [v,d,l]=await Promise.all([listarVeiculos(),api<Dashboard>(`/api/dashboard?inicio=${inicio}&fim=${fim}`),api<LancamentoFinanceiro[]>(`/api/lancamentos?inicio=${inicio}&fim=${fim}`)]);setVeiculos(v);setFinanceiro(d);setLancamentos(l);setSelecionado(atual=>v.some(x=>x.id===atual)?atual:(v[0]?.id??0))}catch(e){setMensagem((e as Error).message)}},[mes])
   useEffect(()=>{void carregar()},[carregar])
   const veiculo=veiculos.find(v=>v.id===selecionado)
   const resultado=financeiro?.resultadoPorVeiculo.find(r=>r.veiculoId===selecionado)
@@ -22,10 +23,10 @@ export default function FrotasPage(){
   const margens=financeiro?.resultadoPorVeiculo.filter(r=>r.receitas>0).map(r=>r.resultado/r.receitas*100)??[]
 
   async function salvar(e:FormEvent<HTMLFormElement>){e.preventDefault();const f=new FormData(e.currentTarget);setSalvando(true);setMensagem('')
-    const corpo=JSON.stringify({identificacao:f.get('identificacao'),placa:f.get('placa'),modelo:f.get('modelo'),custoPorKm:Number(f.get('custoPorKm')),siglaPorto:String(f.get('siglaPorto')||'').trim()||null})
+    const dados={identificacao:String(f.get('identificacao')),placa:String(f.get('placa')),modelo:String(f.get('modelo')||''),custoPorKm:Number(f.get('custoPorKm')),siglaPorto:String(f.get('siglaPorto')||'').trim()||null}
     try{
-      if(editando)await api(`/api/veiculos/${editando.id}`,{method:'PUT',body:corpo})
-      else await api('/api/veiculos',{method:'POST',body:corpo})
+      if(editando)await atualizarVeiculo(editando.id,dados)
+      else await criarVeiculo(dados)
       setModal(false);setEditando(null);setMensagem('Veículo salvo no cadastro real.');await carregar()
     }catch(x){setMensagem((x as Error).message)}finally{setSalvando(false)}}
 

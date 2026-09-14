@@ -4,7 +4,12 @@ export interface SenhaRedefinida { usuarioId: number; nome: string; email: strin
 export interface Veiculo { id: number; identificacao: string; placa: string; modelo?: string; custoPorKm: number; siglaPorto?: string; ativo: boolean }
 export interface Contratante { id: number; nome: string; documento?: string; ativo: boolean }
 export interface Categoria { id: number; nome: string; tipo: 'RECEITA' | 'DESPESA'; ativo: boolean }
-export interface Motorista { id: number; nome: string; telefone?: string; documento?: string; qra?:string; usuarioId?: number; ativo: boolean; veiculoId?: number; veiculo?: string }
+/**
+ * `usuarioId` aceita numero ou texto: no backend antigo era o id do usuario, no
+ * Supabase e o uuid do perfil. A tela so pergunta se ha vinculo, nunca mostra o
+ * valor, entao os dois servem e conviver evita tocar a tela na migracao.
+ */
+export interface Motorista { id: number; nome: string; telefone?: string; documento?: string; qra?:string; usuarioId?: number | string; ativo: boolean; veiculoId?: number; veiculo?: string }
 export interface ContaReceber {
   id: number; contratante: Contratante; protocolo?: string; descricao: string; valorPrevisto: number;
   valorRecebido?: number; diferenca?: number; dataCompetencia: string; vencimento: string;

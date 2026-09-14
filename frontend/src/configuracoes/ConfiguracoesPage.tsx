@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { api } from '../api/http'
+import { criarCategoria, criarContratante, listarCategorias, listarContratantes } from '../dados/cadastros'
 import { baixarCopiaDosDados } from '../api/porto'
 import { aplicarTema, temaAtual, type Tema } from '../tema'
 import type { Categoria, Contratante, SenhaRedefinida, Usuario } from '../types/modelos'
@@ -11,13 +12,17 @@ export default function ConfiguracoesPage(){
   const [tema,setTema]=useState<Tema>(temaAtual)
   function trocarTema(novo:Tema){setTema(novo);aplicarTema(novo)}
   const [mensagem,setMensagem]=useState(''),[erro,setErro]=useState(''),[gerada,setGerada]=useState<SenhaRedefinida|null>(null),[copiada,setCopiada]=useState(false),[baixando,setBaixando]=useState(false)
-  const carregar=()=>Promise.all([api<Categoria[]>('/api/categorias'),api<Contratante[]>('/api/contratantes'),api<Usuario[]>('/api/usuarios')])
+  const carregar=()=>Promise.all([listarCategorias(),listarContratantes(),api<Usuario[]>('/api/usuarios')])
     .then(([c,o,u])=>{setCategorias(c);setContratantes(o);setUsuarios(u)}).catch(x=>setErro((x as Error).message))
   useEffect(()=>{void carregar()},[])
   async function cadastrar(e:FormEvent<HTMLFormElement>,alvo:'categorias'|'contratantes'){e.preventDefault();const formulario=e.currentTarget;const f=new FormData(formulario)
     const body=alvo==='categorias'?{nome:f.get('nome'),tipo:f.get('tipo')}:{nome:f.get('nome'),documento:f.get('documento')||null}
     setErro('');setMensagem('')
-    try{await api(`/api/${alvo}`,{method:'POST',body:JSON.stringify(body)});formulario.reset();await carregar()}catch(x){setErro((x as Error).message)}
+    try{
+      if(alvo==='categorias')await criarCategoria(String(body.nome),body.tipo as 'RECEITA'|'DESPESA')
+      else await criarContratante(String(body.nome),body.documento as string|null)
+      formulario.reset();await carregar()
+    }catch(x){setErro((x as Error).message)}
   }
   async function redefinir(usuario:Usuario){
     setErro('');setMensagem('');setCopiada(false)
