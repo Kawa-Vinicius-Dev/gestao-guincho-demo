@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { api } from '../api/http'
+import { alternarAtivoDespesaFixa, criarDespesaFixa, lancarDespesasFixasDoMes, listarDespesasFixas } from '../dados/despesasFixas'
 import { aprovarDespesa, criarDespesa, listarDespesas, pagarDespesa } from '../dados/despesas'
 import { abrirComprovante, anexarComprovante, removerComprovante } from '../dados/comprovantes'
 import { listarCategorias } from '../dados/cadastros'
@@ -8,7 +8,7 @@ import { listarVeiculos } from '../dados/veiculos'
 import { useAuth } from '../auth/AuthContext'
 import { StatusBadge } from '../components/StatusBadge'
 import { Vazio } from '../components/EstadoPagina'
-import type { Categoria, Despesa, DespesaRecorrente, LancamentoRecorrente, Motorista, Veiculo } from '../types/modelos'
+import type { Categoria, Despesa, DespesaRecorrente,  Motorista, Veiculo } from '../types/modelos'
 import { data, hojeIso, moeda } from '../utils/formatadores'
 import { Campo, Selecao } from '../components/Campos'
 import { FORMAS_PAGAMENTO } from './LancamentosPage'
@@ -38,19 +38,19 @@ export default function DespesasPage(){
     setErro('');setMensagem('')
     try{await criarDespesa(body);setForm(false);setMensagem(admin?'Despesa registrada. Aprove para incluí-la nos totais.':'Despesa enviada para aprovação do administrador.');await carregar()}catch(x){setErro((x as Error).message)}
   }
-  const carregarFixas=()=>admin?api<DespesaRecorrente[]>('/api/despesas-recorrentes').then(setFixas):Promise.resolve()
+  const carregarFixas=()=>admin?listarDespesasFixas().then(setFixas):Promise.resolve()
   async function salvarFixa(e:FormEvent<HTMLFormElement>){e.preventDefault();const formulario=e.currentTarget;const f=new FormData(formulario)
     setErro('');setMensagem('')
-    try{await api('/api/despesas-recorrentes',{method:'POST',body:JSON.stringify({descricao:f.get('descricao'),categoriaId:Number(f.get('categoriaId')),valor:Number(f.get('valor')),diaVencimento:Number(f.get('diaVencimento')),veiculoId:f.get('veiculoId')?Number(f.get('veiculoId')):null})})
+    try{await criarDespesaFixa({descricao:String(f.get('descricao')),categoriaId:Number(f.get('categoriaId')),valor:Number(f.get('valor')),diaVencimento:Number(f.get('diaVencimento')),veiculoId:f.get('veiculoId')?Number(f.get('veiculoId')):null})
       formulario.reset();await carregarFixas()}catch(x){setErro((x as Error).message)}
   }
   async function alternarFixa(fixa:DespesaRecorrente){setErro('')
-    try{await api(`/api/despesas-recorrentes/${fixa.id}/${fixa.ativo?'desativar':'reativar'}`,{method:'PATCH'});await carregarFixas()}
+    try{await alternarAtivoDespesaFixa(fixa);await carregarFixas()}
     catch(x){setErro((x as Error).message)}
   }
   // lancar o mesmo mes duas vezes nao duplica: o backend so cria o que falta
   async function lancarFixas(){setErro('');setMensagem('');setLancando(true)
-    try{const r=await api<LancamentoRecorrente>(`/api/despesas-recorrentes/lancamentos?mes=${mes}`,{method:'POST'})
+    try{const r=await lancarDespesasFixasDoMes(mes)
       setMensagem(`${r.lancadas} ${r.lancadas===1?'despesa fixa lançada':'despesas fixas lançadas'}${r.valorLancado?` · ${moeda(r.valorLancado)}`:''}${r.jaExistiam?` · ${r.jaExistiam} já estavam lançadas`:''}.`)
       await carregar()}
     catch(x){setErro((x as Error).message)}finally{setLancando(false)}

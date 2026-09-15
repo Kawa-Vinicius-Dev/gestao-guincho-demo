@@ -1,7 +1,8 @@
 import { useEffect,useState,type FormEvent } from 'react'
 import { Selecao } from '../components/Campos'
 import { listarMotoristas } from '../dados/motoristas'
-import { baixarRelatorioComissoes,detalharComissao,listarPeriodosComissoes,registrarPagamentoComissao,resumirComissoes } from '../api/comissoes'
+import { baixarRelatorioComissoes } from '../dados/relatorios'
+import { lerComissaoDoCiclo, listarPeriodosComissoes, registrarPagamentoComissao, resumirComissoes } from '../dados/comissoes'
 import type { CalendarioPorto,Comissao,Motorista,ResumoComissao } from '../types/modelos'
 import { data,moeda } from '../utils/formatadores'
 import { periodoCorrente } from '../utils/periodos'
@@ -11,9 +12,9 @@ export default function ComissoesPage(){
   const [periodos,setPeriodos]=useState<CalendarioPorto[]>([]),[motoristas,setMotoristas]=useState<Motorista[]>([]),[periodoId,setPeriodoId]=useState(0),[motoristaId,setMotoristaId]=useState(0),[itens,setItens]=useState<ResumoComissao[]>([]),[detalhe,setDetalhe]=useState<Comissao|null>(null),[erro,setErro]=useState(''),[mensagem,setMensagem]=useState(''),[exportando,setExportando]=useState(false)
   useEffect(()=>{Promise.all([listarPeriodosComissoes(),listarMotoristas()]).then(([p,m])=>{setPeriodos(p);setMotoristas(m);const atual=periodoCorrente(p);if(atual)setPeriodoId(atual.id)}).catch(e=>setErro(e.message))},[])
   useEffect(()=>{if(periodoId)resumirComissoes(periodoId,motoristaId||undefined).then(setItens).catch(e=>setErro(e.message))},[periodoId,motoristaId])
-  async function abrir(id:number){try{setDetalhe(await detalharComissao(id,periodoId))}catch(e){setErro((e as Error).message)}}
+  async function abrir(id:number){try{setDetalhe(await lerComissaoDoCiclo(periodoId,id))}catch(e){setErro((e as Error).message)}}
   async function pagar(evento:FormEvent<HTMLFormElement>){evento.preventDefault();if(!detalhe)return;const form=new FormData(evento.currentTarget)
-    try{await registrarPagamentoComissao(detalhe.motoristaId,periodoId,String(form.get('dataPagamento')),String(form.get('formaPagamento')),String(form.get('observacoes')||''));const [atualizado,resumo]=await Promise.all([detalharComissao(detalhe.motoristaId,periodoId),resumirComissoes(periodoId,motoristaId||undefined)]);setDetalhe(atualizado);setItens(resumo);setErro('');setMensagem('Pagamento registrado no financeiro oficial.')}
+    try{await registrarPagamentoComissao(detalhe.motoristaId,periodoId,String(form.get('dataPagamento')),String(form.get('formaPagamento')),String(form.get('observacoes')||''));const [atualizado,resumo]=await Promise.all([lerComissaoDoCiclo(periodoId,detalhe.motoristaId),resumirComissoes(periodoId,motoristaId||undefined)]);setDetalhe(atualizado);setItens(resumo);setErro('');setMensagem('Pagamento registrado no financeiro oficial.')}
     catch(e){setErro((e as Error).message)}
   }
   async function exportar(){setErro('');setExportando(true)

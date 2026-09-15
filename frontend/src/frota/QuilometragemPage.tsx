@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { api } from '../api/http'
+import { criarQuilometragem, listarQuilometragens } from '../dados/quilometragem'
 import { listarMotoristas } from '../dados/motoristas'
 import { listarVeiculos } from '../dados/veiculos'
 import { Carregando, Vazio } from '../components/EstadoPagina'
@@ -30,7 +30,7 @@ export default function QuilometragemPage() {
 
   async function carregar() {
     const [quilometragens, veiculosCadastrados, motoristasCadastrados] = await Promise.all([
-      api<Quilometragem[]>('/api/quilometragens'),
+      listarQuilometragens(),
       listarVeiculos(),
       listarMotoristas(),
     ])
@@ -65,19 +65,19 @@ export default function QuilometragemPage() {
     evento.preventDefault()
     const form = new FormData(evento.currentTarget)
     try {
-      await api('/api/quilometragens', {
-        method: 'POST',
-        body: JSON.stringify({
-          data: form.get('data'),
-          veiculoId: Number(form.get('veiculoId')),
-          motoristaId: form.get('motoristaId') ? Number(form.get('motoristaId')) : null,
-          protocolo: form.get('protocolo') || null,
-          hodometroInicial: Number(form.get('hodometroInicial')),
-          hodometroFinal: Number(form.get('hodometroFinal')),
-          quilometragemRemunerada: Number(form.get('quilometragemRemunerada')),
-          confirmarExcesso: form.get('confirmarExcesso') === 'on',
-          observacoes: form.get('observacoes') || null,
-        }),
+      const veiculoEscolhido=veiculos.find(v=>v.id===Number(form.get('veiculoId')))
+      await criarQuilometragem({
+        data: String(form.get('data')),
+        veiculoId: Number(form.get('veiculoId')),
+        motoristaId: form.get('motoristaId') ? Number(form.get('motoristaId')) : null,
+        protocolo: String(form.get('protocolo')||'')||null,
+        hodometroInicial: Number(form.get('hodometroInicial')),
+        hodometroFinal: Number(form.get('hodometroFinal')),
+        quilometragemRemunerada: Number(form.get('quilometragemRemunerada')),
+        // O custo do km e congelado no registro, como o backend fazia.
+        custoPorKm: veiculoEscolhido?.custoPorKm ?? 0,
+        confirmarExcesso: form.get('confirmarExcesso') === 'on',
+        observacoes: String(form.get('observacoes')||'')||null,
       })
       await carregar()
       setModal(false)

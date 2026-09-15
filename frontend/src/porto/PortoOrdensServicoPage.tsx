@@ -1,7 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { listarMotoristas } from '../dados/motoristas'
-import { associarMotoristaPorto, baixarOrdensServicoPorto, listarOrdensServicoPorto,
-  periodoPadraoOrdensServicoPorto } from '../api/porto'
+import { associarMotoristaPorto, baixarOrdensServicoPorto, listarOrdensServicoPorto, periodoPadraoOrdensServicoPorto } from '../dados/porto'
 import { Campo, Selecao } from '../components/Campos'
 import type { Motorista, OrdemServicoPorto } from '../types/modelos'
 import { ModalAssociarSocorrista } from './os/ModalAssociarSocorrista'

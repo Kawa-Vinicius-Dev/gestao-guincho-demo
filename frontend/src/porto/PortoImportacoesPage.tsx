@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { avaliarImportacaoPortoPorNumero, cancelarImportacaoPorto, confirmarImportacaoPortoPorNumero, confirmarImportacaoPortoSemOp, criarPreviaConteudoPorto, criarPreviaPorto, listarCalendarioPorto } from '../api/porto'
+import { avaliarImportacaoPorto, cancelarImportacaoPorto, confirmarImportacaoPorto, criarPreviaConteudoPorto, criarPreviaPorto, listarCalendarioPorto } from '../dados/porto'
 import type { CalendarioPorto, PreviaPorto } from '../types/modelos'
 import { moeda } from '../utils/formatadores'
 import { Campo, Selecao } from '../components/Campos'
@@ -31,7 +31,7 @@ export default function PortoImportacoesPage(){
     const controller=new AbortController(),temporizador=window.setTimeout(async()=>{
       setValidando(true);setErro('')
       try{
-        const resposta=await avaliarImportacaoPortoPorNumero(previaId,{numeroOrdemPagamento:numeroNormalizado,calendarioPagamentoId:Number(periodoId)},controller.signal)
+        const resposta=await avaliarImportacaoPorto(previa as PreviaPorto,{numeroOrdemPagamento:numeroNormalizado,calendarioPagamentoId:Number(periodoId)},controller.signal)
         if(!controller.signal.aborted){setPrevia(resposta);setChaveValidada(chaveAvaliacao)}
       }catch(e){if(!controller.signal.aborted)setErro((e as Error).message)}
       finally{if(!controller.signal.aborted)setValidando(false)}
@@ -53,8 +53,8 @@ export default function PortoImportacoesPage(){
     setCarregando(true);setEtapa('Confirmando importação…');setErro('');setFalhaAoConfirmar(false)
     try{
       const r=previa.requerOrdemPagamento
-        ?await confirmarImportacaoPortoPorNumero(previa.id,{numeroOrdemPagamento:numeroNormalizado,calendarioPagamentoId:Number(periodoId),confirmarDivergencias,confirmarReassociacoes,motivoDivergencia:motivoDivergencia||undefined,justificativaDivergencia:justificativaDivergencia.trim()||undefined})
-        :await confirmarImportacaoPortoSemOp(previa.id,confirmarDivergencias)
+        ?await confirmarImportacaoPorto(previa,{numeroOrdemPagamento:numeroNormalizado,calendarioPagamentoId:Number(periodoId),confirmarDivergencias,confirmarReassociacoes,motivoDivergencia:motivoDivergencia||undefined,justificativaDivergencia:justificativaDivergencia.trim()||undefined})
+        :await confirmarImportacaoPorto(previa,{confirmarDivergencias})
       const financeiro=r.tipo==='OS_VINCULADAS'||r.tipo==='SERVICOS_GERAIS'?` · ${r.receitasCriadas} ${r.receitasCriadas===1?'receita criada':'receitas criadas'} · ${r.receitasAtualizadas} ${r.receitasAtualizadas===1?'receita atualizada':'receitas atualizadas'} · ${moeda(r.valorTotalRecebido)} recebidos${r.quinzena?` · período ${r.quinzena}`:''}${r.dataPagamento?` · pagamento em ${dataBr(r.dataPagamento)}`:''}`:''
       setMensagem(`${r.importados} ${r.importados===1?'registro importado':'registros importados'}${r.ignorados?` · ${r.ignorados} ignorados por duplicidade`:''}${financeiro}.`)
       setSemSocorrista(r.osSemSocorrista??[])

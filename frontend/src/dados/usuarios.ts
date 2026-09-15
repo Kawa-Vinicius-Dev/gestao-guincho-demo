@@ -1,0 +1,79 @@
+import { ApiError, api } from '../api/http'
+import type { SenhaRedefinida, Usuario } from '../types/modelos'
+import { ou, supabase } from './cliente'
+import { invalidarCadastro } from './cacheCurto'
+import { moduloNoSupabase } from './modo'
+
+/**
+ * Contas de acesso.
+ *
+ * Listar e leitura comum de `perfis`, filtrada pelas policies. Criar conta,
+ * redefinir senha e dar acesso a um socorrista passam pela Edge Function
+ * `admin-usuarios`: exigem a service_role, que nao pode existir no navegador.
+ * E o unico lugar desta migracao que precisa de servidor.
+ */
+
+const COLUNAS = 'id,nome,email,perfil,ativo,senha_provisoria'
+
+type Linha = {
+  id: string; nome: string; email: string
+  perfil: Usuario['perfil']; ativo: boolean; senha_provisoria: boolean
+}
+
+const paraModelo = (l: Linha): Usuario => ({
+  id: l.id, nome: l.nome, email: l.email, perfil: l.perfil,
+  ativo: l.ativo, senhaProvisoria: l.senha_provisoria,
+})
+
+export async function listarUsuarios(): Promise<Usuario[]> {
+  if (!moduloNoSupabase('usuarios')) return api<Usuario[]>('/api/usuarios')
+
+  const linhas = ou(
+    await supabase().from('perfis').select(COLUNAS).order('nome'),
+    'Não foi possível carregar os usuários.',
+  ) as Linha[]
+  return linhas.map(paraModelo)
+}
+
+/** Chama a Edge Function com o JWT da sessao; ela confere o perfil antes de agir. */
+async function admin<T>(corpo: Record<string, unknown>): Promise<T> {
+  const { data, error } = await supabase().functions.invoke('admin-usuarios', { body: corpo })
+  if (error) {
+    const detalhe = await (error as { context?: Response }).context?.json?.()
+      .then((c: { detalhe?: string }) => c?.detalhe).catch(() => undefined)
+    throw new ApiError(detalhe ?? 'Não foi possível concluir a operação.', 400)
+  }
+  return data as T
+}
+
+export async function criarUsuario(
+  nome: string, email: string, perfil: Usuario['perfil'],
+): Promise<SenhaRedefinida> {
+  if (!moduloNoSupabase('usuarios')) {
+    return api<SenhaRedefinida>('/api/usuarios', {
+      method: 'POST', body: JSON.stringify({ nome, email, perfil }),
+    })
+  }
+  return admin<SenhaRedefinida>({ acao: 'criar', nome, email, perfil })
+}
+
+export async function redefinirSenha(usuario: Usuario): Promise<SenhaRedefinida> {
+  if (!moduloNoSupabase('usuarios')) {
+    return api<SenhaRedefinida>(`/api/usuarios/${usuario.id}/redefinir-senha`, { method: 'PATCH' })
+  }
+  return admin<SenhaRedefinida>({ acao: 'redefinir', perfilId: usuario.id })
+}
+
+/** Dar acesso cria a conta e a liga ao cadastro do socorrista, no mesmo passo. */
+export async function criarAcessoSocorrista(
+  motoristaId: number, email: string,
+): Promise<SenhaRedefinida> {
+  if (!moduloNoSupabase('usuarios')) {
+    return api<SenhaRedefinida>(`/api/motoristas/${motoristaId}/acesso`, {
+      method: 'POST', body: JSON.stringify({ email }),
+    })
+  }
+  const r = await admin<SenhaRedefinida>({ acao: 'acesso', motoristaId, email })
+  invalidarCadastro('motoristas')
+  return r
+}

@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { criarPendenciaPorto, listarPendenciasPorto, resolverPendenciaPorto } from '../api/porto'
+import { criarPendenciaPorto, listarPendenciasPorto, resolverPendenciaPorto } from '../dados/porto'
 import { Carregando, Vazio } from '../components/EstadoPagina'
 import type { PendenciaPorto } from '../types/modelos'
 import { moeda } from '../utils/formatadores'

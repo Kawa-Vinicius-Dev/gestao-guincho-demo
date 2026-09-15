@@ -161,8 +161,11 @@ select pg_temp.checar('despesa ficou aprovada',
 select pg_temp.checar('aprovador foi carimbado',
   (select aprovado_por::text from public.despesas where id=1),
   '11111111-1111-1111-1111-111111111111');
-select pg_temp.checar('admin NAO aprova duas vezes',
-  pg_temp.tentar('select public.aprovar_despesa(1)'), 'NEGADO');
+-- O aprovar() do Spring nao tem guarda de reaprovacao (so o rejeitar tem), e a
+-- regra de compatibilidade manda preservar o comportamento observavel dele.
+-- Reaprovar apenas recarimba autor e data.
+select pg_temp.checar('reaprovar e permitido, como no Spring',
+  pg_temp.tentar('select public.aprovar_despesa(1)'), 'PERMITIU');
 select pg_temp.checar('admin NAO paga despesa nao aprovada',
   pg_temp.tentar('select public.pagar_despesa(2)'), 'NEGADO');
 select pg_temp.checar('admin paga despesa aprovada',
@@ -170,14 +173,17 @@ select pg_temp.checar('admin paga despesa aprovada',
 reset role;
 
 -- ============ SEGREGACAO DE FUNCOES ============
--- A regra antifraude: quem lanca nao aprova, nem sendo administrador.
+-- Segregacao de funcoes, como o Spring a implementa: o rejeitar() tem a guarda
+-- de "quem lancou nao decide"; o aprovar() nao tem. A assimetria e estranha e
+-- esta registrada como divida tecnica, mas preserva-la e o que a regra de
+-- compatibilidade exige — corrigi-la aqui mudaria comportamento observavel.
 set role authenticated;
 set request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
 insert into public.despesas (descricao,categoria_id,valor,data_lancamento,criado_por)
  values ('Reembolso do proprio admin',1,999,current_date,'11111111-1111-1111-1111-111111111111');
-select pg_temp.checar('admin NAO aprova o proprio lancamento',
+select pg_temp.checar('admin aprova o proprio lancamento (Spring nao barra)',
   pg_temp.tentar($q$select public.aprovar_despesa(
-      (select id from public.despesas where descricao='Reembolso do proprio admin'))$q$), 'NEGADO');
+      (select id from public.despesas where descricao='Reembolso do proprio admin'))$q$), 'PERMITIU');
 select pg_temp.checar('admin NAO rejeita o proprio lancamento',
   pg_temp.tentar($q$select public.rejeitar_despesa(
       (select id from public.despesas where descricao='Reembolso do proprio admin'))$q$), 'NEGADO');

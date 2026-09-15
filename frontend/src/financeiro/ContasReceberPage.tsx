@@ -1,6 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { api } from '../api/http'
-import { listarContas, receberConta } from '../dados/contas'
+import { criarConta, listarContas, receberConta } from '../dados/contas'
 import { listarContratantes } from '../dados/cadastros'
 import { listarVeiculos } from '../dados/veiculos'
 import { StatusBadge } from '../components/StatusBadge'
@@ -32,10 +31,11 @@ export default function ContasReceberPage(){
   useEffect(()=>{Promise.all([listarContratantes(),listarVeiculos()]).then(([c,v])=>{setContratantes(c);setVeiculos(v)}).catch(e=>setErro((e as Error).message))},[])
   async function salvar(event:FormEvent<HTMLFormElement>){
     event.preventDefault();const f=new FormData(event.currentTarget)
-    const body={contratanteId:Number(f.get('contratanteId')),protocolo:f.get('protocolo')||null,descricao:f.get('descricao'),
-      valorPrevisto:Number(f.get('valorPrevisto')),dataCompetencia:f.get('dataCompetencia'),vencimento:f.get('vencimento'),
-      veiculoId:f.get('veiculoId')?Number(f.get('veiculoId')):null,observacoes:f.get('observacoes')||null,origem:'MANUAL'}
-    try{await api('/api/contas-receber',{method:'POST',body:JSON.stringify(body)});setModal(null);setVersao(v=>v+1)}catch(e){setErro((e as Error).message)}
+    const texto=(campo:string)=>String(f.get(campo)||'')||null
+    const body={contratanteId:Number(f.get('contratanteId')),protocolo:texto('protocolo'),descricao:String(f.get('descricao')),
+      valorPrevisto:Number(f.get('valorPrevisto')),dataCompetencia:String(f.get('dataCompetencia')),vencimento:String(f.get('vencimento')),
+      veiculoId:f.get('veiculoId')?Number(f.get('veiculoId')):null,observacoes:texto('observacoes'),origem:'MANUAL' as const}
+    try{await criarConta(body);setModal(null);setVersao(v=>v+1)}catch(e){setErro((e as Error).message)}
   }
   async function receber(event:FormEvent<HTMLFormElement>){
     event.preventDefault();if(!selecionada)return;const f=new FormData(event.currentTarget)

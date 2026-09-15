@@ -1,5 +1,5 @@
 import { useEffect,useState,type FormEvent } from 'react'
-import { listarPeriodosComissoes,obterMinhaComissao,registrarAlimentacao } from '../api/comissoes'
+import { lerComissaoDoCiclo, listarPeriodosComissoes, registrarAlimentacao } from '../dados/comissoes'
 import type { CalendarioPorto,Comissao } from '../types/modelos'
 import { data,moeda } from '../utils/formatadores'
 import { periodoCorrente } from '../utils/periodos'
@@ -9,8 +9,8 @@ export default function MinhaComissaoPage(){
   const [periodos,setPeriodos]=useState<CalendarioPorto[]>([]),[periodoId,setPeriodoId]=useState(0),[comissao,setComissao]=useState<Comissao|null>(null)
   const [erro,setErro]=useState(''),[mensagem,setMensagem]=useState(''),[salvando,setSalvando]=useState(false)
   useEffect(()=>{listarPeriodosComissoes().then(lista=>{setPeriodos(lista);const atual=periodoCorrente(lista);if(atual)setPeriodoId(atual.id)}).catch(e=>setErro(e.message))},[])
-  useEffect(()=>{if(periodoId)obterMinhaComissao(periodoId).then(setComissao).catch(e=>setErro(e.message))},[periodoId])
-  async function salvar(event:FormEvent<HTMLFormElement>){event.preventDefault();const form=new FormData(event.currentTarget);setSalvando(true);setErro('');try{await registrarAlimentacao(String(form.get('data')),Number(form.get('valor')),String(form.get('observacoes')||''));setMensagem('Alimentação registrada e enviada para aprovação.');event.currentTarget.reset();setComissao(await obterMinhaComissao(periodoId))}catch(e){setErro((e as Error).message)}finally{setSalvando(false)}}
+  useEffect(()=>{if(periodoId)lerComissaoDoCiclo(periodoId).then(setComissao).catch(e=>setErro(e.message))},[periodoId])
+  async function salvar(event:FormEvent<HTMLFormElement>){event.preventDefault();const form=new FormData(event.currentTarget);setSalvando(true);setErro('');try{await registrarAlimentacao(String(form.get('data')),Number(form.get('valor')),String(form.get('observacoes')||''));setMensagem('Alimentação registrada e enviada para aprovação.');event.currentTarget.reset();setComissao(await lerComissaoDoCiclo(periodoId))}catch(e){setErro((e as Error).message)}finally{setSalvando(false)}}
   return <div className="page-enter commission-page"><header className="page-heading"><div><span className="eyebrow">Área do socorrista</span><h1>Minha comissão</h1><p>Acompanhe somente seus serviços pagos e sua alimentação no fechamento Porto.</p></div><Selecao rotulo="Período financeiro" className="month-picker" vazio="Selecione" value={periodoId||''}
       onChange={e=>setPeriodoId(Number(e.target.value))}
       opcoes={periodos.map(p=>({valor:p.id,texto:`${p.descricao} · ${data(p.competenciaInicio)} a ${data(p.competenciaFim)}`}))}/></header>

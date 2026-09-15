@@ -156,9 +156,11 @@ select pg_temp.checar('previsto soma as duas OPs',
   (public.resumo_porto_dashboard('2026-09-01','2026-09-30') ->> 'valorTotalPrevisto'), '1500.00');
 select pg_temp.checar('quantidade de OPs do periodo',
   (public.resumo_porto_dashboard('2026-09-01','2026-09-30') ->> 'quantidadeTotalOps'), '2');
--- Antes, "programado" repetia o previsto. Agora e so o que ainda nao entrou.
-select pg_temp.checar('programado e so o que ainda nao foi recebido',
-  (public.resumo_porto_dashboard('2026-09-01','2026-09-30') ->> 'valorProgramado'), '500.00');
+-- "Programado" e toda OP com data de pagamento marcada, recebida ou nao — e o
+-- que o Spring mostra, entao e o que fica. Que isso repita o previsto esta
+-- registrado como divida tecnica, nao corrigido aqui.
+select pg_temp.checar('programado segue a regra do Spring: tem data marcada',
+  (public.resumo_porto_dashboard('2026-09-01','2026-09-30') ->> 'valorProgramado'), '1500.00');
 -- Recebido usa o valor confirmado no banco (980), nao o previsto (1000).
 select pg_temp.checar('recebido usa o valor confirmado, nao o previsto',
   (public.resumo_porto_dashboard('2026-09-01','2026-09-30') ->> 'valorRecebido'), '980.00');

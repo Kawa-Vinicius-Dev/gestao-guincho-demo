@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
-import { listarFavoritos, salvarFavoritos } from '../api/favoritos'
+import { listarFavoritos, salvarFavoritos } from '../dados/favoritos'
 import { useAuth } from '../auth/AuthContext'
 
 const itens = [

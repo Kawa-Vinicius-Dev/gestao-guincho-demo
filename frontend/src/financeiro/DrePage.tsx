@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { lerIndicadores } from '../dados/dashboard'
-import { baixarRelatorioCsv } from '../api/relatorios'
+import { baixarRelatorioCsv } from '../dados/relatorios'
 import type { Dashboard } from '../types/modelos'
 import { moeda } from '../utils/formatadores'
 

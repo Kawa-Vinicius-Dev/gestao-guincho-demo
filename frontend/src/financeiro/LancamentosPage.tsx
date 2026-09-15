@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
-import { api } from '../api/http'
+import { criarReceita } from '../dados/receitas'
 import { lerExtrato } from '../dados/extrato'
 import { aprovarDespesa, criarDespesa, pagarDespesa } from '../dados/despesas'
 import { listarCategorias, listarContratantes } from '../dados/cadastros'
@@ -8,7 +8,7 @@ import { listarVeiculos } from '../dados/veiculos'
 import { CampoValor } from '../components/CampoValor'
 import { Campo, Selecao } from '../components/Campos'
 import { AcoesModal, Modal } from '../components/Modal'
-import type { Categoria, Contratante, Despesa, LancamentoFinanceiro, Motorista, Veiculo } from '../types/modelos'
+import type { Categoria, Contratante, Despesa, LancamentoFinanceiro, Motorista, Receita, Veiculo } from '../types/modelos'
 import { moeda } from '../utils/formatadores'
 import { TabelaExtrato } from './extrato/TabelaExtrato'
 
@@ -78,12 +78,13 @@ export default function LancamentosPage() {
     const form=new FormData(evento.currentTarget),dataLancamento=String(form.get('data')),status=String(form.get('status'))
     try{
       if(tipoFormulario==='RECEITA'){
-        await api('/api/receitas',{method:'POST',body:JSON.stringify({
-          descricao:form.get('descricao'),categoriaId:form.get('categoriaId')?Number(form.get('categoriaId')):null,
+        await criarReceita({
+          descricao:String(form.get('descricao')),categoriaId:form.get('categoriaId')?Number(form.get('categoriaId')):null,
           contratanteId:form.get('contratanteId')?Number(form.get('contratanteId')):null,valor:Number(form.get('valor')),
-          dataCompetencia:dataLancamento,dataRecebimento:status==='RECEBIDA'?dataLancamento:null,status,recorrente:false,
-          veiculoId:form.get('veiculoId')?Number(form.get('veiculoId')):null,observacoes:form.get('observacoes')||null,
-        })})
+          dataCompetencia:dataLancamento,dataRecebimento:status==='RECEBIDA'?dataLancamento:null,
+          status:status as Receita['status'],recorrente:false,
+          veiculoId:form.get('veiculoId')?Number(form.get('veiculoId')):null,observacoes:String(form.get('observacoes')||'')||null,
+        })
       }else{
         const despesa=await criarDespesa({
           descricao:String(form.get('descricao')),categoriaId:Number(form.get('categoriaId')),valor:Number(form.get('valor')),

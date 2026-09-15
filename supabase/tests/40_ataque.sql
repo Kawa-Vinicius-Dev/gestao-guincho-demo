@@ -177,9 +177,14 @@ set role authenticated;
 set request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
 insert into public.despesas (descricao,categoria_id,valor,data_lancamento,criado_por)
  values ('Reembolso do proprio admin',1,9999,current_date,'11111111-1111-1111-1111-111111111111');
-select pg_temp.checar('administrador aprova o proprio reembolso',
+-- ATENCAO: o Spring permite que o administrador aprove a propria despesa, e a
+-- regra de compatibilidade manda preservar esse comportamento. Nao e uma falha
+-- de RLS — e uma regra de negocio frouxa, registrada como divida tecnica. O que
+-- o banco garante e que passe SOMENTE pela RPC, que carimba quem aprovou: a
+-- verificacao logo abaixo cobre isso.
+select pg_temp.checar('administrador aprova o proprio reembolso (regra do Spring)',
   pg_temp.tentar($q$select public.aprovar_despesa(
-    (select id from public.despesas where descricao='Reembolso do proprio admin'))$q$), 'NEGADO');
+    (select id from public.despesas where descricao='Reembolso do proprio admin'))$q$), 'PERMITIU');
 -- Contornar a regra escrevendo direto na coluna tambem nao pode passar.
 -- Contornar a RPC escrevendo direto na coluna: era o furo. Agora as colunas de
 -- aprovacao nao estao no GRANT de UPDATE de ninguem.

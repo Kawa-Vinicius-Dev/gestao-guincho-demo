@@ -1,8 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { atualizarOrdemPagamentoPorto, baixarRelatorioOpPorto, baixarRelatorioPorto,
-  confirmarImportacaoPorto, criarOrdemPagamentoPorto, criarPreviaComposicaoPorto,
-  detalharOrdemPagamentoPorto, justificarOrdemPagamentoPorto, listarCalendarioPorto,
-  listarOrdensPagamentoPorto, receberOrdemPagamentoPorto, resumirOrdensPagamentoPorto } from '../api/porto'
+import { atualizarOrdemPagamentoPorto, baixarRelatorioOpPorto, baixarRelatorioPorto, confirmarImportacaoPorto, criarPreviaComposicaoPorto, criarOrdemPagamentoPorto, detalharOrdemPagamentoPorto, justificarOrdemPagamentoPorto, listarCalendarioPorto, listarOrdensPagamentoPorto, receberOrdemPagamentoPorto, resumirOrdensPagamentoPorto } from '../dados/porto'
 import { Campo, Selecao } from '../components/Campos'
 import type { CalendarioPorto, DetalheOpPorto, OrdemPagamentoPorto, PreviaPorto, ResumoOpsPorto } from '../types/modelos'
 import { moeda } from '../utils/formatadores'
@@ -138,7 +135,7 @@ export default function PortoOrdensPagamentoPage() {
 
   async function analisarComposicao() {
     if (!detalhe || !arquivoComposicao) return
-    try { setPreviaComposicao(await criarPreviaComposicaoPorto(detalhe.ordemPagamento.id, arquivoComposicao)) }
+    try { setPreviaComposicao(await criarPreviaComposicaoPorto(detalhe.ordemPagamento, arquivoComposicao)) }
     catch (e) { setErro((e as Error).message) }
   }
 
@@ -148,9 +145,13 @@ export default function PortoOrdensPagamentoPage() {
     const campos = new FormData(evento.currentTarget)
     const temDivergencia = previaComposicao.linhas.some(linha => linha.acao === 'DIVERGENCIA')
     try {
-      await confirmarImportacaoPorto(previaComposicao.id, detalhe.ordemPagamento.id, temDivergencia,
-        String(campos.get('motivo') || '') || undefined,
-        String(campos.get('justificativa') || '') || undefined, periodoComposicao)
+      await confirmarImportacaoPorto(previaComposicao, {
+        numeroOrdemPagamento: detalhe.ordemPagamento.numero,
+        calendarioPagamentoId: periodoComposicao,
+        confirmarDivergencias: temDivergencia,
+        motivoDivergencia: String(campos.get('motivo') || '') || undefined,
+        justificativaDivergencia: String(campos.get('justificativa') || '') || undefined,
+      })
       setPreviaComposicao(null); setArquivoComposicao(null)
       setDetalhe(await detalharOrdemPagamentoPorto(detalhe.ordemPagamento.id))
       await carregar(parametros)

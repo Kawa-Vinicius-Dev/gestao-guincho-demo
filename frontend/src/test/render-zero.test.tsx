@@ -88,41 +88,32 @@ beforeEach(() => { sessionStorage.clear(); localStorage.clear(); chamadasAoRende
 afterEach(() => vi.unstubAllEnvs())
 
 /**
- * Os atalhos do menu lateral sao carregados pelo Layout, nao pelas paginas —
- * entao aparecem em TODA tela que tem menu. Enquanto `/api/favoritos` nao
- * migrar, nenhuma tela do sistema e livre do Render, por melhor que esteja o
- * miolo dela. Foi este teste que mostrou isso: o inventario por pagina nao
- * pegava, porque a chamada nao esta em pagina nenhuma.
+ * Com todos os modulos ligados, nenhuma tela fala com o Render. Este teste mede
+ * — nao presume: ele abre cada rota de verdade e registra toda chamada que sai
+ * para /api.
+ *
+ * Foi ele que mostrou que `/api/favoritos` saia em TODA tela, e nao numa pagina
+ * especifica: os atalhos sao carregados pelo Layout, entao o inventario feito
+ * arquivo por arquivo nao pegava. Por isso a medicao fica, mesmo agora que a
+ * lista esta vazia: se alguma chamada ao backend antigo voltar, por onde for,
+ * ela aparece aqui.
  */
-const MENU = '/api/favoritos'
-
-// O estado real de cada tela, medido. Quando uma dependencia cair, a lista aqui
-// encolhe e o teste avisa — e o mapa da migracao, nao um alvo aspiracional.
 test.each([
-  ['Visão geral (dashboard)', '/', [MENU]],
-  ['Veículos', '/veiculos', [MENU]],
-  ['Receitas', '/receitas', [MENU]],
-  ['DRE', '/dre', [MENU]],
-  ['Fluxo de caixa', '/fluxo-caixa', [MENU]],
-  ['Socorristas', '/equipe', [MENU]],
-  ['Contas a receber', '/contas-receber', [MENU]],
-  ['Lançamentos', '/lancamentos', [MENU]],
-  ['Despesas', '/despesas', [MENU, '/api/despesas-recorrentes']],
-  ['Quilometragem', '/quilometragem', [MENU, '/api/quilometragens']],
-  ['Configurações', '/configuracoes', [MENU, '/api/usuarios']],
-  ['Minha comissão', '/minha-comissao', [MENU, '/api/comissoes/periodos']],
-])('%s: o que ainda vai ao Render e exatamente %j', async (_n, rota, esperadas) => {
+  ['Visão geral (dashboard)', '/'],
+  ['Veículos', '/veiculos'],
+  ['Receitas', '/receitas'],
+  ['DRE', '/dre'],
+  ['Fluxo de caixa', '/fluxo-caixa'],
+  ['Socorristas', '/equipe'],
+  ['Contas a receber', '/contas-receber'],
+  ['Lançamentos', '/lancamentos'],
+  ['Despesas', '/despesas'],
+  ['Quilometragem', '/quilometragem'],
+  ['Configurações', '/configuracoes'],
+  ['Minha comissão', '/minha-comissao'],
+])('%s (%s) nao faz nenhuma chamada ao Render', async (_n, rota) => {
   const chamadas = await abrir(rota)
   const caminhos = [...new Set(chamadas.map(c => c.split(' ')[1]))].sort()
-  expect(caminhos).toEqual([...esperadas].sort())
+  expect(caminhos).toEqual([])
 })
 
-// O miolo financeiro — indicadores, extrato, cadastros — ja nao passa pelo
-// backend antigo. O que sobra nessas telas e o menu, que e do Layout.
-test('as telas financeiras nao chamam o Render por dado proprio', async () => {
-  for (const rota of ['/', '/veiculos', '/receitas', '/dre', '/fluxo-caixa']) {
-    const chamadas = await abrir(rota)
-    const proprias = chamadas.filter(c => !c.includes(MENU))
-    expect(proprias, `rota ${rota}`).toEqual([])
-  }
-})

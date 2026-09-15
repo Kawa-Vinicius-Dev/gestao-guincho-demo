@@ -1,8 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { api } from '../api/http'
+import { listarUsuarios, redefinirSenha } from '../dados/usuarios'
 import { criarCategoria, criarContratante, listarCategorias, listarContratantes } from '../dados/cadastros'
 import { trocarSenha } from '../dados/sessao'
-import { baixarCopiaDosDados } from '../api/porto'
+import { baixarCopiaDosDados } from '../dados/backup'
 import { aplicarTema, temaAtual, type Tema } from '../tema'
 import type { Categoria, Contratante, SenhaRedefinida, Usuario } from '../types/modelos'
 import { Campo, Selecao } from '../components/Campos'
@@ -13,7 +13,7 @@ export default function ConfiguracoesPage(){
   const [tema,setTema]=useState<Tema>(temaAtual)
   function trocarTema(novo:Tema){setTema(novo);aplicarTema(novo)}
   const [mensagem,setMensagem]=useState(''),[erro,setErro]=useState(''),[gerada,setGerada]=useState<SenhaRedefinida|null>(null),[copiada,setCopiada]=useState(false),[baixando,setBaixando]=useState(false)
-  const carregar=()=>Promise.all([listarCategorias(),listarContratantes(),api<Usuario[]>('/api/usuarios')])
+  const carregar=()=>Promise.all([listarCategorias(),listarContratantes(),listarUsuarios()])
     .then(([c,o,u])=>{setCategorias(c);setContratantes(o);setUsuarios(u)}).catch(x=>setErro((x as Error).message))
   useEffect(()=>{void carregar()},[])
   async function cadastrar(e:FormEvent<HTMLFormElement>,alvo:'categorias'|'contratantes'){e.preventDefault();const formulario=e.currentTarget;const f=new FormData(formulario)
@@ -27,7 +27,7 @@ export default function ConfiguracoesPage(){
   }
   async function redefinir(usuario:Usuario){
     setErro('');setMensagem('');setCopiada(false)
-    try{setGerada(await api<SenhaRedefinida>(`/api/usuarios/${usuario.id}/redefinir-senha`,{method:'PATCH'}));await carregar()}
+    try{setGerada(await redefinirSenha(usuario));await carregar()}
     catch(x){setErro((x as Error).message)}
   }
   // o banco esta num plano sem backup automatico: esta copia e o que fica na mao do dono

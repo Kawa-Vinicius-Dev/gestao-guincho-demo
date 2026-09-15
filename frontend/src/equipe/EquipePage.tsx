@@ -1,6 +1,6 @@
 import { useEffect,useState,type FormEvent } from 'react'
+import { criarAcessoSocorrista } from '../dados/usuarios'
 import { Link } from 'react-router-dom'
-import { api } from '../api/http'
 import { listarVeiculos } from '../dados/veiculos'
 import { alternarAtivoMotorista, atualizarMotorista, criarMotorista, listarMotoristas } from '../dados/motoristas'
 import { Carregando,ErroPagina,Vazio } from '../components/EstadoPagina'
@@ -36,7 +36,7 @@ export default function EquipePage(){
   async function criarAcesso(evento:FormEvent<HTMLFormElement>){
     evento.preventDefault();if(!dandoAcesso)return;const form=new FormData(evento.currentTarget);setSalvando(true);setErro('')
     try{
-      setAcesso(await api<SenhaRedefinida>(`/api/motoristas/${dandoAcesso.id}/acesso`,{method:'POST',body:JSON.stringify({email:String(form.get('email'))})}))
+      setAcesso(await criarAcessoSocorrista(dandoAcesso.id,String(form.get('email'))))
       setDandoAcesso(null);carregar()
     }catch(e){setErro((e as Error).message)}finally{setSalvando(false)}
   }

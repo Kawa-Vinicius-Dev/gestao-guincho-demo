@@ -122,3 +122,37 @@ export async function receberConta(
     'Não foi possível registrar o recebimento.',
   )
 }
+
+export interface DadosConta {
+  contratanteId: number
+  protocolo?: string | null
+  descricao: string
+  valorPrevisto: number
+  dataCompetencia: string
+  vencimento: string
+  veiculoId?: number | null
+  observacoes?: string | null
+  origem?: 'MANUAL' | 'IMPORTADA'
+}
+
+export async function criarConta(dados: DadosConta): Promise<ContaReceber> {
+  invalidarCacheFinanceiro()
+  if (!moduloNoSupabase('dashboard')) {
+    return api<ContaReceber>('/api/contas-receber', { method: 'POST', body: JSON.stringify(dados) })
+  }
+  const linha = ou(
+    await supabase().from('contas_receber').insert({
+      contratante_id: dados.contratanteId,
+      protocolo: dados.protocolo || null,
+      descricao: dados.descricao,
+      valor_previsto: dados.valorPrevisto,
+      data_competencia: dados.dataCompetencia,
+      vencimento: dados.vencimento,
+      veiculo_id: dados.veiculoId || null,
+      observacoes: dados.observacoes || null,
+      origem: dados.origem ?? 'MANUAL',
+    }).select(COLUNAS).single(),
+    'Não foi possível registrar a conta.',
+  ) as unknown as LinhaConta
+  return paraModelo(linha)
+}

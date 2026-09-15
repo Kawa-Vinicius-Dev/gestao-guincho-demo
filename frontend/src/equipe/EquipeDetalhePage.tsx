@@ -1,7 +1,7 @@
 import { useEffect,useState } from 'react'
 import { Link,useParams } from 'react-router-dom'
 import { Selecao } from '../components/Campos'
-import { listarPeriodosComissoes,obterDetalheSocorrista } from '../api/comissoes'
+import { listarPeriodosComissoes, obterDetalheSocorrista } from '../dados/comissoes'
 import { Carregando,ErroPagina } from '../components/EstadoPagina'
 import type { CalendarioPorto,DetalheSocorrista } from '../types/modelos'
 import { data,moeda } from '../utils/formatadores'
