@@ -144,7 +144,14 @@ function Painel({ rotulo, opcoes, ancora, selecionado, aoEscolher, aoFechar }: P
 
   useLayoutEffect(() => {
     // Sem foco dentro do painel o Esc e as setas continuariam indo para a pagina.
-    ;(comBusca ? caixa.current?.querySelector('input') : listaRef.current)?.focus()
+    //
+    // No toque o foco vai para a lista, nunca para a busca: focar o campo abre o
+    // teclado virtual, que cobre metade das opcoes de quem so queria escolher
+    // uma. Quem quiser filtrar toca na busca.
+    const toque = typeof window.matchMedia === 'function'
+      && window.matchMedia('(pointer: coarse)').matches
+    const alvo = comBusca && !toque ? caixa.current?.querySelector('input') : listaRef.current
+    alvo?.focus()
   }, [comBusca])
 
   useEffect(() => {
@@ -187,11 +194,17 @@ function Painel({ rotulo, opcoes, ancora, selecionado, aoEscolher, aoFechar }: P
       if (alvo instanceof Node && caixa.current?.contains(alvo)) return
       aoFechar()
     }
-    const fechar = () => aoFechar()
-    window.addEventListener('resize', fechar)
+    // Resize so fecha quando a LARGURA muda — janela redimensionada de verdade
+    // ou giro do aparelho. No celular o teclado virtual e a barra de endereco
+    // mudam so a altura e disparam resize: fechar nisso tornava o campo
+    // inutilizavel no telefone, porque o painel foca a busca, o teclado sobe e
+    // ele se fechava sozinho antes de dar para escolher.
+    const larguraAoAbrir = window.innerWidth
+    const aoRedimensionar = () => { if (window.innerWidth !== larguraAoAbrir) aoFechar() }
+    window.addEventListener('resize', aoRedimensionar)
     window.addEventListener('scroll', aoRolar, true)
     return () => {
-      window.removeEventListener('resize', fechar)
+      window.removeEventListener('resize', aoRedimensionar)
       window.removeEventListener('scroll', aoRolar, true)
     }
   }, [aoFechar])

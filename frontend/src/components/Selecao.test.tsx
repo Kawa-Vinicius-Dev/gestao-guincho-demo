@@ -73,3 +73,34 @@ test('rolar a pagina fecha o painel, que perderia a ancora no campo', async () =
 
   expect(screen.queryByRole('dialog', { name: 'Período' })).not.toBeInTheDocument()
 })
+
+// No celular o teclado virtual e a barra de endereco mudam a altura da janela e
+// disparam resize. Fechar nisso tornava o campo inutilizavel no telefone: o
+// painel abria, o teclado subia e ele se fechava antes de dar para escolher.
+// So aparecia em listas acima de 8 opcoes, que sao as que ganham busca — foi o
+// calendario da Porto passar de 8 ciclos que deixou o campo travado.
+test('teclado virtual (muda so a altura) nao fecha o painel', async () => {
+  const user = userEvent.setup()
+  render(<Selecao rotulo="Período" opcoes={veiculos}/>)
+  await abrir(user, 'Período')
+
+  act(() => {
+    window.innerHeight = 380          // teclado ocupou metade da tela
+    window.dispatchEvent(new Event('resize'))
+  })
+
+  expect(screen.getByRole('dialog', { name: 'Período' })).toBeInTheDocument()
+})
+
+test('girar o aparelho (muda a largura) fecha o painel, que perderia a ancora', async () => {
+  const user = userEvent.setup()
+  render(<Selecao rotulo="Período" opcoes={veiculos}/>)
+  await abrir(user, 'Período')
+
+  act(() => {
+    window.innerWidth = 900
+    window.dispatchEvent(new Event('resize'))
+  })
+
+  expect(screen.queryByRole('dialog', { name: 'Período' })).not.toBeInTheDocument()
+})
