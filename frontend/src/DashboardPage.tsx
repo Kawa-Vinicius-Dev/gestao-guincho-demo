@@ -81,9 +81,9 @@ export default function DashboardPage(){
     </header>
 
     {avisoPeriodo
-      ? <div className="form-alert">{avisoPeriodo}</div>
+      ? <div className="form-alert" role="alert">{avisoPeriodo}</div>
       : erro
-      ? <div className="form-alert">
+      ? <div className="form-alert" role="alert">
           Não foi possível carregar todos os indicadores oficiais. {erro}
         </div>
       : null}

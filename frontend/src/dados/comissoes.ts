@@ -3,6 +3,7 @@ import type {
   AlimentacaoComissao, CalendarioPorto, Comissao, DetalheSocorrista,
   PagamentoComissao, ResumoComissao,
 } from '../types/modelos'
+import { invalidarCacheFinanceiro } from './cacheFinanceiro'
 import { ou, supabase } from './cliente'
 import { moduloNoSupabase } from './modo'
 
@@ -117,10 +118,12 @@ export async function registrarPagamentoComissao(
   formaPagamento?: string, observacoes?: string,
 ): Promise<PagamentoComissao> {
   if (!moduloNoSupabase('comissoes')) {
-    return api<PagamentoComissao>(
+    const pagamento = await api<PagamentoComissao>(
       `/api/comissoes/${motoristaId}/pagamentos?calendarioPagamentoId=${calendarioPagamentoId}`,
       { method: 'POST', body: JSON.stringify({
           dataPagamento, formaPagamento: formaPagamento || null, observacoes: observacoes || null }) })
+    invalidarCacheFinanceiro()
+    return pagamento
   }
   const p = ou(
     await supabase().rpc('pagar_comissao', {
@@ -130,7 +133,7 @@ export async function registrarPagamentoComissao(
     }),
     'Não foi possível registrar o pagamento.',
   ) as Record<string, unknown>
-  return {
+  const pagamento = {
     id: p.id as number,
     motoristaId: p.motorista_id as number,
     calendarioPagamentoId: p.calendario_pagamento_id as number,
@@ -142,4 +145,6 @@ export async function registrarPagamentoComissao(
     pagoPor: '',
     criadoEm: p.criado_em as string,
   }
+  invalidarCacheFinanceiro()
+  return pagamento
 }
