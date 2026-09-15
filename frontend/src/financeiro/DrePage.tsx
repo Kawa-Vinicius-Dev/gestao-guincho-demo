@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Carregando } from '../components/EstadoPagina'
 import { lerIndicadores } from '../dados/dashboard'
 import { baixarRelatorioCsv } from '../dados/relatorios'
 import type { Dashboard } from '../types/modelos'
@@ -13,10 +14,15 @@ export default function DrePage() {
     return {inicio:`${mes}-01`,fim:`${mes}-${String(new Date(d.getFullYear(),d.getMonth()+1,0).getDate()).padStart(2,'0')}`}})
   const [financeiro,setFinanceiro]=useState<Dashboard|null>(null)
   const [erro,setErro]=useState('')
+  // O banco e lento: sem isto a tela ficava mostrando zeros como se fossem o
+  // resultado do periodo, e so depois trocava pelos numeros de verdade.
+  const [carregando,setCarregando]=useState(true)
   const [exportando,setExportando]=useState(false)
   useEffect(()=>{
     if(!inicio||!fim||inicio>fim)return
+    setCarregando(true)
     lerIndicadores(inicio,fim).then(setFinanceiro).catch(e=>setErro(e.message))
+      .finally(()=>setCarregando(false))
   },[inicio,fim])
   const calculo = useMemo(() => {
     const receitaBruta=financeiro?.receitaRecebida??0
@@ -28,6 +34,7 @@ export default function DrePage() {
   return <div className="page-enter">
     <header className="page-heading"><div><span className="eyebrow">Demonstrativo simplificado</span><h1>DRE</h1><p>Receitas recebidas, despesas pagas e resultado — conforme o financeiro oficial.</p></div><div className="heading-actions"><label className="month-picker"><span>De</span><input aria-label="Data inicial" type="date" value={inicio} onChange={e=>setPeriodo(p=>({...p,inicio:e.target.value}))}/></label><label className="month-picker"><span>Até</span><input aria-label="Data final" type="date" value={fim} onChange={e=>setPeriodo(p=>({...p,fim:e.target.value}))}/></label></div></header>
     {erro?<div className="form-alert">{erro}</div>:null}
+    {carregando?<Carregando/>:<>
     <section className="dre-hero"><div><span>Lucro operacional</span><strong>{moeda(calculo.lucro)}</strong><small>Depois das despesas aprovadas e pagas</small></div><div><span>Margem líquida operacional</span><strong>{margem.toFixed(1)}%</strong><small>{margem >= 20 ? 'Resultado saudável no período' : 'Margem abaixo do alvo recomendado'}</small></div></section>
     <section className="dre-layout">
       <article className="panel dre-sheet">
@@ -46,5 +53,6 @@ export default function DrePage() {
         <button className="button button-ghost" onClick={() => window.print()}>Imprimir DRE</button>
       </aside>
     </section>
+    </>}
   </div>
 }

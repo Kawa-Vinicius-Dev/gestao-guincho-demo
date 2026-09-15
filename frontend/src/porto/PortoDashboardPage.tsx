@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { baixarRelatorioPorto, obterDashboardPorto } from '../dados/porto'
 import type { DashboardPorto } from '../types/modelos'
 import { hojeIso, moeda } from '../utils/formatadores'
+import { Carregando } from '../components/EstadoPagina'
 import { Campo, Selecao } from '../components/Campos'
 
 /** Janelas de tempo do painel Porto. */
@@ -15,11 +16,12 @@ export default function PortoDashboardPage(){
   const [dados,setDados]=useState<DashboardPorto|null>(null),[erro,setErro]=useState(''),[parametros,setParametros]=useState(new URLSearchParams())
   const [visao,setVisao]=useState<'PRODUCAO'|'PAGAMENTOS'>('PRODUCAO'),[periodo,setPeriodo]=useState('MENSAL'),[baixando,setBaixando]=useState('')
   async function carregar(params:URLSearchParams){setErro('');try{setDados(await obterDashboardPorto(params));setParametros(new URLSearchParams(params))}catch(e){setErro((e as Error).message)}}
-  useEffect(()=>{const params=new URLSearchParams({periodo:'MENSAL',visao:'PRODUCAO',referencia:hojeIso()});void carregar(params)},[])
+  const [carregando,setCarregando]=useState(true)
+  useEffect(()=>{const params=new URLSearchParams({periodo:'MENSAL',visao:'PRODUCAO',referencia:hojeIso()});void carregar(params).finally(()=>setCarregando(false))},[])
   async function trocarVisao(nova:'PRODUCAO'|'PAGAMENTOS'){setVisao(nova);const params=new URLSearchParams(parametros);params.set('visao',nova);params.set('periodo',periodo);await carregar(params)}
   async function aplicar(event:FormEvent<HTMLFormElement>){event.preventDefault();const form=new FormData(event.currentTarget),params=new URLSearchParams({periodo,visao});for(const nome of ['referencia','dataInicio','dataFim','numeroOs','numeroOp','especialidade','socorrista','statusOperacional','statusFinanceiro','statusConciliacao']){const valor=String(form.get(nome)??'');if(valor)params.set(nome,valor)}await carregar(params)}
   async function exportar(formato:'excel'|'pdf'){setErro('');setBaixando(formato);try{await baixarRelatorioPorto(formato,parametros)}catch(e){setErro((e as Error).message)}finally{setBaixando('')}}
-  return <div className="page-enter dashboard-tech"><header className="page-heading"><div><span className="eyebrow">Porto Seguro</span><h1>Dashboard Porto</h1><p>Serviços realizados, pagamentos programados e valores efetivamente recebidos.</p></div><div className="heading-actions"><button className="button button-ghost" disabled={baixando!==''} onClick={()=>void exportar('pdf')}>{baixando==='pdf'?'Gerando PDF…':'Exportar PDF'}</button><button className="button button-primary" disabled={baixando!==''} onClick={()=>void exportar('excel')}>{baixando==='excel'?'Gerando Excel…':'Exportar Excel'}</button></div></header>{erro?<div className="form-alert">{erro}</div>:null}
+  return <div className="page-enter dashboard-tech"><header className="page-heading"><div><span className="eyebrow">Porto Seguro</span><h1>Dashboard Porto</h1><p>Serviços realizados, pagamentos programados e valores efetivamente recebidos.</p></div><div className="heading-actions"><button className="button button-ghost" disabled={baixando!==''} onClick={()=>void exportar('pdf')}>{baixando==='pdf'?'Gerando PDF…':'Exportar PDF'}</button><button className="button button-primary" disabled={baixando!==''} onClick={()=>void exportar('excel')}>{baixando==='excel'?'Gerando Excel…':'Exportar Excel'}</button></div></header>{erro?<div className="form-alert">{erro}</div>:null}{carregando?<Carregando/>:null}
     <section className="panel"><div className="porto-view-switch" role="group" aria-label="Linha do tempo Porto"><button className={visao==='PRODUCAO'?'active':''} onClick={()=>void trocarVisao('PRODUCAO')}>Produção</button><button className={visao==='PAGAMENTOS'?'active':''} onClick={()=>void trocarVisao('PAGAMENTOS')}>Pagamentos</button></div><form className="ledger-filters porto-dashboard-filters" onSubmit={aplicar}>
       <Selecao rotulo="Período" value={periodo} onChange={e=>setPeriodo(e.target.value)} opcoes={JANELAS}/>
       <Campo rotulo="Referência"><input name="referencia" type="date" defaultValue={hojeIso()}/></Campo>

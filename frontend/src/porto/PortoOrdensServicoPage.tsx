@@ -4,6 +4,7 @@ import { associarMotoristaPorto, baixarOrdensServicoPorto, informarValorOrdemSer
 import { Campo, Selecao } from '../components/Campos'
 import type { Motorista, OrdemServicoPorto } from '../types/modelos'
 import { ModalAssociarSocorrista } from './os/ModalAssociarSocorrista'
+import { Carregando } from '../components/EstadoPagina'
 import { TabelaOrdensServico } from './os/TabelaOrdensServico'
 import { FILTROS_OS, STATUS_FINANCEIRO, STATUS_OPERACIONAL } from './os/opcoes'
 
@@ -26,11 +27,13 @@ export default function PortoOrdensServicoPage() {
     catch (e) { setErro((e as Error).message) }
   }
 
+  const [carregando,setCarregando]=useState(true)
   useEffect(() => {
     // a tela abre num mes so, para nao trazer a tabela inteira
     periodoPadraoOrdensServicoPorto()
       .then(p => { setPeriodo(p); return carregar(new URLSearchParams({ dataInicio: p.dataInicio, dataFim: p.dataFim })) })
       .catch(e => { setErro((e as Error).message); return carregar() })
+      .finally(() => setCarregando(false))
     listarMotoristas().then(setMotoristas).catch(e => setErro(e.message))
   }, [])
 
@@ -153,9 +156,9 @@ export default function PortoOrdensServicoPage() {
           </p>
         : null}
 
-      <TabelaOrdensServico itens={itens}
+      {carregando?<Carregando/>:<TabelaOrdensServico itens={itens}
         aoAssociar={(ordem, sugestao) => { setAssociando(ordem); setMotoristaId(sugestao) }}
-        aoInformarValor={informarValor}/>
+        aoInformarValor={informarValor}/>}
     </section>
 
     {associando

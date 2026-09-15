@@ -65,7 +65,7 @@ export default function ContasReceberPage(){
         <label className="field field-wide"><span>Observações</span><textarea name="observacoes" rows={3}/></label>
         <div className="modal-actions field-wide"><button type="button" className="button button-ghost" onClick={()=>setModal(null)}>Cancelar</button><button className="button button-primary">Salvar conta</button></div>
       </form>:<form onSubmit={receber} className="form-grid"><p>Previsto: <strong>{moeda(selecionada?.valorPrevisto??0)}</strong></p>
-        <label className="field"><span>Valor recebido</span><input name="valorRecebido" type="number" step=".01" defaultValue={selecionada?.valorPrevisto} required/></label>
+        <CampoValor rotulo="Valor recebido" name="valorRecebido" defaultValue={selecionada?.valorPrevisto} required/>
         <label className="field"><span>Data do recebimento</span><input name="dataRecebimento" type="date" defaultValue={hoje()} required/></label>
         <div className="modal-actions"><button type="button" className="button button-ghost" onClick={()=>setModal(null)}>Cancelar</button><button className="button button-primary">Confirmar recebimento</button></div>
       </form>}

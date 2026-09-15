@@ -6,8 +6,9 @@ import { listarCategorias } from '../dados/cadastros'
 import { listarMotoristas } from '../dados/motoristas'
 import { listarVeiculos } from '../dados/veiculos'
 import { useAuth } from '../auth/AuthContext'
+import { CampoNumero } from '../components/CamposMascarados'
 import { StatusBadge } from '../components/StatusBadge'
-import { Vazio } from '../components/EstadoPagina'
+import { Carregando, Vazio } from '../components/EstadoPagina'
 import type { Categoria, Despesa, DespesaRecorrente,  Motorista, Veiculo } from '../types/modelos'
 import { data, hojeIso, moeda } from '../utils/formatadores'
 import { Campo, Selecao } from '../components/Campos'
@@ -25,7 +26,8 @@ export default function DespesasPage(){
   const [form,setForm]=useState(false),[mensagem,setMensagem]=useState(''),[erro,setErro]=useState('')
   const [fixas,setFixas]=useState<DespesaRecorrente[]>([]),[mes,setMes]=useState(mesAtual()),[lancando,setLancando]=useState(false)
   const carregar=()=>admin?listarDespesas().then(setLista):Promise.resolve()
-  useEffect(()=>{carregar().catch(x=>setErro((x as Error).message))
+  const [carregando,setCarregando]=useState(true)
+  useEffect(()=>{carregar().catch(x=>setErro((x as Error).message)).finally(()=>setCarregando(false))
     Promise.all([listarCategorias('DESPESA'),listarVeiculos(),listarMotoristas()])
       .then(([c,v,m])=>{setCategorias(c);setVeiculos(v);setMotoristas(m)}).catch(x=>setErro((x as Error).message))
     carregarFixas().catch(x=>setErro((x as Error).message))},[admin])
@@ -65,7 +67,7 @@ export default function DespesasPage(){
   async function remover(despesa:Despesa){setErro('')
     try{await removerComprovante(despesa);await carregar()}catch(x){setErro((x as Error).message)}}
   return <div className="page-enter pagina-despesas"><header className="page-heading"><div><span className="eyebrow">Saídas</span><h1>Despesas</h1><p>Custos da operação vinculados a veículos, motoristas e protocolos.</p></div><button className="button button-primary" onClick={()=>setForm(true)}>Registrar despesa</button></header>
-    {erro?<div className="form-alert" role="alert">{erro}</div>:null}{mensagem?<div className="success-notice">{mensagem}</div>:null}
+    {erro?<div className="form-alert" role="alert">{erro}</div>:null}{carregando?<Carregando/>:null}{mensagem?<div className="success-notice">{mensagem}</div>:null}
     {admin?<section className="panel">{lista.length?<div className="table-scroll"><table><thead><tr><th>Descrição</th><th>Categoria</th><th>Data</th><th>Veículo</th><th>Situação</th><th>Aprovação</th><th>Valor</th><th>Comprovante</th><th/></tr></thead><tbody>
       {lista.map(d=><tr key={d.id}><td><strong>{d.descricao}</strong><small>{d.criadoPor}</small></td><td>{d.categoria}</td><td>{data(d.data)}</td><td>{d.veiculo||'—'}</td><td><StatusBadge status={d.status}/></td><td>{d.aprovada?<span className="approved">Aprovada</span>:<button className="table-action" onClick={()=>void aprovar(d.id)}>Aprovar</button>}</td><td className="negative"><strong>{moeda(d.valor)}</strong></td>
         <td>{d.comprovanteNomeOriginal?<span className="comprovante-anexado"><button className="table-action" onClick={()=>void abrir(d)}>Ver</button><button className="table-action table-action-danger" onClick={()=>void remover(d)}>Remover</button></span>
@@ -81,7 +83,7 @@ export default function DespesasPage(){
         <Campo rotulo="Descrição da despesa fixa"><input name="descricao" placeholder="Ex.: Aluguel do pátio" required/></Campo>
         <Selecao rotulo="Categoria da despesa fixa" name="categoriaId" required opcoes={categorias.map(x=>({valor:x.id,texto:x.nome}))}/>
         <CampoValor rotulo="Valor da despesa fixa" name="valor" required/>
-        <Campo rotulo="Dia do vencimento"><input name="diaVencimento" type="number" min="1" max="31" required/></Campo>
+        <CampoNumero rotulo="Dia do vencimento" name="diaVencimento" decimais={0} min={1} max={31} required/>
         <Selecao rotulo="Veículo da despesa fixa" name="veiculoId" vazio="Sem veículo" opcoes={veiculos.map(x=>({valor:x.id,texto:x.identificacao}))}/>
         <button className="button button-ghost">Adicionar</button></form></section>:null}
     {form?<Modal etiqueta="Comprovante operacional" titulo="Registrar despesa" largo aoFechar={()=>setForm(false)}>

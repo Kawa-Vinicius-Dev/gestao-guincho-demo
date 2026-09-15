@@ -3,6 +3,7 @@ import { criarAcessoSocorrista } from '../dados/usuarios'
 import { Link } from 'react-router-dom'
 import { listarVeiculos } from '../dados/veiculos'
 import { alternarAtivoMotorista, atualizarMotorista, criarMotorista, listarMotoristas } from '../dados/motoristas'
+import { CampoDocumento, CampoTelefone } from '../components/CamposMascarados'
 import { Carregando,ErroPagina,Vazio } from '../components/EstadoPagina'
 import type { Motorista,SenhaRedefinida,Veiculo } from '../types/modelos'
 import { Selecao } from '../components/Campos'
@@ -67,13 +68,13 @@ export default function EquipePage(){
       nomeAcessivel={editando?`Editar ${editando.nome}`:'Cadastrar socorrista'} aoFechar={fechar}>
       <form onSubmit={salvar} className="form-grid two-columns" key={editando?.id??'novo'}>
         <label className="field field-wide"><span>Nome</span><input name="nome" defaultValue={editando?.nome} required/></label>
-        <label className="field"><span>Telefone</span><input name="telefone" defaultValue={editando?.telefone}/></label>
-        <label className="field"><span>QRA</span><input name="qra" defaultValue={editando?.qra}/></label>
+        <CampoTelefone rotulo="Telefone" name="telefone" defaultValue={editando?.telefone}/>
+        <label className="field"><span>QRA</span><input name="qra" defaultValue={editando?.qra} autoCapitalize="characters" autoCorrect="off" spellCheck={false}/><small>Como aparece no relatório da Porto. É o que liga o serviço a este socorrista.</small></label>
         {/* Vinculo informativo: quem dirigiu o que e definido em cada OS, nao aqui. */}
         <Selecao rotulo="Viatura habitual" name="veiculoId" defaultValue={editando?.veiculoId??''} vazio="Sem viatura"
           ajuda="Só referência — a viatura de cada serviço vem da OS, não daqui."
           opcoes={veiculos.map(v=>({valor:v.id,texto:v.identificacao}))}/>
-        <label className="field field-wide"><span>Documento</span><input name="documento" defaultValue={editando?.documento}/></label>
+        <CampoDocumento rotulo="Documento" name="documento" className="field-wide" defaultValue={editando?.documento}/>
         <div className="modal-actions field-wide"><button type="button" className="button button-ghost" onClick={fechar}>Cancelar</button><button className="button button-primary" disabled={salvando}>{salvando?'Salvando…':editando?'Salvar alterações':'Salvar socorrista'}</button></div>
       </form></Modal>:null}
 

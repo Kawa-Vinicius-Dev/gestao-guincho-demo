@@ -79,7 +79,7 @@ function CelulaValor(
     </button>
   }
   return <form className="porto-valor-inline" onSubmit={salvar}>
-    <input type="number" step="0.01" min="0" value={valor} autoFocus disabled={salvando}
+    <input type="text" inputMode="decimal" value={valor} autoFocus disabled={salvando}
       aria-label={`Valor da OS ${ordem.numero}`}
       onChange={evento => setValor(evento.target.value)}
       onKeyDown={evento => { if (evento.key === 'Escape') setEditando(false) }}/>

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { criarQuilometragem, listarQuilometragens } from '../dados/quilometragem'
 import { listarMotoristas } from '../dados/motoristas'
 import { listarVeiculos } from '../dados/veiculos'
+import { CampoNumero } from '../components/CamposMascarados'
 import { Carregando, Vazio } from '../components/EstadoPagina'
 import type { Motorista, Quilometragem, Veiculo } from '../types/modelos'
 import { data, moeda, numero } from '../utils/formatadores'
@@ -123,9 +124,9 @@ export default function QuilometragemPage() {
           opcoes={veiculos.map(item => ({valor:item.id, texto:`${item.identificacao}${item.modelo ? ` · ${item.modelo}` : ''}`}))}/>
         <Selecao rotulo="Socorrista" name="motoristaId" vazio="Não informado"
           opcoes={motoristas.map(item => ({valor:item.id, texto:item.nome}))}/>
-        <label className="field"><span>Hodômetro inicial</span><input name="hodometroInicial" type="number" min="0" step=".01" required/></label>
-        <label className="field"><span>Hodômetro final</span><input name="hodometroFinal" type="number" min="0" step=".01" required/></label>
-        <label className="field"><span>Quilometragem remunerada</span><input name="quilometragemRemunerada" type="number" min="0" step=".01" required/></label>
+        <CampoNumero rotulo="Hodômetro inicial" name="hodometroInicial" min={0} required/>
+        <CampoNumero rotulo="Hodômetro final" name="hodometroFinal" min={0} required/>
+        <CampoNumero rotulo="Quilometragem remunerada" name="quilometragemRemunerada" min={0} required/>
         <label className="field"><span>Protocolo</span><input name="protocolo"/></label>
         <label className="field two-span"><span>Observações</span><textarea name="observacoes" rows={3}/></label>
         <label className="check-line field-wide"><input name="confirmarExcesso" type="checkbox"/><span>Confirmo eventual quilometragem remunerada acima do total.</span></label>

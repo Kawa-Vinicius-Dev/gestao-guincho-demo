@@ -1,4 +1,5 @@
 import { useEffect,useState,type FormEvent } from 'react'
+import { Carregando } from '../components/EstadoPagina'
 import { Selecao } from '../components/Campos'
 import { listarMotoristas } from '../dados/motoristas'
 import { baixarRelatorioComissoes } from '../dados/relatorios'
@@ -10,8 +11,9 @@ import { Modal } from '../components/Modal'
 
 export default function ComissoesPage(){
   const [periodos,setPeriodos]=useState<CalendarioPorto[]>([]),[motoristas,setMotoristas]=useState<Motorista[]>([]),[periodoId,setPeriodoId]=useState(0),[motoristaId,setMotoristaId]=useState(0),[itens,setItens]=useState<ResumoComissao[]>([]),[detalhe,setDetalhe]=useState<Comissao|null>(null),[erro,setErro]=useState(''),[mensagem,setMensagem]=useState(''),[exportando,setExportando]=useState(false)
-  useEffect(()=>{Promise.all([listarPeriodosComissoes(),listarMotoristas()]).then(([p,m])=>{setPeriodos(p);setMotoristas(m);const atual=periodoCorrente(p);if(atual)setPeriodoId(atual.id)}).catch(e=>setErro(e.message))},[])
-  useEffect(()=>{if(periodoId)resumirComissoes(periodoId,motoristaId||undefined).then(setItens).catch(e=>setErro(e.message))},[periodoId,motoristaId])
+  useEffect(()=>{Promise.all([listarPeriodosComissoes(),listarMotoristas()]).then(([p,m])=>{setPeriodos(p);setMotoristas(m);const atual=periodoCorrente(p);if(atual)setPeriodoId(atual.id);if(!atual)setCarregando(false)}).catch(e=>{setErro(e.message);setCarregando(false)})},[])
+  const [carregando,setCarregando]=useState(true)
+  useEffect(()=>{if(!periodoId)return;setCarregando(true);resumirComissoes(periodoId,motoristaId||undefined).then(setItens).catch(e=>setErro(e.message)).finally(()=>setCarregando(false))},[periodoId,motoristaId])
   async function abrir(id:number){try{setDetalhe(await lerComissaoDoCiclo(periodoId,id))}catch(e){setErro((e as Error).message)}}
   async function pagar(evento:FormEvent<HTMLFormElement>){evento.preventDefault();if(!detalhe)return;const form=new FormData(evento.currentTarget)
     try{await registrarPagamentoComissao(detalhe.motoristaId,periodoId,String(form.get('dataPagamento')),String(form.get('formaPagamento')),String(form.get('observacoes')||''));const [atualizado,resumo]=await Promise.all([lerComissaoDoCiclo(periodoId,detalhe.motoristaId),resumirComissoes(periodoId,motoristaId||undefined)]);setDetalhe(atualizado);setItens(resumo);setErro('');setMensagem('Pagamento registrado no financeiro oficial.')}
@@ -22,7 +24,7 @@ export default function ComissoesPage(){
     catch(e){setErro((e as Error).message)}
     finally{setExportando(false)}
   }
-  return <div className="page-enter commission-page"><header className="page-heading"><div><span className="eyebrow">Equipe e pagamentos</span><h1>Comissões</h1><p>Conferência auditável das OS pagas e alimentações aprovadas.</p></div><button className="button button-ghost" disabled={!periodoId||exportando} onClick={()=>void exportar()}>{exportando?'Gerando CSV…':'Exportar CSV'}</button></header>{erro?<div className="form-alert">{erro}</div>:null}
+  return <div className="page-enter commission-page"><header className="page-heading"><div><span className="eyebrow">Equipe e pagamentos</span><h1>Comissões</h1><p>Conferência auditável das OS pagas e alimentações aprovadas.</p></div><button className="button button-ghost" disabled={!periodoId||exportando} onClick={()=>void exportar()}>{exportando?'Gerando CSV…':'Exportar CSV'}</button></header>{erro?<div className="form-alert">{erro}</div>:null}{carregando?<Carregando/>:null}
     {mensagem?<div className="success-notice">{mensagem}</div>:null}
     <section className="panel"><div className="ledger-filters"><Selecao rotulo="Período financeiro" vazio="Selecione" value={periodoId||''} onChange={e=>setPeriodoId(Number(e.target.value))}
       opcoes={periodos.map(p=>({valor:p.id,texto:`${p.descricao} · ${data(p.competenciaInicio)} a ${data(p.competenciaFim)}`}))}/>
