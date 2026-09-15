@@ -9,6 +9,19 @@ import { CampoArquivo } from '../components/CampoArquivo'
 const rotulos={PREVISAO_RECEBER:'Previsão a receber',OS_VINCULADAS:'OS vinculadas à OP',SERVICOS_DEVOLVIDOS:'Serviços devolvidos',SERVICOS_GERAIS:'Serviços gerais da Porto',SERVICOS_AGUARDANDO_LANCAMENTO:'Serviços aguardando lançamento',PAINEL_DIARIO:'Painel do dia (todas as seguradoras)'}
 const dataBr=(valor?:string)=>valor?new Date(`${valor}T12:00:00`).toLocaleDateString('pt-BR'):''
 
+/**
+ * Numeros de OS num aviso.
+ *
+ * Eram uma tabela de uma coluna dentro de uma caixa rolavel — 13 numeros
+ * ocupavam a tela inteira e escondiam o resto do formulario. Sao codigos
+ * curtos: em linha, cabem em duas linhas e continuam selecionaveis para copiar.
+ */
+function NumerosDeOs({numeros}:{numeros:string[]}){
+  return <ul className="porto-os-lista">
+    {numeros.map(n=><li key={n}>{n}</li>)}
+  </ul>
+}
+
 export default function PortoImportacoesPage(){
   const [arquivo,setArquivo]=useState<File|null>(null),[previa,setPrevia]=useState<PreviaPorto|null>(null)
   const [modo,setModo]=useState<'arquivo'|'colagem'>('arquivo'),[conteudo,setConteudo]=useState('')
@@ -39,10 +52,11 @@ export default function PortoImportacoesPage(){
     return()=>{window.clearTimeout(temporizador);controller.abort()}
   },[chaveAvaliacao,chaveValidada,numeroNormalizado,periodoId,previaId])
 
+  function limparAvisos(){setMensagem('');setErro('');setSemSocorrista([])}
   function limparConfirmacoes(){setConfirmarDivergencias(false);setConfirmarReassociacoes(false);setMotivoDivergencia('');setJustificativaDivergencia('')}
   async function analisar(){
     if(modo==='arquivo'&&!arquivo||modo==='colagem'&&!conteudo.trim())return
-    setCarregando(true);setEtapa('Analisando arquivo…');setErro('');setFalhaAoConfirmar(false);setNumeroOp('');setPeriodoId('');setChaveValidada('');limparConfirmacoes()
+    setCarregando(true);setEtapa('Analisando arquivo…');limparAvisos();setFalhaAoConfirmar(false);setNumeroOp('');setPeriodoId('');setChaveValidada('');limparConfirmacoes()
     try{setPrevia(modo==='arquivo'?await criarPreviaPorto(arquivo as File):await criarPreviaConteudoPorto(conteudo))}catch(e){setErro((e as Error).message)}finally{setEtapa('');setCarregando(false)}
   }
   function alterarNumero(valor:string){setNumeroOp(valor);setChaveValidada('');limparConfirmacoes()}
@@ -62,10 +76,10 @@ export default function PortoImportacoesPage(){
     }catch(e){setErro((e as Error).message);setFalhaAoConfirmar(true)}finally{confirmacaoEmCurso.current=false;setEtapa('');setCarregando(false)}
   }
   async function cancelar(){
-    if(!previa)return;setCarregando(true);setErro('');setFalhaAoConfirmar(false)
+    if(!previa)return;setCarregando(true);limparAvisos();setFalhaAoConfirmar(false)
     try{await cancelarImportacaoPorto(previa.id);setMensagem('Prévia cancelada. Corrija e reenvie o arquivo quando estiver pronto.');setPrevia(null);setArquivo(null);setNumeroOp('');setPeriodoId('');setChaveValidada('');limparConfirmacoes();setInputKey(x=>x+1)}catch(e){setErro((e as Error).message)}finally{setCarregando(false)}
   }
-  function limpar(){setConteudo('');setArquivo(null);setPrevia(null);setErro('');setMensagem('');setFalhaAoConfirmar(false);setNumeroOp('');setPeriodoId('');setChaveValidada('');limparConfirmacoes();setInputKey(x=>x+1)}
+  function limpar(){setConteudo('');setArquivo(null);setPrevia(null);limparAvisos();setFalhaAoConfirmar(false);setNumeroOp('');setPeriodoId('');setChaveValidada('');limparConfirmacoes();setInputKey(x=>x+1)}
 
   const temErros=Boolean(previa?.erros.length||previa?.linhas.some(l=>l.acao==='ERRO'))
   const analise=chaveValidada===chaveAvaliacao&&previa?.analiseOrdemPagamento?.numero===numeroNormalizado?previa.analiseOrdemPagamento:undefined
@@ -76,7 +90,7 @@ export default function PortoImportacoesPage(){
   const divergenciaConfirmada=(!temDivergenciaFinanceira&&!temDivergenciasDados)||(confirmarDivergencias&&(!temDivergenciaFinanceira||Boolean(motivoDivergencia&&justificativaDivergencia.trim())))
 
   return <div className="page-enter"><header className="page-heading"><div><span className="eyebrow">Módulo Porto</span><h1>Importar relatórios</h1><p>Cole serviços ou envie CSV/TXT, confira a prévia e confirme somente depois da validação.</p></div></header>
-    {carregando?<span role="status">{etapa}</span>:null}{erro?<div className="form-alert" role="alert">{erro}{falhaAoConfirmar&&previa?<button type="button" onClick={()=>void confirmar()}>Tentar novamente</button>:null}</div>:null}{mensagem?<div className="success-notice">{mensagem}</div>:null}{semSocorrista.length?<div className="form-alert" role="alert"><strong>{semSocorrista.length} {semSocorrista.length===1?'ordem de serviço ficou':'ordens de serviço ficaram'} sem socorrista, por terem vindo sem QRA.</strong> Associe o socorrista na tela Ordens de serviço.<div className="table-scroll"><table><thead><tr><th>Ordem de serviço</th></tr></thead><tbody>{semSocorrista.map(n=><tr key={n}><td>{n}</td></tr>)}</tbody></table></div></div>:null}
+    {carregando?<span role="status">{etapa}</span>:null}{erro?<div className="form-alert" role="alert">{erro}{falhaAoConfirmar&&previa?<button type="button" onClick={()=>void confirmar()}>Tentar novamente</button>:null}</div>:null}{mensagem?<div className="success-notice">{mensagem}</div>:null}{semSocorrista.length?<div className="form-alert" role="alert"><strong>{semSocorrista.length} {semSocorrista.length===1?'ordem de serviço ficou':'ordens de serviço ficaram'} sem socorrista, por terem vindo sem QRA.</strong> Associe o socorrista na tela Ordens de serviço.<NumerosDeOs numeros={semSocorrista}/></div>:null}
     <section className="panel porto-import-card"><div className="segmented porto-import-modes" role="group" aria-label="Forma de importação"><button className={modo==='arquivo'?'active':''} onClick={()=>{setModo('arquivo');setPrevia(null)}}>Enviar arquivo</button><button className={modo==='colagem'?'active':''} onClick={()=>{setModo('colagem');setPrevia(null)}}>Colar serviços da Porto</button></div>
       {modo==='arquivo'?<div className="porto-upload"><CampoArquivo rotulo="Arquivo CSV ou TXT" chave={inputKey} nome={arquivo?.name}
         accept=".csv,.txt,.tsv,text/csv,text/plain,text/tab-separated-values"
@@ -91,7 +105,11 @@ export default function PortoImportacoesPage(){
             onChange={e=>alterarPeriodo(e.target.value)}
             opcoes={periodos.filter(p=>p.ativo||String(p.id)===periodoId)
               .map(p=>({valor:p.id,texto:`${p.descricao} · ${dataBr(p.competenciaInicio)} a ${dataBr(p.competenciaFim)}`}))}/>:null}
-          {validando?<span role="status">Validando número da OP e período…</span>:null}
+          {/* aria-live sem role="status": anuncia igual, e nao disputa o papel
+              com o indicador de etapa la em cima, que ja e um status. */}
+          <span className="porto-validando" aria-live="polite">
+            {validando?<><i className="spinner" aria-hidden="true"/><span className="apenas-leitor">Validando número da OP e período…</span></>:null}
+          </span>
           {analise&&!analise.existente?<div className="success-notice">A OP {analise.numero} será criada automaticamente.</div>:null}
           {temDivergenciaFinanceira?<div className="form-alert"><strong>Divergência financeira encontrada.</strong><span> Valor atual da OP: {moeda(analise?.valorAtual??0)} · Soma do arquivo: {moeda(analise?.somaArquivo??0)} · Diferença encontrada: {moeda(analise?.diferenca??0)}</span><label className="porto-divergence"><input type="checkbox" aria-label="Confirmo a atualização do valor" checked={confirmarDivergencias} onChange={e=>setConfirmarDivergencias(e.target.checked)}/><span>Confirmo a atualização do valor da OP.</span></label><Selecao rotulo="Motivo da divergência" vazio="Selecione o motivo" value={motivoDivergencia}
             onChange={e=>setMotivoDivergencia(e.target.value)} opcoes={MOTIVOS_COMPOSICAO}/><Campo rotulo="Justificativa da divergência">
@@ -102,7 +120,7 @@ export default function PortoImportacoesPage(){
           <button type="button" className="button button-ghost" disabled={carregando} onClick={cancelar}>Cancelar prévia</button>
           <button className="button button-primary" disabled={carregando||validando||temErros||!divergenciaConfirmada||temReassociacoes&&!confirmarReassociacoes||previa.requerOrdemPagamento&&(!numeroNormalizado||!periodoId||!analise)||previa.linhas.length===0} onClick={confirmar}>Confirmar importação</button>
         </footer>
-        {previa.osSemSocorrista?.length?<div className="form-alert" role="alert"><strong>{previa.osSemSocorrista.length} {previa.osSemSocorrista.length===1?'ordem de serviço ficará':'ordens de serviço ficarão'} sem QRA no relatório.</strong> O socorrista é identificado pelo QRA, e só entre os que já estão cadastrados — o sistema nunca cria um cadastro novo a partir de um QRA desconhecido. Estas ficam sem identidade: associe o socorrista na tela Ordens de serviço.<div className="table-scroll"><table><thead><tr><th>Ordem de serviço</th></tr></thead><tbody>{previa.osSemSocorrista.map(n=><tr key={n}><td>{n}</td></tr>)}</tbody></table></div></div>:null}
+        {previa.osSemSocorrista?.length?<div className="form-alert" role="alert"><strong>{previa.osSemSocorrista.length} {previa.osSemSocorrista.length===1?'ordem de serviço ficará':'ordens de serviço ficarão'} sem QRA no relatório.</strong> O socorrista é identificado pelo QRA, e só entre os que já estão cadastrados — o sistema nunca cria um cadastro novo a partir de um QRA desconhecido. Estas ficam sem identidade: associe o socorrista na tela Ordens de serviço.<NumerosDeOs numeros={previa.osSemSocorrista}/></div>:null}
         {/* O painel do dia nao tem valor nem OP: a coluna Valor ficaria vazia em toda linha.
             No lugar dela entram seguradora e situacao, que e o que existe de util ali. */}
         <div className="table-scroll porto-preview-table"><table><thead><tr><th>Ordem</th><th>Especialidade / Nome</th>{previa.tipo==='PAINEL_DIARIO'?<><th>Seguradora</th><th>Situação</th></>:<th>Valor</th>}<th>Data</th><th>Ação</th></tr></thead><tbody>{previa.linhas.map(l=><tr key={l.hashRegistro}><td><strong>{l.dados.numero_op||l.dados.numero_os}</strong></td><td>{l.dados.especialidade||l.dados.nome_codigo||'—'}</td>{previa.tipo==='PAINEL_DIARIO'?<><td>{l.dados.seguradora||'—'}</td><td>{l.dados.situacao_porto||l.dados.status_porto||'—'}</td></>:<td>{l.dados.valor_total}</td>}<td>{l.dados.data_pagamento||l.dados.data_atendimento}</td><td>{l.mensagem||l.acao}</td></tr>)}</tbody></table></div>

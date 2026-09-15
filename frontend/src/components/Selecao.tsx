@@ -176,14 +176,23 @@ function Painel({ rotulo, opcoes, ancora, selecionado, aoEscolher, aoFechar }: P
     }
   }
 
-  // A rolagem da pagina moveria o campo e o painel ancorado ficaria solto dele.
+  // A rolagem da pagina moveria o campo, e o painel ancorado ficaria solto dele.
+  //
+  // Mas o listener precisa ser em captura para enxergar a rolagem de qualquer
+  // container, e em captura ele tambem enxerga a rolagem da PROPRIA lista — que
+  // fechava o painel no meio da escolha. So fecha quando a rolagem vem de fora.
   useEffect(() => {
+    const aoRolar = (evento: Event) => {
+      const alvo = evento.target
+      if (alvo instanceof Node && caixa.current?.contains(alvo)) return
+      aoFechar()
+    }
     const fechar = () => aoFechar()
     window.addEventListener('resize', fechar)
-    window.addEventListener('scroll', fechar, true)
+    window.addEventListener('scroll', aoRolar, true)
     return () => {
       window.removeEventListener('resize', fechar)
-      window.removeEventListener('scroll', fechar, true)
+      window.removeEventListener('scroll', aoRolar, true)
     }
   }, [aoFechar])
 

@@ -333,3 +333,30 @@ test('falha ao confirmar oferece repetir a própria confirmação', async () => 
   expect(await screen.findByText(/1 registro importado/i)).toBeInTheDocument()
   expect(tentativas).toBe(2)
 })
+
+// O aviso de OS sem socorrista sobrevivia a acao seguinte: dava para ver
+// "Previa cancelada" em verde e, logo abaixo, o alerta vermelho da importacao
+// anterior. Parecia que o cancelamento tinha dado errado.
+test('o aviso da importacao anterior some ao cancelar a prévia seguinte',async()=>{
+  servidor.use(
+    http.get('/api/porto/ordens-pagamento',()=>HttpResponse.json([])),
+    http.post('/api/porto/importacoes/previa',()=>HttpResponse.json({id:31,nomeArquivo:'a.csv',tipo:'PREVISAO_RECEBER',status:'AGUARDANDO_CONFERENCIA',totalLinhas:1,requerOrdemPagamento:false,erros:[],linhas:[{hashRegistro:'h31',acao:'IMPORTAR',dados:{numero_op:'OP-31'}}]},{status:201})),
+    http.post('/api/porto/importacoes/31/confirmar',()=>HttpResponse.json({importacaoId:31,tipo:'PREVISAO_RECEBER',importados:1,ignorados:0,receitasCriadas:0,receitasAtualizadas:0,valorTotalRecebido:0,erros:[],osSemSocorrista:['5655840/26','5665701/26']})),
+    http.post('/api/porto/importacoes/31/cancelar',()=>HttpResponse.json({id:31,status:'CANCELADA'})),
+  )
+  const user=userEvent.setup();render(<PortoImportacoesPage/>)
+
+  await user.upload(screen.getByLabelText(/arquivo csv/i),new File(['csv'],'a.csv',{type:'text/csv'}))
+  await user.click(screen.getByRole('button',{name:/analisar csv/i}))
+  await user.click(await screen.findByRole('button',{name:/confirmar importação/i}))
+  expect(await screen.findByText('5655840/26')).toBeInTheDocument()
+
+  // Segunda prévia, cancelada: o alerta da primeira nao pode continuar na tela.
+  await user.upload(screen.getByLabelText(/arquivo csv/i),new File(['csv'],'a.csv',{type:'text/csv'}))
+  await user.click(screen.getByRole('button',{name:/analisar csv/i}))
+  expect(screen.queryByText('5655840/26')).not.toBeInTheDocument()
+
+  await user.click(await screen.findByRole('button',{name:/cancelar prévia/i}))
+  expect(await screen.findByText(/prévia cancelada/i)).toBeInTheDocument()
+  expect(screen.queryByText('5655840/26')).not.toBeInTheDocument()
+})

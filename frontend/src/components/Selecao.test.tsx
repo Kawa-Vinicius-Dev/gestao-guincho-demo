@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, test } from 'vitest'
 import { Selecao } from './Selecao'
@@ -47,4 +47,29 @@ test('escolher no painel escreve no select que o formulario envia', async () => 
   await user.click(within(painel).getByRole('option', { name: 'Viatura 3' }))
 
   expect(screen.getByLabelText('Viatura')).toHaveValue('v3')
+})
+
+// O listener de rolagem e em captura, para enxergar a rolagem de qualquer
+// container que mova o campo por baixo do painel. So que em captura ele tambem
+// enxergava a rolagem da PROPRIA lista: numa lista longa, como a de periodos da
+// Porto, rolar para achar a opcao fechava o painel na cara da pessoa.
+test('rolar a propria lista nao fecha o painel', async () => {
+  const user = userEvent.setup()
+  render(<Selecao rotulo="Período" opcoes={veiculos}/>)
+  const painel = await abrir(user, 'Período')
+
+  const lista = within(painel).getByRole('listbox', { name: 'Período' })
+  act(() => { lista.dispatchEvent(new Event('scroll', { bubbles: true })) })
+
+  expect(screen.getByRole('dialog', { name: 'Período' })).toBeInTheDocument()
+})
+
+test('rolar a pagina fecha o painel, que perderia a ancora no campo', async () => {
+  const user = userEvent.setup()
+  render(<Selecao rotulo="Período" opcoes={veiculos}/>)
+  await abrir(user, 'Período')
+
+  act(() => { document.body.dispatchEvent(new Event('scroll', { bubbles: true })) })
+
+  expect(screen.queryByRole('dialog', { name: 'Período' })).not.toBeInTheDocument()
 })

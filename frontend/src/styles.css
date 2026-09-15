@@ -1191,3 +1191,13 @@ tbody tr{transition:background-color .14s ease}
 /* Fatia de km morto na barra de proporcao: mesma cor do dinheiro que sai. */
 .dashboard-tech .proporcao-morto{background:var(--red)}
 .dashboard-tech .marca-morto{background:var(--red)}
+
+/* Importacao Porto: avisos e validacao ------------------------------------ */
+/* Texto so para leitor de tela: sai do fluxo sem sumir da arvore acessivel. */
+.apenas-leitor{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+/* Largura fixa reservada: o indicador aparece e some sem mexer no rodape. */
+.porto-validando{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;margin-bottom:10px;flex:none}
+.porto-validando .spinner{width:16px;height:16px;border-width:2px}
+/* Numeros de OS em linha, no lugar de uma tabela de uma coluna. */
+.porto-os-lista{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 0;padding:0;list-style:none;max-height:132px;overflow-y:auto}
+.porto-os-lista li{padding:3px 8px;border:1px solid var(--line);border-radius:5px;background:var(--superficie-2);font:11px/1.4 'IBM Plex Mono',monospace;color:var(--ink)}
