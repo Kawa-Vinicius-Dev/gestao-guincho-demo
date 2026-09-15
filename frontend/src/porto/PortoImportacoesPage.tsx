@@ -48,7 +48,11 @@ export default function PortoImportacoesPage(){
         if(!controller.signal.aborted){setPrevia(resposta);setChaveValidada(chaveAvaliacao)}
       }catch(e){if(!controller.signal.aborted)setErro((e as Error).message)}
       finally{if(!controller.signal.aborted)setValidando(false)}
-    },150)
+      // 600ms, nao 150: cada avaliacao rebaixa o arquivo inteiro do Storage e
+      // reprocessa todas as linhas no servidor. Com 150ms — menos que o intervalo
+      // entre teclas de quem digita — um numero de OP de 8 digitos disparava oito
+      // releituras do arquivo, e a tela ficava "validando" o tempo todo.
+    },600)
     return()=>{window.clearTimeout(temporizador);controller.abort()}
   },[chaveAvaliacao,chaveValidada,numeroNormalizado,periodoId,previaId])
 
