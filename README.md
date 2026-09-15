@@ -330,6 +330,7 @@ conversa com PostgREST, Auth e Storage, e as operações correspondentes estão 
 - [Arquitetura](docs/arquitetura.md)
 - [Guia de desenvolvimento](docs/desenvolvimento.md)
 - [Fluxo Porto: OPs, calendário e pagamentos](docs/porto-fluxo-ops-e-pagamentos.md)
+- [Migração para Supabase: onde paramos e o que falta](docs/migracao-supabase-proximos-passos.md)
 
 ## Autor
 
