@@ -108,6 +108,18 @@ public class OrdemServicoPorto {
         statusOperacionalLegado="DEVOLVIDO_FINALIZADO";
         if(origem!=null)importacao=origem;atualizadoEm=OffsetDateTime.now();
     }
+    /**
+     * Valor informado a mao, para servico que a Porto ainda nao precificou.
+     *
+     * Recusa servico ja pago: ali o valor e o que a OP trouxe, e sobrescrever
+     * a mao desencontraria o caixa do extrato da Porto.
+     */
+    public void informarValorManual(BigDecimal valor){
+        if(statusFinanceiro==EnumsFinanceiros.StatusFinanceiroPorto.RECEBIDO)
+            throw new IllegalArgumentException("Este serviço já foi pago pela Porto: o valor vem da ordem de pagamento.");
+        valorTotal=valor;
+        atualizadoEm=OffsetDateTime.now();
+    }
     public void atualizarDadosPorto(String prestador,String seguradora,String cliente,String placa,OffsetDateTime dataHora){if(valido(prestador))this.prestador=prestador;if(valido(seguradora))this.seguradora=seguradora;if(valido(cliente))this.cliente=cliente;if(valido(placa))this.placa=placa;if(dataHora!=null){dataHoraAtendimento=dataHora;dataAtendimento=dataHora.toLocalDate();}atualizadoEm=OffsetDateTime.now();}
     public void aguardarLancamento(LocalDate previsao,Importacao origem){statusOperacional=EnumsFinanceiros.StatusOperacionalPorto.AGUARDANDO_LANCAMENTO;statusFinanceiro=EnumsFinanceiros.StatusFinanceiroPorto.AGUARDANDO_OP;statusFinanceiroLegado="AGUARDANDO_OP";if(dataPrevistaOriginal==null)dataPrevistaOriginal=previsao;if(origem!=null)importacao=origem;atualizadoEm=OffsetDateTime.now();}
     public void definirPrevisaoOriginal(LocalDate previsao){if(dataPrevistaOriginal==null&&previsao!=null)dataPrevistaOriginal=previsao;}

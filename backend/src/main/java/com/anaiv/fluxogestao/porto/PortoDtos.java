@@ -83,6 +83,15 @@ public final class PortoDtos {
         /* OS que passou do ciclo em que era esperada e continua sem pagamento. */
         boolean atrasadaNoCiclo) {}
     public record AssociarMotoristaRequest(@NotNull Long motoristaId) {}
+    /**
+     * Valor de um servico que veio sem preco.
+     *
+     * O painel diario nao traz valor: o servico entra aguardando a OP. Ate ela
+     * chegar, quem opera sabe quanto aquele servico vale e precisa registrar,
+     * senao a producao do dia fica em zero.
+     */
+    public record AtualizarValorOsRequest(
+        @NotNull @DecimalMin(value="0.0", message="O valor não pode ser negativo.") BigDecimal valorTotal) {}
     public record PendenciaResponse(Long id,String tipo,Long referenciaId,String referencia,BigDecimal valor,LocalDate data,String situacao,
         String motivo,String observacao,String responsavel,LocalDate prazo,String referenciaPorto) {}
     public record PendenciaRequest(@NotBlank String numeroOs,@NotBlank String motivo,@NotNull @DecimalMin("0.00") BigDecimal valor,

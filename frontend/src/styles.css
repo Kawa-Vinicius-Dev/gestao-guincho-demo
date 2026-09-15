@@ -1210,3 +1210,6 @@ tbody tr{transition:background-color .14s ease}
 /* Numeros de OS em linha, no lugar de uma tabela de uma coluna. */
 .porto-os-lista{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 0;padding:0;list-style:none;max-height:132px;overflow-y:auto}
 .porto-os-lista li{padding:3px 8px;border:1px solid var(--line);border-radius:5px;background:var(--superficie-2);font:11px/1.4 'IBM Plex Mono',monospace;color:var(--ink)}
+/* Edicao do valor na propria linha: campo estreito para nao alargar a coluna. */
+.porto-valor-inline{display:flex;align-items:center;gap:6px}
+.porto-valor-inline input{width:92px;padding:4px 6px;border:1px solid var(--line);border-radius:5px;font:inherit}

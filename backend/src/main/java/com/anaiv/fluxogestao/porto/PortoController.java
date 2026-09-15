@@ -39,6 +39,7 @@ public class PortoController {
     public JustificativaResponse justificar(@PathVariable Long id,@Valid @RequestBody JustificativaRequest request,@AuthenticationPrincipal UsuarioPrincipal principal){return porto.justificar(id,request,principal);}
     @GetMapping("/ordens-servico") public List<OrdemServicoResponse> oss(@ModelAttribute PortoOsFiltros filtros){return porto.listarOss(filtros);}
     @GetMapping("/ordens-servico/periodo-padrao") public PeriodoPadraoResponse periodoPadraoOss(){return porto.periodoPadraoOss();}
+    @PatchMapping("/ordens-servico/{id}/valor") public OrdemServicoResponse informarValorOs(@PathVariable Long id,@Valid @RequestBody AtualizarValorOsRequest request){return porto.informarValor(id,request);}
     @PatchMapping("/ordens-servico/{id}/motorista") public OrdemServicoResponse associarMotorista(@PathVariable Long id,@Valid @RequestBody AssociarMotoristaRequest request){return porto.associarMotorista(id,request);}
     @GetMapping("/pendencias") public List<PendenciaResponse> pendencias(){return porto.listarPendencias();}
     @PostMapping("/pendencias") @ResponseStatus(HttpStatus.CREATED) public PendenciaResponse criarPendencia(@Valid @RequestBody PendenciaRequest request){return porto.criarPendencia(request);}

@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { listarMotoristas } from '../dados/motoristas'
-import { associarMotoristaPorto, baixarOrdensServicoPorto, listarOrdensServicoPorto, periodoPadraoOrdensServicoPorto } from '../dados/porto'
+import { associarMotoristaPorto, baixarOrdensServicoPorto, informarValorOrdemServicoPorto, listarOrdensServicoPorto, periodoPadraoOrdensServicoPorto } from '../dados/porto'
 import { Campo, Selecao } from '../components/Campos'
 import type { Motorista, OrdemServicoPorto } from '../types/modelos'
 import { ModalAssociarSocorrista } from './os/ModalAssociarSocorrista'
@@ -56,6 +56,14 @@ export default function PortoOrdensServicoPage() {
         : lista.map(os => os.id === atualizada.id ? atualizada : os))
       setAssociando(null); setMotoristaId(0)
     } catch (e) { setErro((e as Error).message) } finally { setSalvando(false) }
+  }
+
+  async function informarValor(ordem: OrdemServicoPorto, valor: number) {
+    setErro('')
+    try {
+      const atualizada = await informarValorOrdemServicoPorto(ordem.id, valor)
+      setItens(lista => lista.map(os => os.id === atualizada.id ? atualizada : os))
+    } catch (e) { setErro((e as Error).message) }
   }
 
   /**
@@ -146,7 +154,8 @@ export default function PortoOrdensServicoPage() {
         : null}
 
       <TabelaOrdensServico itens={itens}
-        aoAssociar={(ordem, sugestao) => { setAssociando(ordem); setMotoristaId(sugestao) }}/>
+        aoAssociar={(ordem, sugestao) => { setAssociando(ordem); setMotoristaId(sugestao) }}
+        aoInformarValor={informarValor}/>
     </section>
 
     {associando

@@ -1,4 +1,4 @@
-import { api } from '../api/http'
+import { ApiError, api } from '../api/http'
 import type {
   CalendarioPorto, ConfirmacaoPorto, DashboardPorto, DetalheOpPorto, JustificativaPorto,
   OrdemPagamentoPorto, OrdemServicoPorto, PendenciaPorto, PreviaPorto, ResumoOpsPorto,
@@ -297,6 +297,38 @@ export async function associarMotoristaPorto(
       .eq('id', ordemServicoId).select(COLUNAS_OS).single(),
     'Não foi possível associar o socorrista.',
   ) as unknown as Record<string, unknown>
+  return osParaModelo(linha)
+}
+
+/**
+ * Valor de um servico que a Porto ainda nao precificou.
+ *
+ * O painel diario nao traz valor. Ate a OP chegar, quem opera sabe quanto o
+ * servico vale e registra aqui — conta como producao pendente, nunca como
+ * receita: o dinheiro so entra no caixa quando a Porto paga.
+ */
+export async function informarValorOrdemServicoPorto(
+  ordemServicoId: number, valorTotal: number,
+): Promise<OrdemServicoPorto> {
+  invalidarCacheFinanceiro()
+  if (!moduloNoSupabase('porto')) {
+    return api<OrdemServicoPorto>(`/api/porto/ordens-servico/${ordemServicoId}/valor`, {
+      method: 'PATCH', body: JSON.stringify({ valorTotal }),
+    })
+  }
+  // A guarda de "servico ja pago" mora no banco: o filtro recusa a linha em vez
+  // de confiar na tela para nao oferecer o campo.
+  const linha = ou(
+    await supabase().from('ordens_servico_porto')
+      .update({ valor_total: valorTotal })
+      .eq('id', ordemServicoId).neq('status_financeiro', 'RECEBIDO')
+      .select(COLUNAS_OS).maybeSingle(),
+    'Não foi possível informar o valor.',
+  ) as unknown as Record<string, unknown> | null
+  if (!linha) {
+    throw new ApiError(
+      'Este serviço já foi pago pela Porto: o valor vem da ordem de pagamento.', 400)
+  }
   return osParaModelo(linha)
 }
 

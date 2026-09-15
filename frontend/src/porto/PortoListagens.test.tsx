@@ -153,3 +153,40 @@ test('abre a composição da OP e registra justificativa',async()=>{
   const user=userEvent.setup();render(<PortoOrdensPagamentoPage/>);await user.click(await screen.findByRole('button',{name:'OP-DET-91'}));expect(await screen.findByText('OS-DET-92')).toBeInTheDocument()
   await user.selectOptions(screen.getByLabelText(/motivo/i),'DESCONTO');await user.type(screen.getByLabelText(/observação/i),'Justificativa sintética');await user.click(screen.getByRole('button',{name:/registrar justificativa/i}));expect(justificou).toBe(true)
 })
+
+// O painel diario entrega servico sem preco: ele entra com zero e, sem um jeito
+// de corrigir, a producao do dia ficava zerada para sempre. O valor informado
+// aqui conta como producao pendente — receita so quando a Porto pagar.
+test('serviço sem preço aceita valor informado na própria linha',async()=>{
+  let enviado:unknown=null
+  servidor.use(
+    http.get('/api/porto/ordens-servico',()=>HttpResponse.json([
+      {id:31,numero:'7400001/26',valorTotal:0,statusFinanceiro:'AGUARDANDO_OP',
+       statusOperacional:'NORMAL',dataAtendimento:'2026-09-13'}])),
+    http.patch('/api/porto/ordens-servico/31/valor',async({request})=>{
+      enviado=await request.json()
+      return HttpResponse.json({id:31,numero:'7400001/26',valorTotal:181,
+        statusFinanceiro:'AGUARDANDO_OP',statusOperacional:'NORMAL',dataAtendimento:'2026-09-13'})
+    }),
+  )
+  const user=userEvent.setup();render(<PortoOrdensServicoPage/>)
+
+  await user.click(await screen.findByRole('button',{name:/informar valor/i}))
+  await user.type(screen.getByLabelText(/valor da os 7400001\/26/i),'181')
+  await user.click(screen.getByRole('button',{name:/salvar/i}))
+
+  expect(enviado).toEqual({valorTotal:181})
+  expect(await screen.findByText(/181,00/)).toBeInTheDocument()
+})
+
+// Servico ja pago tem valor oficial vindo da OP: editar a mao desencontraria o
+// caixa do extrato da Porto.
+test('serviço já pago não oferece edição de valor',async()=>{
+  servidor.use(http.get('/api/porto/ordens-servico',()=>HttpResponse.json([
+    {id:32,numero:'7400002/26',valorTotal:500,statusFinanceiro:'RECEBIDO',
+     statusOperacional:'NORMAL',dataAtendimento:'2026-09-13'}])))
+  render(<PortoOrdensServicoPage/>)
+
+  expect(await screen.findByText(/500,00/)).toBeInTheDocument()
+  expect(screen.queryByRole('button',{name:/informar valor/i})).not.toBeInTheDocument()
+})

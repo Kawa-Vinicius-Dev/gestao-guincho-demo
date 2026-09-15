@@ -216,6 +216,10 @@ public class PortoService {
     @Transactional public OrdemServicoResponse associarMotorista(Long id,AssociarMotoristaRequest request){OrdemServicoPorto os=oss.findById(id).orElseThrow(()->new RecursoNaoEncontradoException("Ordem de serviço não encontrada."));Motorista motorista=motoristas.findById(request.motoristaId()).orElseThrow(()->new RecursoNaoEncontradoException("Motorista não encontrado."));
         if(!motorista.isAtivo())throw new IllegalArgumentException("Este socorrista está desativado e não pode receber novos vínculos.");
         os.vincularMotoristaManual(motorista);financeiro.atualizarVinculoAdministrativo(os,motorista);return os(os);}
+    @Transactional public OrdemServicoResponse informarValor(Long id,AtualizarValorOsRequest request){
+        OrdemServicoPorto os=oss.findById(id).orElseThrow(()->new RecursoNaoEncontradoException("Ordem de serviço não encontrada."));
+        os.informarValorManual(request.valorTotal());
+        return os(os);}
     @Transactional(readOnly=true) public OrdemPagamentoDetalheResponse detalhar(Long id){OrdemPagamentoPorto ordem=obterOp(id);return new OrdemPagamentoDetalheResponse(op(ordem),oss.findByOrdemPagamento(ordem).stream().map(this::os).toList(),justificativas.findByOrdemPagamentoOrderByCriadoEmDesc(ordem).stream().map(this::justificativa).toList(),historicos.findByOrdemPagamentoOrderByCriadoEmDesc(ordem).stream().map(this::historico).toList());}
     @Transactional public JustificativaResponse justificar(Long id,JustificativaRequest request,UsuarioPrincipal principal){OrdemPagamentoPorto ordem=obterOp(id);Usuario usuario=usuarios.findById(principal.id()).orElseThrow(()->new RecursoNaoEncontradoException("Usuário autenticado não encontrado."));
         return justificativa(justificativas.save(new JustificativaConciliacaoPorto(ordem,request.motivo(),request.observacao().trim(),usuario)));}
