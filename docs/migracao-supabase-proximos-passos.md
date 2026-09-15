@@ -101,7 +101,31 @@ Nomes válidos: `auth`, `veiculos`, `motoristas`, `categorias`, `contratantes`,
 `despesasFixas`, `porto`, `usuarios`. O valor `tudo` liga todos. O `auth` é
 obrigatório junto com qualquer outro.
 
-### 5. Checklist de validação
+### 5. Validação automática (roda contra o projeto de teste)
+
+`frontend/e2e/supabase-validar.mjs` exercita justamente as três camadas que
+nunca rodaram — Auth, Storage e PostgREST —, pelas mesmas bibliotecas que o
+frontend usa. Não precisa de Docker: fala com o projeto remoto.
+
+```bash
+cd frontend
+SUPABASE_URL=https://PROJETO-DE-TESTE.supabase.co \
+SUPABASE_ANON_KEY=sb_publishable_... \
+ADMIN_EMAIL=seu-admin@exemplo.com ADMIN_SENHA=... \
+node e2e/supabase-validar.mjs
+```
+
+Cobre: cadastro e login, sessão, logout, gatilho de provisionamento de perfil,
+visitante sem login recusado, `FUNCIONARIO` barrado em operação administrativa,
+upload e download de comprovante, arquivo alheio recusado, e as RPCs de
+dashboard, extrato, comissões e Porto. Sai com código 1 se algo falhar.
+
+Ele escreve dados — use no projeto de teste, não no real.
+
+> Se o cadastro falhar falando em confirmação de e-mail, desligue **Confirm
+> email** em Authentication → Providers → Email no projeto de teste.
+
+### 6. Checklist de validação manual
 
 O que precisa ser exercitado de verdade, porque nunca foi:
 
@@ -117,7 +141,7 @@ O que precisa ser exercitado de verdade, porque nunca foi:
   mostra hoje, no mesmo período. Devem bater.
 - **Mobile:** abrir as telas principais em largura de celular.
 
-### 6. Produção
+### 7. Produção
 
 Só depois que o teste estiver limpo: repetir os passos 1 e 2 no projeto real
 (reconstruindo o banco) e mover as variáveis para o projeto de produção da
