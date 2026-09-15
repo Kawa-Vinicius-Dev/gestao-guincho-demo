@@ -3,6 +3,7 @@ import { afterAll, afterEach, beforeAll } from 'vitest'
 import { cleanup, configure } from '@testing-library/react'
 
 import { limparCacheCurto } from '../dados/cacheCurto'
+import { invalidarCacheFinanceiro } from '../dados/dashboard'
 import { restaurarEstadoTeste, servidor } from './servidor'
 
 // O padrao do findBy* e 1s. Com dezoito arquivos em paralelo a maquina fica carregada e testes
@@ -18,5 +19,6 @@ afterEach(() => {
   // O cache de cadastros vive no modulo e sobreviveria de um caso para o outro,
   // servindo a um teste a resposta que outro montou.
   limparCacheCurto()
+  invalidarCacheFinanceiro()
 })
 afterAll(() => servidor.close())

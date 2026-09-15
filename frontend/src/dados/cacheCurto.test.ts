@@ -103,3 +103,18 @@ test('nada do cache encosta no localStorage', async () => {
 
   expect(localStorage.length).toBe(0)
 })
+
+test('resposta iniciada antes da limpeza não repovoa o cache', async () => {
+  const { comCacheCurto, limparCacheCurto } = await carregar()
+  let liberar!: (valor: string) => void
+  const antiga = comCacheCurto('categorias:DESPESA', () =>
+    new Promise<string>(resolve => { liberar = resolve }))
+
+  limparCacheCurto()
+  liberar('sessão anterior')
+  await antiga
+
+  let novasBuscas = 0
+  await comCacheCurto('categorias:DESPESA', async () => { novasBuscas++; return 'sessão nova' })
+  expect(novasBuscas).toBe(1)
+})

@@ -7,8 +7,8 @@ import { moeda, numero, percentual } from '../utils/formatadores'
  * melhor em HTML do que em SVG - o nome trunca, quebra e responde ao tamanho da
  * tela sem calculo manual de viewBox. Nenhuma dependencia nova.
  *
- * Todos leem de dados que /api/dashboard ja devolve. Nao existe serie temporal
- * na API, entao nao existe grafico de linha aqui: inventar um exigiria endpoint novo.
+ * Todos leem do mesmo resumo do dashboard. A trajetória usa a série diária que
+ * o backend/RPC agrega sem criar outra chamada na página.
  */
 
 /** Escala compartilhada: toda barra do mesmo grafico mede contra o maior valor. */
@@ -140,15 +140,28 @@ const dataCurta=(valor:string)=>{
   return `${dia}/${mes}`
 }
 
-/** Linha em degraus: o gasto sobe no dia em que foi pago, sem sugerir movimento entre datas. */
+/** Linha em degraus: o gasto sobe no dia consolidado pelo resumo, sem inventar movimento entre datas. */
 export function DespesaAcumulada({pontos,inicio,fim}:{pontos:PontoDespesaAcumulada[];inicio:string;fim:string}){
   if(!pontos.length)return <Vazio texto="A trajetória aparece quando houver despesas pagas."/>
-  const ordenados=[...pontos].sort((a,b)=>a.data.localeCompare(b.data))
   const largura=640,altura=196,margemX=12,topo=12,base=164
   const primeiro=diaUtc(inicio),ultimo=diaUtc(fim)
+  if(!Number.isFinite(primeiro)||!Number.isFinite(ultimo)||ultimo<primeiro){
+    return <Vazio texto="Informe um período válido para ver a trajetória."/>
+  }
+  const ordenados=[...pontos]
+    .filter(ponto=>{
+      const data=diaUtc(ponto.data)
+      return Number.isFinite(data)&&data>=primeiro&&data<=ultimo
+        &&Number.isFinite(ponto.valorDia)&&Number.isFinite(ponto.acumulado)
+    })
+    .sort((a,b)=>a.data.localeCompare(b.data))
+  if(!ordenados.length)return <Vazio texto="A trajetória aparece quando houver despesas pagas."/>
   const intervalo=Math.max(ultimo-primeiro,1)
   const total=Math.max(ordenados.at(-1)?.acumulado??0,1)
-  const x=(data:string)=>margemX+(diaUtc(data)-primeiro)/intervalo*(largura-margemX*2)
+  const x=(data:string)=>{
+    const posicao=Math.min(Math.max((diaUtc(data)-primeiro)/intervalo,0),1)
+    return margemX+posicao*(largura-margemX*2)
+  }
   const y=(valor:number)=>topo+(1-valor/total)*(base-topo)
   let caminho=`M ${margemX} ${base}`
   for(const ponto of ordenados)caminho+=` H ${x(ponto.data)} V ${y(ponto.acumulado)}`
@@ -172,7 +185,7 @@ export function DespesaAcumulada({pontos,inicio,fim}:{pontos:PontoDespesaAcumula
         className="trajetoria-ponto" cx={x(ponto.data)} cy={y(ponto.acumulado)} r="3.5"/>):null}
     </svg>
     <div className="trajetoria-eixo" aria-hidden="true"><span>{dataCurta(inicio)}</span><span>{dataCurta(fim)}</span></div>
-    <p>Maior saída em {dataCurta(maiorDia.data)}: <strong>{moeda(maiorDia.valorDia)}</strong></p>
+    <p>Maior gasto em {dataCurta(maiorDia.data)}: <strong>{moeda(maiorDia.valorDia)}</strong></p>
   </div>
 }
 

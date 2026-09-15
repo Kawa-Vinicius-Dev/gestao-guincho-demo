@@ -140,18 +140,28 @@ test('trocar senha grava e baixa a marca de provisoria, nesta ordem', async () =
   expect(passos).toEqual(['conferiu', 'gravou', 'concluiu'])
 })
 
-test('sair encerra a sessao no Supabase', async () => {
+test('sair encerra a sessao e apaga os numeros da operacao em cache', async () => {
   sessaoGravada()
   let saiu = false
-  servidor.use(http.post(`${URL_SUPABASE}/auth/v1/logout`, () => {
-    saiu = true
-    return new HttpResponse(null, { status: 204 })
-  }))
-  const { sair } = await carregar('auth')
+  servidor.use(
+    http.post(`${URL_SUPABASE}/rest/v1/rpc/dashboard_resumo`, () => HttpResponse.json({
+      financeiro: { saldoRealizado: 10 }, porto: null,
+    })),
+    http.post(`${URL_SUPABASE}/auth/v1/logout`, () => {
+      saiu = true
+      return new HttpResponse(null, { status: 204 })
+    }),
+  )
+  const { sair } = await carregar('auth,dashboard')
+  const { dashboardEmCache, lerDashboard } = await import('./dashboard')
+
+  await lerDashboard('2026-09-01','2026-09-30')
+  expect(dashboardEmCache('2026-09-01','2026-09-30')).toBeDefined()
 
   await sair()
 
   expect(saiu).toBe(true)
+  expect(dashboardEmCache('2026-09-01','2026-09-30')).toBeUndefined()
 })
 
 test('sem o modo auth, tudo continua no backend antigo', async () => {

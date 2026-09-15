@@ -24,6 +24,10 @@ const FINANCEIRO = {
   kmMorto: 200, custoKmMorto: 400, producaoPaga: 1000, comissaoSobreProducao: 200,
   producaoPendente: 300, servicosDoPeriodo: 3, servicosPendentes: 1, comissaoAPagar: 200,
   resultadoPorVeiculo: [], resultadoPorSocorrista: [], despesasPorCategoria: [],
+  despesasAcumuladasPorDia: [
+    { data: '2026-09-08', valorDia: 400, acumulado: 400 },
+    { data: '2026-09-09', valorDia: 50, acumulado: 450 },
+  ],
 }
 const PORTO = {
   quantidadeTotalOps: 2, valorTotalPrevisto: 1500, valorProgramado: 500, valorRecebido: 980,
@@ -45,6 +49,7 @@ test('no Supabase, os dois blocos vem numa chamada so', async () => {
   expect(chamadas).toBe(1)
   expect(corpo).toEqual({ p_inicio: '2026-09-01', p_fim: '2026-09-30' })
   expect(resumo.financeiro.saldoRealizado).toBe(550)
+  expect(resumo.financeiro.despesasAcumuladasPorDia?.at(-1)?.acumulado).toBe(450)
   expect(resumo.porto?.valorRecebido).toBe(980)
 })
 
@@ -134,6 +139,23 @@ test('quem mexe em dinheiro derruba o cache', async () => {
   expect(dashboardEmCache('2026-09-01', '2026-09-30')).toBeUndefined()
   await lerDashboard('2026-09-01', '2026-09-30')
   expect(chamadas).toBe(2)
+})
+
+test('resposta iniciada antes da limpeza não volta ao cache financeiro', async () => {
+  let liberar!: () => void
+  const espera = new Promise<void>(resolve => { liberar = resolve })
+  servidor.use(http.post(`${URL_SUPABASE}/rest/v1/rpc/dashboard_resumo`, async () => {
+    await espera
+    return HttpResponse.json({ financeiro: FINANCEIRO, porto: PORTO })
+  }))
+  const { lerDashboard, invalidarCacheFinanceiro, dashboardEmCache } = await carregar('auth,dashboard')
+
+  const pedidoAntigo = lerDashboard('2026-09-01', '2026-09-30')
+  invalidarCacheFinanceiro()
+  liberar()
+  await pedidoAntigo
+
+  expect(dashboardEmCache('2026-09-01', '2026-09-30')).toBeUndefined()
 })
 
 test('forcar ignora o cache', async () => {

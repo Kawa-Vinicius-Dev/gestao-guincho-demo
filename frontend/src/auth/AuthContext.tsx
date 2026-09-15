@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { tokenStorage } from '../api/http'
 import { autenticacaoNoSupabase } from '../dados/modo'
-import { entrar, observarSessao, sair, usuarioAtual } from '../dados/sessao'
+import { entrar, limparCachesDaSessao, observarSessao, sair, usuarioAtual } from '../dados/sessao'
 import type { Usuario } from '../types/modelos'
 
 interface AuthValue {
@@ -25,7 +25,9 @@ export function AuthProvider({children}:{children:ReactNode}) {
   const [usuario,setUsuario]=useState<Usuario|null>(null)
   const [carregando,setCarregando]=useState(podeTerSessao)
 
-  const limpar=useCallback(()=>{tokenStorage.clear();setUsuario(null);setCarregando(false)},[])
+  const limpar=useCallback(()=>{
+    limparCachesDaSessao();tokenStorage.clear();setUsuario(null);setCarregando(false)
+  },[])
 
   useEffect(()=>{
     if(!podeTerSessao()){setCarregando(false);return}

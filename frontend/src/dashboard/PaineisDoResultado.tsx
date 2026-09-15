@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { FaturamentoECusto, GastosPorCategoria, ProporcaoKm, ProporcaoServicos } from '../components/Graficos'
+import { DespesaAcumulada, FaturamentoECusto, GastosPorCategoria, ProporcaoKm, ProporcaoServicos } from '../components/Graficos'
 import type { ResumoPortoDashboard } from '../dados/dashboard'
 import type { Dashboard } from '../types/modelos'
 import { moeda, percentual } from '../utils/formatadores'
@@ -19,7 +19,8 @@ import { moeda, percentual } from '../utils/formatadores'
  * cor conforme o sinal, porque prejuizo em azul nao parece prejuizo.
  */
 export function FaixaDeIndicadores({ dados, margem }: { dados: Dashboard; margem: number }) {
-  const aReceber = dados.receitaPrevista + dados.totalAtrasado
+  // O atraso ja faz parte de receitaPrevista; somar outra vez inflava o cartão.
+  const aReceber = dados.receitaPrevista
   const lucro = dados.saldoRealizado
   return <section className="kpi-grid" aria-label="Indicadores do período">
     <article className="kpi">
@@ -58,14 +59,14 @@ export function FaixaDeIndicadores({ dados, margem }: { dados: Dashboard; margem
  * respondem "quanto sobrou" e este responde "no que foi", que e a pergunta
  * seguinte de quem abre o sistema.
  */
-export function PainelDeGastos({ dados }: { dados: Dashboard }) {
+export function PainelDeGastos({ dados, inicio, fim }: { dados: Dashboard; inicio: string; fim: string }) {
   const categorias = dados.despesasPorCategoria ?? []
   const maior = categorias[0]
   return <section className="panel painel-gastos">
     <header className="panel-title">
       <div>
         <span className="eyebrow">Para onde o dinheiro foi</span>
-        <h2>Maiores gastos do período</h2>
+        <h2>Composição e ritmo dos gastos</h2>
         {maior
           ? <p>
               <strong>{maior.categoria}</strong> puxou {percentual(maior.participacao)} de tudo
@@ -75,10 +76,23 @@ export function PainelDeGastos({ dados }: { dados: Dashboard }) {
       </div>
       <Link to="/despesas">Abrir despesas</Link>
     </header>
-    <GastosPorCategoria total={dados.despesasPagas}
-      linhas={categorias.map(c => ({
-        id: c.categoriaId, rotulo: c.categoria, valor: c.valor, participacao: c.participacao,
-      }))}/>
+    {categorias.length
+      ? <div className="gastos-leitura">
+          <section aria-labelledby="titulo-composicao-gastos">
+            <h3 id="titulo-composicao-gastos">Composição por categoria</h3>
+            <GastosPorCategoria total={dados.despesasPagas}
+              linhas={categorias.map(c => ({
+                id: c.categoriaId, rotulo: c.categoria, valor: c.valor,
+                participacao: c.participacao,
+              }))}/>
+          </section>
+          <section aria-labelledby="titulo-trajetoria-gastos">
+            <h3 id="titulo-trajetoria-gastos">Trajetória no período</h3>
+            <DespesaAcumulada pontos={dados.despesasAcumuladasPorDia ?? []}
+              inicio={inicio} fim={fim}/>
+          </section>
+        </div>
+      : <GastosPorCategoria total={dados.despesasPagas} linhas={[]}/>}
   </section>
 }
 

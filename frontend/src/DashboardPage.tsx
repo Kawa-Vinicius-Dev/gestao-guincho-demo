@@ -28,9 +28,15 @@ export default function DashboardPage(){
   // Enquanto revalida, a tela fica de pe com os numeros de antes em vez de
   // piscar o esqueleto a cada troca de periodo.
   const [atualizando,setAtualizando]=useState(false)
+  const periodoValido=Boolean(inicio&&fim&&inicio<=fim)
+  const avisoPeriodo=!inicio||!fim
+    ? 'Informe a data inicial e a data final para consultar o período.'
+    : inicio>fim?'A data inicial precisa ser anterior ou igual à data final.':''
 
   useEffect(()=>{
-    if(!inicio||!fim||inicio>fim)return
+    if(!inicio||!fim||inicio>fim){
+      setFinanceiro(null);setPorto(null);setErro('');setAtualizando(false);return
+    }
     let valeu=true
     const guardado=dashboardEmCache(inicio,fim)
     if(guardado){setFinanceiro(guardado.financeiro);setPorto(guardado.porto);setAtualizando(true)}
@@ -61,24 +67,28 @@ export default function DashboardPage(){
         <label className="month-picker">
           <span>De</span>
           <input aria-label="Data inicial" type="date" value={inicio}
+            max={fim||undefined}
             onChange={e=>setPeriodo(p=>({...p,inicio:e.target.value}))}/>
         </label>
         <label className="month-picker">
           <span>Até</span>
           <input aria-label="Data final" type="date" value={fim}
+            min={inicio||undefined}
             onChange={e=>setPeriodo(p=>({...p,fim:e.target.value}))}/>
         </label>
         <Link className="button button-primary" to="/despesas?novo=1">+ Registrar despesa</Link>
       </div>
     </header>
 
-    {erro
+    {avisoPeriodo
+      ? <div className="form-alert">{avisoPeriodo}</div>
+      : erro
       ? <div className="form-alert">
           Não foi possível carregar todos os indicadores oficiais. {erro}
         </div>
       : null}
 
-    {financeiro
+    {periodoValido&&financeiro
       ? <>
           {/* Leitura de dez segundos primeiro; o resto explica de onde ela saiu. */}
           <FaixaDeIndicadores dados={financeiro} margem={margem}/>
@@ -86,7 +96,7 @@ export default function DashboardPage(){
           {/* Duas perguntas que andam juntas: no que o dinheiro foi, e quanto do
               rodado nao foi pago. Lado a lado enquanto couber. */}
           <div className="grade-painel grade-8-4">
-            <PainelDeGastos dados={financeiro}/>
+            <PainelDeGastos dados={financeiro} inicio={inicio} fim={fim}/>
             <PainelDeKm dados={financeiro}/>
           </div>
 
@@ -99,9 +109,11 @@ export default function DashboardPage(){
 
           <PainelDaProducao dados={financeiro}/>
         </>
-      : erro
-        ? <div className="loading-card">Não foi possível carregar os indicadores deste período.</div>
-        : <div className="loading-card">Carregando indicadores financeiros oficiais…</div>}
+      : !periodoValido
+        ? null
+        : erro
+        ? <div className="loading-card" role="status">Não foi possível carregar os indicadores deste período.</div>
+        : <div className="loading-card" role="status">Carregando indicadores financeiros oficiais…</div>}
 
     {porto ? <ResumoPorto porto={porto}/> : null}
 

@@ -174,35 +174,36 @@ small.estimado{display:block;margin-top:2px;padding:1px 5px;width:fit-content;bo
 .dashboard-tech .finance-lane strong{font:500 clamp(25px,2.5vw,35px)/1 'IBM Plex Mono',monospace;letter-spacing:-.035em}
 .dashboard-tech .finance-lane .lane-result strong{text-shadow:0 0 24px rgba(70,199,238,.4)}
 
-/* --- faixa de producao e comissao --- */
-.dashboard-tech .fleet-summary{border-color:var(--console-edge);background:var(--console-edge)}
-.dashboard-tech .fleet-summary>div{background:linear-gradient(158deg,var(--console-face),var(--console-face-alt))}
-.dashboard-tech .fleet-summary span{color:var(--console-label)}
-.dashboard-tech .fleet-summary strong{color:var(--console-figure);
+/* --- faixa de producao e comissao ---
+   Superficie clara: o marinho fica reservado para a navegacao, e estes numeros
+   continuam pertencendo ao mesmo painel dos graficos logo abaixo. */
+.dashboard-tech .fleet-summary{border-color:var(--blue-100);background:var(--line)}
+.dashboard-tech .fleet-summary>div{background:linear-gradient(145deg,var(--superficie),var(--blue-50))}
+.dashboard-tech .fleet-summary span{color:var(--muted)}
+.dashboard-tech .fleet-summary strong{color:var(--ink);
   font:500 23px/1 'IBM Plex Mono',monospace;letter-spacing:-.025em}
-.dashboard-tech .fleet-summary small{color:var(--console-support)}
+.dashboard-tech .fleet-summary small{color:var(--muted)}
 
 /* --- registro: coluna 1 e nome, o resto e numero e vai para a mono --- */
 .dashboard-tech .panel td:not(:first-child){font:500 12px/1.4 'IBM Plex Mono',monospace}
 .dashboard-tech .empty-inline{padding:18px 24px;font-size:13px}
 
-/* --- resumo Porto, para nao destoar dos indicadores --- */
-.dashboard-tech .porto-finance-summary{border-color:var(--console-edge);
-  background:linear-gradient(135deg,var(--console-deep),var(--console-face-alt))}
-.dashboard-tech .porto-finance-summary h2{color:var(--console-figure)}
-.dashboard-tech .porto-finance-summary header a{color:var(--cyan);font-weight:600;text-decoration:none}
-.dashboard-tech .porto-finance-summary>div span{color:var(--console-label);
-  border:1px solid var(--console-edge);background:rgba(70,199,238,.05)}
-.dashboard-tech .porto-finance-summary strong{color:var(--console-figure);
+/* --- resumo Porto --- */
+.dashboard-tech .porto-finance-summary{border-color:var(--blue-100);
+  background:linear-gradient(135deg,var(--blue-50),var(--superficie) 72%);box-shadow:var(--shadow)}
+.dashboard-tech .porto-finance-summary h2{color:var(--ink)}
+.dashboard-tech .porto-finance-summary header a{color:var(--blue-600);font-weight:600;text-decoration:none}
+.dashboard-tech .porto-finance-summary>div span{color:var(--muted);
+  border:1px solid var(--blue-100);background:var(--superficie)}
+.dashboard-tech .porto-finance-summary strong{color:var(--ink);
   font:500 19px 'IBM Plex Mono',monospace}
-.dashboard-tech .porto-finance-summary small,.dashboard-tech .porto-finance-summary p{color:var(--console-support)}
+.dashboard-tech .porto-finance-summary small,.dashboard-tech .porto-finance-summary p{color:var(--muted)}
 
 /* Cabecalho de painel: dois dos tres paineis do dashboard vinham com padding
    zero no .panel-title, encostando o texto na borda do cartao, enquanto o
    terceiro (.vehicle-results-v2) tinha 22px. Padroniza os tres. */
 .dashboard-tech .panel>.panel-title{padding:20px 22px 14px;border-bottom:1px solid var(--line)}
-/* A faixa escura preenche o painel de ponta a ponta, em vez de flutuar com
-   borda e raio proprios dentro da borda do painel. */
+/* A faixa preenche o painel de ponta a ponta, sem borda e raio duplicados. */
 .dashboard-tech .panel>.fleet-summary{margin:0;border:0;border-radius:0}
 
 /* ===========================================================================
@@ -943,38 +944,72 @@ tbody tr{transition:background-color .14s ease}
 /* ===========================================================================
    Para onde o dinheiro foi
    ---------------------------------------------------------------------------
-   Barra deitada por categoria, da maior para a menor. A maior sai em vermelho
-   cheio: e nela que a conversa sobre corte de custo comeca.
+   Rosca para composicao e linha em degraus para o momento de cada pagamento.
+   A lista preserva os numeros exatos: cor nunca e a unica forma de leitura.
    =========================================================================== */
 .dashboard-tech .painel-gastos{margin-bottom:var(--espaco-2)}
-.dashboard-tech .gastos-categoria{padding:var(--espaco-1) var(--painel-pad) var(--espaco-3)}
-.dashboard-tech .gastos-total{
-  display:flex;align-items:baseline;justify-content:space-between;gap:12px;
-  margin:0 0 var(--espaco-2);padding-bottom:10px;
-  border-bottom:1px solid var(--linha-suave)}
-.dashboard-tech .gastos-total span{color:var(--muted);font-size:11px;
-  letter-spacing:.07em;text-transform:uppercase}
-.dashboard-tech .gastos-total strong{
-  font:600 22px 'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;color:var(--ink)}
-/* Quatro colunas: nome, barra, valor e participacao. A participacao e o que
-   responde "isso e muito?" sem a pessoa fazer a conta de cabeca. */
-.dashboard-tech .gastos-categoria .barra-linha{
-  grid-template-columns:minmax(96px,168px) minmax(0,1fr) minmax(92px,auto) 52px}
-.dashboard-tech .gastos-categoria .barra-trilho{height:15px}
-.dashboard-tech .barra-maior{background:var(--red)}
-.dashboard-tech .gastos-categoria .barra-preenche{background:#8aa4bf}
-.dashboard-tech .gastos-categoria .barra-maior{background:var(--red)}
-.dashboard-tech .barra-parcela{
-  text-align:right;color:var(--muted);
-  font:500 12px/1 'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums}
-@media(max-width:620px){
-  /* Em tela estreita o nome sobe e a barra ocupa a largura toda: espremer quatro
-     colunas em 390px deixaria o nome com duas letras. */
-  .dashboard-tech .gastos-categoria .barra-linha{
-    grid-template-columns:minmax(0,1fr) auto;gap:4px 10px}
-  .dashboard-tech .gastos-categoria .barra-rotulo{grid-column:1/-1;font-weight:600}
-  .dashboard-tech .gastos-categoria .barra-trilho{grid-column:1/-1;order:3}
-  .dashboard-tech .gastos-categoria .barra-valor{text-align:left}
+.dashboard-tech .gastos-leitura{
+  display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);
+  border-top:1px solid var(--line)}
+.dashboard-tech .gastos-leitura>section{min-width:0;padding:18px var(--painel-pad) 20px}
+.dashboard-tech .gastos-leitura>section+section{border-left:1px solid var(--line)}
+.dashboard-tech .gastos-leitura h3{
+  margin:0 0 16px;color:var(--muted);font:600 10px 'IBM Plex Sans',sans-serif;
+  letter-spacing:.09em;text-transform:uppercase}
+.dashboard-tech .gastos-categoria{
+  display:grid;grid-template-columns:minmax(118px,154px) minmax(0,1fr);
+  align-items:center;gap:clamp(16px,2vw,26px)}
+.dashboard-tech .gastos-rosca{
+  position:relative;display:grid;place-items:center;width:100%;aspect-ratio:1;
+  border-radius:50%;background:var(--gastos-gradiente)}
+.dashboard-tech .gastos-rosca:before{
+  content:'';grid-area:1/1;width:61%;aspect-ratio:1;border-radius:50%;
+  background:var(--superficie);box-shadow:0 0 0 1px var(--linha-suave)}
+.dashboard-tech .gastos-rosca>span{z-index:1;grid-area:1/1;max-width:58%;text-align:center}
+.dashboard-tech .gastos-rosca small,.dashboard-tech .gastos-rosca strong{display:block}
+.dashboard-tech .gastos-rosca small{
+  color:var(--muted);font-size:8px;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+.dashboard-tech .gastos-rosca strong{
+  margin-top:5px;color:var(--ink);font:600 clamp(12px,1.3vw,17px)/1.1 'IBM Plex Mono',monospace;
+  font-variant-numeric:tabular-nums;white-space:nowrap}
+.dashboard-tech .gastos-categoria ol{min-width:0;margin:0;padding:0;list-style:none}
+.dashboard-tech .gastos-categoria li{
+  display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;
+  gap:7px;min-height:34px;border-bottom:1px solid var(--linha-suave);font-size:10px}
+.dashboard-tech .gastos-categoria li:last-child{border-bottom:0}
+.dashboard-tech .gastos-categoria li>i{width:8px;height:8px;border-radius:2px}
+.dashboard-tech .gastos-categoria li>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dashboard-tech .gastos-categoria li>strong,.dashboard-tech .gastos-categoria li>small{
+  font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;white-space:nowrap}
+.dashboard-tech .gastos-categoria li>strong{color:var(--ink);font-size:10px}
+.dashboard-tech .gastos-categoria li>small{color:var(--muted);font-size:9px;text-align:right}
+.dashboard-tech .gastos-trajetoria{min-width:0}
+.dashboard-tech .trajetoria-resumo{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.dashboard-tech .trajetoria-resumo span{color:var(--muted);font-size:10px}
+.dashboard-tech .trajetoria-resumo strong{
+  color:var(--red);font:600 15px 'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums}
+.dashboard-tech .gastos-trajetoria svg{display:block;width:100%;height:auto;margin-top:7px;overflow:visible}
+.dashboard-tech .trajetoria-grade{stroke:var(--linha-suave);stroke-width:1}
+.dashboard-tech .trajetoria-area{fill:var(--red);opacity:.12}
+.dashboard-tech .trajetoria-linha{
+  fill:none;stroke:var(--red);stroke-width:3;stroke-linecap:round;stroke-linejoin:round;
+  vector-effect:non-scaling-stroke}
+.dashboard-tech .trajetoria-ponto{
+  fill:var(--superficie);stroke:var(--red);stroke-width:2;vector-effect:non-scaling-stroke}
+.dashboard-tech .trajetoria-eixo{
+  display:flex;justify-content:space-between;margin-top:-5px;color:var(--muted);
+  font:500 9px 'IBM Plex Mono',monospace}
+.dashboard-tech .gastos-trajetoria>p{margin:13px 0 0;color:var(--muted);font-size:10px}
+.dashboard-tech .gastos-trajetoria>p strong{color:var(--ink)}
+@media(max-width:760px){
+  .dashboard-tech .gastos-leitura{grid-template-columns:minmax(0,1fr)}
+  .dashboard-tech .gastos-leitura>section+section{border-top:1px solid var(--line);border-left:0}
+}
+@media(max-width:520px){
+  .dashboard-tech .gastos-categoria{grid-template-columns:minmax(0,1fr)}
+  .dashboard-tech .gastos-rosca{width:150px;justify-self:center}
+  .dashboard-tech .gastos-categoria li{grid-template-columns:auto minmax(0,1fr) auto}
+  .dashboard-tech .gastos-categoria li>small{grid-column:2;text-align:left}
 }
 
 /* O grafico de faturamento x custo tem quatro colunas (nome, barras, valores,

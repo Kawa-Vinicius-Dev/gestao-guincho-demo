@@ -21,6 +21,8 @@ type Entrada = { em: number; valor: unknown }
 const cache = new Map<string, Entrada>()
 /** Chamadas em voo, para duas telas simultaneas nao pedirem a mesma lista. */
 const emVoo = new Map<string, Promise<unknown>>()
+/** Impede uma resposta da sessao anterior de repovoar o cache depois do logout. */
+let geracao = 0
 
 export async function comCacheCurto<T>(chave: string, buscar: () => Promise<T>): Promise<T> {
   const guardado = cache.get(chave)
@@ -29,12 +31,18 @@ export async function comCacheCurto<T>(chave: string, buscar: () => Promise<T>):
   const jaPedido = emVoo.get(chave)
   if (jaPedido) return jaPedido as Promise<T>
 
-  const promessa = buscar()
+  const geracaoDoPedido = geracao
+  let promessa: Promise<T>
+  promessa = buscar()
     .then(valor => {
-      cache.set(chave, { em: Date.now(), valor })
+      if (geracaoDoPedido === geracao) cache.set(chave, { em: Date.now(), valor })
       return valor
     })
-    .finally(() => emVoo.delete(chave))
+    .finally(() => {
+      // Uma invalidacao pode ter iniciado outro pedido com a mesma chave. A
+      // resposta antiga nao pode apagar o registro do pedido novo.
+      if (emVoo.get(chave) === promessa) emVoo.delete(chave)
+    })
 
   emVoo.set(chave, promessa)
   return promessa
@@ -46,12 +54,14 @@ export async function comCacheCurto<T>(chave: string, buscar: () => Promise<T>):
  * cadastro que nao aparece logo depois de salvo parece cadastro perdido.
  */
 export function invalidarCadastro(chave: string) {
+  geracao++
   cache.delete(chave)
   emVoo.delete(chave)
 }
 
 /** Usado pelos testes. */
 export function limparCacheCurto() {
+  geracao++
   cache.clear()
   emVoo.clear()
 }

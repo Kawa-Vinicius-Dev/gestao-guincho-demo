@@ -1,6 +1,7 @@
 import { ApiError, api, tokenStorage } from '../api/http'
 import type { Usuario } from '../types/modelos'
 import { limparCacheCurto } from './cacheCurto'
+import { invalidarCacheFinanceiro } from './cacheFinanceiro'
 import { erroDoBanco, ou, supabase } from './cliente'
 import { autenticacaoNoSupabase } from './modo'
 
@@ -76,6 +77,9 @@ export async function usuarioAtual(): Promise<Usuario | null> {
 }
 
 export async function entrar(email: string, senha: string): Promise<Usuario> {
+  // Uma nova tentativa de entrada delimita uma nova sessao. Mesmo que uma
+  // resposta antiga ainda esteja em voo, ela nao pode alimentar os caches.
+  limparCachesDaSessao()
   const emailNormalizado = email.trim().toLowerCase()
 
   if (!autenticacaoNoSupabase()) {
@@ -109,7 +113,7 @@ export async function sair(): Promise<void> {
   // logado. Numa maquina compartilhada do patio, a proxima pessoa nao pode
   // herdar a lista da anterior — nem ver por trinta segundos algo que o proprio
   // RLS dela negaria.
-  limparCacheCurto()
+  limparCachesDaSessao()
   if (!autenticacaoNoSupabase()) {
     try {
       if (tokenStorage.get()) await api('/api/auth/logout', { method: 'POST' })
@@ -119,6 +123,12 @@ export async function sair(): Promise<void> {
     return
   }
   await supabase().auth.signOut()
+}
+
+/** Nenhum dado da operação atravessa uma troca de usuário na mesma aba. */
+export function limparCachesDaSessao(): void {
+  limparCacheCurto()
+  invalidarCacheFinanceiro()
 }
 
 /**

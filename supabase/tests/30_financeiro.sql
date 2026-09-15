@@ -150,6 +150,17 @@ select pg_temp.checar('as participacoes somam 100%',
    from jsonb_array_elements(public.dashboard_financeiro('2026-09-01','2026-09-30')
         -> 'despesasPorCategoria') x), '100');
 
+\echo '===== TRAJETORIA: fecha com o total pago sem outra chamada ====='
+select pg_temp.checar('a serie diaria vem dentro do resumo da tela',
+  (public.dashboard_resumo('2026-09-01','2026-09-30')
+    -> 'financeiro' -> 'despesasAcumuladasPorDia' -> 0 ->> 'data'), '2026-09-08');
+select pg_temp.checar('o ultimo acumulado fecha com despesas pagas',
+  (select item ->> 'acumulado'
+   from jsonb_array_elements(public.dashboard_resumo('2026-09-01','2026-09-30')
+        -> 'financeiro' -> 'despesasAcumuladasPorDia') with ordinality as serie(item,posicao)
+   order by posicao desc limit 1),
+  (public.dashboard_financeiro('2026-09-01','2026-09-30') ->> 'despesasPagas'));
+
 \echo '===== RESUMO PORTO: previsto x programado x recebido ====='
 -- OP-1 recebida (previsto 1000, recebido 980) e OP-2 programada (500).
 select pg_temp.checar('previsto soma as duas OPs',

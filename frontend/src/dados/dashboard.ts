@@ -1,8 +1,11 @@
 import { api } from '../api/http'
 import { resumirOrdensPagamentoPorto } from '../api/porto'
 import type { Dashboard } from '../types/modelos'
+import { entradaDoCacheFinanceiro, geracaoDoCacheFinanceiro, guardarNoCacheFinanceiro } from './cacheFinanceiro'
 import { ou, supabase } from './cliente'
 import { moduloNoSupabase } from './modo'
+
+export { invalidarCacheFinanceiro } from './cacheFinanceiro'
 
 /**
  * Indicadores do periodo.
@@ -40,45 +43,36 @@ export interface ResumoDashboard {
  *
  * Nada disto vai para localStorage: sao receita, lucro e margem da operacao, e
  * localStorage sobrevive ao fim da sessao, fica legivel para qualquer script da
- * pagina e nao tem como ser invalidado quando a pessoa sai. O Map abaixo morre
- * junto com a aba, que e o comportamento certo para numero de caixa.
+ * pagina e nao tem como ser invalidado quando a pessoa sai. O armazenamento em
+ * memoria morre junto com a aba, que e o comportamento certo para numero de caixa.
  *
  * Serve para a troca de periodo ida-e-volta nao repetir a consulta, e para a
  * tela pintar na hora enquanto revalida por baixo.
  */
 const VALIDADE_MS = 60_000
-const cache = new Map<string, { em: number; dados: ResumoDashboard }>()
 
 const chave = (inicio: string, fim: string) => `${inicio}|${fim}`
 
 /** O que ja se sabe sobre o periodo, para pintar antes da resposta chegar. */
 export function dashboardEmCache(inicio: string, fim: string): ResumoDashboard | undefined {
-  return cache.get(chave(inicio, fim))?.dados
-}
-
-/**
- * Chamado por quem muda dinheiro: aprovar, pagar, receber, lancar. Sem isto o
- * cache serviria por ate um minuto um total que a propria pessoa acabou de
- * alterar — e o numero errado logo depois da acao e pior do que a espera.
- */
-export function invalidarCacheFinanceiro() {
-  cache.clear()
+  return entradaDoCacheFinanceiro<ResumoDashboard>(chave(inicio, fim))?.dados
 }
 
 export async function lerDashboard(
   inicio: string, fim: string, opcoes: { forcar?: boolean } = {},
 ): Promise<ResumoDashboard> {
   const k = chave(inicio, fim)
-  const guardado = cache.get(k)
+  const guardado = entradaDoCacheFinanceiro<ResumoDashboard>(k)
   if (!opcoes.forcar && guardado && Date.now() - guardado.em < VALIDADE_MS) {
     return guardado.dados
   }
 
+  const geracaoDoPedido = geracaoDoCacheFinanceiro()
   const dados = moduloNoSupabase('dashboard')
     ? await peloSupabase(inicio, fim)
     : await peloRender(inicio, fim)
 
-  cache.set(k, { em: Date.now(), dados })
+  guardarNoCacheFinanceiro(k, dados, geracaoDoPedido)
   return dados
 }
 
