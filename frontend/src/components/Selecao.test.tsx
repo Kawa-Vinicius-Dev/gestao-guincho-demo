@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor, within } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, test } from 'vitest'
 import { Selecao } from './Selecao'
@@ -78,8 +78,11 @@ test.each([
   expect(screen.getByRole('dialog', { name: 'Período' })).toBeInTheDocument()
 })
 
-// A excecao legitima: sem campo na tela nao ha onde ancorar o painel.
-test('painel fecha quando o campo sai da tela', async () => {
+// No celular o painel cobre a tela e leva o foco para dentro de si — o que rola
+// a pagina e tira o campo de vista. Fechar nessa hora tornava o dropdown
+// impossivel de abrir: ele aparecia e sumia no mesmo toque. NADA que mexa na
+// janela pode fechar o painel; so Esc, o fundo ou escolher uma opcao.
+test('campo sair de vista nao fecha o painel', async () => {
   const user = userEvent.setup()
   render(<Selecao rotulo="Período" opcoes={veiculos}/>)
   // Depois de aberto o painel tambem se chama "Período": pega o campo antes.
@@ -88,6 +91,9 @@ test('painel fecha quando o campo sai da tela', async () => {
 
   campo.getBoundingClientRect = () => ({ top: -500, bottom: -450 }) as DOMRect
   act(() => { document.body.dispatchEvent(new Event('scroll', { bubbles: true })) })
-  await waitFor(() =>
-    expect(screen.queryByRole('dialog', { name: 'Período' })).not.toBeInTheDocument())
+  // O reposicionamento roda dentro de requestAnimationFrame: sem esperar o
+  // quadro a asercao acerta antes de ele rodar e o teste nao prova nada.
+  await act(async () => { await new Promise(pronto => setTimeout(pronto, 50)) })
+
+  expect(screen.getByRole('dialog', { name: 'Período' })).toBeInTheDocument()
 })

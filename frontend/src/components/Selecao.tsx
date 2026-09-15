@@ -71,7 +71,11 @@ export function Selecao({ rotulo, className, ajuda, vazio, opcoes, ...resto }: P
    * recolhendo. Cada um desses aparecia como um bug diferente e foi corrigido
    * como um bug diferente. Recalcular a ancora resolve a classe toda.
    *
-   * So fecha quando o campo sai da tela — ai nao ha mesmo onde ancorar.
+   * NADA que mexa na janela fecha o painel. Ja tentei abrir uma excecao para o
+   * campo sair de vista, e ela reintroduziu o mesmo defeito: no celular o painel
+   * cobre a tela e leva o foco para dentro de si, isso rola a pagina, o campo
+   * sai de vista e o painel se fechava no mesmo toque em que abriu. Fecha por
+   * Esc, pelo fundo ou escolhendo — mais nada.
    */
   useEffect(() => {
     if (!aberto) return
@@ -80,10 +84,7 @@ export function Selecao({ rotulo, className, ajuda, vazio, opcoes, ...resto }: P
       cancelAnimationFrame(quadro)
       quadro = requestAnimationFrame(() => {
         const alvo = campo.current
-        if (!alvo) return
-        const caixa = alvo.getBoundingClientRect()
-        if (caixa.bottom < 0 || caixa.top > window.innerHeight) { fechar(); return }
-        setAncora(caixa)
+        if (alvo) setAncora(alvo.getBoundingClientRect())
       })
     }
     window.addEventListener('scroll', recalcular, true)
