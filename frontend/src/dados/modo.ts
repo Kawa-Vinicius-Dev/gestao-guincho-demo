@@ -53,7 +53,10 @@ export function autenticacaoNoSupabase() {
 
 export function moduloNoSupabase(modulo: Modulo) {
   if (!autenticacaoNoSupabase()) return false
-  return configurados.has(modulo) || configurados.has('tudo')
+  // A lista da variavel e normalizada em minusculas, entao o nome do modulo
+  // tambem precisa ser — senao `despesasFixas` nunca casaria com o que foi
+  // digitado, e o modulo so ligaria por `tudo`.
+  return configurados.has(modulo.toLowerCase()) || configurados.has('tudo')
 }
 
 /** Para a tela de configuracoes mostrar o que esta ligado, sem adivinhacao. */
