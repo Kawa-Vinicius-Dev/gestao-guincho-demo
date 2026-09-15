@@ -1,5 +1,6 @@
 import { api } from '../api/http'
 import type { Motorista } from '../types/modelos'
+import { comCacheCurto, invalidarCadastro } from './cacheCurto'
 import { ou, supabase } from './cliente'
 import { moduloNoSupabase } from './modo'
 
@@ -73,16 +74,19 @@ function paraBanco(dados: DadosMotorista) {
 }
 
 export async function listarMotoristas(): Promise<Motorista[]> {
-  if (!moduloNoSupabase('motoristas')) return api<Motorista[]>('/api/motoristas')
+  return comCacheCurto('motoristas', async () => {
+    if (!moduloNoSupabase('motoristas')) return api<Motorista[]>('/api/motoristas')
 
-  const linhas = ou(
-    await supabase().from('motoristas').select(COLUNAS).order('nome'),
-    'Não foi possível carregar os socorristas.',
-  ) as unknown as LinhaMotorista[]
-  return linhas.map(paraModelo)
+    const linhas = ou(
+      await supabase().from('motoristas').select(COLUNAS).order('nome'),
+      'Não foi possível carregar os socorristas.',
+    ) as unknown as LinhaMotorista[]
+    return linhas.map(paraModelo)
+  })
 }
 
 export async function criarMotorista(dados: DadosMotorista): Promise<Motorista> {
+  invalidarCadastro('motoristas')
   if (!moduloNoSupabase('motoristas')) {
     return api<Motorista>('/api/motoristas', { method: 'POST', body: JSON.stringify(dados) })
   }
@@ -94,6 +98,7 @@ export async function criarMotorista(dados: DadosMotorista): Promise<Motorista> 
 }
 
 export async function atualizarMotorista(id: number, dados: DadosMotorista): Promise<Motorista> {
+  invalidarCadastro('motoristas')
   if (!moduloNoSupabase('motoristas')) {
     return api<Motorista>(`/api/motoristas/${id}`, { method: 'PUT', body: JSON.stringify(dados) })
   }
@@ -110,6 +115,7 @@ export async function atualizarMotorista(id: number, dados: DadosMotorista): Pro
  * continua de pe. Era essa a regra do backend e continua sendo aqui.
  */
 export async function alternarAtivoMotorista(motorista: Motorista): Promise<Motorista> {
+  invalidarCadastro('motoristas')
   if (!moduloNoSupabase('motoristas')) {
     return api<Motorista>(
       `/api/motoristas/${motorista.id}/${motorista.ativo ? 'desativar' : 'reativar'}`,

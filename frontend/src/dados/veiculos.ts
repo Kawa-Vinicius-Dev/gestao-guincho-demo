@@ -1,5 +1,6 @@
 import { api } from '../api/http'
 import type { Veiculo } from '../types/modelos'
+import { comCacheCurto, invalidarCadastro } from './cacheCurto'
 import { ou, supabase } from './cliente'
 import { moduloNoSupabase } from './modo'
 
@@ -66,18 +67,21 @@ function paraBanco(dados: DadosVeiculo) {
 }
 
 export async function listarVeiculos(): Promise<Veiculo[]> {
-  if (!moduloNoSupabase('veiculos')) return api<Veiculo[]>('/api/veiculos')
+  return comCacheCurto('veiculos', async () => {
+    if (!moduloNoSupabase('veiculos')) return api<Veiculo[]>('/api/veiculos')
 
-  // A ordem importa para a tela: a lista lateral da pagina de Veiculos e os
-  // seletores de viatura aparecem em ordem de identificacao, como antes.
-  const linhas = ou(
-    await supabase().from('veiculos').select(COLUNAS).order('identificacao'),
-    'Não foi possível carregar os veículos.',
-  ) as LinhaVeiculo[]
-  return linhas.map(paraModelo)
+    // A ordem importa para a tela: a lista lateral da pagina de Veiculos e os
+    // seletores de viatura aparecem em ordem de identificacao, como antes.
+    const linhas = ou(
+      await supabase().from('veiculos').select(COLUNAS).order('identificacao'),
+      'Não foi possível carregar os veículos.',
+    ) as LinhaVeiculo[]
+    return linhas.map(paraModelo)
+  })
 }
 
 export async function criarVeiculo(dados: DadosVeiculo): Promise<Veiculo> {
+  invalidarCadastro('veiculos')
   if (!moduloNoSupabase('veiculos')) {
     return api<Veiculo>('/api/veiculos', { method: 'POST', body: JSON.stringify(dados) })
   }
@@ -89,6 +93,7 @@ export async function criarVeiculo(dados: DadosVeiculo): Promise<Veiculo> {
 }
 
 export async function atualizarVeiculo(id: number, dados: DadosVeiculo): Promise<Veiculo> {
+  invalidarCadastro('veiculos')
   if (!moduloNoSupabase('veiculos')) {
     return api<Veiculo>(`/api/veiculos/${id}`, { method: 'PUT', body: JSON.stringify(dados) })
   }

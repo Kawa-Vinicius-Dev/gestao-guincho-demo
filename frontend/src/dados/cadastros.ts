@@ -1,5 +1,6 @@
 import { api } from '../api/http'
 import type { Categoria, Contratante } from '../types/modelos'
+import { comCacheCurto, invalidarCadastro } from './cacheCurto'
 import { ou, supabase } from './cliente'
 import { moduloNoSupabase } from './modo'
 
@@ -25,6 +26,7 @@ export type TipoCategoria = 'RECEITA' | 'DESPESA'
  * de receita para descartar no browser seria egress gasto a toa.
  */
 export async function listarCategorias(tipo?: TipoCategoria): Promise<Categoria[]> {
+ return comCacheCurto(`categorias:${tipo ?? 'todas'}`, async () => {
   if (!moduloNoSupabase('categorias')) {
     return api<Categoria[]>(tipo ? `/api/categorias?tipo=${tipo}` : '/api/categorias')
   }
@@ -35,9 +37,12 @@ export async function listarCategorias(tipo?: TipoCategoria): Promise<Categoria[
     'Não foi possível carregar as categorias.',
   ) as LinhaCategoria[]
   return linhas
+ })
 }
 
 export async function criarCategoria(nome: string, tipo: TipoCategoria): Promise<Categoria> {
+  invalidarCadastro(`categorias:${tipo}`)
+  invalidarCadastro('categorias:todas')
   if (!moduloNoSupabase('categorias')) {
     return api<Categoria>('/api/categorias', { method: 'POST', body: JSON.stringify({ nome, tipo }) })
   }
@@ -49,16 +54,19 @@ export async function criarCategoria(nome: string, tipo: TipoCategoria): Promise
 }
 
 export async function listarContratantes(): Promise<Contratante[]> {
-  if (!moduloNoSupabase('contratantes')) return api<Contratante[]>('/api/contratantes')
+  return comCacheCurto('contratantes', async () => {
+    if (!moduloNoSupabase('contratantes')) return api<Contratante[]>('/api/contratantes')
 
-  const linhas = ou(
-    await supabase().from('contratantes').select(COLUNAS_CONTRATANTE).order('nome'),
-    'Não foi possível carregar os contratantes.',
-  ) as LinhaContratante[]
-  return linhas.map(l => ({ id: l.id, nome: l.nome, documento: l.documento ?? undefined, ativo: l.ativo }))
+    const linhas = ou(
+      await supabase().from('contratantes').select(COLUNAS_CONTRATANTE).order('nome'),
+      'Não foi possível carregar os contratantes.',
+    ) as LinhaContratante[]
+    return linhas.map(l => ({ id: l.id, nome: l.nome, documento: l.documento ?? undefined, ativo: l.ativo }))
+  })
 }
 
 export async function criarContratante(nome: string, documento?: string | null): Promise<Contratante> {
+  invalidarCadastro('contratantes')
   if (!moduloNoSupabase('contratantes')) {
     return api<Contratante>('/api/contratantes', {
       method: 'POST', body: JSON.stringify({ nome, documento: documento || null }),

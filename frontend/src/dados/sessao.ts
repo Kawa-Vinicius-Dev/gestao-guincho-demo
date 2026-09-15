@@ -1,5 +1,6 @@
 import { ApiError, api, tokenStorage } from '../api/http'
 import type { Usuario } from '../types/modelos'
+import { limparCacheCurto } from './cacheCurto'
 import { erroDoBanco, ou, supabase } from './cliente'
 import { autenticacaoNoSupabase } from './modo'
 
@@ -104,6 +105,11 @@ export async function entrar(email: string, senha: string): Promise<Usuario> {
 }
 
 export async function sair(): Promise<void> {
+  // Os cadastros em cache nao sao segredo, mas sao da operacao de quem estava
+  // logado. Numa maquina compartilhada do patio, a proxima pessoa nao pode
+  // herdar a lista da anterior — nem ver por trinta segundos algo que o proprio
+  // RLS dela negaria.
+  limparCacheCurto()
   if (!autenticacaoNoSupabase()) {
     try {
       if (tokenStorage.get()) await api('/api/auth/logout', { method: 'POST' })
