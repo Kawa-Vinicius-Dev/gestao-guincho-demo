@@ -150,10 +150,27 @@ public class DashboardService {
             acumuladasPorDia.add(new DespesaAcumuladaDia(gasto.getKey(),gasto.getValue(),acumulado));
         }
 
+        // Servico prestado no periodo que a Porto paga fora dele. A receita existe,
+        // so nao nesta janela — e sem dizer onde ela esta a tela parece quebrada
+        // para quem acabou de importar o relatorio e ve zero.
+        Map<LocalDate,List<com.anaiv.fluxogestao.porto.OrdemServicoPorto>> pagosForaDaJanela=
+            servicosDoPeriodo.stream()
+                .filter(os->os.getStatusFinanceiro()==StatusFinanceiroPorto.RECEBIDO)
+                .filter(os->os.getDataEfetivaPagamento()!=null)
+                .filter(os->!entre(os.getDataEfetivaPagamento(),inicio,fim))
+                .collect(java.util.stream.Collectors.groupingBy(
+                    com.anaiv.fluxogestao.porto.OrdemServicoPorto::getDataEfetivaPagamento,
+                    TreeMap::new,java.util.stream.Collectors.toList()));
+        List<RecebimentoForaDoPeriodo> foraDoPeriodo=pagosForaDaJanela.entrySet().stream()
+            .map(dia->new RecebimentoForaDoPeriodo(dia.getKey(),
+                soma(dia.getValue().stream().map(com.anaiv.fluxogestao.porto.OrdemServicoPorto::getValorTotal).toList()),
+                dia.getValue().size()))
+            .toList();
+
         return new DashboardResponse(recebida,prevista,atrasada,pagas,despPrev,realizado,projetado,
             importados,kmTotal,kmRem,kmMorto,custoMorto,resultados,
             producaoPaga,comissaoSobreProducao,producaoPendente,pendentes.size(),servicosDoPeriodo.size(),
-            comissaoAPagar,porCategoria,porPessoa,acumuladasPorDia);
+            comissaoAPagar,porCategoria,porPessoa,acumuladasPorDia,foraDoPeriodo);
     }
     private boolean entre(LocalDate data,LocalDate inicio,LocalDate fim){return data!=null&&!data.isBefore(inicio)&&!data.isAfter(fim);}
     /** Quanto a categoria representa do total pago, em pontos percentuais. Total zero da zero. */

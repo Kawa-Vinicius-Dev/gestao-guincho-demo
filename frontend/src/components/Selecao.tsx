@@ -62,6 +62,39 @@ export function Selecao({ rotulo, className, ajuda, vazio, opcoes, ...resto }: P
     setAberto(true)
   }
 
+  /**
+   * Rolagem e redimensionamento REPOSICIONAM o painel; nao o fecham.
+   *
+   * Fechar era a origem de uma familia inteira de defeitos, porque qualquer
+   * coisa que mexesse na janela matava a escolha em andamento: rolar a propria
+   * lista, o teclado virtual subindo, a barra de endereco do celular
+   * recolhendo. Cada um desses aparecia como um bug diferente e foi corrigido
+   * como um bug diferente. Recalcular a ancora resolve a classe toda.
+   *
+   * So fecha quando o campo sai da tela — ai nao ha mesmo onde ancorar.
+   */
+  useEffect(() => {
+    if (!aberto) return
+    let quadro = 0
+    const recalcular = () => {
+      cancelAnimationFrame(quadro)
+      quadro = requestAnimationFrame(() => {
+        const alvo = campo.current
+        if (!alvo) return
+        const caixa = alvo.getBoundingClientRect()
+        if (caixa.bottom < 0 || caixa.top > window.innerHeight) { fechar(); return }
+        setAncora(caixa)
+      })
+    }
+    window.addEventListener('scroll', recalcular, true)
+    window.addEventListener('resize', recalcular)
+    return () => {
+      cancelAnimationFrame(quadro)
+      window.removeEventListener('scroll', recalcular, true)
+      window.removeEventListener('resize', recalcular)
+    }
+  }, [aberto])
+
   function fechar() {
     setAberto(false)
     campo.current?.focus()
@@ -182,32 +215,6 @@ function Painel({ rotulo, opcoes, ancora, selecionado, aoEscolher, aoFechar }: P
       if (alvo !== undefined) aoEscolher(String(alvo.valor))
     }
   }
-
-  // A rolagem da pagina moveria o campo, e o painel ancorado ficaria solto dele.
-  //
-  // Mas o listener precisa ser em captura para enxergar a rolagem de qualquer
-  // container, e em captura ele tambem enxerga a rolagem da PROPRIA lista — que
-  // fechava o painel no meio da escolha. So fecha quando a rolagem vem de fora.
-  useEffect(() => {
-    const aoRolar = (evento: Event) => {
-      const alvo = evento.target
-      if (alvo instanceof Node && caixa.current?.contains(alvo)) return
-      aoFechar()
-    }
-    // Resize so fecha quando a LARGURA muda — janela redimensionada de verdade
-    // ou giro do aparelho. No celular o teclado virtual e a barra de endereco
-    // mudam so a altura e disparam resize: fechar nisso tornava o campo
-    // inutilizavel no telefone, porque o painel foca a busca, o teclado sobe e
-    // ele se fechava sozinho antes de dar para escolher.
-    const larguraAoAbrir = window.innerWidth
-    const aoRedimensionar = () => { if (window.innerWidth !== larguraAoAbrir) aoFechar() }
-    window.addEventListener('resize', aoRedimensionar)
-    window.addEventListener('scroll', aoRolar, true)
-    return () => {
-      window.removeEventListener('resize', aoRedimensionar)
-      window.removeEventListener('scroll', aoRolar, true)
-    }
-  }, [aoFechar])
 
   /**
    * Abre para baixo quando ha espaco, para cima quando nao ha.

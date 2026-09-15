@@ -56,7 +56,14 @@ export interface Dashboard {
   producaoPendente:number; servicosPendentes:number; servicosDoPeriodo:number
   comissaoAPagar:number; despesasPorCategoria:GastoPorCategoria[]; resultadoPorSocorrista:ResultadoSocorrista[]
   despesasAcumuladasPorDia?:DespesaAcumuladaDia[]
+  recebimentosForaDoPeriodo?:RecebimentoForaDoPeriodo[]
 }
+/**
+ * Servico prestado no periodo que a Porto paga fora dele: o dinheiro existe,
+ * so nao nesta janela. Sem dizer onde ele foi, a tela parece quebrada para quem
+ * acabou de importar o relatorio.
+ */
+export interface RecebimentoForaDoPeriodo { dataPagamento:string; valor:number; servicos:number }
 /** Para onde o dinheiro foi: despesa paga do periodo somada por categoria. */
 export interface GastoPorCategoria { categoriaId:number; categoria:string; valor:number; participacao:number }
 /** Movimento pago do dia e a soma progressiva usada na trajetória financeira. */

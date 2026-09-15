@@ -97,7 +97,7 @@ public class PortoImportacaoService {
             switch(previa.tipo()){case PREVISAO_RECEBER->porto.importarOp(linha,imp);case SERVICOS_GERAIS,OS_VINCULADAS->{ }case SERVICOS_AGUARDANDO_LANCAMENTO->porto.importarAguardando(linha,imp);case SERVICOS_DEVOLVIDOS->porto.importarDevolucao(linha,imp);case PAINEL_DIARIO->porto.importarPainelDiario(linha,imp);}
             registros.save(new RegistroImportadoPorto(imp,chave,previa.tipo()));importados++;if(linha.acao()==AcaoLinhaPorto.ATUALIZAR||linha.acao()==AcaoLinhaPorto.DIVERGENCIA)atualizados++;else novos++;}
         BigDecimal totalRecebido=BigDecimal.ZERO;if(op!=null){if(porNumero){totalRecebido=porto.recalcularOp(op);op.atualizar(totalRecebido,null,periodo.calendario().getDataPagamento(),imp);}PortoFinanceiroService.ResultadoLote resultado=financeiro.sincronizarLote(porto.ossDaOp(op),op,imp,periodo.calendario());receitasCriadas+=resultado.receitasCriadas();receitasAtualizadas+=resultado.receitasAtualizadas();if(!porNumero)totalRecebido=totalRecebido.add(resultado.valorTotal());op.sincronizarRecebimento(totalRecebido,periodo.calendario().getDataPagamento(),periodo.calendario());if(porNumero)for(OrdemPagamentoPorto origem:opsOrigem)if(!origem.getId().equals(op.getId()))porto.recalcularOp(origem);if(diferenca!=null&&diferenca.abs().compareTo(new BigDecimal("0.01"))>0&&request!=null&&request.motivoDivergencia()!=null&&request.justificativaDivergencia()!=null&&!request.justificativaDivergencia().isBlank())porto.registrarJustificativaImportacao(op,request.motivoDivergencia(),request.justificativaDivergencia(),diferenca,principal);porto.registrarHistoricoImportacao(op,principal,importados,atualizados);}
-        imp.confirmar();return new ConfirmacaoResponse(imp.getId(),previa.tipo(),importados,ignorados,novos,atualizados,receitasCriadas,receitasAtualizadas,totalRecebido,periodo==null?null:periodo.rotulo(),periodo==null?null:periodo.calendario().getDataPagamento(),List.of(),osSemSocorrista(imp));
+        imp.confirmar();esquecerPrevia(imp.getId());return new ConfirmacaoResponse(imp.getId(),previa.tipo(),importados,ignorados,novos,atualizados,receitasCriadas,receitasAtualizadas,totalRecebido,periodo==null?null:periodo.rotulo(),periodo==null?null:periodo.calendario().getDataPagamento(),List.of(),osSemSocorrista(imp));
     }
     @Transactional public ConfirmacaoResponse reprocessarFinanceiro(Long id,Long calendarioPagamentoId){Importacao imp=obter(id);if(imp.getStatus()!=StatusImportacao.CONFIRMADA||imp.getTipoRelatorioPorto()!=TipoRelatorioPorto.OS_VINCULADAS)throw new IllegalArgumentException("Somente uma importação confirmada de OP paga pode ser reprocessada.");List<OrdemServicoPorto> oss=porto.ossDaImportacao(imp);if(oss.isEmpty())throw new IllegalArgumentException("A importação não possui ordens de serviço vinculadas para reprocessar.");Set<OrdemPagamentoPorto> ops=new LinkedHashSet<>();oss.forEach(os->{if(os.getOrdemPagamento()!=null)ops.add(os.getOrdemPagamento());});if(ops.size()!=1)throw new IllegalArgumentException("A importação precisa estar vinculada a uma única OP.");OrdemPagamentoPorto op=ops.iterator().next();PortoFinanceiroService.PeriodoFinanceiro periodo=financeiro.resolverPeriodo(op,calendarioPagamentoId);PortoFinanceiroService.ResultadoLote resultado=financeiro.sincronizarLote(oss,op,imp,periodo.calendario());op.sincronizarRecebimento(resultado.valorTotal(),periodo.calendario().getDataPagamento(),periodo.calendario());return new ConfirmacaoResponse(imp.getId(),imp.getTipoRelatorioPorto(),0,0,0,0,resultado.receitasCriadas(),resultado.receitasAtualizadas(),resultado.valorTotal(),periodo.rotulo(),periodo.calendario().getDataPagamento(),List.of(),osSemSocorrista(imp));}
     /**
@@ -136,13 +136,14 @@ public class PortoImportacaoService {
     @Transactional(readOnly=true) public PreviaResponse avaliar(Long id,ConfirmarImportacaoRequest request){Importacao imp=obter(id);
         if(imp.getStatus()!=StatusImportacao.AGUARDANDO_CONFERENCIA||!importacaoPaga(imp.getTipoRelatorioPorto()))throw new IllegalArgumentException("Esta prévia de OS não pode ser avaliada.");
         if(request==null||(request.ordemPagamentoId()==null&&(request.numeroOrdemPagamento()==null||request.numeroOrdemPagamento().isBlank())))throw new IllegalArgumentException("Informe o número da OP antes de avaliar.");
-        try{String numero=numeroOp(request);Optional<OrdemPagamentoPorto> op=request.ordemPagamentoId()!=null?Optional.of(porto.obterOp(request.ordemPagamentoId())):porto.buscarOp(numero);PreviaPorto previa=contextualizar(reler(imp));PreviaPorto avaliada=avaliarProcessamento(previa,op.orElse(null),numero);return resposta(imp,avaliada,analisarOp(avaliada,numero,op));}
+        try{String numero=numeroOp(request);Optional<OrdemPagamentoPorto> op=request.ordemPagamentoId()!=null?Optional.of(porto.obterOp(request.ordemPagamentoId())):porto.buscarOp(numero);PreviaPorto previa=contextualizar(previaDoArquivo(imp));PreviaPorto avaliada=avaliarProcessamento(previa,op.orElse(null),numero);return resposta(imp,avaliada,analisarOp(avaliada,numero,op));}
         catch(IllegalArgumentException e){throw e;}catch(Exception e){throw falha("Não foi possível reler o CSV Porto.",e);}
     }
     @Transactional public PreviaResponse cancelar(Long id){Importacao imp=obter(id);
         if(imp.getTipoRelatorioPorto()==null)throw new IllegalArgumentException("Esta não é uma importação Porto.");
         if(imp.getStatus()==StatusImportacao.CONFIRMADA)throw new IllegalArgumentException("Uma importação confirmada não pode ser cancelada.");
         if(imp.getStatus()!=StatusImportacao.CANCELADA)imp.cancelar();
+        esquecerPrevia(imp.getId());
         try{return resposta(imp,contextualizar(reler(imp)));}
         catch(Exception e){throw falha("Não foi possível reler o CSV Porto.",e);}
     }
@@ -179,6 +180,46 @@ public class PortoImportacaoService {
         try{return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest((linha.hashRegistro()+"|op="+op.getId()).getBytes(StandardCharsets.UTF_8)));}catch(Exception e){throw new IllegalStateException(e);}}
     private boolean importacaoPaga(TipoRelatorioPorto tipo){return tipo==TipoRelatorioPorto.OS_VINCULADAS||tipo==TipoRelatorioPorto.SERVICOS_GERAIS;}
     private PreviaPorto parse(byte[] bytes,boolean conteudoLivre){if(blocos.suporta(bytes))return blocos.parse(bytes);if(painelDiario.suporta(bytes))return painelDiario.parse(bytes);return conteudoLivre?parser.parseServicosGerais(bytes):parser.parse(bytes);}
+    /**
+     * Previa ja lida do arquivo, por importacao.
+     *
+     * Ler e baixar o arquivo do Storage e parsear tudo — e o resultado nao muda
+     * enquanto a importacao existir, porque o arquivo e imutavel. Sem cache,
+     * cada tecla digitada no numero da OP refazia o download e o parse de um
+     * relatorio de centenas de linhas, e a tela ficava presa em "validando".
+     *
+     * Guarda so a leitura crua. A classificacao de cada linha (o que ja existe,
+     * o que e duplicata) continua sendo refeita a cada chamada, porque depende
+     * do banco e o banco muda.
+     *
+     * Perder o cache nao quebra nada: reinicio, outra instancia ou entrada
+     * expirada caem na releitura, que e o comportamento antigo.
+     *
+     * Vale so na avaliacao, que e o caminho repetido. Confirmar e cancelar
+     * continuam lendo do Storage: sao acoes unicas, e e essa leitura que
+     * garante que nao se confirma uma importacao cujo arquivo sumiu.
+     */
+    private static final int PREVIAS_EM_CACHE=32;
+    private static final long VALIDADE_CACHE_MS=30*60*1000L;
+    private record PreviaEmCache(PreviaPorto previa,long lidaEm){}
+    private final Map<Long,PreviaEmCache> cachePrevias=Collections.synchronizedMap(
+        new LinkedHashMap<>(16,0.75f,true){
+            @Override protected boolean removeEldestEntry(Map.Entry<Long,PreviaEmCache> maisAntiga){
+                return size()>PREVIAS_EM_CACHE;
+            }
+        });
+
+    private PreviaPorto previaDoArquivo(Importacao importacao)throws Exception{
+        PreviaEmCache guardada=cachePrevias.get(importacao.getId());
+        if(guardada!=null&&System.currentTimeMillis()-guardada.lidaEm()<VALIDADE_CACHE_MS)return guardada.previa();
+        PreviaPorto lida=reler(importacao);
+        cachePrevias.put(importacao.getId(),new PreviaEmCache(lida,System.currentTimeMillis()));
+        return lida;
+    }
+
+    /** Importacao encerrada nao sera lida de novo: o arquivo sai da memoria. */
+    private void esquecerPrevia(Long id){cachePrevias.remove(id);}
+
     private PreviaPorto reler(Importacao importacao)throws Exception{byte[] bytes=armazenamento.baixar(importacao.getCaminhoArquivo());
         if(importacao.getTipoRelatorioPorto()==TipoRelatorioPorto.SERVICOS_AGUARDANDO_LANCAMENTO)return blocos.parse(bytes);
         if(importacao.getTipoRelatorioPorto()==TipoRelatorioPorto.PAINEL_DIARIO)return painelDiario.parse(bytes);

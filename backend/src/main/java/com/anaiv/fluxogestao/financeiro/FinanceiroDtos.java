@@ -70,6 +70,15 @@ public final class FinanceiroDtos {
     public record GastoPorCategoria(Long categoriaId, String categoria, BigDecimal valor, BigDecimal participacao) {}
     /** Despesa paga em um dia e o total acumulado ate ele, dentro do periodo consultado. */
     public record DespesaAcumuladaDia(LocalDate data, BigDecimal valorDia, BigDecimal acumulado) {}
+    /**
+     * Servico prestado dentro do periodo que a Porto paga fora dele.
+     *
+     * A Porto fecha a OP e paga semanas depois, entao o dinheiro de um servico
+     * aparece na data do pagamento, nao na do atendimento. Sem dizer para onde
+     * ele foi, quem importa um relatorio e olha o mes do servico ve receita zero
+     * e conclui que a importacao falhou.
+     */
+    public record RecebimentoForaDoPeriodo(LocalDate dataPagamento, BigDecimal valor, long servicos) {}
 
     public record DashboardResponse(BigDecimal receitaRecebida, BigDecimal receitaPrevista,
         BigDecimal totalAtrasado, BigDecimal despesasPagas, BigDecimal despesasPrevistas,
@@ -86,7 +95,9 @@ public final class FinanceiroDtos {
         List<GastoPorCategoria> despesasPorCategoria,
         List<ResultadoSocorrista> resultadoPorSocorrista,
         /* Serie esparsa por dia de pagamento, sobre a mesma base de despesasPagas. */
-        List<DespesaAcumuladaDia> despesasAcumuladasPorDia) {}
+        List<DespesaAcumuladaDia> despesasAcumuladasPorDia,
+        /* Onde foi parar o dinheiro dos servicos deste periodo que a Porto paga depois. */
+        List<RecebimentoForaDoPeriodo> recebimentosForaDoPeriodo) {}
     /** Producao anda colada na comissao: ver uma sem a outra esconde metade do custo do servico. */
     public record ResultadoSocorrista(Long motoristaId, String socorrista, long servicos,
         BigDecimal producao, BigDecimal comissao, BigDecimal despesas, BigDecimal custoTotal) {}

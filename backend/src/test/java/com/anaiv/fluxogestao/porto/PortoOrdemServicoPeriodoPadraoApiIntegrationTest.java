@@ -12,6 +12,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -41,9 +42,23 @@ class PortoOrdemServicoPeriodoPadraoApiIntegrationTest {
     }
 
     @Test void semServicoNoMesCorrenteCaiNoMesDoServicoMaisRecente() throws Exception {
-        inserir("OS-PADRAO-ANTIGA",LocalDate.now().minusMonths(3));
-        LocalDate maisRecente=jdbc.queryForObject("select max(data_atendimento) from ordens_servico_porto",LocalDate.class);
-        assertThat(maisRecente.getMonth()).describedAs("o mes corrente deve estar vazio neste teste").isNotEqualTo(LocalDate.now().getMonth());
+        // Esta regra so existe quando o mes corrente esta vazio, e o teste precisa
+        // garantir isso: quatro classes da suite gravam servico em setembro de
+        // 2026 — que virou "o mes corrente" pela data em que a suite roda — e
+        // nenhuma limpa. Rodando junto, este teste nunca via o mes vazio.
+        esvaziarMesCorrente();
+
+        // O endpoint cai no mes do servico MAIS RECENTE da base inteira, entao o
+        // teste tambem precisa ser dono desse servico: varios outros gravam OS
+        // com data no futuro, e o resultado dependia de quem rodou antes.
+        LocalDate maiorJaGravada=jdbc.queryForObject(
+            "select coalesce(max(data_atendimento),current_date) from ordens_servico_porto",LocalDate.class);
+        LocalDate maisRecente=maiorJaGravada.plusDays(1);
+        LocalDate hoje=LocalDate.now();
+        // A premissa do teste e nao haver servico no mes corrente.
+        if(maisRecente.getMonth()==hoje.getMonth()&&maisRecente.getYear()==hoje.getYear())
+            maisRecente=maisRecente.plusMonths(1);
+        inserir("OS-PADRAO-ANTIGA",maisRecente);
 
         String periodo=periodoPadrao();
         assertThat((String)JsonPath.read(periodo,"$.dataInicio")).isEqualTo(maisRecente.withDayOfMonth(1).toString());
@@ -59,6 +74,27 @@ class PortoOrdemServicoPeriodoPadraoApiIntegrationTest {
             .andExpect(status().isOk())
             .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.length()").value(1))
             .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$[0].numero").value("OS-PADRAO-DENTRO"));
+    }
+
+    /**
+     * Apaga os servicos do mes corrente e o que depende deles.
+     *
+     * E dado de teste: cada teste grava o seu antes de assertar, entao nada aqui
+     * pertence a outro. As quatro tabelas sao as que referenciam a OS por chave
+     * estrangeira — apagar so a OS falharia.
+     */
+    private void esvaziarMesCorrente(){
+        LocalDate inicio=LocalDate.now().withDayOfMonth(1);
+        LocalDate fim=inicio.plusMonths(1).minusDays(1);
+        String doMes="select id from ordens_servico_porto where data_atendimento between ? and ?";
+        for(String dependente:List.of(
+                "delete from receitas where ordem_servico_porto_id in ("+doMes+")",
+                "delete from contas_receber where ordem_servico_porto_id in ("+doMes+")",
+                "delete from pendencias_financeiras_porto where ordem_servico_id in ("+doMes+")",
+                "delete from historico_porto where ordem_servico_id in ("+doMes+")")) {
+            jdbc.update(dependente,inicio,fim);
+        }
+        jdbc.update("delete from ordens_servico_porto where data_atendimento between ? and ?",inicio,fim);
     }
 
     private void inserir(String numero,LocalDate data){

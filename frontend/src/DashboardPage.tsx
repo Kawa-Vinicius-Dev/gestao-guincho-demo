@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom'
 import { dashboardEmCache, lerDashboard, type ResumoPortoDashboard } from './dados/dashboard'
 import { FaixaDeIndicadores, PainelDaProducao, PainelDeGastos, PainelDeKm,
   PainelPorSocorrista, PainelPorVeiculo, ResumoPorto } from './dashboard/PaineisDoResultado'
-import type { Dashboard } from './types/modelos'
+import type { Dashboard, RecebimentoForaDoPeriodo } from './types/modelos'
+import { data, moeda } from './utils/formatadores'
 
 
 const meses=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez']
@@ -80,6 +81,8 @@ export default function DashboardPage(){
       </div>
     </header>
 
+    <AvisoRecebimentoForaDoPeriodo itens={financeiro?.recebimentosForaDoPeriodo}/>
+
     {avisoPeriodo
       ? <div className="form-alert" role="alert">{avisoPeriodo}</div>
       : erro
@@ -121,5 +124,28 @@ export default function DashboardPage(){
       <strong>Como calculamos:</strong> lucro operacional = receitas recebidas − despesas
       aprovadas e pagas. A data financeira da OP vem do recebimento, não da data do atendimento.
     </p>
+  </div>
+}
+
+/**
+ * A Porto fecha a OP e paga semanas depois: o servico e de julho, o dinheiro
+ * entra em agosto. Quem olha o mes do servico via receita zero e concluia que a
+ * importacao tinha falhado — aconteceu tres vezes na operacao. Em vez de apenas
+ * nao mostrar o valor, a tela diz onde ele esta.
+ */
+function AvisoRecebimentoForaDoPeriodo({ itens }: { itens?: RecebimentoForaDoPeriodo[] }) {
+  if (!itens?.length) return null
+  const total = itens.reduce((soma, item) => soma + item.valor, 0)
+  const servicos = itens.reduce((soma, item) => soma + item.servicos, 0)
+  // Nome proprio: o card de carregamento tambem e um status, e sem distinguir
+  // os dois o leitor de tela anuncia "status" duas vezes sem dizer qual.
+  return <div className="success-notice" role="status" aria-label="Recebimento fora do período">
+    <strong>{moeda(total)}</strong> de {servicos} {servicos === 1 ? 'serviço prestado' : 'serviços prestados'}
+    {' '}neste período {itens.length === 1 ? 'entra' : 'entram'} em{' '}
+    {itens.map((item, indice) => <span key={item.dataPagamento}>
+      {indice > 0 ? (indice === itens.length - 1 ? ' e ' : ', ') : ''}
+      <strong>{data(item.dataPagamento)}</strong>
+    </span>)}
+    {' '}— fora da janela que você está vendo. Ajuste o período para conferir o recebimento.
   </div>
 }

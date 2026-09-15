@@ -1,4 +1,4 @@
-import { act, render, screen, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, test } from 'vitest'
 import { Selecao } from './Selecao'
@@ -49,58 +49,45 @@ test('escolher no painel escreve no select que o formulario envia', async () => 
   expect(screen.getByLabelText('Viatura')).toHaveValue('v3')
 })
 
-// O listener de rolagem e em captura, para enxergar a rolagem de qualquer
-// container que mova o campo por baixo do painel. So que em captura ele tambem
-// enxergava a rolagem da PROPRIA lista: numa lista longa, como a de periodos da
-// Porto, rolar para achar a opcao fechava o painel na cara da pessoa.
-test('rolar a propria lista nao fecha o painel', async () => {
-  const user = userEvent.setup()
-  render(<Selecao rotulo="Período" opcoes={veiculos}/>)
-  const painel = await abrir(user, 'Período')
-
-  const lista = within(painel).getByRole('listbox', { name: 'Período' })
-  act(() => { lista.dispatchEvent(new Event('scroll', { bubbles: true })) })
-
-  expect(screen.getByRole('dialog', { name: 'Período' })).toBeInTheDocument()
-})
-
-test('rolar a pagina fecha o painel, que perderia a ancora no campo', async () => {
-  const user = userEvent.setup()
-  render(<Selecao rotulo="Período" opcoes={veiculos}/>)
-  await abrir(user, 'Período')
-
-  act(() => { document.body.dispatchEvent(new Event('scroll', { bubbles: true })) })
-
-  expect(screen.queryByRole('dialog', { name: 'Período' })).not.toBeInTheDocument()
-})
-
-// No celular o teclado virtual e a barra de endereco mudam a altura da janela e
-// disparam resize. Fechar nisso tornava o campo inutilizavel no telefone: o
-// painel abria, o teclado subia e ele se fechava antes de dar para escolher.
-// So aparecia em listas acima de 8 opcoes, que sao as que ganham busca — foi o
-// calendario da Porto passar de 8 ciclos que deixou o campo travado.
-test('teclado virtual (muda so a altura) nao fecha o painel', async () => {
-  const user = userEvent.setup()
-  render(<Selecao rotulo="Período" opcoes={veiculos}/>)
-  await abrir(user, 'Período')
-
-  act(() => {
-    window.innerHeight = 380          // teclado ocupou metade da tela
+// Rolar, girar o aparelho ou abrir o teclado nao podem matar a escolha em
+// andamento. Cada um desses ja foi um bug separado; a regra agora e uma so —
+// o painel se reposiciona e segue aberto.
+test.each([
+  ['rolar a propria lista', () => {
+    const lista = screen.getByRole('listbox', { name: 'Período' })
+    lista.dispatchEvent(new Event('scroll', { bubbles: true }))
+  }],
+  ['rolar a pagina', () => {
+    document.body.dispatchEvent(new Event('scroll', { bubbles: true }))
+  }],
+  ['teclado virtual (muda a altura)', () => {
+    window.innerHeight = 380
     window.dispatchEvent(new Event('resize'))
-  })
-
-  expect(screen.getByRole('dialog', { name: 'Período' })).toBeInTheDocument()
-})
-
-test('girar o aparelho (muda a largura) fecha o painel, que perderia a ancora', async () => {
-  const user = userEvent.setup()
-  render(<Selecao rotulo="Período" opcoes={veiculos}/>)
-  await abrir(user, 'Período')
-
-  act(() => {
+  }],
+  ['girar o aparelho (muda a largura)', () => {
     window.innerWidth = 900
     window.dispatchEvent(new Event('resize'))
-  })
+  }],
+])('%s nao fecha o painel', async (_nome, mexer) => {
+  const user = userEvent.setup()
+  render(<Selecao rotulo="Período" opcoes={veiculos}/>)
+  await abrir(user, 'Período')
 
-  expect(screen.queryByRole('dialog', { name: 'Período' })).not.toBeInTheDocument()
+  act(() => { mexer() })
+
+  expect(screen.getByRole('dialog', { name: 'Período' })).toBeInTheDocument()
+})
+
+// A excecao legitima: sem campo na tela nao ha onde ancorar o painel.
+test('painel fecha quando o campo sai da tela', async () => {
+  const user = userEvent.setup()
+  render(<Selecao rotulo="Período" opcoes={veiculos}/>)
+  // Depois de aberto o painel tambem se chama "Período": pega o campo antes.
+  const campo = screen.getByLabelText('Período')
+  await abrir(user, 'Período')
+
+  campo.getBoundingClientRect = () => ({ top: -500, bottom: -450 }) as DOMRect
+  act(() => { document.body.dispatchEvent(new Event('scroll', { bubbles: true })) })
+  await waitFor(() =>
+    expect(screen.queryByRole('dialog', { name: 'Período' })).not.toBeInTheDocument())
 })
