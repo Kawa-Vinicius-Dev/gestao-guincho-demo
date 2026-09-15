@@ -44,6 +44,56 @@ public class PortoService {
         List<OrdemServicoPorto> candidatos=oss.findByNumeroNormalizado(chave);
         return candidatos.size()==1?Optional.of(candidatos.getFirst()):Optional.empty();
     }
+    /**
+     * Tudo que a importacao consulta, carregado de uma vez.
+     *
+     * O laco de confirmacao chamava o banco por linha: a OS pelo numero, o
+     * socorrista pelo QRA, o ciclo pela competencia. Num relatorio de 248
+     * servicos isso virava mais de mil idas ao banco — e como o backend e o
+     * banco estao em hospedagens diferentes, cada ida custa latencia de rede.
+     * Era isso que fazia a confirmacao levar minutos.
+     *
+     * Os dados sao poucos e repetidos: um punhado de QRAs e algumas dezenas de
+     * ciclos, relidos centenas de vezes. Tres consultas no inicio resolvem.
+     */
+    public record ContextoImportacao(
+        Map<String,OrdemServicoPorto> porNumero,
+        Map<String,List<OrdemServicoPorto>> porNumeroNormalizado,
+        Map<String,Motorista> motoristasPorQra,
+        List<CalendarioPagamentoPorto> ciclos) {
+
+        /** Mesma regra do buscarOsFlexivel: exata primeiro, normalizada so se for unica. */
+        Optional<OrdemServicoPorto> acharOs(String numero){
+            if(numero==null)return Optional.empty();
+            OrdemServicoPorto exata=porNumero.get(numero);
+            if(exata!=null)return Optional.of(exata);
+            String chave=OrdemServicoPorto.normalizar(numero);
+            if(chave==null)return Optional.empty();
+            List<OrdemServicoPorto> candidatos=porNumeroNormalizado.getOrDefault(chave,List.of());
+            return candidatos.size()==1?Optional.of(candidatos.getFirst()):Optional.empty();
+        }
+        Optional<Motorista> acharMotorista(String qra){
+            if(qra==null||qra.isBlank())return Optional.empty();
+            return Optional.ofNullable(motoristasPorQra.get(qra.trim().toUpperCase(java.util.Locale.ROOT)));
+        }
+    }
+
+    @Transactional(readOnly=true)
+    public ContextoImportacao prepararImportacao(Collection<String> numerosOs){
+        List<String> numeros=numerosOs.stream().filter(Objects::nonNull).distinct().toList();
+        List<String> chaves=numeros.stream().map(OrdemServicoPorto::normalizar).filter(Objects::nonNull).distinct().toList();
+        Map<String,OrdemServicoPorto> porNumero=numeros.isEmpty()?Map.of()
+            :oss.findByNumeroIn(numeros).stream().collect(java.util.stream.Collectors.toMap(OrdemServicoPorto::getNumero,x->x,(a,b)->a));
+        Map<String,List<OrdemServicoPorto>> porNormalizado=chaves.isEmpty()?Map.of()
+            :oss.findByNumeroNormalizadoIn(chaves).stream()
+                .collect(java.util.stream.Collectors.groupingBy(OrdemServicoPorto::getNumeroNormalizado));
+        Map<String,Motorista> porQra=motoristas.findAll().stream()
+            .filter(m->m.getQra()!=null&&!m.getQra().isBlank())
+            .collect(java.util.stream.Collectors.toMap(
+                m->m.getQra().trim().toUpperCase(java.util.Locale.ROOT),x->x,(a,b)->a));
+        return new ContextoImportacao(porNumero,porNormalizado,porQra,calendarioService.ciclosAtivos());
+    }
+
     public Map<String,OrdemServicoPorto> buscarOssEmLote(Collection<String> numeros){return oss.findByNumeroIn(numeros).stream().collect(java.util.stream.Collectors.toMap(OrdemServicoPorto::getNumero,x->x));}
     public Map<String,OrdemPagamentoPorto> buscarOpsEmLote(Collection<String> numeros){return ops.findByNumeroIn(numeros).stream().collect(java.util.stream.Collectors.toMap(OrdemPagamentoPorto::getNumero,x->x));}
     /** Existencia em lote: o resumo da previa percorre centenas de linhas e nao pode consultar uma a uma. */
@@ -58,16 +108,16 @@ public class PortoService {
     public AcaoLinhaPorto classificarOsComposicao(LinhaPorto linha,String numeroOp,OrdemServicoPorto os){if(os==null)return AcaoLinhaPorto.IMPORTAR;if(os.getOrdemPagamento()!=null&&!os.getOrdemPagamento().getNumero().equals(numeroOp))return AcaoLinhaPorto.DIVERGENCIA;boolean conflito=diferentePreenchido(os.getValorTotal(),linha.decimal("valor_total"))||conflita(os.getEspecialidade(),linha.texto("especialidade"))||conflita(os.getSiglaViatura(),linha.texto("sigla_viatura"))||conflita(os.getSocorrista(),linha.texto("socorrista"))||conflita(os.getQra(),linha.texto("qra"));return conflito?AcaoLinhaPorto.DIVERGENCIA:AcaoLinhaPorto.ATUALIZAR;}
     public void importarOp(LinhaPorto l,Importacao i){String numero=l.texto("numero_op");OrdemPagamentoPorto op=ops.findByNumero(numero).orElseGet(()->new OrdemPagamentoPorto(numero,i));
         LocalDate pagamento=l.data("data_pagamento");op.atualizar(l.decimal("valor_total"),l.texto("nome_codigo"),pagamento,i);if(op.getCalendarioPagamento()==null&&pagamento!=null)calendario.findByDataPagamento(pagamento).ifPresent(op::associarCalendario);ops.save(op);}
-    public OrdemServicoPorto importarOs(LinhaPorto l,OrdemPagamentoPorto op,Importacao i,boolean arquivoLiberadoAposAnalise){String numero=l.texto("numero_os");
+    public OrdemServicoPorto importarOs(LinhaPorto l,OrdemPagamentoPorto op,Importacao i,boolean arquivoLiberadoAposAnalise,ContextoImportacao ctx){String numero=l.texto("numero_os");
         // Pode ser uma OS que o painel do dia ja cadastrou com o numero curto. Se for, completa
         // aquela e adota o numero do financeiro, que e o que o cliente ve no portal da Porto.
-        OrdemServicoPorto os=buscarOsFlexivel(numero).orElseGet(()->new OrdemServicoPorto(numero,i));
+        OrdemServicoPorto os=ctx.acharOs(numero).orElseGet(()->new OrdemServicoPorto(numero,i));
         os.renumerar(numero);
         os.atualizar(op,l.decimal("valor_total"),l.texto("especialidade"),l.texto("sigla_viatura"),l.texto("socorrista"),l.texto("qra"),
             l.data("data_atendimento"),l.decimal("valor_km_excedente"),l.decimal("km_morto_estimado"),i);
-        vincularMotoristaSeSeguro(os);CalendarioPagamentoPorto periodo=op.getCalendarioPagamento();boolean periodoAnterior=periodo!=null&&os.getDataAtendimento()!=null&&os.getDataAtendimento().isBefore(periodo.getCompetenciaInicio());
-        if(periodoAnterior&&os.getDataPrevistaOriginal()==null)calendarioService.previsaoDaCompetencia(os.getDataAtendimento()).ifPresent(os::definirPrevisaoOriginal);
-        int ciclos=calendarioService.ciclosUltrapassados(os.getDataPrevistaOriginal(),op.getDataPagamentoProgramada());os.processarEmOp(op,ciclos,arquivoLiberadoAposAnalise||periodoAnterior||ciclos>0);return oss.save(os);}
+        vincularMotoristaSeSeguro(os,ctx);CalendarioPagamentoPorto periodo=op.getCalendarioPagamento();boolean periodoAnterior=periodo!=null&&os.getDataAtendimento()!=null&&os.getDataAtendimento().isBefore(periodo.getCompetenciaInicio());
+        if(periodoAnterior&&os.getDataPrevistaOriginal()==null)calendarioService.previsaoDaCompetencia(ctx.ciclos(),os.getDataAtendimento()).ifPresent(os::definirPrevisaoOriginal);
+        int ciclos=calendarioService.ciclosUltrapassados(ctx.ciclos(),os.getDataPrevistaOriginal(),op.getDataPagamentoProgramada());os.processarEmOp(op,ciclos,arquivoLiberadoAposAnalise||periodoAnterior||ciclos>0);return oss.save(os);}
     public List<OrdemServicoPorto> ossDaImportacao(Importacao importacao){return oss.findByImportacao(importacao);}
     public List<OrdemServicoPorto> ossDaOp(OrdemPagamentoPorto op){return oss.findByOrdemPagamento(op);}
     public BigDecimal recalcularOp(OrdemPagamentoPorto op){BigDecimal total=ossDaOp(op).stream().map(OrdemServicoPorto::getValorTotal).filter(Objects::nonNull).reduce(BigDecimal.ZERO,BigDecimal::add);op.recalcularComposicao(total);return total;}
@@ -321,9 +371,23 @@ public class PortoService {
     private Usuario usuario(UsuarioPrincipal principal){if(principal==null)throw new IllegalArgumentException("Usuário autenticado não identificado.");return usuarios.findById(principal.id()).orElseThrow(()->new RecursoNaoEncontradoException("Usuário autenticado não encontrado."));}
     private PendenciaResponse pendencia(PendenciaFinanceiraPorto x){return new PendenciaResponse(x.getId(),x.getTipo(),x.getOrdemServico().getId(),x.getOrdemServico().getNumero(),x.getValor(),x.getDataDevolucao(),x.getStatus().name(),x.getMotivo(),x.getObservacao(),x.getResponsavel(),x.getPrazo(),x.getReferenciaPorto());}
     private String limpar(String valor){return valor==null||valor.isBlank()?null:valor.trim();}
-    private void vincularMotoristaSeSeguro(OrdemServicoPorto os){Motorista encontrado=resolverMotorista.resolver(os);
+    /**
+     * Mesma regra do resolver: QRA cadastrado e ativo vincula; QRA de quem saiu
+     * da equipe nao vincula mas tambem nao apaga vinculo antigo. So le do
+     * contexto, em vez de consultar o banco uma vez por linha.
+     */
+    /** Caminho de linha unica (aguardando lancamento): uma consulta direta serve. */
+    private void vincularMotoristaSeSeguro(OrdemServicoPorto os){
+        Motorista encontrado=resolverMotorista.resolver(os);
         if(encontrado!=null){os.vincularMotoristaAutomaticamente(encontrado);return;}
         if(resolverMotorista.desativado(os))return;
+        os.limparVinculoAutomatico();}
+
+    private void vincularMotoristaSeSeguro(OrdemServicoPorto os,ContextoImportacao ctx){
+        Optional<Motorista> cadastrado=ctx.acharMotorista(os.getQra());
+        Motorista ativo=cadastrado.filter(Motorista::isAtivo).orElse(null);
+        if(ativo!=null){os.vincularMotoristaAutomaticamente(ativo);return;}
+        if(cadastrado.isPresent())return;
         os.limparVinculoAutomatico();}
     private void sincronizarRecebimentoComposto(OrdemPagamentoPorto op,LocalDate dataRecebimento,Long calendarioPagamentoId){List<OrdemServicoPorto> vinculadas=oss.findByOrdemPagamento(op);if(vinculadas.isEmpty())throw new IllegalArgumentException("Importe a composição da OP antes de confirmar o recebimento.");PortoFinanceiroService.PeriodoFinanceiro periodo=financeiro.resolverPeriodo(op,calendarioPagamentoId);vinculadas.forEach(os->financeiro.sincronizar(os,op,os.getImportacao(),periodo.calendario(),dataRecebimento));}
 }

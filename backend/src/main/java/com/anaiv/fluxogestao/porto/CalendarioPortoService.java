@@ -30,6 +30,32 @@ public class CalendarioPortoService {
             .filter(x->periodo.inicio().equals(x.getCompetenciaInicio())&&periodo.fim().equals(x.getCompetenciaFim()))
             .map(CalendarioPagamentoPorto::getDataPagamento);
     }
+
+    /*
+     * Versoes que trabalham sobre o calendario ja carregado.
+     *
+     * Uma importacao chama estas duas uma vez por linha. Consultando o banco a
+     * cada chamada, um relatorio de 248 servicos gerava centenas de idas so para
+     * reler as mesmas dezenas de ciclos. A regra e identica — muda so de onde os
+     * ciclos vem.
+     */
+    @Transactional(readOnly=true) public List<CalendarioPagamentoPorto> ciclosAtivos(){
+        return repositorio.findAllByOrderByDataPagamento().stream().filter(CalendarioPagamentoPorto::isAtivo).toList();
+    }
+    public int ciclosUltrapassados(List<CalendarioPagamentoPorto> ciclos,LocalDate prevista,LocalDate efetiva){
+        if(prevista==null||efetiva==null||!efetiva.isAfter(prevista))return 0;
+        return (int)ciclos.stream()
+            .filter(x->x.getDataPagamento().isAfter(prevista)&&!x.getDataPagamento().isAfter(efetiva)).count();
+    }
+    public Optional<LocalDate> previsaoDaCompetencia(List<CalendarioPagamentoPorto> ciclos,LocalDate dataServico){
+        PeriodoQuinzena periodo=periodo(dataServico);
+        return ciclos.stream()
+            .filter(x->x.getCompetenciaInicio()!=null&&x.getCompetenciaFim()!=null)
+            .filter(x->!x.getCompetenciaInicio().isAfter(dataServico)&&!x.getCompetenciaFim().isBefore(dataServico))
+            .min(java.util.Comparator.comparing(CalendarioPagamentoPorto::getDataPagamento))
+            .filter(x->periodo.inicio().equals(x.getCompetenciaInicio())&&periodo.fim().equals(x.getCompetenciaFim()))
+            .map(CalendarioPagamentoPorto::getDataPagamento);
+    }
     private static final int PRIMEIRO_PAGAMENTO=16, SEGUNDO_PAGAMENTO=30, MESES_DE_FOLGA=6;
     private static final String[] MESES={"janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"};
     /**
