@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react'
 import { moeda, numero, percentual } from '../utils/formatadores'
 
 /**
@@ -78,35 +79,100 @@ export function ProporcaoServicos({pagos,pendentes,valorPago,valorPendente}:
 }
 
 export type LinhaCategoria={id:number;rotulo:string;valor:number;participacao:number}
+export type PontoDespesaAcumulada={data:string;valorDia:number;acumulado:number}
+
+const CORES_GASTOS=['#c4324c','#1570ef','#46c7ee','#607d9b','#d59a32','#0b1d33']
+
+type FatiaGasto={id:number|string;rotulo:string;valor:number;participacao:number;cor:string}
+
+/** Cinco nomes continuam legiveis; o restante fecha a conta em "Outros". */
+function fatiasDeGasto(linhas:LinhaCategoria[],total:number):FatiaGasto[]{
+  const ordenadas=[...linhas].sort((a,b)=>b.valor-a.valor)
+  const principais=ordenadas.slice(0,5)
+  const restantes=ordenadas.slice(5)
+  const base=total>0?total:ordenadas.reduce((soma,linha)=>soma+linha.valor,0)
+  const fatias:FatiaGasto[]=principais.map((linha,indice)=>({
+    ...linha,participacao:base?linha.valor/base*100:0,cor:CORES_GASTOS[indice],
+  }))
+  if(restantes.length){
+    const valor=restantes.reduce((soma,linha)=>soma+linha.valor,0)
+    fatias.push({id:'outros',rotulo:'Outros',valor,participacao:base?valor/base*100:0,
+      cor:CORES_GASTOS[5]})
+  }
+  return fatias
+}
 
 /**
- * Para onde o dinheiro foi: despesa paga somada por categoria, da maior para a
- * menor. E a primeira pergunta de quem abre o sistema — "o que pesou no mes" —,
- * e ate aqui ela exigia abrir a tela de despesas e somar na mao.
- *
- * Barra deitada, e nao rosca: com sete ou oito categorias a rosca vira um
- * carrossel de cores que so se le pela legenda, e comparar duas fatias vizinhas
- * de tamanho parecido e impossivel. Em barra, a ordem ja e a resposta.
+ * A rosca da a composicao num relance, mas nao carrega a leitura sozinha: a lista
+ * ao lado mantem nome, valor e percentual exatos, em ordem de impacto.
  */
 export function GastosPorCategoria({linhas,total}:{linhas:LinhaCategoria[];total:number}){
   if(!linhas.length)return <Vazio texto="Nenhuma despesa paga neste período."/>
-  const maior=escala(linhas.map(l=>l.valor))
-  return <div className="grafico gastos-categoria">
-    <p className="gastos-total">
-      <span>Total pago no período</span><strong>{moeda(total)}</strong>
-    </p>
-    {linhas.map((linha,posicao)=>
-      <div className="barra-linha" key={linha.id}>
-        <span className="barra-rotulo" title={linha.rotulo}>{linha.rotulo}</span>
-        <span className="barra-trilho">
-          {/* A maior categoria e a unica em vermelho cheio: e nela que a conversa
-              sobre corte de custo comeca. As outras acompanham em tom neutro. */}
-          <i className={posicao===0?'barra-preenche barra-maior':'barra-preenche'}
-            style={{width:`${Math.max(linha.valor/maior*100,2)}%`}}/>
-        </span>
-        <span className="barra-valor">{moeda(linha.valor)}</span>
-        <span className="barra-parcela">{percentual(linha.participacao)}</span>
-      </div>)}
+  const fatias=fatiasDeGasto(linhas,total)
+  let cursor=0
+  const gradiente=fatias.map(fatia=>{
+    const inicio=cursor
+    cursor+=fatia.participacao
+    return `${fatia.cor} ${inicio}% ${Math.min(cursor,100)}%`
+  }).join(',')
+  const estilo={'--gastos-gradiente':`conic-gradient(${gradiente})`} as CSSProperties
+  return <div className="gastos-categoria">
+    <div className="gastos-rosca" style={estilo} aria-hidden="true">
+      <span><small>Total pago</small><strong>{moeda(total)}</strong></span>
+    </div>
+    <ol aria-label="Despesas por categoria">
+      {fatias.map(fatia=><li key={fatia.id}>
+        <i style={{backgroundColor:fatia.cor}} aria-hidden="true"/>
+        <span title={fatia.rotulo}>{fatia.rotulo}</span>
+        <strong>{moeda(fatia.valor)}</strong>
+        <small>{percentual(fatia.participacao)}</small>
+      </li>)}
+    </ol>
+  </div>
+}
+
+const diaUtc=(valor:string)=>{
+  const [ano,mes,dia]=valor.split('-').map(Number)
+  return Date.UTC(ano,mes-1,dia)
+}
+const dataCurta=(valor:string)=>{
+  const [,mes,dia]=valor.split('-')
+  return `${dia}/${mes}`
+}
+
+/** Linha em degraus: o gasto sobe no dia em que foi pago, sem sugerir movimento entre datas. */
+export function DespesaAcumulada({pontos,inicio,fim}:{pontos:PontoDespesaAcumulada[];inicio:string;fim:string}){
+  if(!pontos.length)return <Vazio texto="A trajetória aparece quando houver despesas pagas."/>
+  const ordenados=[...pontos].sort((a,b)=>a.data.localeCompare(b.data))
+  const largura=640,altura=196,margemX=12,topo=12,base=164
+  const primeiro=diaUtc(inicio),ultimo=diaUtc(fim)
+  const intervalo=Math.max(ultimo-primeiro,1)
+  const total=Math.max(ordenados.at(-1)?.acumulado??0,1)
+  const x=(data:string)=>margemX+(diaUtc(data)-primeiro)/intervalo*(largura-margemX*2)
+  const y=(valor:number)=>topo+(1-valor/total)*(base-topo)
+  let caminho=`M ${margemX} ${base}`
+  for(const ponto of ordenados)caminho+=` H ${x(ponto.data)} V ${y(ponto.acumulado)}`
+  caminho+=` H ${largura-margemX}`
+  const area=`${caminho} V ${base} H ${margemX} Z`
+  const maiorDia=ordenados.reduce((maior,ponto)=>ponto.valorDia>maior.valorDia?ponto:maior,ordenados[0])
+  const descricao=ordenados.map(ponto=>
+    `${dataCurta(ponto.data)}: ${moeda(ponto.valorDia)} no dia, ${moeda(ponto.acumulado)} acumulados`).join('. ')
+  return <div className="gastos-trajetoria">
+    <div className="trajetoria-resumo">
+      <span>Gasto acumulado</span><strong>{moeda(ordenados.at(-1)?.acumulado??0)}</strong>
+    </div>
+    <svg viewBox={`0 0 ${largura} ${altura}`} role="img"
+      aria-label={`Despesas acumuladas entre ${dataCurta(inicio)} e ${dataCurta(fim)}. ${descricao}`}>
+      {[0,.25,.5,.75,1].map(fatia=>
+        <line key={fatia} className="trajetoria-grade" x1={margemX} x2={largura-margemX}
+          y1={topo+(base-topo)*fatia} y2={topo+(base-topo)*fatia}/>)}
+      <path className="trajetoria-area" d={area}/>
+      <path className="trajetoria-linha" d={caminho}/>
+      {ordenados.length<=45?ordenados.map(ponto=><circle key={ponto.data}
+        className="trajetoria-ponto" cx={x(ponto.data)} cy={y(ponto.acumulado)} r="3.5"/>):null}
+    </svg>
+    <div className="trajetoria-eixo" aria-hidden="true"><span>{dataCurta(inicio)}</span><span>{dataCurta(fim)}</span></div>
+    <p>Maior saída em {dataCurta(maiorDia.data)}: <strong>{moeda(maiorDia.valorDia)}</strong></p>
   </div>
 }
 

@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { trocarSenha } from '../dados/sessao'
 import { useAuth } from '../auth/AuthContext'
+import { MarcaJms } from '../components/MarcaJms'
 
 export default function TrocarSenhaPage(){
   const {usuario,logout}=useAuth()
@@ -12,7 +13,7 @@ export default function TrocarSenhaPage(){
   }
   return <main className="login-page">
     <section className="login-brand">
-      <div className="login-road" aria-hidden="true"><i/><i/><i/></div>
+      <MarcaJms className="login-mark"/>
       <span className="eyebrow">J M S · acesso</span>
       <h1>Escolha uma senha só sua.</h1>
       <p>A senha provisória serve apenas para este primeiro acesso.</p>

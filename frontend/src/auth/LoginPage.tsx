@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
+import { MarcaJms } from '../components/MarcaJms'
 
 const credencialLocal = import.meta.env.DEV
   ? { email: 'admin@fluxogestao.local', senha: 'Admin@123' }
@@ -20,7 +21,7 @@ export default function LoginPage(){
   }
   return <main className="login-page">
     <section className="login-brand">
-      <div className="login-road" aria-hidden="true"><i/><i/><i/></div>
+      <MarcaJms className="login-mark"/>
       <span className="eyebrow">J M S · visão do dono</span>
       <h1>Da estrada ao lucro, sem perder nenhum custo.</h1>
       <p>Receitas, despesas, frota e km morto no mesmo fluxo financeiro.</p>

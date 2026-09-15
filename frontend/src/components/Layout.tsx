@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { listarFavoritos, salvarFavoritos } from '../dados/favoritos'
 import { useAuth } from '../auth/AuthContext'
+import { MarcaJms } from './MarcaJms'
 
 const itens = [
   ['/', 'Visão geral', true, 'financeiro'],
@@ -153,7 +154,7 @@ export function Layout() {
   return <div className="app-shell">
     <aside className={`sidebar ${aberto?'sidebar-open':''}`}>
       <div className="brand">
-        <span className="brand-road" aria-hidden="true"><i/><i/></span>
+        <MarcaJms className="brand-mark"/>
         <div><strong>J M S</strong></div>
       </div>
       <nav className="primary-nav" aria-label="Navegação principal">

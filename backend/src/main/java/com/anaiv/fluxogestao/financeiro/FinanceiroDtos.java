@@ -68,6 +68,8 @@ public final class FinanceiroDtos {
      * separado do que ja mostra.
      */
     public record GastoPorCategoria(Long categoriaId, String categoria, BigDecimal valor, BigDecimal participacao) {}
+    /** Despesa paga em um dia e o total acumulado ate ele, dentro do periodo consultado. */
+    public record DespesaAcumuladaDia(LocalDate data, BigDecimal valorDia, BigDecimal acumulado) {}
 
     public record DashboardResponse(BigDecimal receitaRecebida, BigDecimal receitaPrevista,
         BigDecimal totalAtrasado, BigDecimal despesasPagas, BigDecimal despesasPrevistas,
@@ -82,7 +84,9 @@ public final class FinanceiroDtos {
         BigDecimal comissaoAPagar,
         /* Para onde o dinheiro foi: despesa paga somada por categoria, da maior para a menor. */
         List<GastoPorCategoria> despesasPorCategoria,
-        List<ResultadoSocorrista> resultadoPorSocorrista) {}
+        List<ResultadoSocorrista> resultadoPorSocorrista,
+        /* Serie esparsa por dia de pagamento, sobre a mesma base de despesasPagas. */
+        List<DespesaAcumuladaDia> despesasAcumuladasPorDia) {}
     /** Producao anda colada na comissao: ver uma sem a outra esconde metade do custo do servico. */
     public record ResultadoSocorrista(Long motoristaId, String socorrista, long servicos,
         BigDecimal producao, BigDecimal comissao, BigDecimal despesas, BigDecimal custoTotal) {}

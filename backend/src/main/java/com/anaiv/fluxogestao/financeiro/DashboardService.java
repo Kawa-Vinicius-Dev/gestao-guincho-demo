@@ -48,7 +48,9 @@ public class DashboardService {
         BigDecimal previstaManual=soma(receitas.stream().filter(r->r.getStatus()==StatusReceita.PREVISTA).map(Receita::getValor).toList());
         BigDecimal prevista=previstaContas.add(previstaManual);
         BigDecimal atrasada=soma(contas.stream().filter(c->c.getStatus()==StatusContaReceber.ATRASADO).map(ContaReceber::getValorPrevisto).toList());
-        BigDecimal pagas=soma(despesas.stream().filter(Despesa::isAprovada).filter(d->d.getStatus()==StatusDespesa.PAGO).map(Despesa::getValor).toList());
+        var despesasPagasNoPeriodo=despesas.stream().filter(Despesa::isAprovada)
+            .filter(d->d.getStatus()==StatusDespesa.PAGO).toList();
+        BigDecimal pagas=soma(despesasPagasNoPeriodo.stream().map(Despesa::getValor).toList());
         BigDecimal despPrev=soma(despesas.stream().filter(Despesa::isAprovada).filter(d->d.getStatus()==StatusDespesa.PENDENTE||d.getStatus()==StatusDespesa.ATRASADO).map(Despesa::getValor).toList());
         BigDecimal realizado=recebida.subtract(pagas), projetado=recebida.add(prevista).subtract(pagas).subtract(despPrev);
         BigDecimal kmTotal=soma(kms.stream().map(Quilometragem::getQuilometragemTotal).toList());
@@ -123,9 +125,7 @@ public class DashboardService {
         // logo acima - aprovada e paga -, so que quebrada por categoria, para a
         // pergunta "o que mais pesou no mes" ter resposta sem abrir outra tela.
         // Agrupa a lista que ja esta em memoria: nao ha consulta nova.
-        List<GastoPorCategoria> porCategoria=despesas.stream()
-            .filter(Despesa::isAprovada)
-            .filter(d->d.getStatus()==StatusDespesa.PAGO)
+        List<GastoPorCategoria> porCategoria=despesasPagasNoPeriodo.stream()
             .filter(d->d.getCategoria()!=null)
             .collect(java.util.stream.Collectors.groupingBy(Despesa::getCategoria,
                 java.util.stream.Collectors.reducing(ZERO,Despesa::getValor,BigDecimal::add)))
@@ -135,10 +135,25 @@ public class DashboardService {
             .sorted(java.util.Comparator.comparing(GastoPorCategoria::valor).reversed())
             .toList();
 
+        // Linha acumulada do periodo. Usa a colecao ja carregada e a mesma base de "pagas":
+        // aprovada + PAGO. A data acompanha a consulta do dashboard: pagamento, ou lancamento
+        // quando o pagamento nao foi informado. Dias sem movimento ficam implicitos.
+        Map<LocalDate,BigDecimal> valorPorDia=despesasPagasNoPeriodo.stream()
+            .collect(java.util.stream.Collectors.groupingBy(
+                d->d.getDataPagamento()!=null?d.getDataPagamento():d.getData(),
+                TreeMap::new,
+                java.util.stream.Collectors.reducing(ZERO,Despesa::getValor,BigDecimal::add)));
+        List<DespesaAcumuladaDia> acumuladasPorDia=new ArrayList<>();
+        BigDecimal acumulado=ZERO;
+        for(var gasto:valorPorDia.entrySet()){
+            acumulado=acumulado.add(gasto.getValue());
+            acumuladasPorDia.add(new DespesaAcumuladaDia(gasto.getKey(),gasto.getValue(),acumulado));
+        }
+
         return new DashboardResponse(recebida,prevista,atrasada,pagas,despPrev,realizado,projetado,
             importados,kmTotal,kmRem,kmMorto,custoMorto,resultados,
             producaoPaga,comissaoSobreProducao,producaoPendente,pendentes.size(),servicosDoPeriodo.size(),
-            comissaoAPagar,porCategoria,porPessoa);
+            comissaoAPagar,porCategoria,porPessoa,acumuladasPorDia);
     }
     private boolean entre(LocalDate data,LocalDate inicio,LocalDate fim){return data!=null&&!data.isBefore(inicio)&&!data.isAfter(fim);}
     /** Quanto a categoria representa do total pago, em pontos percentuais. Total zero da zero. */

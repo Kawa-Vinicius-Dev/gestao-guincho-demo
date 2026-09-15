@@ -14,10 +14,8 @@ button,input,select,textarea{font:inherit}button{color:inherit}a{color:inherit}:
 .app-shell{display:grid;grid-template-columns:268px minmax(0,1fr);min-height:100vh}
 .sidebar{position:sticky;top:0;height:100vh;display:flex;flex-direction:column;padding:28px 18px 20px;color:#d8e5f2;background:linear-gradient(178deg,var(--navy-900),var(--navy-950))}
 .brand{display:flex;align-items:center;gap:13px;padding:0 10px 25px;border-bottom:1px solid rgba(255,255,255,.09)}
-.brand-road{position:relative;width:38px;height:38px;overflow:hidden;border-radius:11px;background:var(--blue-500);transform:rotate(3deg)}
-.brand-road i:first-child{position:absolute;left:17px;top:-4px;width:4px;height:47px;background:var(--white);transform:rotate(12deg)}
-.brand-road i:last-child{position:absolute;left:18px;top:4px;width:2px;height:31px;background:repeating-linear-gradient(180deg,var(--navy-900) 0 5px,transparent 5px 10px);transform:rotate(12deg)}
-.brand strong,.brand span{display:block}.brand strong{font:600 27px/.85 'Barlow Condensed',sans-serif;letter-spacing:.02em}.brand span{margin-top:5px;color:#98aec4;font-size:11px;letter-spacing:.14em;text-transform:uppercase}
+.jms-mark{display:block;object-fit:contain;flex:0 0 auto}.brand-mark{width:38px;height:38px}.login-mark{width:44px;height:44px;margin-bottom:40px}
+.brand strong{display:block;font:600 27px/.85 'Barlow Condensed',sans-serif;letter-spacing:.02em}
 .primary-nav{display:grid;gap:3px;margin:20px 0;overflow-y:auto;scrollbar-width:thin}
 .primary-nav a{position:relative;display:flex;align-items:center;gap:12px;min-height:41px;padding:0 12px;border-radius:7px;color:#a9bbcd;text-decoration:none;font-size:13px;transition:.15s ease}
 .primary-nav a:hover{color:white;background:rgba(255,255,255,.05)}.primary-nav a.active{color:white;background:rgba(46,144,250,.16)}

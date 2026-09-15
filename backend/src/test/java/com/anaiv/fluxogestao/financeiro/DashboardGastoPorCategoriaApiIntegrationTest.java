@@ -38,9 +38,10 @@ class DashboardGastoPorCategoriaApiIntegrationTest {
         long manutencao = id(criar(token, "/api/categorias", """
                 {"nome":"Manutencao categoria","tipo":"DESPESA"}"""));
 
-        // Duas despesas de combustivel: tem de somar numa linha so.
-        aprovar(token, id(despesa(token, "Diesel", combustivel, "600.00", "2044-03-05")));
-        aprovar(token, id(despesa(token, "Diesel de novo", combustivel, "200.00", "2044-03-09")));
+        // Duas despesas de combustivel: tem de somar numa categoria e num mesmo dia.
+        // A primeira foi lancada no dia 4, mas paga no dia 5: a serie usa o pagamento.
+        aprovar(token, id(despesa(token, "Diesel", combustivel, "600.00", "2044-03-04", "2044-03-05")));
+        aprovar(token, id(despesa(token, "Diesel de novo", combustivel, "200.00", "2044-03-05")));
         aprovar(token, id(despesa(token, "Pastilha", manutencao, "200.00", "2044-03-07")));
 
         // Aprovada mas ainda nao paga: fica de fora, como fica do total de despesas pagas.
@@ -54,6 +55,9 @@ class DashboardGastoPorCategoriaApiIntegrationTest {
         List<String> nomes = JsonPath.read(dashboard, "$.despesasPorCategoria[*].categoria");
         List<Number> valores = JsonPath.read(dashboard, "$.despesasPorCategoria[*].valor");
         List<Number> participacoes = JsonPath.read(dashboard, "$.despesasPorCategoria[*].participacao");
+        List<String> dias = JsonPath.read(dashboard, "$.despesasAcumuladasPorDia[*].data");
+        List<Number> valoresDiarios = JsonPath.read(dashboard, "$.despesasAcumuladasPorDia[*].valorDia");
+        List<Number> acumulados = JsonPath.read(dashboard, "$.despesasAcumuladasPorDia[*].acumulado");
 
         assertThat(nomes).as("a maior vem primeiro")
                 .containsExactly("Combustivel categoria", "Manutencao categoria");
@@ -65,6 +69,16 @@ class DashboardGastoPorCategoriaApiIntegrationTest {
         // A soma das categorias tem de fechar com o numero grande da tela.
         Number pagas = JsonPath.read(dashboard, "$.despesasPagas");
         assertThat(pagas.doubleValue()).as("a despesa nao paga nao entra em lugar nenhum").isEqualTo(1000.0);
+        assertThat(dias).as("a serie usa o dia do pagamento e vem em ordem")
+                .containsExactly("2044-03-05", "2044-03-07");
+        assertThat(valoresDiarios.stream().map(Number::doubleValue).toList())
+                .as("despesas do mesmo dia sao agrupadas")
+                .containsExactly(800.0, 200.0);
+        assertThat(acumulados.stream().map(Number::doubleValue).toList())
+                .containsExactly(800.0, 1000.0);
+        assertThat(acumulados.get(acumulados.size() - 1).doubleValue())
+                .as("o ultimo acumulado fecha com despesasPagas")
+                .isEqualTo(pagas.doubleValue());
     }
 
     @Test
@@ -75,13 +89,20 @@ class DashboardGastoPorCategoriaApiIntegrationTest {
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
         List<Object> categorias = JsonPath.read(dashboard, "$.despesasPorCategoria");
+        List<Object> acumuladas = JsonPath.read(dashboard, "$.despesasAcumuladasPorDia");
         assertThat(categorias).isEmpty();
+        assertThat(acumuladas).isEmpty();
     }
 
     private String despesa(String token, String descricao, long categoria, String valor, String data) throws Exception {
+        return despesa(token, descricao, categoria, valor, data, data);
+    }
+
+    private String despesa(String token, String descricao, long categoria, String valor, String data,
+                           String dataPagamento) throws Exception {
         return criar(token, "/api/despesas", """
                 {"descricao":"%s","categoriaId":%d,"valor":%s,"data":"%s","dataPagamento":"%s","status":"PAGO"}
-                """.formatted(descricao, categoria, valor, data, data));
+                """.formatted(descricao, categoria, valor, data, dataPagamento));
     }
 
     private void aprovar(String token, long despesaId) throws Exception {
