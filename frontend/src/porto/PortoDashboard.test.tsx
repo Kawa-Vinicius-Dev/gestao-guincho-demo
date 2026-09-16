@@ -42,12 +42,26 @@ const painel = (extra: Record<string, unknown> = {}) => ({
     { inicio: '2026-04-14', produzido: 22610.49, servicos: 93, recebido: 0, programado: 0 },
     { inicio: '2026-04-20', produzido: 37189.63, servicos: 124, recebido: 74770, programado: 74770 },
   ],
+  // Formato real da RPC: a OP vem da view, com o nome das colunas.
   opsDestaque: [{
-    id: 7, numero: '06389821', valorTotal: 74770, valorRecebido: 74770,
-    periodoInicio: '2026-03-30', periodoFim: '2026-04-29',
-    situacaoFinanceira: 'RECEBIDO', statusConciliacao: 'CONCILIADA',
-    quantidadeOrdensServico: 275, divergencia: 0, vencida: false,
+    id: 1, numero: '06389821', valor_total: 74770, valor_recebido: 74770,
+    periodo_inicio: '2026-03-30', periodo_fim: '2026-04-29',
+    data_pagamento_programada: '2026-06-07', data_recebimento: '2026-06-07',
+    situacao_financeira: 'RECEBIDO', status_conciliacao: 'CONCILIADA',
+    quantidade_ordens_servico: 275, divergencia: 0, vencida: false,
+    prioridade: 4, referencia: '2026-04-29',
   }],
+  faturamentoPorSocorrista: [
+    { chave: '1', rotulo: 'JEFERSON MARTINS DA SILVA', valor: 23853.12, quantidade: 49, semVinculo: false },
+    { chave: '9', rotulo: 'ANDERSON JORGE RIBEIRO', valor: 19864.11, quantidade: 85, semVinculo: false },
+    { chave: '2', rotulo: 'QEBSON RAMOS DA SILVA', valor: 18787.95, quantidade: 75, semVinculo: false },
+    { chave: '4', rotulo: 'NATANAEL JOSE DE FREITAS NETO', valor: 8326.2, quantidade: 50, semVinculo: false },
+    { chave: 'sem', rotulo: 'Sem socorrista', valor: 3938.62, quantidade: 16, semVinculo: true },
+  ],
+  faturamentoPorViatura: [
+    { chave: 'sem', rotulo: 'Sem viatura', valor: 74770, quantidade: 275, semVinculo: true },
+  ],
+  pendenciasVinculo: { quantidade: 275, semSocorrista: 16, semViatura: 275 },
   ...extra,
 })
 
@@ -75,7 +89,7 @@ test('o dinheiro abre a tela, com a leitura do que ele significa', async () => {
 })
 
 test('a barra de indicadores mostra serviços, espera por OP e divergência', async () => {
-  servidorDoPainel(painel({ quantidadeAguardandoOp: 12, valorAguardandoOp: 3800 }))
+  servidorDoPainel(painel())
   const Painel = await abrirPainel()
 
   render(<MemoryRouter><Painel/></MemoryRouter>)
@@ -83,9 +97,83 @@ test('a barra de indicadores mostra serviços, espera por OP e divergência', as
   expect(await screen.findByText('Serviços realizados')).toBeInTheDocument()
   expect(screen.getByText(/^R\$\s74\.770,00 no período$/)).toBeInTheDocument()
   expect(screen.getByText('Aguardando OP')).toBeInTheDocument()
-  expect(screen.getByText(/^R\$\s3\.800,00 sem cobrança$/)).toBeInTheDocument()
+  expect(screen.getByText('Nenhum serviço fora de OP')).toBeInTheDocument()
   expect(screen.getByText('OPs com divergência')).toBeInTheDocument()
   expect(screen.getByText('Composição confere')).toBeInTheDocument()
+})
+
+// O painel do dia chega sem valor: doze servicos esperando OP nao sao
+// "R$ 0,00 sem cobranca", sao servicos cujo preco so vem com a OP.
+test('serviço do painel diário aguardando OP não vira R$ 0,00', async () => {
+  servidorDoPainel(painel({ quantidadeAguardandoOp: 12, valorAguardandoOp: 0 }))
+  const Painel = await abrirPainel()
+
+  render(<MemoryRouter><Painel/></MemoryRouter>)
+
+  expect(await screen.findByText('Sem valor até a OP')).toBeInTheDocument()
+  expect(screen.queryByText(/R\$\s0,00/)).not.toBeInTheDocument()
+})
+
+// "A receber" nao existe no modelo em que a OP chega paga. O que falta na OS e
+// dono: socorrista ou viatura — e o topo leva direto para onde se resolve.
+test('OS sem socorrista ou viatura aparece no topo e leva às pendências', async () => {
+  servidorDoPainel(painel())
+  const Painel = await abrirPainel()
+
+  render(<MemoryRouter><Painel/></MemoryRouter>)
+
+  const financeiro = await screen.findByRole('region', { name: /resumo financeiro/i })
+  expect(within(financeiro).getByText('Sem socorrista ou viatura')).toBeInTheDocument()
+  expect(within(financeiro).getByText('275 OS')).toBeInTheDocument()
+  expect(within(financeiro).getByText('16 sem socorrista · 275 sem viatura')).toBeInTheDocument()
+  expect(within(financeiro).getByRole('link', { name: /resolver pendências/i }))
+    .toHaveAttribute('href', '/porto/pendencias')
+  expect(within(financeiro).queryByText(/a receber/i)).not.toBeInTheDocument()
+})
+
+test('toda OS com socorrista e viatura: o topo não mostra pendência', async () => {
+  servidorDoPainel(painel({ pendenciasVinculo: { quantidade: 0, semSocorrista: 0, semViatura: 0 } }))
+  const Painel = await abrirPainel()
+
+  render(<MemoryRouter><Painel/></MemoryRouter>)
+
+  await screen.findByRole('region', { name: /resumo financeiro/i })
+  expect(screen.queryByText('Sem socorrista ou viatura')).not.toBeInTheDocument()
+})
+
+test('faturamento por socorrista e por viatura, com as OS sem dono por último', async () => {
+  servidorDoPainel(painel())
+  const Painel = await abrirPainel()
+
+  render(<MemoryRouter><Painel/></MemoryRouter>)
+
+  const socorristas = await screen.findByRole('list', { name: /faturamento por socorrista/i })
+  const linhas = within(socorristas).getAllByRole('listitem')
+  expect(linhas).toHaveLength(5)
+  expect(linhas[0]).toHaveTextContent('JEFERSON MARTINS DA SILVA')
+  expect(linhas[0]).toHaveTextContent(/R\$\s23\.853,12/)
+  expect(linhas[0]).toHaveTextContent('49 serviços')
+  expect(linhas[4]).toHaveTextContent('Sem socorrista')
+  expect(linhas[4]).toHaveClass('sem-vinculo')
+
+  const viaturas = screen.getByRole('list', { name: /faturamento por viatura/i })
+  expect(within(viaturas).getByText('Sem viatura')).toBeInTheDocument()
+  expect(within(viaturas).getByText('275 serviços')).toBeInTheDocument()
+})
+
+// A RPC devolve a OP com o nome das colunas. A tabela lia valorTotal e
+// periodoFim direto e, em producao, saia sem valor, sem periodo e sem status.
+test('a tabela de OPs lê o formato que a RPC devolve', async () => {
+  servidorDoPainel(painel())
+  const Painel = await abrirPainel()
+
+  render(<MemoryRouter><Painel/></MemoryRouter>)
+
+  const linha = (await screen.findByText('06389821')).closest('tr')!
+  expect(linha).toHaveTextContent('30/03/2026 a 29/04/2026')
+  expect(linha).toHaveTextContent('275')
+  expect(linha).toHaveTextContent(/R\$\s74\.770,00/)
+  expect(within(linha).getByText('Conciliada')).toBeInTheDocument()
 })
 
 // Sem divergencia nao ha o que resolver: o bloco de atencao nao aparece, e nada
@@ -105,10 +193,7 @@ test('sem divergência, não mostra bloco de atenção nem faixa no lugar', asyn
 })
 
 test('divergência pede providência e leva para as ordens de pagamento', async () => {
-  servidorDoPainel(painel({
-    quantidadeComDivergencia: 3, valorTotalDivergencias: 1250.5,
-    quantidadeAguardandoOp: 12, valorAguardandoOp: 3800,
-  }))
+  servidorDoPainel(painel({ quantidadeComDivergencia: 3, valorTotalDivergencias: 1250.5 }))
   const Painel = await abrirPainel()
 
   render(<MemoryRouter><Painel/></MemoryRouter>)
@@ -116,15 +201,14 @@ test('divergência pede providência e leva para as ordens de pagamento', async 
   expect(await screen.findByText('3 OPs com divergência')).toBeInTheDocument()
   expect(screen.getByRole('link', { name: /ver ordens de pagamento/i }))
     .toHaveAttribute('href', '/porto/ordens-pagamento')
-  // Servico aguardando OP e espera normal pela Porto, nao providencia: aparece
-  // uma vez, como "a receber" no topo, e nao na fila de atencao.
-  expect(screen.getAllByText('12 serviços aguardando OP')).toHaveLength(1)
 })
 
 test('período sem dados não mostra três zeros, e oferece a saída', async () => {
   servidorDoPainel(painel({
     quantidadeTotalOps: 0, quantidadeTotalServicos: 0, valorTotalRealizado: 0,
     valorProgramado: 0, valorRecebido: 0, serie: [], opsDestaque: [],
+    faturamentoPorSocorrista: [], faturamentoPorViatura: [],
+    pendenciasVinculo: { quantidade: 0, semSocorrista: 0, semViatura: 0 },
   }))
   const Painel = await abrirPainel()
 
@@ -154,17 +238,4 @@ test('trocar o agrupamento recarrega a série com o novo grão', async () => {
   await user.click(screen.getByRole('button', { name: 'Semanal' }))
 
   expect(grao).toBe('SEMANA')
-})
-
-// O painel do dia traz servico sem preco. Doze servicos somando zero nao e
-// "nada a receber": e "ainda nao se sabe quanto".
-test('serviço aguardando OP sem preço aparece como a precificar, não como R$ 0,00', async () => {
-  servidorDoPainel(painel({ quantidadeAguardandoOp: 12, valorAguardandoOp: 0 }))
-  const Painel = await abrirPainel()
-
-  render(<MemoryRouter><Painel/></MemoryRouter>)
-
-  const financeiro = await screen.findByRole('region', { name: /resumo financeiro/i })
-  expect(within(financeiro).getByText('A precificar')).toBeInTheDocument()
-  expect(within(financeiro).getByText('12 serviços aguardando OP')).toBeInTheDocument()
 })

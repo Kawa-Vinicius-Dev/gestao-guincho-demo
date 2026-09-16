@@ -1,19 +1,21 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { baixarRelatorioPorto, listarPeriodosDeOp, obterDashboardAltoNivelPorto } from '../dados/porto'
-import type { DashboardAltoNivelPorto, OpDestaquePorto, OrdemPagamentoPorto } from '../types/modelos'
+import type {
+  DashboardAltoNivelPorto, OpDestaquePorto, OrdemPagamentoPorto, PendenciasVinculoPorto,
+} from '../types/modelos'
 import { data, hojeIso, moeda, percentual } from '../utils/formatadores'
 import { Carregando } from '../components/EstadoPagina'
 import { Campo, Selecao } from '../components/Campos'
-import { EvolucaoAcumulada } from '../components/Graficos'
+import { EvolucaoAcumulada, FaturamentoPorGrupo } from '../components/Graficos'
 import { CabecalhoPagina, Etiqueta, GradeIndicadores, Indicador, Painel } from '../components/ui/Pagina'
 import { rotuloOp } from '../utils/periodos'
 
 /**
  * Painel Porto.
  *
- * A tela responde, nesta ordem: quanto entrou, o que esta em aberto, o que
- * precisa de acao, como evoluiu e quais OPs olhar. A ordem nao e estetica — e a
+ * A tela responde, nesta ordem: quanto entrou, quais OS ainda estao sem dono, o
+ * que precisa de acao, quem faturou quanto e quais OPs olhar. A ordem nao e estetica — e a
  * sequencia em que quem administra pergunta, e por isso o dinheiro vem primeiro
  * e o detalhe por ultimo.
  *
@@ -51,6 +53,14 @@ function rotuloDoBalde(grao: string) {
     }
     return `${dia}/${mes}`
   }
+}
+
+/** "16 sem socorrista · 275 sem viatura", so com as partes que existem. */
+function detalheDoVinculo(p: PendenciasVinculoPorto) {
+  return [
+    p.semSocorrista ? `${p.semSocorrista} sem socorrista` : '',
+    p.semViatura ? `${p.semViatura} sem viatura` : '',
+  ].filter(Boolean).join(' · ')
 }
 
 /** Um cartao so fica colorido quando ha o que resolver: zero e uma boa noticia. */
@@ -102,9 +112,6 @@ export default function PortoDashboardPage() {
   }
 
   const vazio = Boolean(dados && !dados.quantidadeTotalServicos && !dados.quantidadeTotalOps)
-  // Toda OP chega paga: programado e recebido sao o mesmo numero, e nao existe OP
-  // vencida. O que ainda falta entrar sao os servicos feitos que nenhuma OP pagou.
-  const aReceber = dados ? dados.valorAguardandoOp : 0
   const recebidoSobreProducao = dados && dados.valorTotalRealizado > 0
     ? (dados.valorRecebido / dados.valorTotalRealizado) * 100
     : null
@@ -179,17 +186,16 @@ export default function PortoDashboardPage() {
                 <small>{dados.quantidadeTotalServicos} serviços executados</small>
                 {ticketMedio !== null ? <small>Ticket médio {moeda(ticketMedio)}</small> : null}
               </div>
-              <div>
-                <dt>A receber</dt>
-                {/* Servico do painel do dia chega sem preco: 12 servicos somando
-                    R$ 0,00 nao e "nada a receber", e "ainda nao se sabe quanto". */}
-                <dd className={dados.quantidadeAguardandoOp ? 'destaque-falta' : ''}>
-                  {dados.quantidadeAguardandoOp && !aReceber ? 'A precificar' : moeda(aReceber)}
-                </dd>
-                <small>{dados.quantidadeAguardandoOp
-                  ? `${dados.quantidadeAguardandoOp} ${dados.quantidadeAguardandoOp === 1 ? 'serviço aguardando OP' : 'serviços aguardando OP'}`
-                  : 'Nenhum serviço fora de OP'}</small>
-              </div>
+              {/* Nao existe "a receber": a OP chega paga e o painel do dia chega
+                  sem valor. O que falta na OS e dono — socorrista ou viatura. */}
+              {dados.pendenciasVinculo.quantidade
+                ? <div className="destaque-pendente">
+                    <dt>Sem socorrista ou viatura</dt>
+                    <dd>{dados.pendenciasVinculo.quantidade} OS</dd>
+                    <small>{detalheDoVinculo(dados.pendenciasVinculo)}</small>
+                    <Link to="/porto/pendencias">Resolver pendências</Link>
+                  </div>
+                : null}
             </dl>
 
             <div className="destaque-grafico">
@@ -216,7 +222,10 @@ export default function PortoDashboardPage() {
           apoio={`${moeda(dados.valorTotalRealizado)} no período`}/>
         <Indicador rotulo="Aguardando OP" valor={dados.quantidadeAguardandoOp}
           tom={tom(dados.quantidadeAguardandoOp, 'atencao')}
-          apoio={`${moeda(dados.valorAguardandoOp)} sem cobrança`}/>
+          apoio={dados.valorAguardandoOp
+            ? `${moeda(dados.valorAguardandoOp)} sem cobrança`
+            // O painel do dia chega sem valor: o preco so vem com a OP.
+            : dados.quantidadeAguardandoOp ? 'Sem valor até a OP' : 'Nenhum serviço fora de OP'}/>
         <Indicador rotulo="OPs com divergência" valor={dados.quantidadeComDivergencia}
           tom={tom(dados.quantidadeComDivergencia, 'alerta')}
           apoio={dados.quantidadeComDivergencia ? moeda(dados.valorTotalDivergencias) : 'Composição confere'}/>
@@ -235,6 +244,17 @@ export default function PortoDashboardPage() {
             </ul>
           </Painel>
         : null}
+
+      <div className="painel-faturamento">
+        <Painel etiqueta="Por pessoa" titulo="Faturamento por socorrista">
+          <FaturamentoPorGrupo descricao="Faturamento por socorrista no período"
+            vazio="Nenhum serviço neste período." linhas={dados.faturamentoPorSocorrista}/>
+        </Painel>
+        <Painel etiqueta="Por viatura" titulo="Faturamento por viatura">
+          <FaturamentoPorGrupo descricao="Faturamento por viatura no período"
+            vazio="Nenhum serviço neste período." linhas={dados.faturamentoPorViatura}/>
+        </Painel>
+      </div>
 
       {dados.opsDestaque.length
         ? <Painel semRespiro className="painel-ops-titulo" etiqueta="Detalhe"

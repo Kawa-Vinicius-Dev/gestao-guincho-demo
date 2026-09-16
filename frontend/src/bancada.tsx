@@ -16,49 +16,58 @@ import '@fontsource/ibm-plex-sans/500.css'
 import '@fontsource/ibm-plex-sans/600.css'
 import '@fontsource/ibm-plex-mono/500.css'
 
+// Resposta real de porto_dashboard_alto_nivel('2026-03-30', '2026-04-29', 'SEMANA'),
+// copiada do banco em 16/09/2026 (sem porEspecialidade/porSocorrista, que a tela
+// nao le). Exemplo inventado ja escondeu um indicador impossivel e uma tabela
+// quebrada; a bancada so mostra o que o sistema produz.
 const painel = {
-  // Modelo real: toda OP chega paga (programado = recebido, nada vencido). O que
-  // falta entrar sao os servicos do painel do dia que nenhuma OP pagou ainda.
-  quantidadeTotalOps: 1, valorTotalPrevisto: 74770, quantidadeSemComposicao: 0,
-  valorSemComposicao: 0, quantidadeConciliadas: 1, valorConciliadas: 74770,
-  quantidadeValorAbaixo: 0, diferencaTotalAbaixo: 0, quantidadeValorAcima: 0,
-  diferencaTotalAcima: 0, quantidadeComDivergencia: 0, valorTotalDivergencias: 0,
-  quantidadePagamentoProgramado: 1, valorProgramado: 74770,
-  quantidadeRecebidas: 1, valorRecebido: 74770,
-  quantidadeAguardandoRecebimento: 0, valorAguardandoRecebimento: 0,
-  quantidadeVencidasNaoRecebidas: 0, valorVencidoNaoRecebido: 0,
-  valorMedioPorOp: 74770, quantidadeOrdensServico: 275,
-  quantidadeTotalServicos: 287, valorTotalRealizado: 78570,
-  quantidadeAguardandoOp: 12, valorAguardandoOp: 3800,
-  quantidadeServicosPagamentoProgramado: 275, valorServicosPagamentoProgramado: 74770,
-  valorPrevistoAReceber: 74770, valorConciliado: 74770, valorEfetivamenteRecebido: 74770,
-  quantidadeServicosPendentes: 0, valorServicosPendentes: 0,
-  quantidadeServicosDevolvidos: 2,
-  porEspecialidade: [], porSocorrista: [],
   grao: 'SEMANA',
-  // Caso real: a OP de 30/03 a 29/04 e paga de uma vez e cai no fim do periodo.
   serie: [
-    { inicio: '2026-03-30', produzido: 615, servicos: 3, recebido: 0, programado: 0 },
-    { inicio: '2026-04-06', produzido: 0, servicos: 0, recebido: 0, programado: 0 },
-    { inicio: '2026-04-13', produzido: 22610.49, servicos: 93, recebido: 0, programado: 0 },
-    { inicio: '2026-04-20', produzido: 37189.63, servicos: 124, recebido: 0, programado: 0 },
-    { inicio: '2026-04-27', produzido: 14354.88, servicos: 55, recebido: 74770, programado: 74770 },
-    // Servicos do painel do dia depois do fechamento da OP: produzidos, ainda sem OP.
-    { inicio: '2026-05-04', produzido: 3800, servicos: 12, recebido: 0, programado: 0 },
+    { inicio: '2026-03-30', recebido: 0, servicos: 3, produzido: 615, programado: 0 },
+    { inicio: '2026-04-06', recebido: 0, servicos: 0, produzido: 0, programado: 0 },
+    { inicio: '2026-04-13', recebido: 0, servicos: 93, produzido: 22610.49, programado: 0 },
+    { inicio: '2026-04-20', recebido: 0, servicos: 124, produzido: 37189.63, programado: 0 },
+    { inicio: '2026-04-27', recebido: 74770, servicos: 55, produzido: 14354.88, programado: 74770 },
   ],
-  opsDestaque: [
-    { id: 7, numero: '06389821', valorTotal: 74770, valorRecebido: 74770,
-      periodoInicio: '2026-03-30', periodoFim: '2026-04-29', dataPagamentoProgramada: '2026-06-07',
-      situacaoFinanceira: 'RECEBIDO', statusConciliacao: 'CONCILIADA',
-      quantidadeOrdensServico: 275, divergencia: 0, vencida: false },
+  periodoInicio: '2026-03-30', periodoFim: '2026-04-29',
+  opsDestaque: [{
+    id: 1, numero: '06389821', vencida: false, prioridade: 4, referencia: '2026-04-29',
+    divergencia: 0, periodo_fim: '2026-04-29', valor_total: 74770, periodo_inicio: '2026-03-30',
+    valor_recebido: 74770, data_recebimento: '2026-06-07', status_conciliacao: 'CONCILIADA',
+    situacao_financeira: 'RECEBIDO', data_pagamento_programada: '2026-06-07',
+    quantidade_ordens_servico: 275,
+  }],
+  valorRecebido: 74770, valorConciliado: 74770, valorMedioPorOp: 74770, valorProgramado: 74770,
+  valorConciliadas: 74770,
+  pendenciasVinculo: { quantidade: 275, semViatura: 275, semSocorrista: 16 },
+  valorAguardandoOp: 0, quantidadeTotalOps: 1, valorSemComposicao: 0, valorTotalPrevisto: 74770,
+  diferencaTotalAcima: 0, quantidadeRecebidas: 1, valorTotalRealizado: 74770,
+  diferencaTotalAbaixo: 0, quantidadeValorAcima: 0,
+  faturamentoPorViatura: [
+    { chave: 'sem', valor: 74770, rotulo: 'Sem viatura', quantidade: 275, semVinculo: true },
   ],
+  quantidadeConciliadas: 1, quantidadeValorAbaixo: 0, valorPrevistoAReceber: 74770,
+  quantidadeAguardandoOp: 0, valorServicosPendentes: 0, valorTotalDivergencias: 0,
+  quantidadeOrdensServico: 275, quantidadeSemComposicao: 0, quantidadeTotalServicos: 275,
+  valorVencidoNaoRecebido: 0,
+  faturamentoPorSocorrista: [
+    { chave: '1', valor: 23853.12, rotulo: 'JEFERSON MARTINS DA SILVA', quantidade: 49, semVinculo: false },
+    { chave: '9', valor: 19864.11, rotulo: 'ANDERSON JORGE RIBEIRO', quantidade: 85, semVinculo: false },
+    { chave: '2', valor: 18787.95, rotulo: 'QEBSON RAMOS DA SILVA', quantidade: 75, semVinculo: false },
+    { chave: '4', valor: 8326.2, rotulo: 'NATANAEL JOSE DE FREITAS NETO', quantidade: 50, semVinculo: false },
+    { chave: 'sem', valor: 3938.62, rotulo: 'Sem socorrista', quantidade: 16, semVinculo: true },
+  ],
+  quantidadeComDivergencia: 0, valorEfetivamenteRecebido: 74770, valorAguardandoRecebimento: 0,
+  quantidadeServicosPendentes: 0, quantidadeServicosDevolvidos: 0,
+  quantidadePagamentoProgramado: 1, quantidadeVencidasNaoRecebidas: 0,
+  quantidadeAguardandoRecebimento: 0, valorServicosPagamentoProgramado: 0,
+  quantidadeServicosPagamentoProgramado: 0,
 }
 
+// A unica OP que existe no banco.
 const ops = [
-  { id: 7, numero: '06389821', valor_total: 74770, situacao_financeira: 'RECEBIDO',
+  { id: 1, numero: '06389821', valor_total: 74770, situacao_financeira: 'RECEBIDO',
     periodo_inicio: '2026-03-30', periodo_fim: '2026-04-29' },
-  { id: 9, numero: '06422281', valor_total: 22870, situacao_financeira: 'PROGRAMADO',
-    periodo_inicio: '2026-04-27', periodo_fim: '2026-05-11' },
 ]
 
 /** Responde as chamadas do Supabase com o exemplo acima, sem rede. */

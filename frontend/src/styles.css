@@ -1410,3 +1410,23 @@ tbody tr{transition:background-color .14s ease}
 /* Contexto do destaque com duas linhas de apoio (servicos e ticket medio). */
 .destaque-contexto small{display:block}
 .destaque-contexto small+small{margin-top:2px}
+
+/* Pendencia de vinculo no topo do painel Porto: conta OS, nao dinheiro. */
+.destaque-pendente dd{color:#8a6410}
+.destaque-pendente a{display:inline-block;margin-top:6px;color:var(--blue-600);font-size:var(--t-apoio);font-weight:600;text-decoration:none}
+.destaque-pendente a:after{content:' \2192';transition:margin .16s ease}
+.destaque-pendente a:hover:after{margin-left:3px}
+
+/* Faturamento por socorrista e por viatura, lado a lado. */
+.painel-faturamento{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--espaco-3)}
+.faturamento-grupo{display:grid;gap:var(--espaco-2);margin:0;padding:0;list-style:none}
+.faturamento-grupo li{display:grid;grid-template-columns:minmax(0,190px) minmax(60px,1fr) 104px 74px;align-items:center;gap:var(--espaco-2)}
+.faturamento-grupo-rotulo{overflow:hidden;color:var(--ink);font-size:var(--t-apoio);font-weight:500;text-overflow:ellipsis;white-space:nowrap}
+.faturamento-grupo-trilho{position:relative;height:10px;overflow:hidden;border-radius:99px;background:var(--linha-suave)}
+.faturamento-grupo-trilho>span{position:absolute;top:0;bottom:0;left:0;border-radius:99px;background:var(--blue-500);transition:width .4s cubic-bezier(.22,1,.36,1)}
+.faturamento-grupo strong{color:var(--ink);font:600 17px/1 'Barlow Condensed',sans-serif;font-variant-numeric:tabular-nums;text-align:right}
+.faturamento-grupo small{color:var(--muted);font-size:var(--t-rotulo);text-align:right}
+.faturamento-grupo .sem-vinculo .faturamento-grupo-rotulo{color:#8a6410}
+.faturamento-grupo .sem-vinculo .faturamento-grupo-trilho>span{background:#e0a530}
+@media(max-width:1180px){.painel-faturamento{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){.faturamento-grupo-trilho>span{transition:none}}

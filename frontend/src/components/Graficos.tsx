@@ -55,6 +55,30 @@ export function FaturamentoECusto({descricao,linhas,vazio}:{descricao:string;lin
   </div>
 }
 
+export type LinhaFaturamento={chave:string;rotulo:string;valor:number;quantidade:number;semVinculo:boolean}
+
+/**
+ * Quanto cada socorrista ou viatura faturou, uma barra por linha. A linha sem
+ * vinculo fica por ultimo e em amarelo: o dinheiro existe, so falta dono — e e ela
+ * que faz a soma das barras fechar com o faturamento do periodo. OS do painel
+ * diario chega sem valor, conta como servico e nao soma dinheiro; por isso a
+ * quantidade aparece ao lado do valor.
+ */
+export function FaturamentoPorGrupo({descricao,linhas,vazio}:{descricao:string;linhas:LinhaFaturamento[];vazio:string}){
+  if(!linhas.length)return <Vazio texto={vazio}/>
+  const ordenadas=[...linhas].sort((a,b)=>Number(a.semVinculo)-Number(b.semVinculo)||b.valor-a.valor)
+  const maior=escala(ordenadas.map(l=>l.valor))
+  const largura=(v:number)=>`${v>0?Math.max(v/maior*100,1.5):0}%`
+  return <ul className="faturamento-grupo" aria-label={descricao}>
+    {ordenadas.map(l=><li key={l.chave} className={l.semVinculo?'sem-vinculo':undefined}>
+      <span className="faturamento-grupo-rotulo" title={l.rotulo}>{l.rotulo}</span>
+      <span className="faturamento-grupo-trilho" aria-hidden="true"><span style={{width:largura(l.valor)}}/></span>
+      <strong>{moeda(l.valor)}</strong>
+      <small>{l.quantidade} {l.quantidade===1?'serviço':'serviços'}</small>
+    </li>)}
+  </ul>
+}
+
 /**
  * Serviço prestado não é serviço pago: a Porto fecha a OP semanas depois. Esta
  * proporcao existe para deixar visivel quanto do periodo ainda esta esperando OP,
