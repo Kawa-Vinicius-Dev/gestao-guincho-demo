@@ -241,51 +241,6 @@ test('despesa de comissão explica o caminho em vez do erro genérico', async ()
   })).rejects.toThrow(/cancele o pagamento da comissão/i)
 })
 
-// "Almoco de Fulano" com viatura e socorrista preenchidos sumia do lado do
-// socorrista: a agregacao do painel so conta a despesa no socorrista quando ela
-// nao tem viatura OU e alimentacao, e o formulario nunca marcava alimentacao.
-test('alimentação do socorrista sai marcada, e não como despesa comum', async () => {
-  let enviado: Record<string, unknown> = {}
-  servidor.use(http.post(`${URL_SUPABASE}/rest/v1/despesas`, async ({ request }) => {
-    enviado = await request.json() as Record<string, unknown>
-    return responder(request, [LINHA])
-  }))
-  comSessao()
-  const { criarDespesa } = await carregar('auth,despesas')
-
-  await criarDespesa({
-    descricao: 'Almoço de Fulano', categoriaId: 3, valor: 50, data: '2026-04-02',
-    veiculoId: 2, motoristaId: 7, natureza: 'ALIMENTACAO_FUNCIONARIO',
-  })
-
-  expect(enviado.natureza).toBe('ALIMENTACAO_FUNCIONARIO')
-  expect(enviado.motorista_id).toBe(7)
-  // Alimentacao e custo do socorrista, nao da viatura: a viatura nao e gravada
-  // nem quando chega preenchida, porque o painel a descarta de qualquer forma e
-  // sobraria um vinculo que nenhuma conta usa.
-  expect(enviado.veiculo_id).toBeNull()
-})
-
-// Sem socorrista nao ha de quem descontar: a marca viraria um estado que
-// nenhuma tela consegue usar, e a despesa sumiria da viatura sem aparecer em
-// lugar nenhum.
-test('alimentação sem socorrista volta a ser despesa comum', async () => {
-  let enviado: Record<string, unknown> = {}
-  servidor.use(http.post(`${URL_SUPABASE}/rest/v1/despesas`, async ({ request }) => {
-    enviado = await request.json() as Record<string, unknown>
-    return responder(request, [LINHA])
-  }))
-  comSessao()
-  const { criarDespesa } = await carregar('auth,despesas')
-
-  await criarDespesa({
-    descricao: 'Almoço', categoriaId: 3, valor: 50, data: '2026-04-02',
-    veiculoId: 2, natureza: 'ALIMENTACAO_FUNCIONARIO',
-  })
-
-  expect(enviado.natureza).toBe('GERAL')
-})
-
 test('despesa comum continua nascendo GERAL', async () => {
   let enviado: Record<string, unknown> = {}
   servidor.use(http.post(`${URL_SUPABASE}/rest/v1/despesas`, async ({ request }) => {

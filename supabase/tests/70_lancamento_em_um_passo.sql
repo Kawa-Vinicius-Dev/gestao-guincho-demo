@@ -51,11 +51,6 @@ select pg_temp.checar('"Pendente" continua pendente, só que já aprovada',
 select pg_temp.checar('aprovado_por guarda quem lançou',
   (select (aprovado_por = criado_por)::text from public.registrar_despesa_aprovada(
      'Pedágio',1,12,'2026-09-14',null,null,null,null,null,null,'GERAL',true,null)), 'true');
-select pg_temp.checar('alimentação do socorrista não leva viatura',
-  (select coalesce(veiculo_id::text,'sem viatura') from public.registrar_despesa_aprovada(
-     'Almoço',2,50,'2026-09-15',null,null,1,1,null,null,'ALIMENTACAO_FUNCIONARIO',true,null)), 'sem viatura');
-select pg_temp.checar('e é marcada como alimentação',
-  (select natureza::text from public.despesas where descricao = 'Almoço'), 'ALIMENTACAO_FUNCIONARIO');
 
 \echo '===== O funcionario continua passando pela aprovacao ====='
 set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000002';
@@ -79,52 +74,35 @@ insert into public.despesas (descricao,categoria_id,valor,data_lancamento,status
 select pg_temp.barrado('nem o administrador aprova o próprio lançamento por aprovar_despesa',
   $$select public.aprovar_despesa((select id from public.despesas where descricao = 'Lançada à mão pelo dono'))$$);
 
-\echo '===== Alimentacao nunca leva viatura, venha por onde vier ====='
--- A regra na tela resolve o formulario e so ele. Estas sao as outras portas.
+\echo '===== Gasto de viatura e da viatura, alimentacao incluida ====='
+-- O cartao que a equipe usa e vinculado a viatura: a refeicao comprada nele e
+-- custo daquela viatura, como o diesel. A regra que apagava a viatura de toda
+-- despesa de Alimentacao caiu junto com a premissa que a criou.
 set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';
 
--- Porta 1: despesa fixa. Cadastrada com viatura, lancada todo mes por
--- lancar_despesas_recorrentes, que copia veiculo_id e nunca escreve natureza.
+select pg_temp.checar('alimentação lançada pelo administrador mantém a viatura',
+  (select veiculo_id::text from public.registrar_despesa_aprovada(
+     'Almoço da equipe',2,80,'2026-10-01',null,null,1,1,null,null,'GERAL',true,null)), '1');
+select pg_temp.checar('e não vira desconto de comissão de ninguém',
+  (select natureza::text from public.despesas where descricao = 'Almoço da equipe'), 'GERAL');
+
+-- Despesa fixa de Alimentacao com viatura: volta a lancar com a viatura.
 insert into public.despesas_recorrentes
  (descricao,categoria_id,valor,dia_vencimento,veiculo_id,motorista_id,ativo)
  values ('Marmita do plantão',2,300,10,1,1,true);
-select public.lancar_despesas_recorrentes('2026-10-01');
-select pg_temp.checar('despesa fixa de alimentação não leva viatura',
-  (select coalesce(veiculo_id::text,'sem viatura') from public.despesas
-    where descricao = 'Marmita do plantão'), 'sem viatura');
-select pg_temp.checar('e sai marcada como alimentação do socorrista',
-  (select natureza::text from public.despesas where descricao = 'Marmita do plantão'),
+select public.lancar_despesas_recorrentes('2026-11-01');
+select pg_temp.checar('despesa fixa de alimentação mantém a viatura',
+  (select veiculo_id::text from public.despesas where descricao = 'Marmita do plantão'), '1');
+
+select pg_temp.checar('o trigger que apagava a viatura não existe mais',
+  (select count(*)::text from pg_trigger where tgname = 'despesas_alimentacao_sem_viatura'), '0');
+
+-- O que NAO voltou: o socorrista lancando a refeicao do proprio bolso continua
+-- sendo a unica coisa que desconta da comissao.
+set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000002';
+select public.registrar_alimentacao('2026-10-05',45,'Do meu bolso');
+select pg_temp.checar('registrar_alimentacao segue marcando o desconto',
+  (select natureza::text from public.despesas where observacoes = 'Do meu bolso'),
   'ALIMENTACAO_FUNCIONARIO');
-
--- Porta 2: insert direto na tabela, como faz o funcionario pela policy.
-insert into public.despesas (descricao,categoria_id,valor,data_lancamento,veiculo_id,motorista_id,status,aprovada,criado_por)
- values ('Lanche na estrada',2,25,'2026-10-02',1,1,'PENDENTE',false,'aaaaaaaa-0000-0000-0000-000000000001');
-select pg_temp.checar('insert direto de alimentação também perde a viatura',
-  (select coalesce(veiculo_id::text,'sem viatura') from public.despesas
-    where descricao = 'Lanche na estrada'), 'sem viatura');
-
--- Porta 3: trocar a categoria de uma despesa que ja existe com viatura.
-insert into public.despesas (descricao,categoria_id,valor,data_lancamento,veiculo_id,motorista_id,status,aprovada,criado_por)
- values ('Era diesel',1,80,'2026-10-03',1,1,'PENDENTE',false,'aaaaaaaa-0000-0000-0000-000000000001');
-update public.despesas set categoria_id = 2 where descricao = 'Era diesel';
-select pg_temp.checar('virar alimentação na correção solta a viatura',
-  (select coalesce(veiculo_id::text,'sem viatura') from public.despesas
-    where descricao = 'Era diesel'), 'sem viatura');
-
--- Sem socorrista nao ha de quem descontar: continua GERAL, mas a viatura sai
--- do mesmo jeito. Comida nao e custo de veiculo, com ou sem dono.
-insert into public.despesas (descricao,categoria_id,valor,data_lancamento,veiculo_id,status,aprovada,criado_por)
- values ('Café da equipe',2,40,'2026-10-04',1,'PENDENTE',false,'aaaaaaaa-0000-0000-0000-000000000001');
-select pg_temp.checar('alimentação sem socorrista não vira desconto de ninguém',
-  (select natureza::text from public.despesas where descricao = 'Café da equipe'), 'GERAL');
-select pg_temp.checar('mas também não vira custo de viatura',
-  (select coalesce(veiculo_id::text,'sem viatura') from public.despesas
-    where descricao = 'Café da equipe'), 'sem viatura');
-
--- E o contrario segue valendo: despesa que nao e alimentacao mantem a viatura.
-insert into public.despesas (descricao,categoria_id,valor,data_lancamento,veiculo_id,motorista_id,status,aprovada,criado_por)
- values ('Diesel de verdade',1,500,'2026-10-05',1,1,'PENDENTE',false,'aaaaaaaa-0000-0000-0000-000000000001');
-select pg_temp.checar('despesa comum continua na viatura',
-  (select veiculo_id::text from public.despesas where descricao = 'Diesel de verdade'), '1');
 
 \echo 'TODOS OS TESTES PASSARAM'

@@ -56,61 +56,6 @@ test('manter despesa fecha a janela sem excluir nada', async () => {
   expect(screen.getByText('Almoço de Fulano')).toBeInTheDocument()
 })
 
-// O formulario pedia viatura E socorrista, mas a despesa so chegava na viatura:
-// no painel, despesa com viatura preenchida e custo da viatura, e o socorrista
-// so recebe a que nao tem viatura ou a que e alimentacao dele. Alimentacao e
-// sempre do socorrista, entao a viatura sai do caminho.
-test('escolher Alimentação desativa a viatura e exige o socorrista', async () => {
-  abrir()
-
-  await userEvent.click(await screen.findByRole('button', { name: /^registrar despesa$/i }))
-  const janela = screen.getByRole('dialog', { name: /registrar despesa/i })
-  await userEvent.selectOptions(within(janela).getByLabelText('Categoria'), '2')
-  expect(within(janela).getByLabelText('Veículo')).toBeEnabled()
-
-  await userEvent.selectOptions(within(janela).getByLabelText('Categoria'), '3')
-
-  expect(within(janela).getByLabelText('Veículo')).toBeDisabled()
-  expect(within(janela).getByLabelText('Socorrista')).toBeRequired()
-  expect(within(janela).getByText(/custo do socorrista, não da viatura/i)).toBeInTheDocument()
-})
-
-test('a despesa de alimentação sai marcada e sem viatura', async () => {
-  let enviado: Record<string, unknown> = {}
-  servidor.use(http.post('/api/despesas', async ({ request }) => {
-    enviado = await request.json() as Record<string, unknown>
-    return HttpResponse.json({ ...diesel, id: 99 }, { status: 201 })
-  }))
-  abrir()
-
-  await userEvent.click(await screen.findByRole('button', { name: /^registrar despesa$/i }))
-  const janela = screen.getByRole('dialog', { name: /registrar despesa/i })
-  await userEvent.type(within(janela).getByLabelText('Descrição'), 'Almoço de Fulano')
-  await userEvent.type(within(janela).getByLabelText('Valor'), '5000')
-  await userEvent.selectOptions(within(janela).getByLabelText('Categoria'), '3')
-  await userEvent.selectOptions(within(janela).getByLabelText('Socorrista'), '7')
-  await userEvent.click(within(janela).getByRole('button', { name: /enviar despesa/i }))
-
-  expect(enviado.natureza).toBe('ALIMENTACAO_FUNCIONARIO')
-  expect(enviado.motoristaId).toBe(7)
-  expect(enviado.veiculoId).toBeNull()
-})
-
-// O <select> de categoria nao tem opcao vazia: abre ja na primeira da lista.
-// O estado nascia em '' enquanto a tela mostrava "Alimentação", entao o campo de
-// veiculo so desativava depois de reescolher a opcao que ja estava a vista.
-test('a categoria que o campo já mostra ao abrir é a que vale', async () => {
-  abrir()
-
-  await userEvent.click(await screen.findByRole('button', { name: /^registrar despesa$/i }))
-  const janela = screen.getByRole('dialog', { name: /registrar despesa/i })
-
-  // Alimentação é a primeira da lista devolvida pelo servidor deste teste.
-  expect(within(janela).getByLabelText('Categoria')).toHaveValue('3')
-  expect(within(janela).getByLabelText('Veículo')).toBeDisabled()
-  expect(within(janela).getByText(/custo do socorrista, não da viatura/i)).toBeInTheDocument()
-})
-
 // Alimentação não tem viatura de propósito, e a coluna ficava com um traço: a
 // linha não dizia de quem era o almoço. O nome já vinha na consulta.
 test('a lista mostra de quem é a despesa, e não só a viatura', async () => {
