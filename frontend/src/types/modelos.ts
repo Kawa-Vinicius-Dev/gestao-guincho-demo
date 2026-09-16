@@ -110,4 +110,10 @@ export interface PagamentoComissao { id:number; motoristaId:number; calendarioPa
 export interface Comissao { calendarioPagamentoId?:number; ordemPagamentoId?:number; numeroOp?:string; periodoInicio?:string; periodoFim?:string; periodo:string; socorrista:string; motoristaId:number; quantidadeServicosPagos:number; producaoPaga:number; percentualComissao:number; comissaoBruta:number; alimentacaoAprovada:number; alimentacaoPendente:number; liquido:number; aguardandoOp:boolean; servicos:ServicoComissao[]; alimentacoes:AlimentacaoComissao[]; pagamento?:PagamentoComissao }
 export interface ResumoComissao { motoristaId:number; socorrista:string; quantidadeServicosPagos:number; producaoPaga:number; comissaoBruta:number; alimentacaoAprovada:number; liquido:number; pagamento?:PagamentoComissao }
 export interface ServicoSocorrista { id:number; numeroOs:string; dataAtendimento?:string; especialidade?:string; viatura?:string; numeroOp?:string; valorServico:number; statusPagamento:'PAGO'|'PAGO_EM_OUTRO_PERIODO'|'AGUARDANDO_PAGAMENTO'; pagoNoPeriodo:boolean; comissaoGerada?:number }
-export interface DetalheSocorrista { id:number; nome:string; ativo:boolean; telefone?:string; email?:string; qra?:string; veiculosUtilizados:string[]; totalServicosPrestados:number; comissao:Comissao; servicos:ServicoSocorrista[] }
+/**
+ * Uma despesa lancada no nome do socorrista. `descontaDaComissao` e o que separa
+ * as duas leituras: toda despesa ligada a ele aparece na tela dele, mas so a
+ * alimentacao entra no fechamento — mostrar nao e cobrar.
+ */
+export interface DespesaDoSocorrista { id:number; descricao:string; data:string; valor:number; categoria:string; veiculo?:string; situacao:Despesa['status']; aprovada:boolean; descontaDaComissao:boolean; observacoes?:string }
+export interface DetalheSocorrista { id:number; nome:string; ativo:boolean; telefone?:string; email?:string; qra?:string; veiculosUtilizados:string[]; totalServicosPrestados:number; comissao:Comissao; servicos:ServicoSocorrista[]; despesas:DespesaDoSocorrista[] }

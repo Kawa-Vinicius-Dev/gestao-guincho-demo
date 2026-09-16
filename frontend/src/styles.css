@@ -1555,3 +1555,8 @@ tbody tr{transition:background-color .14s ease}
 .aviso-alimentacao{margin:0;padding:var(--espaco-2);border-left:3px solid var(--blue-600);
   border-radius:0 var(--controle-raio) var(--controle-raio) 0;background:var(--info-fundo);
   color:var(--info-texto);font-size:11px;line-height:1.55}
+
+/* A nota que separa o que desconta do que só aparece. Fica antes da tabela, e
+   não depois: quem lê a coluna de valores já precisa saber que aquele dinheiro
+   não sai do líquido do socorrista. */
+.nota-fora-do-fechamento{margin:0 0 var(--espaco-2);color:var(--muted);font-size:11px;line-height:1.55}

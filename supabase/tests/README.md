@@ -15,6 +15,10 @@ Validam as migrations num Postgres local, sem depender de um projeto Supabase.
   participa. Visitante sem login, funcionario em operacao de administrador,
   troca de id, arquivos alheios e as tentativas de contornar a segregacao de
   funcoes escrevendo direto na coluna.
+- `60_despesas_do_socorrista.sql` — 10 asserções sobre as despesas que aparecem
+  na tela do socorrista: a janela da OP, o que fica de fora (rejeitada, de outro
+  período, o pagamento da própria comissão) e, principalmente, que listar não
+  mudou o que desconta do líquido dele.
 - `30_financeiro.sql` — 33 asserções sobre as regras que mexem em dinheiro:
   recorte de periodo e suas bordas, atraso derivado do vencimento, despesa nao
   aprovada fora do resultado, custo do km congelado no registro, producao e
