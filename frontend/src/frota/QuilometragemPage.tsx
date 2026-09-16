@@ -127,7 +127,7 @@ export default function QuilometragemPage() {
         <CampoNumero rotulo="Hodômetro inicial" name="hodometroInicial" min={0} required/>
         <CampoNumero rotulo="Hodômetro final" name="hodometroFinal" min={0} required/>
         <CampoNumero rotulo="Quilometragem remunerada" name="quilometragemRemunerada" min={0} required/>
-        <label className="field"><span>Protocolo</span><input name="protocolo"/></label>
+        <label className="field"><span>Protocolo</span><input name="protocolo" autoCapitalize="characters" autoCorrect="off" spellCheck={false}/></label>
         <label className="field two-span"><span>Observações</span><textarea name="observacoes" rows={3}/></label>
         <label className="check-line field-wide"><input name="confirmarExcesso" type="checkbox"/><span>Confirmo eventual quilometragem remunerada acima do total.</span></label>
         <div className="modal-actions field-wide"><button type="button" className="button button-ghost" onClick={() => setModal(false)}>Cancelar</button><button className="button button-primary">Salvar registro</button></div>

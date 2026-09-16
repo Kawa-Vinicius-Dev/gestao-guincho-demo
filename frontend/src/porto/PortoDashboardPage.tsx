@@ -29,10 +29,10 @@ export default function PortoDashboardPage(){
         <Campo rotulo="Data inicial"><input name="dataInicio" type="date" required/></Campo>
         <Campo rotulo="Data final"><input name="dataFim" type="date" required/></Campo>
       </>:null}
-      <Campo rotulo="Número da OS" className="filter-grow"><input name="numeroOs"/></Campo>
-      <Campo rotulo="Número da OP"><input name="numeroOp"/></Campo>
-      <Campo rotulo="Especialidade"><input name="especialidade"/></Campo>
-      <Campo rotulo="Socorrista"><input name="socorrista"/></Campo>
+      <Campo rotulo="Número da OS" className="filter-grow"><input name="numeroOs" autoCapitalize="characters" autoCorrect="off" spellCheck={false}/></Campo>
+      <Campo rotulo="Número da OP"><input name="numeroOp" inputMode="numeric"/></Campo>
+      <Campo rotulo="Especialidade"><input name="especialidade" autoCapitalize="sentences" autoComplete="off"/></Campo>
+      <Campo rotulo="Socorrista"><input name="socorrista" autoCapitalize="words" autoComplete="off"/></Campo>
       <button className="button button-primary">Aplicar filtros</button>
     </form></section>
     {dados?<><section className="porto-finance-lane"><article><span>Realizado</span><strong>{moeda(dados.valorTotalRealizado)}</strong><small>{dados.quantidadeTotalServicos} serviços executados</small></article><article><span>Programado</span><strong>{moeda(dados.valorProgramado)}</strong><small>{dados.quantidadePagamentoProgramado} ordens de pagamento</small></article><article><span>Recebido</span><strong>{moeda(dados.valorRecebido)}</strong><small>{dados.quantidadeRecebidas} recebimentos confirmados</small></article></section>

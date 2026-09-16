@@ -80,14 +80,14 @@ export default function DespesasPage(){
         <button className="button button-primary" disabled={lancando||!fixas.some(f=>f.ativo)} onClick={()=>void lancarFixas()}>{lancando?'Lançando…':'Lançar as fixas do mês'}</button></div></header>
       {fixas.length?<ul className="simple-list">{fixas.map(f=><li key={f.id}><strong>{f.descricao}</strong><small>{f.categoria} · {moeda(f.valor)} · todo dia {f.diaVencimento}{f.veiculo?` · ${f.veiculo}`:''}{f.ativo?'':' · desativada'}</small><button className={f.ativo?'table-action table-action-danger':'table-action'} onClick={()=>void alternarFixa(f)}>{f.ativo?'Desativar':'Reativar'}</button></li>)}</ul>:<p className="empty-inline">Nenhuma despesa fixa cadastrada.</p>}
       <form onSubmit={salvarFixa} className="inline-form">
-        <Campo rotulo="Descrição da despesa fixa"><input name="descricao" placeholder="Ex.: Aluguel do pátio" required/></Campo>
+        <Campo rotulo="Descrição da despesa fixa"><input name="descricao" placeholder="Ex.: Aluguel do pátio" required autoCapitalize="sentences" autoComplete="off"/></Campo>
         <Selecao rotulo="Categoria da despesa fixa" name="categoriaId" required opcoes={categorias.map(x=>({valor:x.id,texto:x.nome}))}/>
         <CampoValor rotulo="Valor da despesa fixa" name="valor" required/>
         <CampoNumero rotulo="Dia do vencimento" name="diaVencimento" decimais={0} min={1} max={31} required/>
         <Selecao rotulo="Veículo da despesa fixa" name="veiculoId" vazio="Sem veículo" opcoes={veiculos.map(x=>({valor:x.id,texto:x.identificacao}))}/>
         <button className="button button-ghost">Adicionar</button></form></section>:null}
     {form?<Modal etiqueta="Comprovante operacional" titulo="Registrar despesa" largo aoFechar={()=>setForm(false)}>
-      <form onSubmit={salvar} className="form-grid three-columns"><label className="field field-wide"><span>Descrição</span><input name="descricao" required/></label>
+      <form onSubmit={salvar} className="form-grid three-columns"><label className="field field-wide"><span>Descrição</span><input name="descricao" required autoCapitalize="sentences" autoComplete="off"/></label>
         <Selecao rotulo="Categoria" name="categoriaId" required opcoes={categorias.map(x=>({valor:x.id,texto:x.nome}))}/>
         <CampoValor rotulo="Valor" name="valor" required/>
         <Selecao rotulo="Situação" name="status" opcoes={[{valor:'PAGO',texto:'Paga'},{valor:'PENDENTE',texto:'Pendente'}]}/>
@@ -96,7 +96,7 @@ export default function DespesasPage(){
         <Selecao rotulo="Forma de pagamento" name="formaPagamento" vazio="Não informada" opcoes={FORMAS_PAGAMENTO}/>
         <Selecao rotulo="Veículo" name="veiculoId" vazio="Não relacionado" opcoes={veiculos.map(x=>({valor:x.id,texto:x.identificacao}))}/>
         <Selecao rotulo="Motorista" name="motoristaId" vazio="Não relacionado" opcoes={motoristas.map(x=>({valor:x.id,texto:x.nome}))}/>
-        <label className="field"><span>Protocolo ou referência</span><input name="protocolo"/></label><label className="field two-span"><span>Comprovante (referência)</span><input name="comprovante" placeholder="Nome ou caminho do arquivo"/></label>
+        <label className="field"><span>Protocolo ou referência</span><input name="protocolo" autoCapitalize="characters" autoCorrect="off" spellCheck={false}/></label><label className="field two-span"><span>Comprovante (referência)</span><input name="comprovante" placeholder="Nome ou caminho do arquivo" autoCapitalize="sentences" autoComplete="off"/></label>
         <label className="field field-wide"><span>Observações</span><textarea name="observacoes" rows={3}/></label>
         <AcoesModal aoCancelar={()=>setForm(false)}>
           <button className="button button-primary">Enviar despesa</button>

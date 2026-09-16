@@ -36,7 +36,7 @@ export default function ReceitasPage(){
     </tbody></table></div>:<Vazio titulo="Nenhuma receita" descricao="Recebimentos de contas e receitas manuais aparecerão aqui."/>}</section>
     {form?<Modal etiqueta="Receita avulsa" titulo={editando?'Editar receita':'Nova receita'}
       aoFechar={()=>{setForm(false);setEditando(null)}}>
-      <form key={editando?.id??'nova'} onSubmit={salvar} className="form-grid two-columns"><label className="field field-wide"><span>Descrição</span><input name="descricao" defaultValue={editando?.descricao} required/></label>
+      <form key={editando?.id??'nova'} onSubmit={salvar} className="form-grid two-columns"><label className="field field-wide"><span>Descrição</span><input name="descricao" defaultValue={editando?.descricao} required autoCapitalize="sentences" autoComplete="off"/></label>
         <CampoValor rotulo="Valor" name="valor" defaultValue={editando?.valor} required/>
         <Selecao rotulo="Status" name="status" defaultValue={editando?.status??'RECEBIDA'}
           opcoes={[{valor:'RECEBIDA',texto:'Recebida'},{valor:'PREVISTA',texto:'Prevista'}]}/>

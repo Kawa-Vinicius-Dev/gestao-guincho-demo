@@ -199,7 +199,7 @@ export default function PortoOrdensPagamentoPage() {
 
     <section className="panel">
       <form className="ledger-filters porto-op-filters" onSubmit={aplicar}>
-        <Campo rotulo="Número da OP" className="filter-grow"><input name="numero"/></Campo>
+        <Campo rotulo="Número da OP" className="filter-grow"><input name="numero" inputMode="numeric"/></Campo>
         <Selecao rotulo="Quinzena" name="calendarioPagamentoId" vazio="Todas"
           opcoes={periodos.map(p => ({
             valor: p.id,

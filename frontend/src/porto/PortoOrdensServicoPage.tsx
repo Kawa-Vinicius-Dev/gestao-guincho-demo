@@ -124,11 +124,11 @@ export default function PortoOrdensServicoPage() {
           <input aria-label="Data final" name="dataFim" type="date"
             defaultValue={periodo.dataFim} key={`f${periodo.dataFim}`}/>
         </Campo>
-        <Campo rotulo="Número da OS" className="filter-grow"><input name="numeroOs"/></Campo>
-        <Campo rotulo="Número da OP"><input name="numeroOp"/></Campo>
-        <Campo rotulo="Especialidade"><input name="especialidade"/></Campo>
-        <Campo rotulo="Socorrista"><input name="socorrista"/></Campo>
-        <Campo rotulo="Seguradora"><input name="seguradora" placeholder="Porto, Azul, Itaú…"/></Campo>
+        <Campo rotulo="Número da OS" className="filter-grow"><input name="numeroOs" autoCapitalize="characters" autoCorrect="off" spellCheck={false}/></Campo>
+        <Campo rotulo="Número da OP"><input name="numeroOp" inputMode="numeric"/></Campo>
+        <Campo rotulo="Especialidade"><input name="especialidade" autoCapitalize="sentences" autoComplete="off"/></Campo>
+        <Campo rotulo="Socorrista"><input name="socorrista" autoCapitalize="words" autoComplete="off"/></Campo>
+        <Campo rotulo="Seguradora"><input name="seguradora" placeholder="Porto, Azul, Itaú…" autoCapitalize="sentences" autoComplete="off"/></Campo>
         <Selecao rotulo="Status operacional" name="statusOperacional" vazio="Todos" opcoes={STATUS_OPERACIONAL}/>
         <Selecao rotulo="Status financeiro" name="statusFinanceiro" vazio="Todos" opcoes={STATUS_FINANCEIRO}/>
         <button className="button button-primary">Aplicar filtros</button>

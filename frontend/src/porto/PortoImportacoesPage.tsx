@@ -104,7 +104,7 @@ export default function PortoImportacoesPage(){
         {temErros?<div className="form-alert"><strong>Corrija e reenvie o arquivo.</strong> {previa.erros.join(' · ')}</div>:null}
         <footer className="porto-confirm porto-confirm-sticky" aria-label="Ações da prévia">
           <div className="porto-confirm-totals"><span><strong>{previa.totalLinhas}</strong> registros</span><span><strong>{moeda(previa.resumo?.valorTotal??0)}</strong> valor total</span></div>
-          {previa.requerOrdemPagamento?<label className="field"><span>Número da OP</span><input aria-label="Número da OP" value={numeroOp} onChange={e=>alterarNumero(e.target.value)} required placeholder="Ex.: 06422281"/></label>:null}
+          {previa.requerOrdemPagamento?<label className="field"><span>Número da OP</span><input aria-label="Número da OP" inputMode="numeric" autoComplete="off" value={numeroOp} onChange={e=>alterarNumero(e.target.value)} required placeholder="Ex.: 06422281"/></label>:null}
           {previa.requerOrdemPagamento?<Selecao rotulo="Período financeiro" required vazio="Selecione o período" value={periodoId}
             onChange={e=>alterarPeriodo(e.target.value)}
             opcoes={periodos.filter(p=>p.ativo||String(p.id)===periodoId)

@@ -46,7 +46,7 @@ export default function ContasReceberPage(){
       <button className="button button-primary" onClick={()=>setModal('nova')}>Nova conta</button></header>
     {erro?<div className="form-alert">{erro}</div>:null}
     <section className="panel">
-      <div className="filters"><Campo rotulo="Pesquisar" className="search-field"><input value={pesquisa} onChange={e=>setPesquisa(e.target.value)} placeholder="Protocolo ou referência, contratante ou descrição"/></Campo>
+      <div className="filters"><Campo rotulo="Pesquisar" className="search-field"><input type="search" inputMode="search" autoCorrect="off" autoCapitalize="none" value={pesquisa} onChange={e=>setPesquisa(e.target.value)} placeholder="Protocolo ou referência, contratante ou descrição"/></Campo>
         <Selecao rotulo="Situação" className="filter-select" vazio="Todos" value={status} onChange={e=>setStatus(e.target.value)}
           opcoes={[{valor:'PENDENTE',texto:'Pendente'},{valor:'ATRASADO',texto:'Atrasado'},{valor:'RECEBIDO',texto:'Recebido'},{valor:'CANCELADO',texto:'Cancelado'}]}/></div>
       {carregando&&primeiraCarga?<Carregando/>:contas.length?<div className={carregando?'table-scroll atualizando':'table-scroll'}><table><thead><tr><th>Protocolo ou referência</th><th>Contratante</th><th>Vencimento</th><th>Situação</th><th>Previsto</th><th>Recebido</th><th/></tr></thead>
@@ -56,8 +56,8 @@ export default function ContasReceberPage(){
     {modal?<Modal etiqueta="Contas a receber" titulo={modal==='nova'?'Nova conta':'Registrar recebimento'} aoFechar={()=>setModal(null)}>
       {modal==='nova'?<form onSubmit={salvar} className="form-grid two-columns">
         <Selecao rotulo="Contratante" name="contratanteId" required opcoes={contratantes.map(c=>({valor:c.id,texto:c.nome}))}/>
-        <label className="field"><span>Protocolo ou referência</span><input name="protocolo"/></label>
-        <label className="field field-wide"><span>Descrição</span><input name="descricao" required/></label>
+        <label className="field"><span>Protocolo ou referência</span><input name="protocolo" autoCapitalize="characters" autoCorrect="off" spellCheck={false}/></label>
+        <label className="field field-wide"><span>Descrição</span><input name="descricao" required autoCapitalize="sentences" autoComplete="off"/></label>
         <CampoValor rotulo="Valor previsto" name="valorPrevisto" required/>
         <Selecao rotulo="Veículo" name="veiculoId" vazio="Não relacionado" opcoes={veiculos.map(v=>({valor:v.id,texto:v.identificacao}))}/>
         <label className="field"><span>Competência</span><input name="dataCompetencia" type="date" defaultValue={hoje()} required/></label>

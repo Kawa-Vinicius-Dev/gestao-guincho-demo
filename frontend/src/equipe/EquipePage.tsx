@@ -67,7 +67,7 @@ export default function EquipePage(){
     {modal?<Modal etiqueta="Equipe" titulo={editando?'Editar socorrista':'Novo socorrista'}
       nomeAcessivel={editando?`Editar ${editando.nome}`:'Cadastrar socorrista'} aoFechar={fechar}>
       <form onSubmit={salvar} className="form-grid two-columns" key={editando?.id??'novo'}>
-        <label className="field field-wide"><span>Nome</span><input name="nome" defaultValue={editando?.nome} required/></label>
+        <label className="field field-wide"><span>Nome</span><input name="nome" defaultValue={editando?.nome} required autoCapitalize="words" autoComplete="off"/></label>
         <CampoTelefone rotulo="Telefone" name="telefone" defaultValue={editando?.telefone}/>
         <label className="field"><span>QRA</span><input name="qra" defaultValue={editando?.qra} autoCapitalize="characters" autoCorrect="off" spellCheck={false}/><small>Como aparece no relatório da Porto. É o que liga o serviço a este socorrista.</small></label>
         {/* Vinculo informativo: quem dirigiu o que e definido em cada OS, nao aqui. */}
@@ -81,7 +81,7 @@ export default function EquipePage(){
     {dandoAcesso?<Modal etiqueta={dandoAcesso.nome} titulo="Criar acesso" aoFechar={()=>setDandoAcesso(null)}>
       <p>{dandoAcesso.nome} vai poder registrar as próprias despesas e ver a comissão dele. O sistema gera uma senha provisória para você repassar.</p>
       <form onSubmit={criarAcesso} className="form-grid">
-        <label className="field"><span>E-mail de acesso</span><input name="email" type="email" required/></label>
+        <label className="field"><span>E-mail de acesso</span><input name="email" type="email" inputMode="email" autoComplete="email" autoCapitalize="none" autoCorrect="off" required/></label>
         <div className="modal-actions"><button type="button" className="button button-ghost" onClick={()=>setDandoAcesso(null)}>Cancelar</button><button className="button button-primary" disabled={salvando}>{salvando?'Criando…':'Criar acesso'}</button></div>
       </form></Modal>:null}
 

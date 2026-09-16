@@ -52,12 +52,12 @@ export default function ConfiguracoesPage(){
       <section className="panel settings-card"><header><h2>Aparência</h2><p>Vale só neste computador e neste navegador.</p></header><div className="segmented tema-escolha" role="group" aria-label="Tema visual"><button className={tema==='claro'?'active':''} aria-pressed={tema==='claro'} onClick={()=>trocarTema('claro')}>Claro</button><button className={tema==='escuro'?'active':''} aria-pressed={tema==='escuro'} onClick={()=>trocarTema('escuro')}>Escuro</button></div><p className="empty-inline">O sistema não segue o tema do computador: a cor só muda quando você escolhe aqui.</p></section>
       <section className="panel settings-card"><header><h2>Contratantes</h2><p>Porto Seguro e demais clientes pagadores.</p></header><ul className="simple-list">{contratantes.map(c=><li key={c.id}><strong>{c.nome}</strong><small>{c.documento||'Sem documento'}</small></li>)}</ul>
         <form onSubmit={e=>cadastrar(e,'contratantes')} className="inline-form">
-          <Campo rotulo="Nome do contratante"><input name="nome" required/></Campo>
+          <Campo rotulo="Nome do contratante"><input name="nome" required autoCapitalize="words" autoComplete="off"/></Campo>
           <CampoDocumento rotulo="CNPJ ou CPF" name="documento"/>
           <button className="button button-ghost">Adicionar</button></form></section>
       <section className="panel settings-card"><header><h2>Categorias</h2><p>Classifique para entender para onde o dinheiro vai.</p></header><ul className="simple-list">{categorias.map(c=><li key={c.id}><strong>{c.nome}</strong><small>{c.tipo}</small></li>)}</ul>
         <form onSubmit={e=>cadastrar(e,'categorias')} className="inline-form">
-          <Campo rotulo="Nome da categoria"><input name="nome" required/></Campo>
+          <Campo rotulo="Nome da categoria"><input name="nome" required autoCapitalize="words" autoComplete="off"/></Campo>
           <Selecao rotulo="Tipo da categoria" name="tipo" opcoes={[{valor:'DESPESA',texto:'Despesa'},{valor:'RECEITA',texto:'Receita'}]}/>
           <button className="button button-ghost">Adicionar</button></form></section>
       <section className="panel settings-card"><header><h2>Trocar senha</h2><p>A nova senha deve ter pelo menos oito caracteres.</p></header><form onSubmit={senha} className="form-grid"><label className="field"><span>Senha atual</span><input name="senhaAtual" type="password" autoComplete="current-password" required/></label><label className="field"><span>Nova senha</span><input name="novaSenha" type="password" autoComplete="new-password" minLength={8} required/></label><button className="button button-primary">Alterar senha</button></form></section>

@@ -115,14 +115,14 @@ export default function LancamentosPage() {
         opcoes={[{valor:'RECEITA',texto:'Receitas'},{valor:'DESPESA',texto:'Despesas'}]}/>
       <Selecao rotulo="Veículo" vazio="Todos" value={veiculoFiltro} onChange={e=>setVeiculoFiltro(e.target.value)}
         opcoes={veiculos.map(v=>({valor:v.id,texto:v.identificacao}))}/>
-      <Campo rotulo="Buscar" className="filter-grow"><input value={pesquisa} onChange={e=>setPesquisa(e.target.value)} placeholder="Descrição, categoria ou protocolo"/></Campo>
+      <Campo rotulo="Buscar" className="filter-grow"><input type="search" inputMode="search" autoCorrect="off" autoCapitalize="none" value={pesquisa} onChange={e=>setPesquisa(e.target.value)} placeholder="Descrição, categoria ou protocolo"/></Campo>
     </div>
     <TabelaExtrato itens={filtrados} carregando={carregando} aoPagar={item=>void pagar(item)}/>
     </section>
     {modal?<Modal etiqueta="Persistência real" titulo="Novo lançamento" className="modal-financial"
       aoFechar={()=>setModal(false)}>
       <form onSubmit={salvar} className="form-grid two-columns">
-        <Campo rotulo="Descrição" className="field-wide"><input name="descricao" required/></Campo><CampoValor rotulo="Valor" name="valor" required/>
+        <Campo rotulo="Descrição" className="field-wide"><input name="descricao" required autoCapitalize="sentences" autoComplete="off"/></Campo><CampoValor rotulo="Valor" name="valor" required/>
         <Selecao rotulo="Categoria" name="categoriaId" required={tipoFormulario==='DESPESA'} vazio="Sem categoria"
           opcoes={categoriasFormulario.map(c=>({valor:c.id,texto:c.nome}))}/>
         <Campo rotulo="Data"><input name="data" type="date" defaultValue={hoje()} required/></Campo>

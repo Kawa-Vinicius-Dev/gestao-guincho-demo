@@ -13,7 +13,7 @@ test('socorrista vê composição auditável, saldo negativo e registra alimenta
   let corpo:unknown
   servidor.use(http.get('/api/comissoes/periodos',()=>HttpResponse.json(periodos)),http.get('/api/minha-comissao',()=>HttpResponse.json(detalhe)),http.post('/api/minha-comissao/alimentacoes',async({request})=>{corpo=await request.json();return HttpResponse.json({id:10,motoristaId:4,data:'2026-08-20',valor:35,situacao:'PENDENTE',aprovada:false},{status:201})}))
   const user=userEvent.setup();render(<MinhaComissaoPage/>);expect(await screen.findByText('-R$ 50,00')).toBeInTheDocument();expect(screen.getByText('OS-1')).toBeInTheDocument();expect(screen.getByText(/30\/06\/2026/)).toBeInTheDocument()
-  await user.type(screen.getByLabelText(/valor da alimentação/i),'35');await user.type(screen.getByLabelText(/data da alimentação/i),'2026-08-20');await user.click(screen.getByRole('button',{name:/registrar alimentação/i}));expect(corpo).toEqual(expect.objectContaining({valor:35,data:'2026-08-20'}));expect(JSON.stringify(corpo)).not.toContain('motoristaId')
+  await user.type(screen.getByLabelText(/valor da alimentação/i),'3500');await user.type(screen.getByLabelText(/data da alimentação/i),'2026-08-20');await user.click(screen.getByRole('button',{name:/registrar alimentação/i}));expect(corpo).toEqual(expect.objectContaining({valor:35,data:'2026-08-20'}));expect(JSON.stringify(corpo)).not.toContain('motoristaId')
 })
 
 test('administrador filtra resumo e abre o detalhamento que forma a comissão',async()=>{

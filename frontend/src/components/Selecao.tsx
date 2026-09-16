@@ -257,7 +257,8 @@ function Painel({ rotulo, opcoes, ancora, selecionado, aoEscolher, aoFechar }: P
         </header>
         {comBusca
           ? <div className="selecao-busca">
-              <input value={busca} onChange={e => setBusca(e.target.value)}
+              <input type="search" inputMode="search" autoCorrect="off" autoCapitalize="none"
+                value={busca} onChange={e => setBusca(e.target.value)}
                 placeholder="Buscar…" aria-label={`Buscar em ${rotulo}`}
                 aria-controls={`${id}-lista`}/>
             </div>

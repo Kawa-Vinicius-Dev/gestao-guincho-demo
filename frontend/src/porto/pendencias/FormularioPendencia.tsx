@@ -17,14 +17,14 @@ type Props = {
 export function FormularioPendencia({ aoEnviar, aoFechar }: Props) {
   return <Modal etiqueta="Porto Seguro" titulo="Nova pendência" aoFechar={aoFechar}>
     <form className="form-grid two-columns" onSubmit={aoEnviar}>
-      <Campo rotulo="Número da OS"><input name="numeroOs" required/></Campo>
-      <Campo rotulo="Motivo"><input name="motivo" required/></Campo>
+      <Campo rotulo="Número da OS"><input name="numeroOs" required autoCapitalize="characters" autoCorrect="off" spellCheck={false}/></Campo>
+      <Campo rotulo="Motivo"><input name="motivo" required autoCapitalize="sentences" autoComplete="off"/></Campo>
       <CampoValor rotulo="Valor" name="valor" required exigirPositivo={false}/>
       <Campo rotulo="Data da pendência"><input name="dataPendencia" type="date" required/></Campo>
-      <Campo rotulo="Responsável"><input name="responsavel" required/></Campo>
+      <Campo rotulo="Responsável"><input name="responsavel" required autoCapitalize="words" autoComplete="off"/></Campo>
       <Selecao rotulo="Situação financeira" name="statusFinanceiro" required opcoes={SITUACAO_FINANCEIRA}/>
       <Campo rotulo="Prazo"><input name="prazo" type="date"/></Campo>
-      <Campo rotulo="Referência Porto"><input name="referenciaPorto"/></Campo>
+      <Campo rotulo="Referência Porto"><input name="referenciaPorto" autoCapitalize="characters" autoCorrect="off" spellCheck={false}/></Campo>
       <Campo rotulo="Observação" className="field-wide"><textarea name="observacao" required/></Campo>
       <AcoesModal aoCancelar={aoFechar}>
         <button className="button button-primary">Salvar pendência</button>
