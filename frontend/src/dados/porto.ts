@@ -23,7 +23,8 @@ const consulta = (params?: URLSearchParams) => (params?.toString() ? `?${params}
 const COLUNAS_OP = [
   'id', 'numero', 'valor_total', 'nome_codigo', 'data_pagamento_programada',
   'valor_recebido', 'data_recebimento', 'situacao_financeira', 'status_porto',
-  'observacao', 'calendario_pagamento_id', 'quantidade_ordens_servico',
+  'observacao', 'calendario_pagamento_id', 'periodo_inicio', 'periodo_fim',
+  'quantidade_ordens_servico',
   'valor_ordens_servico', 'divergencia', 'status_conciliacao', 'periodo_financeiro',
 ].join(',')
 
@@ -46,6 +47,8 @@ function opParaModelo(l: LinhaOp): OrdemPagamentoPorto {
     statusPorto: (l.status_porto as string) ?? undefined,
     observacao: (l.observacao as string) ?? undefined,
     calendarioPagamentoId: (l.calendario_pagamento_id as number) ?? undefined,
+    periodoInicio: (l.periodo_inicio as string) ?? undefined,
+    periodoFim: (l.periodo_fim as string) ?? undefined,
     periodoFinanceiro: (l.periodo_financeiro as string) ?? undefined,
   }
 }
@@ -105,8 +108,10 @@ export async function listarOrdensPagamentoPorto(
   let q = supabase().from('porto_ops_conciliadas').select(COLUNAS_OP)
   const inicio = params?.get('dataInicio')
   const fim = params?.get('dataFim')
-  if (inicio) q = q.gte('data_pagamento_programada', inicio)
-  if (fim) q = q.lte('data_pagamento_programada', fim)
+  // O recorte da OP e o periodo dela: uma OP de abril paga em junho continua
+  // sendo de abril, que e quando os servicos aconteceram.
+  if (inicio) q = q.gte('periodo_fim', inicio)
+  if (fim) q = q.lte('periodo_fim', fim)
   const numero = params?.get('numeroOp')
   if (numero) q = q.ilike('numero', `%${numero}%`)
 

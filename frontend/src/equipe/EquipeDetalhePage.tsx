@@ -1,27 +1,27 @@
 import { useEffect,useState } from 'react'
 import { Link,useParams } from 'react-router-dom'
 import { Selecao } from '../components/Campos'
-import { listarPeriodosComissoes, obterDetalheSocorrista } from '../dados/comissoes'
+import { listarOpsComissao, obterDetalheSocorrista } from '../dados/comissoes'
 import { Carregando,ErroPagina } from '../components/EstadoPagina'
-import type { CalendarioPorto,DetalheSocorrista } from '../types/modelos'
+import type { DetalheSocorrista,OrdemPagamentoPorto } from '../types/modelos'
 import { data,moeda } from '../utils/formatadores'
-import { periodoCorrente } from '../utils/periodos'
+import { opCorrente, rotuloOp } from '../utils/periodos'
 
 const statusPagamento={PAGO:'Pago',PAGO_EM_OUTRO_PERIODO:'Pago em outro período',AGUARDANDO_PAGAMENTO:'Aguardando pagamento'} as const
 
 export default function EquipeDetalhePage(){
   const motoristaId=Number(useParams().id)
-  const [periodos,setPeriodos]=useState<CalendarioPorto[]>([]),[periodoId,setPeriodoId]=useState(0),[detalhe,setDetalhe]=useState<DetalheSocorrista|null>(null)
+  const [periodos,setPeriodos]=useState<OrdemPagamentoPorto[]>([]),[periodoId,setPeriodoId]=useState(0),[detalhe,setDetalhe]=useState<DetalheSocorrista|null>(null)
   const [carregandoPeriodos,setCarregandoPeriodos]=useState(true),[carregandoDetalhe,setCarregandoDetalhe]=useState(false),[erro,setErro]=useState('')
-  useEffect(()=>{listarPeriodosComissoes().then(lista=>{setPeriodos(lista);const atual=periodoCorrente(lista);if(atual)setPeriodoId(atual.id)}).catch(e=>setErro(e.message)).finally(()=>setCarregandoPeriodos(false))},[])
+  useEffect(()=>{listarOpsComissao().then(lista=>{setPeriodos(lista);const atual=opCorrente(lista);if(atual)setPeriodoId(atual.id)}).catch((e:Error)=>setErro(e.message)).finally(()=>setCarregandoPeriodos(false))},[])
   useEffect(()=>{if(!motoristaId||!periodoId)return;setCarregandoDetalhe(true);setErro('');obterDetalheSocorrista(motoristaId,periodoId).then(setDetalhe).catch(e=>setErro(e.message)).finally(()=>setCarregandoDetalhe(false))},[motoristaId,periodoId])
   if(carregandoPeriodos)return <Carregando/>
   if(erro&&!detalhe)return <ErroPagina mensagem={erro}/>
   return <div className="page-enter employee-detail-page">
     <header className="employee-detail-heading">
       <div><Link className="back-link" to="/equipe">← Voltar para socorristas</Link><span className="eyebrow">Ficha administrativa</span><h1>{detalhe?.nome||'Socorrista'}</h1><p>Histórico operacional e composição financeira por fechamento Porto.</p></div>
-      <Selecao rotulo="Período Porto" className="month-picker" vazio="Selecione" value={periodoId||''} onChange={event=>setPeriodoId(Number(event.target.value))}
-        opcoes={periodos.map(periodo=>({valor:periodo.id,texto:`${periodo.descricao} · ${data(periodo.competenciaInicio)} a ${data(periodo.competenciaFim)}`}))}/>
+      <Selecao rotulo="Ordem de pagamento" className="month-picker" vazio="Selecione" value={periodoId||''} onChange={event=>setPeriodoId(Number(event.target.value))}
+        opcoes={periodos.map(rotuloEOp=>({valor:rotuloEOp.id,texto:rotuloOp(rotuloEOp)}))}/>
     </header>
     {erro?<div className="form-alert" role="alert">{erro}</div>:null}
     {carregandoDetalhe&&!detalhe?<Carregando/>:null}
