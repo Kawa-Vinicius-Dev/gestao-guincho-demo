@@ -64,7 +64,9 @@ test('socorrista vê composição auditável, saldo negativo e registra alimenta
   expect(await screen.findByText('-R$ 50,00')).toBeInTheDocument()
   expect(screen.getByText('OS-1')).toBeInTheDocument()
 
-  await user.type(screen.getByLabelText(/valor da alimentação/i), '35')
+  // O campo usa a mascara de dinheiro como os demais: os digitos entram pela
+  // direita, entao R$ 35,00 se digita "3500".
+  await user.type(screen.getByLabelText(/valor da alimentação/i), '3500')
   await user.type(screen.getByLabelText(/data da alimentação/i), '2026-04-20')
   await user.click(screen.getByRole('button', { name: /registrar alimentação/i }))
 

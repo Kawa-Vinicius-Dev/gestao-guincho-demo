@@ -27,7 +27,7 @@ export function FormularioOp({ edicao, aoEnviar, aoFechar }: Props) {
     aoFechar={aoFechar}>
     <form className="form-grid two-columns" onSubmit={aoEnviar}>
       <Campo rotulo="Número da OP">
-        <input name="numero" defaultValue={edicao?.numero} required inputMode="numeric"/>
+        <input name="numero" defaultValue={edicao?.numero} required inputMode="numeric" autoComplete="off"/>
       </Campo>
       <Campo rotulo="Data prevista">
         <input name="dataPrevista" type="date" defaultValue={edicao?.dataPagamentoProgramada} required/>

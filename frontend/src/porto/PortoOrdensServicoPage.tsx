@@ -125,7 +125,7 @@ export default function PortoOrdensServicoPage() {
             defaultValue={periodo.dataFim} key={`f${periodo.dataFim}`}/>
         </Campo>
         <Campo rotulo="Número da OS" className="filter-grow"><input name="numeroOs" autoCapitalize="characters" autoCorrect="off" spellCheck={false}/></Campo>
-        <Campo rotulo="Número da OP"><input name="numeroOp" inputMode="numeric"/></Campo>
+        <Campo rotulo="Número da OP"><input name="numeroOp" inputMode="numeric" autoComplete="off"/></Campo>
         <Campo rotulo="Especialidade"><input name="especialidade" autoCapitalize="sentences" autoComplete="off"/></Campo>
         <Campo rotulo="Socorrista"><input name="socorrista" autoCapitalize="words" autoComplete="off"/></Campo>
         <Campo rotulo="Seguradora"><input name="seguradora" placeholder="Porto, Azul, Itaú…" autoCapitalize="sentences" autoComplete="off"/></Campo>
