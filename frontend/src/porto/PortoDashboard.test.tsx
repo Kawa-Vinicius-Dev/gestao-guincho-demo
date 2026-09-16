@@ -42,12 +42,26 @@ const painel = (extra: Record<string, unknown> = {}) => ({
     { inicio: '2026-04-14', produzido: 22610.49, servicos: 93, recebido: 0, programado: 0 },
     { inicio: '2026-04-20', produzido: 37189.63, servicos: 124, recebido: 74770, programado: 74770 },
   ],
+  // Formato real da RPC: a OP vem da view, com o nome das colunas.
   opsDestaque: [{
-    id: 7, numero: '06389821', valorTotal: 74770, valorRecebido: 74770,
-    periodoInicio: '2026-03-30', periodoFim: '2026-04-29',
-    situacaoFinanceira: 'RECEBIDO', statusConciliacao: 'CONCILIADA',
-    quantidadeOrdensServico: 275, divergencia: 0, vencida: false,
+    id: 1, numero: '06389821', valor_total: 74770, valor_recebido: 74770,
+    periodo_inicio: '2026-03-30', periodo_fim: '2026-04-29',
+    data_pagamento_programada: '2026-06-07', data_recebimento: '2026-06-07',
+    situacao_financeira: 'RECEBIDO', status_conciliacao: 'CONCILIADA',
+    quantidade_ordens_servico: 275, divergencia: 0, vencida: false,
+    prioridade: 4, referencia: '2026-04-29',
   }],
+  faturamentoPorSocorrista: [
+    { chave: '1', rotulo: 'JEFERSON MARTINS DA SILVA', valor: 23853.12, quantidade: 49, semVinculo: false },
+    { chave: '9', rotulo: 'ANDERSON JORGE RIBEIRO', valor: 19864.11, quantidade: 85, semVinculo: false },
+    { chave: '2', rotulo: 'QEBSON RAMOS DA SILVA', valor: 18787.95, quantidade: 75, semVinculo: false },
+    { chave: '4', rotulo: 'NATANAEL JOSE DE FREITAS NETO', valor: 8326.2, quantidade: 50, semVinculo: false },
+    { chave: 'sem', rotulo: 'Sem socorrista', valor: 3938.62, quantidade: 16, semVinculo: true },
+  ],
+  faturamentoPorViatura: [
+    { chave: 'sem', rotulo: 'Sem viatura', valor: 74770, quantidade: 275, semVinculo: true },
+  ],
+  pendenciasVinculo: { quantidade: 275, semSocorrista: 16, semViatura: 275 },
   ...extra,
 })
 
@@ -65,46 +79,136 @@ test('o dinheiro abre a tela, com a leitura do que ele significa', async () => {
   render(<MemoryRouter><Painel/></MemoryRouter>)
 
   const financeiro = await screen.findByRole('region', { name: /resumo financeiro/i })
-  expect(within(financeiro).getAllByText('R$ 74.770,00')).toHaveLength(3)
+  // Recebido em destaque e realizado ao lado; toda OP chega paga, entao nao ha
+  // "programado" separado para mostrar.
+  expect(within(financeiro).getAllByText('R$ 74.770,00')).toHaveLength(2)
   expect(within(financeiro).getByText(/275 serviços executados/)).toBeInTheDocument()
-  expect(within(financeiro).getByText(/100,0% do programado/)).toBeInTheDocument()
-  expect(screen.getByText(/Ticket médio de R\$ 271,89 por serviço\./)).toBeInTheDocument()
+  expect(within(financeiro).getByText(/100,0% da produção/)).toBeInTheDocument()
+  expect(within(financeiro).queryByText(/programado/i)).not.toBeInTheDocument()
+  expect(within(financeiro).getByText(/Ticket médio R\$\s271,89/)).toBeInTheDocument()
 })
 
-// Zero divergencia e zero atraso sao boa noticia: a tela nao pode usar vermelho
-// para dizer isso, nem abrir uma lista de problemas vazia.
-test('sem pendência, mostra estado positivo em vez de lista de erros', async () => {
+test('a barra de indicadores mostra serviços, espera por OP e divergência', async () => {
   servidorDoPainel(painel())
   const Painel = await abrirPainel()
 
   render(<MemoryRouter><Painel/></MemoryRouter>)
 
-  expect(await screen.findByText('Tudo em dia')).toBeInTheDocument()
-  expect(screen.getByText(/Nenhuma pendência crítica/)).toBeInTheDocument()
-  expect(screen.getByText('Nenhum pagamento atrasado')).toBeInTheDocument()
+  expect(await screen.findByText('Serviços realizados')).toBeInTheDocument()
+  expect(screen.getByText(/^R\$\s74\.770,00 no período$/)).toBeInTheDocument()
+  expect(screen.getByText('Aguardando OP')).toBeInTheDocument()
+  expect(screen.getByText('Nenhum serviço fora de OP')).toBeInTheDocument()
+  expect(screen.getByText('OPs com divergência')).toBeInTheDocument()
+  expect(screen.getByText('Composição confere')).toBeInTheDocument()
 })
 
-test('com divergência e atraso, cada item leva para onde se resolve', async () => {
-  servidorDoPainel(painel({
-    quantidadeComDivergencia: 3, valorTotalDivergencias: 1250.5,
-    quantidadeVencidasNaoRecebidas: 2, valorVencidoNaoRecebido: 12400,
-    quantidadeAguardandoOp: 12, valorAguardandoOp: 3800,
-  }))
+// O painel do dia chega sem valor: doze servicos esperando OP nao sao
+// "R$ 0,00 sem cobranca", sao servicos cujo preco so vem com a OP.
+test('serviço do painel diário aguardando OP não vira R$ 0,00', async () => {
+  servidorDoPainel(painel({ quantidadeAguardandoOp: 12, valorAguardandoOp: 0 }))
+  const Painel = await abrirPainel()
+
+  render(<MemoryRouter><Painel/></MemoryRouter>)
+
+  expect(await screen.findByText('Sem valor até a OP')).toBeInTheDocument()
+  expect(screen.queryByText(/R\$\s0,00/)).not.toBeInTheDocument()
+})
+
+// "A receber" nao existe no modelo em que a OP chega paga. O que falta na OS e
+// dono: socorrista ou viatura — e o topo leva direto para onde se resolve.
+test('OS sem socorrista ou viatura aparece no topo e leva às pendências', async () => {
+  servidorDoPainel(painel())
+  const Painel = await abrirPainel()
+
+  render(<MemoryRouter><Painel/></MemoryRouter>)
+
+  const financeiro = await screen.findByRole('region', { name: /resumo financeiro/i })
+  expect(within(financeiro).getByText('Sem socorrista ou viatura')).toBeInTheDocument()
+  expect(within(financeiro).getByText('275 OS')).toBeInTheDocument()
+  expect(within(financeiro).getByText('16 sem socorrista · 275 sem viatura')).toBeInTheDocument()
+  expect(within(financeiro).getByRole('link', { name: /resolver pendências/i }))
+    .toHaveAttribute('href', '/porto/pendencias')
+  expect(within(financeiro).queryByText(/a receber/i)).not.toBeInTheDocument()
+})
+
+test('toda OS com socorrista e viatura: o topo não mostra pendência', async () => {
+  servidorDoPainel(painel({ pendenciasVinculo: { quantidade: 0, semSocorrista: 0, semViatura: 0 } }))
+  const Painel = await abrirPainel()
+
+  render(<MemoryRouter><Painel/></MemoryRouter>)
+
+  await screen.findByRole('region', { name: /resumo financeiro/i })
+  expect(screen.queryByText('Sem socorrista ou viatura')).not.toBeInTheDocument()
+})
+
+test('faturamento por socorrista e por viatura, com as OS sem dono por último', async () => {
+  servidorDoPainel(painel())
+  const Painel = await abrirPainel()
+
+  render(<MemoryRouter><Painel/></MemoryRouter>)
+
+  const socorristas = await screen.findByRole('list', { name: /faturamento por socorrista/i })
+  const linhas = within(socorristas).getAllByRole('listitem')
+  expect(linhas).toHaveLength(5)
+  expect(linhas[0]).toHaveTextContent('JEFERSON MARTINS DA SILVA')
+  expect(linhas[0]).toHaveTextContent(/R\$\s23\.853,12/)
+  expect(linhas[0]).toHaveTextContent('49 serviços')
+  expect(linhas[4]).toHaveTextContent('Sem socorrista')
+  expect(linhas[4]).toHaveClass('sem-vinculo')
+
+  const viaturas = screen.getByRole('list', { name: /faturamento por viatura/i })
+  expect(within(viaturas).getByText('Sem viatura')).toBeInTheDocument()
+  expect(within(viaturas).getByText('275 serviços')).toBeInTheDocument()
+})
+
+// A RPC devolve a OP com o nome das colunas. A tabela lia valorTotal e
+// periodoFim direto e, em producao, saia sem valor, sem periodo e sem status.
+test('a tabela de OPs lê o formato que a RPC devolve', async () => {
+  servidorDoPainel(painel())
+  const Painel = await abrirPainel()
+
+  render(<MemoryRouter><Painel/></MemoryRouter>)
+
+  const linha = (await screen.findByText('06389821')).closest('tr')!
+  expect(linha).toHaveTextContent('30/03/2026 a 29/04/2026')
+  expect(linha).toHaveTextContent('275')
+  expect(linha).toHaveTextContent(/R\$\s74\.770,00/)
+  expect(within(linha).getByText('Conciliada')).toBeInTheDocument()
+})
+
+// Sem divergencia nao ha o que resolver: o bloco de atencao nao aparece, e nada
+// entra no lugar dele — a barra ja diz "Composicao confere".
+test('sem divergência, não mostra bloco de atenção nem faixa no lugar', async () => {
+  servidorDoPainel(painel())
+  const Painel = await abrirPainel()
+
+  render(<MemoryRouter><Painel/></MemoryRouter>)
+
+  expect(await screen.findByText('Composição confere')).toBeInTheDocument()
+  expect(screen.queryByText('Precisa de atenção')).not.toBeInTheDocument()
+  expect(screen.queryByText('Tudo em dia')).not.toBeInTheDocument()
+  expect(screen.queryByText(/pendentes na porto/i)).not.toBeInTheDocument()
+  // No modelo em que a OP chega paga nao existe OP vencida — o indicador saiu.
+  expect(screen.queryByText(/vencida/i)).not.toBeInTheDocument()
+})
+
+test('divergência pede providência e leva para as ordens de pagamento', async () => {
+  servidorDoPainel(painel({ quantidadeComDivergencia: 3, valorTotalDivergencias: 1250.5 }))
   const Painel = await abrirPainel()
 
   render(<MemoryRouter><Painel/></MemoryRouter>)
 
   expect(await screen.findByText('3 OPs com divergência')).toBeInTheDocument()
-  expect(screen.getByText('2 OPs vencidas')).toBeInTheDocument()
-  expect(screen.getByText('12 serviços aguardando OP')).toBeInTheDocument()
-  expect(screen.getByRole('link', { name: /ver serviços/i }))
-    .toHaveAttribute('href', '/porto/ordens-servico')
+  expect(screen.getByRole('link', { name: /ver ordens de pagamento/i }))
+    .toHaveAttribute('href', '/porto/ordens-pagamento')
 })
 
 test('período sem dados não mostra três zeros, e oferece a saída', async () => {
   servidorDoPainel(painel({
     quantidadeTotalOps: 0, quantidadeTotalServicos: 0, valorTotalRealizado: 0,
     valorProgramado: 0, valorRecebido: 0, serie: [], opsDestaque: [],
+    faturamentoPorSocorrista: [], faturamentoPorViatura: [],
+    pendenciasVinculo: { quantidade: 0, semSocorrista: 0, semViatura: 0 },
   }))
   const Painel = await abrirPainel()
 
@@ -149,7 +253,7 @@ test('a OP escolhida continua escolhida ao voltar para a tela', async () => {
   const Painel = await abrirPainel()
 
   const primeira = render(<MemoryRouter><Painel/></MemoryRouter>)
-  const periodo = await screen.findByLabelText('Período')
+  const periodo = await screen.findByLabelText('Ordem de pagamento')
   await userEvent.selectOptions(periodo, '7')
   expect(await screen.findByDisplayValue('2026-03-30')).toBeInTheDocument()
   primeira.unmount()
@@ -158,5 +262,5 @@ test('a OP escolhida continua escolhida ao voltar para a tela', async () => {
 
   expect(await screen.findByDisplayValue('2026-03-30')).toBeInTheDocument()
   expect(screen.getByDisplayValue('2026-04-29')).toBeInTheDocument()
-  expect(await screen.findByLabelText('Período')).toHaveValue('7')
+  expect(await screen.findByLabelText('Ordem de pagamento')).toHaveValue('7')
 })

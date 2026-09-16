@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react'
 import { expect, test } from 'vitest'
-import { FaixaDeIndicadores } from '../dashboard/PaineisDoResultado'
+import { ResultadoDoPeriodo } from '../dashboard/PaineisDoResultado'
 import type { Dashboard } from '../types/modelos'
 import { DespesaAcumulada, GastosPorCategoria, ProducaoXRecebimentos } from './Graficos'
 
@@ -54,9 +54,9 @@ test('a receber não soma de novo o valor que já está em atraso', () => {
     resultadoPorSocorrista:[],
   } satisfies Dashboard
 
-  render(<FaixaDeIndicadores dados={dados} margem={80}/>)
+  render(<ResultadoDoPeriodo dados={dados}/>)
 
-  const cartao=screen.getByText('A receber').closest('article')
+  const cartao=screen.getByText('A receber').closest('div')
   expect(cartao).toHaveTextContent('R$ 300,00')
   expect(cartao).not.toHaveTextContent('R$ 500,00')
   expect(cartao).toHaveTextContent('R$ 200,00 em atraso')

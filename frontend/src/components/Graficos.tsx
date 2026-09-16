@@ -19,63 +19,28 @@ function escala(valores:number[]){
 
 function Vazio({texto}:{texto:string}){return <p className="grafico-vazio">{texto}</p>}
 
-export type LinhaFaturamentoCusto={id:number;rotulo:string;faturamento:number;custo:number}
+export type LinhaFaturamento={chave:string;rotulo:string;valor:number;quantidade?:number;detalhe?:string;semVinculo:boolean}
 
 /**
- * Faturamento contra custo, na mesma escala, para veiculo e para socorrista. Duas
- * barras por linha: a distancia entre elas e o resultado, e o numero ao lado so
- * confirma o que a barra ja mostrou. Ordena pelo faturamento, porque a pergunta
- * de quem abre o dashboard e "quem mais trouxe dinheiro, e a que custo".
+ * Quanto cada socorrista ou viatura faturou, uma barra por linha. A linha sem
+ * vinculo fica por ultimo e em amarelo: o dinheiro existe, so falta dono — e e ela
+ * que faz a soma das barras fechar com o faturamento do periodo. OS do painel
+ * diario chega sem valor, conta como servico e nao soma dinheiro; por isso a
+ * quantidade aparece ao lado do valor.
  */
-export function FaturamentoECusto({descricao,linhas,vazio}:{descricao:string;linhas:LinhaFaturamentoCusto[];vazio:string}){
+export function FaturamentoPorGrupo({descricao,linhas,vazio}:{descricao:string;linhas:LinhaFaturamento[];vazio:string}){
   if(!linhas.length)return <Vazio texto={vazio}/>
-  const ordenadas=[...linhas].sort((a,b)=>b.faturamento-a.faturamento||b.custo-a.custo)
-  const maior=escala(ordenadas.flatMap(l=>[l.faturamento,l.custo]))
-  // Valor zero nao desenha barra nenhuma; valor pequeno ganha um minimo visivel.
+  const ordenadas=[...linhas].sort((a,b)=>Number(a.semVinculo)-Number(b.semVinculo)||b.valor-a.valor)
+  const maior=escala(ordenadas.map(l=>l.valor))
   const largura=(v:number)=>`${v>0?Math.max(v/maior*100,1.5):0}%`
-  return <div className="grafico grafico-par" role="img"
-    aria-label={`${descricao}. ${ordenadas.map(l=>`${l.rotulo}: faturamento ${moeda(l.faturamento)}, custo ${moeda(l.custo)}, resultado ${moeda(l.faturamento-l.custo)}`).join('. ')}`}>
-    <div className="par-legenda" aria-hidden="true">
-      <span><i className="marca-faturamento"/>Faturamento</span>
-      <span><i className="marca-custo"/>Custo</span>
-      <span className="par-legenda-resultado">Resultado</span>
-    </div>
-    {ordenadas.map(l=>{
-      const resultado=l.faturamento-l.custo
-      return <div className="par-linha" key={l.id}>
-        <span className="barra-rotulo" title={l.rotulo}>{l.rotulo}</span>
-        <span className="par-trilhos">
-          <span className="barra-trilho par-trilho"><span className="barra-preenche par-faturamento" style={{width:largura(l.faturamento)}}/></span>
-          <span className="barra-trilho par-trilho"><span className="barra-preenche par-custo" style={{width:largura(l.custo)}}/></span>
-        </span>
-        <span className="par-valores"><span>{moeda(l.faturamento)}</span><span className="par-valor-custo">{moeda(l.custo)}</span></span>
-        <strong className={`par-resultado ${resultado<0?'negative':'positive'}`}>{moeda(resultado)}</strong>
-      </div>})}
-    <p className="grafico-escala par-escala"><span/><span className="escala-eixo"><span>R$ 0</span><span>{moeda(maior)}</span></span><span/><span/></p>
-  </div>
-}
-
-/**
- * Serviço prestado não é serviço pago: a Porto fecha a OP semanas depois. Esta
- * proporcao existe para deixar visivel quanto do periodo ainda esta esperando OP,
- * que hoje so aparece como dois numeros soltos.
- */
-export function ProporcaoServicos({pagos,pendentes,valorPago,valorPendente}:
-  {pagos:number;pendentes:number;valorPago:number;valorPendente:number}){
-  const total=pagos+pendentes
-  if(!total)return <Vazio texto="Nenhum serviço registrado neste período."/>
-  const fatia=(n:number)=>n/total*100
-  return <div className="grafico grafico-proporcao" role="img"
-    aria-label={`${pagos} de ${total} serviços pagos, ${pendentes} aguardando ordem de pagamento.`}>
-    <div className="proporcao-trilho">
-      {pagos>0?<span className="proporcao-pago" style={{width:`${fatia(pagos)}%`}}/>:null}
-      {pendentes>0?<span className="proporcao-pendente" style={{width:`${fatia(pendentes)}%`}}/>:null}
-    </div>
-    <dl className="proporcao-legenda">
-      <div><dt><i className="marca-pago"/>Pagos</dt><dd>{pagos}<small>{moeda(valorPago)}</small></dd></div>
-      <div><dt><i className="marca-pendente"/>Aguardando OP</dt><dd>{pendentes}<small>{moeda(valorPendente)}</small></dd></div>
-    </dl>
-  </div>
+  return <ul className="faturamento-grupo" aria-label={descricao}>
+    {ordenadas.map(l=><li key={l.chave} className={l.semVinculo?'sem-vinculo':undefined}>
+      <span className="faturamento-grupo-rotulo" title={l.rotulo}>{l.rotulo}</span>
+      <span className="faturamento-grupo-trilho" aria-hidden="true"><span style={{width:largura(l.valor)}}/></span>
+      <strong>{moeda(l.valor)}</strong>
+      <small>{l.detalhe??(l.quantidade==null?'':`${l.quantidade} ${l.quantidade===1?'serviço':'serviços'}`)}</small>
+    </li>)}
+  </ul>
 }
 
 export type LinhaCategoria={id:number;rotulo:string;valor:number;participacao:number}
@@ -321,6 +286,81 @@ export function ProducaoXRecebimentos({ pontos, rotulo }: {
         <span><i className="legend-programado"/>Programado<b>{moeda(ponto.programado)}</b></span>
         <small>{ponto.servicos} {ponto.servicos === 1 ? 'serviço' : 'serviços'}</small>
       </div> : null}
+    </div>
+  </div>
+}
+
+/**
+ * Produção e recebimento acumulados no período.
+ *
+ * O recebimento da Porto não entra aos poucos: entra de uma vez, quando a OP
+ * fecha. Por período, isso vira um pico solto no fim e uma linha no chão antes
+ * dele — parece quebrado, com os números certos. Acumulado, a história aparece:
+ * a produção sobe semana a semana, o recebido dá um degrau quando a OP paga, e o
+ * espaço entre as duas linhas é exatamente o que ainda falta entrar.
+ *
+ * O desenho segue a referência que o Kawã escolheu (Stripe): linha fina, grade
+ * quase invisível, dois rótulos no eixo e o detalhe no ponteiro.
+ */
+export function EvolucaoAcumulada({ pontos, rotulo }: {
+  pontos: PontoProducao[]
+  rotulo: (inicio: string) => string
+}) {
+  const [ativo, setAtivo] = useState<number | null>(null)
+  if (!pontos.length) return <Vazio texto="A evolução aparece quando houver serviços no período."/>
+
+  let produzido = 0, recebido = 0
+  const acumulado = pontos.map(p => {
+    produzido += p.produzido
+    recebido += p.recebido
+    return { ...p, produzidoAcumulado: produzido, recebidoAcumulado: recebido }
+  })
+
+  const largura = 760, altura = 230, topo = 16, base = 196, lado = 8
+  const teto = Math.max(produzido, recebido, 1)
+  const x = (i: number) => lado + (acumulado.length === 1 ? (largura - lado * 2) / 2
+    : (i / (acumulado.length - 1)) * (largura - lado * 2))
+  const y = (v: number) => base - (v / teto) * (base - topo)
+  const caminho = (campo: 'produzidoAcumulado' | 'recebidoAcumulado') => acumulado
+    .map((p, i) => `${i ? 'L' : 'M'} ${x(i).toFixed(1)} ${y(p[campo]).toFixed(1)}`).join(' ')
+
+  // A faixa entre as duas linhas: produção por cima, recebido voltando por baixo.
+  const volta = [...acumulado].reverse()
+    .map((p, i) => `L ${x(acumulado.length - 1 - i).toFixed(1)} ${y(p.recebidoAcumulado).toFixed(1)}`).join(' ')
+  const faixa = `${caminho('produzidoAcumulado')} ${volta} Z`
+
+  const ponto = ativo === null ? null : acumulado[ativo]
+  const passo = (largura - lado * 2) / Math.max(acumulado.length - 1, 1)
+
+  return <div className="acumulado-chart">
+    <div className="acumulado-plot" onMouseLeave={() => setAtivo(null)}>
+      <svg viewBox={`0 0 ${largura} ${altura}`} role="img" preserveAspectRatio="none"
+        aria-label={`Produção acumulada ${moeda(produzido)} e recebido acumulado ${moeda(recebido)} no período.`}>
+        <line className="acumulado-base" x1={lado} x2={largura - lado} y1={base} y2={base}/>
+        <path className="acumulado-faixa" d={faixa}/>
+        <path className="acumulado-linha-produzido" d={caminho('produzidoAcumulado')}/>
+        <path className="acumulado-linha-recebido" d={caminho('recebidoAcumulado')}/>
+        {acumulado.map((p, i) => <rect key={p.inicio} className="acumulado-alvo"
+          x={x(i) - passo / 2} y={0} width={passo} height={altura}
+          onMouseEnter={() => setAtivo(i)}/>)}
+        {ponto ? <>
+          <line className="acumulado-guia" x1={x(ativo!)} x2={x(ativo!)} y1={topo} y2={base}/>
+          <circle className="acumulado-ponto-produzido" cx={x(ativo!)} cy={y(ponto.produzidoAcumulado)} r="4"/>
+          <circle className="acumulado-ponto-recebido" cx={x(ativo!)} cy={y(ponto.recebidoAcumulado)} r="4"/>
+        </> : null}
+      </svg>
+
+      {ponto ? <div className="acumulado-tooltip"
+        style={{ left: `${Math.min(Math.max((x(ativo!) / largura) * 100, 14), 86)}%` }}>
+        <strong>Até {rotulo(ponto.inicio)}</strong>
+        <span><i className="marca-produzido"/>Produzido<b>{moeda(ponto.produzidoAcumulado)}</b></span>
+        <span><i className="marca-recebido"/>Recebido<b>{moeda(ponto.recebidoAcumulado)}</b></span>
+        <span className="acumulado-tooltip-falta">A receber<b>{moeda(ponto.produzidoAcumulado - ponto.recebidoAcumulado)}</b></span>
+      </div> : null}
+    </div>
+    <div className="acumulado-eixo" aria-hidden="true">
+      <span>{rotulo(acumulado[0].inicio)}</span>
+      <span>{rotulo(acumulado[acumulado.length - 1].inicio)}</span>
     </div>
   </div>
 }
