@@ -299,3 +299,52 @@ test('despesa comum continua nascendo GERAL', async () => {
 
   expect(enviado.natureza).toBe('GERAL')
 })
+
+// O site sobe antes de a migração ser aplicada — o intervalo entre publicar o
+// frontend e rodar o SQL. Antes, esse intervalo derrubava o lançamento inteiro
+// e jogava a assinatura da função em inglês na cara de quem queria registrar um
+// almoço. Agora a despesa é registrada pelo caminho de sempre, pendente.
+test('sem a função no banco, a despesa ainda é registrada — pendente', async () => {
+  let inseriu = false
+  servidor.use(
+    http.post(`${URL_SUPABASE}/rest/v1/rpc/registrar_despesa_aprovada`, () => HttpResponse.json({
+      code: 'PGRST202',
+      message: 'Could not find the function public.registrar_despesa_aprovada(...) in the schema cache',
+    }, { status: 404 })),
+    http.post(`${URL_SUPABASE}/rest/v1/despesas`, async ({ request }) => {
+      inseriu = true
+      return responder(request, [LINHA])
+    }),
+  )
+  comSessao()
+  const { criarDespesa } = await carregar('auth,despesas')
+
+  const criada = await criarDespesa(
+    { descricao: 'Almoço', categoriaId: 3, valor: 50, data: '2026-09-16', status: 'PAGO' }, true)
+
+  expect(inseriu).toBe(true)
+  expect(criada.aprovada).toBe(false)
+})
+
+// Só a ausência da função volta ao caminho antigo. Recusa de permissão é
+// resposta de verdade: engoli-la esconderia o motivo e criaria uma despesa que
+// a pessoa não tinha direito de criar aprovada.
+test('recusa de permissão não vira lançamento pendente disfarçado', async () => {
+  let inseriu = false
+  servidor.use(
+    http.post(`${URL_SUPABASE}/rest/v1/rpc/registrar_despesa_aprovada`, () => HttpResponse.json({
+      code: '42501', message: 'permission denied',
+    }, { status: 403 })),
+    http.post(`${URL_SUPABASE}/rest/v1/despesas`, async ({ request }) => {
+      inseriu = true
+      return responder(request, [LINHA])
+    }),
+  )
+  comSessao()
+  const { criarDespesa } = await carregar('auth,despesas')
+
+  await expect(criarDespesa(
+    { descricao: 'Almoço', categoriaId: 3, valor: 50, data: '2026-09-16' }, true))
+    .rejects.toThrow(/não tem permissão/i)
+  expect(inseriu).toBe(false)
+})

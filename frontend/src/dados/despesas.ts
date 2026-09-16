@@ -171,32 +171,10 @@ export async function criarDespesa(dados: DadosDespesa, jaAprovada = false): Pro
   const alimentacao = dados.natureza === 'ALIMENTACAO_FUNCIONARIO' && Boolean(dados.motoristaId)
 
   if (jaAprovada) {
-    const linha = ou(
-      await supabase().rpc('registrar_despesa_aprovada', {
-        p_descricao: dados.descricao,
-        p_categoria_id: dados.categoriaId,
-        p_valor: dados.valor,
-        p_data: dados.data,
-        p_vencimento: dados.vencimento || null,
-        p_forma_pagamento: dados.formaPagamento || null,
-        p_veiculo_id: dados.veiculoId || null,
-        p_motorista_id: dados.motoristaId || null,
-        p_protocolo: dados.protocolo || null,
-        p_observacoes: dados.observacoes || null,
-        p_natureza: alimentacao ? 'ALIMENTACAO_FUNCIONARIO' : 'GERAL',
-        p_paga: dados.status === 'PAGO',
-        p_data_pagamento: dados.dataPagamento || null,
-      }),
-      'Não foi possível registrar a despesa.',
-    ) as { id: number }
-    // A RPC devolve a linha crua da tabela, sem os nomes de categoria, viatura e
-    // socorrista que a tela mostra. Em vez de montar meia despesa aqui, le a
-    // linha pronta pelo mesmo caminho da listagem.
-    const completa = ou(
-      await supabase().from('despesas').select(COLUNAS).eq('id', linha.id).single(),
-      'Não foi possível registrar a despesa.',
-    ) as unknown as LinhaDespesa
-    return paraModelo(completa)
+    const aprovada = await lancarJaAprovada(dados, alimentacao)
+    if (aprovada) return aprovada
+    // A funcao nao existe neste banco: cai no caminho de sempre logo abaixo, e
+    // a tela avisa que a despesa ficou pendente. Ver `lancarJaAprovada`.
   }
 
   // Toda despesa nasce pendente e nao aprovada, qualquer que seja a situacao
@@ -298,4 +276,47 @@ export async function excluirDespesa(despesa: Despesa): Promise<void> {
   if (despesa.comprovante) {
     await supabase().storage.from('comprovantes').remove([despesa.comprovante]).catch(() => {})
   }
+}
+
+/**
+ * Erro do PostgREST para "esta funcao nao existe no banco".
+ *
+ * Acontece quando o site sobe com uma migracao ainda nao aplicada — que e
+ * exatamente o intervalo entre publicar o frontend e rodar o SQL. Antes, esse
+ * intervalo derrubava o lancamento inteiro e jogava a assinatura da funcao em
+ * ingles na cara de quem so queria registrar um almoco.
+ */
+const FUNCAO_AUSENTE = 'PGRST202'
+
+/** Lanca a despesa ja aprovada, ou devolve null se o banco ainda nao tem a RPC. */
+async function lancarJaAprovada(dados: DadosDespesa, alimentacao: boolean): Promise<Despesa | null> {
+  const resposta = await supabase().rpc('registrar_despesa_aprovada', {
+    p_descricao: dados.descricao,
+    p_categoria_id: dados.categoriaId,
+    p_valor: dados.valor,
+    p_data: dados.data,
+    p_vencimento: dados.vencimento || null,
+    p_forma_pagamento: dados.formaPagamento || null,
+    p_veiculo_id: dados.veiculoId || null,
+    p_motorista_id: dados.motoristaId || null,
+    p_protocolo: dados.protocolo || null,
+    p_observacoes: dados.observacoes || null,
+    p_natureza: alimentacao ? 'ALIMENTACAO_FUNCIONARIO' : 'GERAL',
+    p_paga: dados.status === 'PAGO',
+    p_data_pagamento: dados.dataPagamento || null,
+  })
+  // So a ausencia da funcao volta para o caminho antigo. Recusa de permissao,
+  // valor invalido e qualquer outro erro sobem como erro: sao respostas de
+  // verdade, e engoli-las esconderia o motivo.
+  if (resposta.error?.code === FUNCAO_AUSENTE) return null
+  const linha = ou(resposta, 'Não foi possível registrar a despesa.') as { id: number }
+
+  // A RPC devolve a linha crua da tabela, sem os nomes de categoria, viatura e
+  // socorrista que a tela mostra. Em vez de montar meia despesa aqui, le a
+  // linha pronta pelo mesmo caminho da listagem.
+  const completa = ou(
+    await supabase().from('despesas').select(COLUNAS).eq('id', linha.id).single(),
+    'Não foi possível registrar a despesa.',
+  ) as unknown as LinhaDespesa
+  return paraModelo(completa)
 }

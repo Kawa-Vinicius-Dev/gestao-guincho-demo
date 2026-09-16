@@ -54,12 +54,17 @@ export default function DespesasPage(){
     // Quem responde pelo caixa nao precisa aprovar o proprio lancamento: a
     // despesa do administrador ja nasce aprovada, e paga se ele disse que ja
     // pagou. A RPC confere o perfil, entao a bandeira so escolhe o caminho.
-    try{await criarDespesa(body,admin);setForm(false)
-      setMensagem(admin
-        ?(body.status==='PAGO'
-          ?'Despesa registrada e paga. Já está na Visão geral.'
-          :'Despesa registrada e aprovada. Registre o pagamento quando ele sair.')
-        :'Despesa enviada para aprovação do administrador.')
+    try{const criada=await criarDespesa(body,admin);setForm(false)
+      // A mensagem sai do que o banco devolveu, e nao do que a tela pediu:
+      // quando a funcao de lancamento em um passo ainda nao foi aplicada, a
+      // despesa volta pendente, e dizer "ja esta na Visao geral" seria mentira.
+      setMensagem(!admin
+        ?'Despesa enviada para aprovação do administrador.'
+        :criada.status==='PAGO'
+        ?'Despesa registrada e paga. Já está na Visão geral.'
+        :criada.aprovada
+        ?'Despesa registrada e aprovada. Registre o pagamento quando ele sair.'
+        :'Despesa registrada, mas ficou pendente: o banco ainda não tem o lançamento em um passo. Aprove e registre o pagamento para ela entrar nos totais.')
       await carregar()}catch(x){setErro((x as Error).message)}
   }
   const carregarFixas=()=>admin?listarDespesasFixas().then(setFixas):Promise.resolve()
