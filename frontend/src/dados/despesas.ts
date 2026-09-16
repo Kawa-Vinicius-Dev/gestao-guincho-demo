@@ -91,7 +91,31 @@ export interface DadosDespesa {
   protocolo?: string | null
   observacoes?: string | null
   status?: Despesa['status']
+  /**
+   * Alimentacao do socorrista, e nao custo da viatura.
+   *
+   * A agregacao do painel trata as duas de formas opostas de proposito: despesa
+   * com viatura preenchida conta na viatura, e a mesma despesa marcada como
+   * alimentacao sai da viatura e conta no socorrista — e e ela que desconta da
+   * comissao dele. Sem esta coluna, "Almoco de Fulano" com viatura e socorrista
+   * preenchidos sumia do lado do socorrista, que e o que o formulario prometia
+   * ao pedir o nome dele.
+   */
+  natureza?: 'GERAL' | 'ALIMENTACAO_FUNCIONARIO'
 }
+
+/**
+ * A categoria que significa "comida de socorrista".
+ *
+ * E o nome mesmo, e nao uma coluna: e assim que `registrar_alimentacao` acha a
+ * categoria no banco quando o proprio socorrista lanca a refeicao dele. Ter dois
+ * criterios diferentes para a mesma pergunta — um no banco, outro na tela — e
+ * como o lancamento do administrador e o do socorrista acabariam em lados
+ * opostos do fechamento.
+ */
+export const CATEGORIA_ALIMENTACAO = 'alimentação'
+export const eAlimentacao = (nome: string) =>
+  nome.trim().toLowerCase() === CATEGORIA_ALIMENTACAO
 
 /**
  * Quantas despesas a tela traz de uma vez.
@@ -125,6 +149,11 @@ export async function criarDespesa(dados: DadosDespesa): Promise<Despesa> {
     return api<Despesa>('/api/despesas', { method: 'POST', body: JSON.stringify(dados) })
   }
 
+  // Alimentacao sem socorrista nao tem de quem descontar: a marca viraria um
+  // estado que nenhuma tela consegue usar, e a despesa sumiria da viatura sem
+  // aparecer em lugar nenhum.
+  const alimentacao = dados.natureza === 'ALIMENTACAO_FUNCIONARIO' && Boolean(dados.motoristaId)
+
   // Toda despesa nasce pendente e nao aprovada, qualquer que seja a situacao
   // escolhida no formulario. Nao e limitacao tecnica: "paga sem ter sido
   // aprovada" e o estado que o fluxo de aprovacao existe para impedir, e a
@@ -138,10 +167,15 @@ export async function criarDespesa(dados: DadosDespesa): Promise<Despesa> {
       data_lancamento: dados.data,
       vencimento: dados.vencimento || null,
       forma_pagamento: dados.formaPagamento || null,
-      veiculo_id: dados.veiculoId || null,
+      // Alimentacao nao tem viatura, e a regra vive aqui e nao so na tela: a
+      // mesma despesa contada nos dois lados apareceria duas vezes no custo da
+      // operacao, e o painel tira a alimentacao da viatura de qualquer forma —
+      // gravar a viatura so deixaria um vinculo que nenhuma conta usa.
+      veiculo_id: alimentacao ? null : dados.veiculoId || null,
       motorista_id: dados.motoristaId || null,
       protocolo: dados.protocolo || null,
       observacoes: dados.observacoes || null,
+      natureza: alimentacao ? 'ALIMENTACAO_FUNCIONARIO' : 'GERAL',
       status: 'PENDENTE',
       aprovada: false,
       criado_por: await usuarioAtualId(),

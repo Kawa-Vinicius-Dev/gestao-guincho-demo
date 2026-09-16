@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { alternarAtivoDespesaFixa, criarDespesaFixa, lancarDespesasFixasDoMes, listarDespesasFixas } from '../dados/despesasFixas'
-import { aprovarDespesa, criarDespesa, excluirDespesa, listarDespesas, pagarDespesa } from '../dados/despesas'
+import { aprovarDespesa, criarDespesa, eAlimentacao, excluirDespesa, listarDespesas, pagarDespesa } from '../dados/despesas'
 import { abrirComprovante, anexarComprovante, removerComprovante } from '../dados/comprovantes'
 import { listarCategorias } from '../dados/cadastros'
 import { listarMotoristas } from '../dados/motoristas'
@@ -28,6 +28,9 @@ export default function DespesasPage(){
   // Qual despesa esta na janela de confirmacao, e nao um booleano: a janela
   // precisa dizer qual e, com descricao e valor, senao confirmar e um chute.
   const [excluindo,setExcluindo]=useState<Despesa|null>(null),[apagando,setApagando]=useState(false)
+  // Qual categoria esta escolhida no formulario, so para saber se e alimentacao.
+  const [categoriaEscolhida,setCategoriaEscolhida]=useState('')
+  const alimentacao=eAlimentacao(categorias.find(c=>String(c.id)===categoriaEscolhida)?.nome??'')
   const carregar=()=>admin?listarDespesas().then(setLista):Promise.resolve()
   const [carregando,setCarregando]=useState(true)
   useEffect(()=>{carregar().catch(x=>setErro((x as Error).message)).finally(()=>setCarregando(false))
@@ -39,7 +42,8 @@ export default function DespesasPage(){
     const body={descricao:String(f.get('descricao')),categoriaId:Number(f.get('categoriaId')),valor:Number(f.get('valor')),data:String(f.get('data')),
       vencimento:texto('vencimento'),dataPagamento:texto('dataPagamento'),formaPagamento:texto('formaPagamento'),
       veiculoId:f.get('veiculoId')?Number(f.get('veiculoId')):null,motoristaId:f.get('motoristaId')?Number(f.get('motoristaId')):null,
-      protocolo:texto('protocolo'),observacoes:texto('observacoes'),status:(texto('status')??'PENDENTE') as Despesa['status']}
+      protocolo:texto('protocolo'),observacoes:texto('observacoes'),status:(texto('status')??'PENDENTE') as Despesa['status'],
+      natureza:alimentacao?'ALIMENTACAO_FUNCIONARIO' as const:'GERAL' as const}
     setErro('');setMensagem('')
     try{await criarDespesa(body);setForm(false);setMensagem(admin?'Despesa registrada. Aprove para incluí-la nos totais.':'Despesa enviada para aprovação do administrador.');await carregar()}catch(x){setErro((x as Error).message)}
   }
@@ -77,7 +81,7 @@ export default function DespesasPage(){
     // A janela fica aberta quando da erro: fechar levaria embora a unica
     // explicacao de por que a despesa continua na lista.
     catch(x){setErro((x as Error).message)}finally{setApagando(false)}}
-  return <div className="page-enter pagina-despesas"><header className="page-heading"><div><span className="eyebrow">Saídas</span><h1>Despesas</h1><p>Custos da operação vinculados a veículos, motoristas e protocolos.</p></div><button className="button button-primary" onClick={()=>setForm(true)}>Registrar despesa</button></header>
+  return <div className="page-enter pagina-despesas"><header className="page-heading"><div><span className="eyebrow">Saídas</span><h1>Despesas</h1><p>Custos da operação vinculados a veículos, motoristas e protocolos.</p></div><button className="button button-primary" onClick={()=>{setCategoriaEscolhida('');setForm(true)}}>Registrar despesa</button></header>
     {erro?<div className="form-alert" role="alert">{erro}</div>:null}{carregando?<Carregando/>:null}{mensagem?<div className="success-notice">{mensagem}</div>:null}
     {admin?<section className="panel">{lista.length?<div className="table-scroll"><table><thead><tr><th>Descrição</th><th>Categoria</th><th>Data</th><th>Veículo</th><th>Situação</th><th>Aprovação</th><th>Valor</th><th>Comprovante</th><th/></tr></thead><tbody>
       {lista.map(d=><tr key={d.id}><td><strong>{d.descricao}</strong><small>{d.criadoPor}</small></td><td>{d.categoria}</td><td>{data(d.data)}</td><td>{d.veiculo||'—'}</td><td><StatusBadge status={d.status}/></td><td>{d.aprovada?<span className="approved">Aprovada</span>:<button className="table-action" onClick={()=>void aprovar(d.id)}>Aprovar</button>}</td><td className="negative"><strong>{moeda(d.valor)}</strong></td>
@@ -88,7 +92,7 @@ export default function DespesasPage(){
             <IconeLixeira/>
           </button></span></td></tr>)}
       </tbody></table></div>:<Vazio titulo="Nenhuma despesa" descricao="Registre custos ou aguarde lançamentos dos socorristas."/>}</section>
-      :<section className="employee-callout"><span className="eyebrow">Perfil socorrista</span><h2>Registre os custos assim que acontecerem.</h2><p>Seus lançamentos serão conferidos pelo administrador antes de entrarem no financeiro.</p><button className="button button-primary" onClick={()=>setForm(true)}>Registrar agora</button></section>}
+      :<section className="employee-callout"><span className="eyebrow">Perfil socorrista</span><h2>Registre os custos assim que acontecerem.</h2><p>Seus lançamentos serão conferidos pelo administrador antes de entrarem no financeiro.</p><button className="button button-primary" onClick={()=>{setCategoriaEscolhida('');setForm(true)}}>Registrar agora</button></section>}
     {admin?<section className="panel" aria-label="Despesas fixas"><header className="panel-title"><div><h2>Despesas fixas</h2><p>O que cai todo mês: aluguel, seguro, parcela. Cadastre uma vez e lance o mês quando quiser.</p></div>
       <div className="heading-actions"><Campo rotulo="Mês"><input aria-label="Mês do lançamento" type="month" value={mes} onChange={e=>setMes(e.target.value)}/></Campo>
         <button className="button button-primary" disabled={lancando||!fixas.some(f=>f.ativo)} onClick={()=>void lancarFixas()}>{lancando?'Lançando…':'Lançar as fixas do mês'}</button></div></header>
@@ -102,14 +106,24 @@ export default function DespesasPage(){
         <button className="button button-ghost">Adicionar</button></form></section>:null}
     {form?<Modal etiqueta="Comprovante operacional" titulo="Registrar despesa" largo aoFechar={()=>setForm(false)}>
       <form onSubmit={salvar} className="form-grid three-columns"><label className="field field-wide"><span>Descrição</span><input name="descricao" required autoCapitalize="sentences" autoComplete="off"/></label>
-        <Selecao rotulo="Categoria" name="categoriaId" required opcoes={categorias.map(x=>({valor:x.id,texto:x.nome}))}/>
+        <Selecao rotulo="Categoria" name="categoriaId" required value={categoriaEscolhida}
+          onChange={e=>setCategoriaEscolhida(e.target.value)}
+          opcoes={categorias.map(x=>({valor:x.id,texto:x.nome}))}/>
         <CampoValor rotulo="Valor" name="valor" required/>
         <Selecao rotulo="Situação" name="status" opcoes={[{valor:'PAGO',texto:'Paga'},{valor:'PENDENTE',texto:'Pendente'}]}/>
         <label className="field"><span>Data</span><input name="data" type="date" defaultValue={hoje()} required/></label>
         <label className="field"><span>Vencimento</span><input name="vencimento" type="date"/></label><label className="field"><span>Data do pagamento</span><input name="dataPagamento" type="date"/></label>
         <Selecao rotulo="Forma de pagamento" name="formaPagamento" vazio="Não informada" opcoes={FORMAS_PAGAMENTO}/>
-        <Selecao rotulo="Veículo" name="veiculoId" vazio="Não relacionado" opcoes={veiculos.map(x=>({valor:x.id,texto:x.identificacao}))}/>
-        <Selecao rotulo="Motorista" name="motoristaId" vazio="Não relacionado" opcoes={motoristas.map(x=>({valor:x.id,texto:x.nome}))}/>
+        <Selecao rotulo="Veículo" name="veiculoId" vazio={alimentacao?'Não se aplica':'Não relacionado'}
+          key={alimentacao?'veiculo-na':'veiculo'} disabled={alimentacao}
+          opcoes={veiculos.map(x=>({valor:x.id,texto:x.identificacao}))}/>
+        <Selecao rotulo={alimentacao?'Socorrista':'Motorista'} name="motoristaId" required={alimentacao}
+          vazio={alimentacao?'Selecione o socorrista':'Não relacionado'}
+          opcoes={motoristas.map(x=>({valor:x.id,texto:x.nome}))}/>
+        {alimentacao?<p className="field-wide aviso-alimentacao">
+          Alimentação é custo do socorrista, não da viatura: entra no fechamento da comissão dele e
+          desconta do líquido. Por isso o campo de veículo fica desativado.
+        </p>:null}
         <label className="field"><span>Protocolo ou referência</span><input name="protocolo" autoCapitalize="characters" autoCorrect="off" spellCheck={false}/></label><label className="field two-span"><span>Comprovante (referência)</span><input name="comprovante" placeholder="Nome ou caminho do arquivo" autoCapitalize="sentences" autoComplete="off"/></label>
         <label className="field field-wide"><span>Observações</span><textarea name="observacoes" rows={3}/></label>
         <AcoesModal aoCancelar={()=>setForm(false)}>

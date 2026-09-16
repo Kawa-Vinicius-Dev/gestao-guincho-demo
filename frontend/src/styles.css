@@ -1543,3 +1543,15 @@ tbody tr{transition:background-color .14s ease}
 .resultado-a-receber small{margin-left:auto;font-size:var(--t-apoio)}
 @media(max-width:1180px){.resultado-partes{padding-left:0;border-left:0}}
 @media(prefers-reduced-motion:reduce){.resultado-trilho>span{transition:none}}
+
+/* ===========================================================================
+   Aviso de alimentação no formulário de despesa
+   ---------------------------------------------------------------------------
+   Um campo que fica cinza sem dizer por que parece defeito. O aviso aparece na
+   mesma hora em que o veiculo e desativado e explica a troca: alimentacao e
+   custo do socorrista, entao ela sai da viatura e entra no fechamento da
+   comissao. Fica no tom de informacao, e nao no de erro — nada deu errado.
+   =========================================================================== */
+.aviso-alimentacao{margin:0;padding:var(--espaco-2);border-left:3px solid var(--blue-600);
+  border-radius:0 var(--controle-raio) var(--controle-raio) 0;background:var(--info-fundo);
+  color:var(--info-texto);font-size:11px;line-height:1.55}
