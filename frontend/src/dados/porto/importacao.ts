@@ -253,7 +253,8 @@ async function classificar(
       return { ...linha, acao: 'IGNORAR', mensagem: 'Registro já importado anteriormente.' }
     }
 
-    if (tipo !== 'PREVISAO_RECEBER') {
+    // Cancelado nao teve atendimento, entao nao tem comissao para dar dono.
+    if (tipo !== 'PREVISAO_RECEBER' && linha.dados.cancelado !== 'true') {
       const dono = socorristaDaLinha(linha, porNumero.get(chave), cadastro)
       if (!dono.id) {
         orfas.push({
