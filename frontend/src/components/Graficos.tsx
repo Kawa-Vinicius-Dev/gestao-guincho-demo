@@ -1,5 +1,5 @@
-import type { CSSProperties } from 'react'
-import { moeda, numero, percentual } from '../utils/formatadores'
+import { useState, type CSSProperties } from 'react'
+import { moeda, moedaCurta, numero, percentual } from '../utils/formatadores'
 
 /**
  * Graficos do dashboard. Sao desenhados com grid e divs, nao com uma biblioteca:
@@ -218,5 +218,104 @@ export function ProporcaoKm({remunerado,morto,custoMorto}:
         <dd>{numero(morto)} km<small>{moeda(custoMorto)} de custo</small></dd>
       </div>
     </dl>
+  </div>
+}
+
+export type PontoProducao = {
+  inicio: string; produzido: number; recebido: number; programado: number; servicos: number
+}
+
+/**
+ * Producao contra recebimentos, no tempo.
+ *
+ * As tres series respondem a distancia entre trabalhar e receber: a producao
+ * acontece no atendimento, o programado e a promessa da Porto, e o recebido e o
+ * dinheiro na conta — quase sempre semanas depois. Um grafico que forcasse as
+ * tres na mesma data esconderia justamente esse intervalo.
+ *
+ * Barras para a producao e linhas para dinheiro: a producao e uma contagem de
+ * periodo fechado, que barra representa melhor; recebimento e programacao sao
+ * trajetorias, que linha representa melhor. O tooltip segue o ponteiro porque a
+ * pergunta ali e sempre "quanto foi neste periodo", e le-la exige os tres
+ * numeros juntos.
+ */
+export function ProducaoXRecebimentos({ pontos, rotulo }: {
+  pontos: PontoProducao[]
+  rotulo: (inicio: string) => string
+}) {
+  const [ativo, setAtivo] = useState<number | null>(null)
+  if (!pontos.length) return <Vazio texto="A evolução aparece quando houver serviços no período."/>
+
+  const largura = 720, altura = 272, topo = 20, base = 214, margem = 58
+  const teto = escala(pontos.flatMap(p => [p.produzido, p.recebido, p.programado]))
+  const passo = (largura - margem * 2) / Math.max(pontos.length, 1)
+  const x = (i: number) => margem + passo * i + passo / 2
+  const y = (v: number) => base - (v / teto) * (base - topo)
+  const linha = (campo: 'recebido' | 'programado') => pontos
+    .map((p, i) => `${i ? 'L' : 'M'} ${x(i).toFixed(1)} ${y(p[campo]).toFixed(1)}`).join(' ')
+  const area = `${linha('recebido')} L ${x(pontos.length - 1).toFixed(1)} ${base} L ${x(0).toFixed(1)} ${base} Z`
+
+  const temRecebido = pontos.some(p => p.recebido > 0)
+  const temProgramado = pontos.some(p => p.programado > 0)
+  const ponto = ativo === null ? null : pontos[ativo]
+
+  return <div className="producao-chart">
+    <div className="chart-legend">
+      <span><i className="legend-produzido"/>Produzido</span>
+      {temRecebido ? <span><i className="legend-recebido"/>Recebido</span> : null}
+      {temProgramado ? <span><i className="legend-programado"/>Programado</span> : null}
+    </div>
+    <div className="producao-plot" onMouseLeave={() => setAtivo(null)}>
+      <svg viewBox={`0 0 ${largura} ${altura}`} role="img"
+        aria-label={`Produção e recebimentos por período. ${pontos.map(p =>
+          `${rotulo(p.inicio)}: produzido ${moeda(p.produzido)}, recebido ${moeda(p.recebido)}`).join('. ')}`}>
+        {[0, .25, .5, .75, 1].map(f => <g key={f}>
+          <line className="producao-grade" x1={margem} x2={largura - margem}
+            y1={topo + (base - topo) * f} y2={topo + (base - topo) * f}/>
+          <text className="producao-escala" x={margem - 10} y={topo + (base - topo) * f + 4}
+            textAnchor="end">{moedaCurta(teto * (1 - f))}</text>
+        </g>)}
+
+        {pontos.map((p, i) => <rect key={`b${p.inicio}`} className="producao-barra"
+          x={x(i) - Math.min(passo * .32, 16)} width={Math.min(passo * .64, 32)}
+          y={y(p.produzido)} height={Math.max(base - y(p.produzido), p.produzido > 0 ? 2 : 0)}/>)}
+
+        <defs>
+          <linearGradient id="recebidoGradiente" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor="rgba(8,122,85,.16)"/>
+            <stop offset="100%" stopColor="rgba(8,122,85,0)"/>
+          </linearGradient>
+        </defs>
+        {temRecebido ? <path className="producao-area" d={area}/> : null}
+        {temProgramado ? <path className="producao-linha-programado" d={linha('programado')}/> : null}
+        {temRecebido ? <path className="producao-linha-recebido" d={linha('recebido')}/> : null}
+        {temRecebido ? pontos.map((p, i) => p.recebido > 0
+          ? <circle key={`r${p.inicio}`} className="producao-ponto" cx={x(i)} cy={y(p.recebido)} r="4"/>
+          : null) : null}
+
+        {/* Faixa invisivel por periodo: o alvo do ponteiro e a coluna inteira,
+            nao a barra — mirar numa barra de 2px de altura seria impossivel. */}
+        {pontos.map((p, i) => <rect key={`h${p.inicio}`} className="producao-alvo"
+          x={margem + passo * i} y={topo} width={passo} height={base - topo}
+          onMouseEnter={() => setAtivo(i)}/>)}
+
+        {ativo !== null
+          ? <line className="producao-guia" x1={x(ativo)} x2={x(ativo)} y1={topo} y2={base}/>
+          : null}
+
+        {pontos.map((p, i) => pontos.length <= 16 || i % Math.ceil(pontos.length / 12) === 0
+          ? <text key={`x${p.inicio}`} className="producao-eixo" x={x(i)} y={altura - 18}
+              textAnchor="middle">{rotulo(p.inicio)}</text>
+          : null)}
+      </svg>
+
+      {ponto ? <div className="producao-tooltip" style={{ left: `${(x(ativo!) / largura) * 100}%` }}>
+        <strong>{rotulo(ponto.inicio)}</strong>
+        <span><i className="legend-produzido"/>Produzido<b>{moeda(ponto.produzido)}</b></span>
+        <span><i className="legend-recebido"/>Recebido<b>{moeda(ponto.recebido)}</b></span>
+        <span><i className="legend-programado"/>Programado<b>{moeda(ponto.programado)}</b></span>
+        <small>{ponto.servicos} {ponto.servicos === 1 ? 'serviço' : 'serviços'}</small>
+      </div> : null}
+    </div>
   </div>
 }

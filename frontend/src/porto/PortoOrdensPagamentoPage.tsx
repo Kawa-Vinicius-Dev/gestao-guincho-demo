@@ -1,13 +1,12 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { atualizarOrdemPagamentoPorto, baixarRelatorioOpPorto, baixarRelatorioPorto, confirmarImportacaoPorto, criarPreviaComposicaoPorto, criarOrdemPagamentoPorto, detalharOrdemPagamentoPorto, justificarOrdemPagamentoPorto, listarCalendarioPorto, listarOrdensPagamentoPorto, receberOrdemPagamentoPorto, resumirOrdensPagamentoPorto } from '../dados/porto'
+import { atualizarOrdemPagamentoPorto, baixarRelatorioOpPorto, baixarRelatorioPorto, confirmarImportacaoPorto, criarPreviaComposicaoPorto, criarOrdemPagamentoPorto, detalharOrdemPagamentoPorto, justificarOrdemPagamentoPorto, listarOrdensPagamentoPorto, resumirOrdensPagamentoPorto } from '../dados/porto'
 import { Campo, Selecao } from '../components/Campos'
-import type { CalendarioPorto, DetalheOpPorto, OrdemPagamentoPorto, PreviaPorto, ResumoOpsPorto } from '../types/modelos'
+import type { DetalheOpPorto, OrdemPagamentoPorto, PreviaPorto, ResumoOpsPorto } from '../types/modelos'
 import { moeda } from '../utils/formatadores'
 import { FormularioOp } from './ops/FormularioOp'
 import { ModalDetalheOp } from './ops/ModalDetalheOp'
-import { ModalRecebimento } from './ops/ModalRecebimento'
 import { TabelaOps } from './ops/TabelaOps'
-import { CONCILIACAO, RECEBIMENTO, data } from './ops/opcoes'
+import { CONCILIACAO, RECEBIMENTO } from './ops/opcoes'
 
 const semResumo: ResumoOpsPorto = {
   quantidadeTotalOps: 0, valorTotalPrevisto: 0, quantidadeSemComposicao: 0, valorSemComposicao: 0,
@@ -25,14 +24,11 @@ const FILTROS = ['numero', 'calendarioPagamentoId', 'dataInicio', 'dataFim', 'si
 export default function PortoOrdensPagamentoPage() {
   const [itens, setItens] = useState<OrdemPagamentoPorto[]>([])
   const [resumo, setResumo] = useState<ResumoOpsPorto>(semResumo)
-  const [periodos, setPeriodos] = useState<CalendarioPorto[]>([])
-  const [recebimento, setRecebimento] = useState<OrdemPagamentoPorto | null>(null)
   const [detalhe, setDetalhe] = useState<DetalheOpPorto | null>(null)
   const [editando, setEditando] = useState<OrdemPagamentoPorto | null>(null)
   const [novaAberta, setNovaAberta] = useState(false)
   const [previaComposicao, setPreviaComposicao] = useState<PreviaPorto | null>(null)
   const [arquivoComposicao, setArquivoComposicao] = useState<File | null>(null)
-  const [periodoComposicao, setPeriodoComposicao] = useState(0)
   const [erro, setErro] = useState('')
   const [carregando, setCarregando] = useState(false)
   const [parametros, setParametros] = useState(new URLSearchParams())
@@ -48,14 +44,7 @@ export default function PortoOrdensPagamentoPage() {
     } catch (e) { setErro((e as Error).message) } finally { setCarregando(false) }
   }
 
-  useEffect(() => {
-    void carregar(new URLSearchParams())
-    listarCalendarioPorto().then(setPeriodos).catch(e => setErro(e.message))
-  }, [])
-
-  useEffect(() => {
-    if (recebimento) setPeriodoComposicao(recebimento.calendarioPagamentoId ?? 0)
-  }, [recebimento])
+  useEffect(() => { void carregar(new URLSearchParams()) }, [])
 
   async function aplicar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault()
@@ -67,24 +56,12 @@ export default function PortoOrdensPagamentoPage() {
     await carregar(params)
   }
 
-  async function receber(evento: FormEvent<HTMLFormElement>) {
-    evento.preventDefault()
-    if (!recebimento) return
-    const campos = new FormData(evento.currentTarget)
-    try {
-      await receberOrdemPagamentoPorto(recebimento.id, Number(campos.get('valor')),
-        String(campos.get('data')), periodoComposicao || undefined)
-      setRecebimento(null)
-      await carregar(parametros)
-    } catch (e) { setErro((e as Error).message) }
-  }
 
   async function abrirDetalhe(id: number) {
     setErro('')
     try {
       const resposta = await detalharOrdemPagamentoPorto(id)
       setDetalhe(resposta)
-      setPeriodoComposicao(resposta.ordemPagamento.calendarioPagamentoId ?? 0)
     } catch (e) { setErro((e as Error).message) }
   }
 
@@ -141,13 +118,12 @@ export default function PortoOrdensPagamentoPage() {
 
   async function confirmarComposicao(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault()
-    if (!detalhe || !previaComposicao || !periodoComposicao) return
+    if (!detalhe || !previaComposicao) return
     const campos = new FormData(evento.currentTarget)
     const temDivergencia = previaComposicao.linhas.some(linha => linha.acao === 'DIVERGENCIA')
     try {
       await confirmarImportacaoPorto(previaComposicao, {
         numeroOrdemPagamento: detalhe.ordemPagamento.numero,
-        calendarioPagamentoId: periodoComposicao,
         confirmarDivergencias: temDivergencia,
         motivoDivergencia: String(campos.get('motivo') || '') || undefined,
         justificativaDivergencia: String(campos.get('justificativa') || '') || undefined,
@@ -199,31 +175,20 @@ export default function PortoOrdensPagamentoPage() {
 
     <section className="panel">
       <form className="ledger-filters porto-op-filters" onSubmit={aplicar}>
-        <Campo rotulo="Número da OP" className="filter-grow"><input name="numero" inputMode="numeric"/></Campo>
-        <Selecao rotulo="Quinzena" name="calendarioPagamentoId" vazio="Todas"
-          opcoes={periodos.map(p => ({
-            valor: p.id,
-            texto: p.competenciaInicio && p.competenciaFim
-              ? `${data(p.competenciaInicio)} a ${data(p.competenciaFim)}` : p.descricao,
-          }))}/>
+        <Campo rotulo="Número da OP" className="filter-grow"><input name="numero"/></Campo>
         <Campo rotulo="Data inicial"><input name="dataInicio" type="date"/></Campo>
         <Campo rotulo="Data final"><input name="dataFim" type="date"/></Campo>
         <Selecao rotulo="Recebimento" name="recebida" vazio="Todos" opcoes={RECEBIMENTO}/>
         <Selecao rotulo="Conciliação" name="statusConciliacao" vazio="Todas" opcoes={CONCILIACAO}/>
         <button className="button button-primary" disabled={carregando}>Aplicar filtros</button>
       </form>
-      <TabelaOps itens={itens} aoAbrirDetalhe={id => void abrirDetalhe(id)} aoReceber={setRecebimento}/>
+      <TabelaOps itens={itens} aoAbrirDetalhe={id => void abrirDetalhe(id)}/>
     </section>
 
     {novaAberta ? <FormularioOp aoEnviar={salvarOp} aoFechar={() => setNovaAberta(false)}/> : null}
     {editando ? <FormularioOp edicao={editando} aoEnviar={salvarOp} aoFechar={() => setEditando(null)}/> : null}
-    {recebimento
-      ? <ModalRecebimento ordem={recebimento} periodos={periodos} periodo={periodoComposicao}
-          aoTrocarPeriodo={setPeriodoComposicao} aoEnviar={receber} aoFechar={() => setRecebimento(null)}/>
-      : null}
     {detalhe
-      ? <ModalDetalheOp detalhe={detalhe} periodos={periodos} periodo={periodoComposicao}
-          aoTrocarPeriodo={setPeriodoComposicao} previa={previaComposicao}
+      ? <ModalDetalheOp detalhe={detalhe} previa={previaComposicao}
           arquivoEscolhido={arquivoComposicao !== null} nomeArquivo={arquivoComposicao?.name}
           aoEscolherArquivo={setArquivoComposicao}
           aoAnalisar={() => void analisarComposicao()} aoConfirmarComposicao={confirmarComposicao}

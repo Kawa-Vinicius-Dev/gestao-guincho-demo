@@ -1,88 +1,64 @@
-import { api } from '../api/http'
 import type {
-  AlimentacaoComissao, CalendarioPorto, Comissao, DetalheSocorrista,
+  AlimentacaoComissao, Comissao, DetalheSocorrista,
   PagamentoComissao, ResumoComissao,
 } from '../types/modelos'
 import { invalidarCacheFinanceiro } from './cacheFinanceiro'
 import { ou, supabase } from './cliente'
-import { moduloNoSupabase } from './modo'
+import { listarPeriodosDeOp } from './porto'
+
 
 /**
- * Comissao do ciclo.
+ * Comissao da OP.
  *
- * RPC, e nao consulta direta, por dois motivos. O calculo cruza OSs recebidas,
- * a OP que as pagou e as alimentacoes aprovadas do periodo — junta que nao cabe
- * num `.select()` sem virar varias idas. E o socorrista precisa ver o numero da
- * OP que pagou cada servico dele, e OP e tabela de administrador: a funcao le
- * por ele e devolve so as linhas dele, em vez de abrir o caixa da Porto inteiro.
+ * A comissao fechava por ciclo do calendario: para saber quanto o socorrista
+ * tinha a receber era preciso que alguem tivesse cadastrado o ciclo certo, com
+ * a competencia certa, antes. Agora a pergunta e direta — chegou a OP, quem
+ * trabalhou nela recebe a parte dele —, e a janela da alimentacao que abate e o
+ * proprio periodo da OP.
+ *
+ * Tudo por RPC, e nao consulta direta, por dois motivos. O calculo cruza as OS
+ * da OP com as alimentacoes aprovadas do periodo, junta que nao cabe num
+ * `.select()` sem virar varias idas. E o socorrista precisa ver o numero da OP
+ * que pagou cada servico dele, e OP e tabela de administrador: a funcao le por
+ * ele e devolve so as linhas dele, em vez de abrir o caixa da Porto inteiro.
  */
 
-export async function lerComissaoDoCiclo(
-  calendarioPagamentoId: number, motoristaId?: number,
+/**
+ * O periodo das telas de comissao e a propria OP — a mesma listagem que o painel
+ * Porto usa, reexportada aqui para as telas de comissao nao precisarem saber de
+ * onde ela vem.
+ */
+export { listarPeriodosDeOp as listarOpsComissao }
+
+export async function lerComissaoDaOp(
+  ordemPagamentoId: number, motoristaId?: number,
 ): Promise<Comissao> {
-  if (!moduloNoSupabase('comissoes')) {
-    return motoristaId
-      ? api<Comissao>(`/api/comissoes/${motoristaId}?calendarioPagamentoId=${calendarioPagamentoId}`)
-      : api<Comissao>(`/api/minha-comissao?calendarioPagamentoId=${calendarioPagamentoId}`)
-  }
   return ou(
-    await supabase().rpc('comissao_do_ciclo', {
-      p_calendario_id: calendarioPagamentoId,
+    await supabase().rpc('comissao_da_op', {
+      p_op_id: ordemPagamentoId,
       p_motorista_id: motoristaId ?? null,
     }),
     'Não foi possível carregar a comissão.',
   ) as Comissao
 }
 
-/** Os ciclos de pagamento. Leitura aberta a todo operador: e o seletor de periodo. */
-export async function listarPeriodosComissoes(): Promise<CalendarioPorto[]> {
-  if (!moduloNoSupabase('comissoes')) return api<CalendarioPorto[]>('/api/comissoes/periodos')
-
-  const linhas = ou(
-    await supabase().from('calendario_pagamentos_porto')
-      .select('id,data_pagamento,competencia_inicio,competencia_fim,descricao,ativo,estimado,criado_em,atualizado_em')
-      .eq('ativo', true).order('data_pagamento', { ascending: false }),
-    'Não foi possível carregar os ciclos.',
-  ) as Record<string, unknown>[]
-  return linhas.map(l => ({
-    id: l.id as number,
-    dataPagamento: l.data_pagamento as string,
-    competenciaInicio: l.competencia_inicio as string,
-    competenciaFim: l.competencia_fim as string,
-    descricao: l.descricao as string,
-    ativo: l.ativo as boolean,
-    estimado: l.estimado as boolean,
-    criadoEm: l.criado_em as string,
-    atualizadoEm: l.atualizado_em as string,
-  }))
-}
-
 export async function resumirComissoes(
-  calendarioPagamentoId: number, motoristaId?: number,
+  ordemPagamentoId: number, motoristaId?: number,
 ): Promise<ResumoComissao[]> {
-  if (!moduloNoSupabase('comissoes')) {
-    return api<ResumoComissao[]>(
-      `/api/comissoes/resumo?calendarioPagamentoId=${calendarioPagamentoId}` +
-      (motoristaId ? `&motoristaId=${motoristaId}` : ''))
-  }
   return ou(
-    await supabase().rpc('resumo_comissoes', {
-      p_calendario_id: calendarioPagamentoId, p_motorista_id: motoristaId ?? null,
+    await supabase().rpc('resumo_comissoes_op', {
+      p_op_id: ordemPagamentoId, p_motorista_id: motoristaId ?? null,
     }),
     'Não foi possível carregar o resumo de comissões.',
   ) as ResumoComissao[]
 }
 
 export async function obterDetalheSocorrista(
-  motoristaId: number, calendarioPagamentoId: number,
+  motoristaId: number, ordemPagamentoId: number,
 ): Promise<DetalheSocorrista> {
-  if (!moduloNoSupabase('comissoes')) {
-    return api<DetalheSocorrista>(
-      `/api/equipe/${motoristaId}/detalhes?calendarioPagamentoId=${calendarioPagamentoId}`)
-  }
   return ou(
-    await supabase().rpc('detalhe_socorrista', {
-      p_motorista_id: motoristaId, p_calendario_id: calendarioPagamentoId,
+    await supabase().rpc('detalhe_socorrista_op', {
+      p_motorista_id: motoristaId, p_op_id: ordemPagamentoId,
     }),
     'Não foi possível carregar o socorrista.',
   ) as DetalheSocorrista
@@ -91,11 +67,6 @@ export async function obterDetalheSocorrista(
 export async function registrarAlimentacao(
   data: string, valor: number, observacoes?: string,
 ): Promise<AlimentacaoComissao> {
-  if (!moduloNoSupabase('comissoes')) {
-    return api<AlimentacaoComissao>('/api/minha-comissao/alimentacoes', {
-      method: 'POST', body: JSON.stringify({ data, valor, observacoes: observacoes || null }),
-    })
-  }
   const d = ou(
     await supabase().rpc('registrar_alimentacao', {
       p_data: data, p_valor: valor, p_observacoes: observacoes || null,
@@ -114,20 +85,12 @@ export async function registrarAlimentacao(
 }
 
 export async function registrarPagamentoComissao(
-  motoristaId: number, calendarioPagamentoId: number, dataPagamento: string,
+  motoristaId: number, ordemPagamentoId: number, dataPagamento: string,
   formaPagamento?: string, observacoes?: string,
 ): Promise<PagamentoComissao> {
-  if (!moduloNoSupabase('comissoes')) {
-    const pagamento = await api<PagamentoComissao>(
-      `/api/comissoes/${motoristaId}/pagamentos?calendarioPagamentoId=${calendarioPagamentoId}`,
-      { method: 'POST', body: JSON.stringify({
-          dataPagamento, formaPagamento: formaPagamento || null, observacoes: observacoes || null }) })
-    invalidarCacheFinanceiro()
-    return pagamento
-  }
   const p = ou(
-    await supabase().rpc('pagar_comissao', {
-      p_motorista_id: motoristaId, p_calendario_id: calendarioPagamentoId,
+    await supabase().rpc('pagar_comissao_op', {
+      p_motorista_id: motoristaId, p_op_id: ordemPagamentoId,
       p_data_pagamento: dataPagamento, p_forma_pagamento: formaPagamento || null,
       p_observacoes: observacoes || null,
     }),
@@ -136,7 +99,7 @@ export async function registrarPagamentoComissao(
   const pagamento = {
     id: p.id as number,
     motoristaId: p.motorista_id as number,
-    calendarioPagamentoId: p.calendario_pagamento_id as number,
+    ordemPagamentoId: p.ordem_pagamento_id as number,
     despesaId: p.despesa_id as number,
     valorPago: Number(p.valor_pago),
     dataPagamento: p.data_pagamento as string,
@@ -145,6 +108,7 @@ export async function registrarPagamentoComissao(
     pagoPor: '',
     criadoEm: p.criado_em as string,
   }
+  // O repasse nasce como despesa paga: o resultado do periodo mudou.
   invalidarCacheFinanceiro()
   return pagamento
 }

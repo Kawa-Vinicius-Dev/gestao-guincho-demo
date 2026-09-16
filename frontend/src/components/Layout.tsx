@@ -18,10 +18,7 @@ const itens = [
   ['/porto/dashboard', 'Dashboard Porto', true, 'porto'],
   ['/porto/importacoes', 'Importar relatórios', true, 'porto'],
   ['/porto/ordens-pagamento', 'Ordens de pagamento', true, 'porto'],
-  ['/porto/ordens-servico', 'Ordens de serviço', true, 'porto'],
-  ['/porto/pendencias', 'Pendências e devolvidos', true, 'porto'],
-  ['/porto/calendario', 'Calendário de pagamentos', true, 'porto'],
-  ['/porto/relatorios', 'Relatórios Porto', true, 'porto'],
+  ['/porto/pendencias', 'Pendências do período', true, 'porto'],
   ['/configuracoes', 'Configurações', true, 'sistema'],
 ] as const
 /** Mesmo teto do backend (FavoritoMenuController.MAXIMO): o topo do menu tem de continuar curto. */
@@ -51,7 +48,7 @@ const icones: Record<string,string> = {
   '/porto/ordens-pagamento':'M3 6h18v12H3zM3 10h18M7 14h4',
   '/porto/ordens-servico':'M6 3h8l4 4v14H6zM14 3v4h4M9 13h6M9 16h4',
   '/porto/pendencias':'M12 4 21 20H3zM12 10v4M12 17.5h.01',
-  '/porto/calendario':'M4 6h16v14H4zM4 10h16M9 3v4M15 3v4',
+  '/porto/devolvidos':'M9 14 4 9l5-5M4 9h11a5 5 0 0 1 0 10H9',
   '/porto/relatorios':'M6 3h8l4 4v14H6zM14 3v4h4M9 17v-3M12 17v-6M15 17v-2',
   '/configuracoes':'M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1',
 }

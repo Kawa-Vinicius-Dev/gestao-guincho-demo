@@ -1,12 +1,13 @@
 import type {
   AnaliseOrdemPagamentoPorto, ConfirmacaoPorto, LinhaPreviaPorto,
-  PreviaPorto, ReassociacaoOsPorto, ResumoPreviaPorto,
+  OsSemSocorristaPorto, PreviaPorto, ReassociacaoOsPorto, ResumoPreviaPorto,
 } from '../../types/modelos'
 import { ApiError } from '../../api/http'
 import { ou, supabase } from '../cliente'
 import { invalidarCacheFinanceiro } from '../dashboard'
 import type { Previa, TipoRelatorio } from './csv'
 import { lerCsvPorto, lerServicosGeraisPorto } from './csv'
+import { lerPainelDiarioPorto } from './painelDiario'
 import type { Linha } from './linha'
 
 /**
@@ -24,7 +25,23 @@ import type { Linha } from './linha'
 /** Relatorio que traz dinheiro precisa de OP e de ciclo antes de confirmar. */
 const PAGA: TipoRelatorio[] = ['OS_VINCULADAS', 'SERVICOS_GERAIS']
 
-const normalizarNumero = (valor: string) => valor.replace(/[^0-9]/g, '')
+/**
+ * Chave de comparacao da OS: o miolo do numero mais o ano.
+ *
+ * A Porto escreve a mesma OS de dois jeitos — `5673329/26` no painel diario e
+ * `01/3195073-26` no relatorio da OP, onde o prefixo de um ou dois digitos so
+ * aparece neste ultimo. Comparar os digitos crus fazia `0131950732` e
+ * `319507326` parecerem servicos diferentes, e o mesmo atendimento entrava duas
+ * vezes. Precisa continuar igual a `numero_os_normalizado` do banco: e a mesma
+ * chave dos dois lados.
+ */
+const NUMERO_OS = /^(?:\d{1,2}[/-])?(\d{4,})[-/](\d{2})$/
+
+const normalizarNumero = (valor: string) => {
+  const limpo = valor.trim()
+  const m = limpo.match(NUMERO_OS)
+  return m ? `${m[1]}${m[2]}` : limpo.replace(/[^0-9]/g, '')
+}
 
 function numeroDaLinha(linha: Linha) {
   return linha.dados.numero_os?.trim() || linha.dados.numero_op?.trim() || ''
@@ -60,6 +77,8 @@ interface OsExistente {
   numero_normalizado: string
   ordem_pagamento_id: number | null
   valor_total: number
+  motorista_id: number | null
+  sigla_viatura: string | null
   // O PostgREST devolve o vinculo para-um como objeto, mas sem tipos gerados
   // ele chega tipado como lista; os dois formatos sao aceitos aqui.
   ordens_pagamento_porto: { numero: string } | { numero: string }[] | null
@@ -92,7 +111,7 @@ async function registrosExistentes(tipo: TipoRelatorio, numeros: string[]) {
 
   const oss = ou(
     await supabase().from('ordens_servico_porto')
-      .select('numero_normalizado,ordem_pagamento_id,valor_total,ordens_pagamento_porto(numero)')
+      .select('numero_normalizado,ordem_pagamento_id,valor_total,motorista_id,sigla_viatura,ordens_pagamento_porto(numero)')
       .in('numero_normalizado', numeros.map(normalizarNumero)),
     'Não foi possível verificar as ordens de serviço existentes.',
   ) as OsExistente[]
@@ -101,6 +120,88 @@ async function registrosExistentes(tipo: TipoRelatorio, numeros: string[]) {
     porNumero.set(os.numero_normalizado, os)
   }
   return { conhecidos, porNumero }
+}
+
+/**
+ * Quem pode ser o socorrista de uma OS, na mesma ordem que o banco usa ao
+ * aplicar: o QRA identifica a pessoa, e a escala do dia e o palpite seguinte.
+ *
+ * A previa precisa dessa conta antes de gravar, e nao depois: OS sem socorrista
+ * e comissao que ninguem recebe, com o servico ja contado no faturamento. Ver
+ * isso na tela, com o arquivo na frente, e diferente de descobrir depois numa
+ * lista de pendencias.
+ *
+ * A escala vem do painel do dia, que registra viatura e socorrista juntos,
+ * servico a servico. Nao e a "viatura habitual" do cadastro: as viaturas trocam
+ * de socorrista, entao o costume acerta numa semana e erra na outra — e o que
+ * ele decide e de quem e a comissao. A chave e dia + viatura, e so vale quando
+ * uma pessoa so rodou aquela viatura naquele dia.
+ */
+interface Cadastro {
+  porQra: Map<string, { id: number; nome: string }>
+  porEscala: Map<string, { id: number; nome: string }>
+}
+
+const escala = (dataAtendimento?: string | null, sigla?: string | null) =>
+  `${(dataAtendimento ?? '').slice(0, 10)}|${(sigla ?? '').trim().toUpperCase()}`
+
+const chave = (valor?: string | null) => (valor ?? '').trim().toUpperCase()
+
+async function cadastroDeSocorristas(datas: string[]): Promise<Cadastro> {
+  const dias = [...new Set(datas.filter(Boolean).map(d => d.slice(0, 10)))]
+  const [motoristas, doDia] = await Promise.all([
+    supabase().from('motoristas').select('id,nome,qra').eq('ativo', true),
+    dias.length
+      ? supabase().from('ordens_servico_porto')
+          .select('data_atendimento,sigla_viatura,motorista_id,motoristas(nome)')
+          .in('data_atendimento', dias).not('motorista_id', 'is', null)
+      : Promise.resolve({ data: [], error: null }),
+  ])
+  const pessoas = ou(motoristas, 'Não foi possível carregar os socorristas.') as
+    { id: number; nome: string; qra: string | null }[]
+  const servicos = ou(doDia, 'Não foi possível carregar a escala do período.') as {
+    data_atendimento: string | null
+    sigla_viatura: string | null
+    motorista_id: number
+    motoristas: { nome: string } | { nome: string }[] | null
+  }[]
+
+  const porQra = new Map<string, { id: number; nome: string }>()
+  for (const pessoa of pessoas) {
+    if (chave(pessoa.qra)) porQra.set(chave(pessoa.qra), { id: pessoa.id, nome: pessoa.nome })
+  }
+
+  const porEscala = new Map<string, { id: number; nome: string }>()
+  for (const servico of servicos) {
+    if (!chave(servico.sigla_viatura)) continue
+    const vinculo = servico.motoristas
+    const nome = (Array.isArray(vinculo) ? vinculo[0] : vinculo)?.nome ?? ''
+    const posicao = escala(servico.data_atendimento, servico.sigla_viatura)
+    const jaVisto = porEscala.get(posicao)
+    // Duas pessoas na mesma viatura no mesmo dia tornam o palpite ambiguo; ai
+    // ninguem e sugerido, e a escolha fica com quem importa.
+    porEscala.set(posicao,
+      jaVisto && jaVisto.id !== servico.motorista_id
+        ? { id: 0, nome: '' }
+        : jaVisto ?? { id: servico.motorista_id, nome })
+  }
+
+  return { porQra, porEscala }
+}
+
+function socorristaDaLinha(
+  linha: Linha, existente: OsExistente | undefined, cadastro: Cadastro,
+): { id?: number; nome?: string } {
+  if (existente?.motorista_id) return { id: existente.motorista_id }
+
+  const porQra = cadastro.porQra.get(chave(linha.dados.qra))
+  if (porQra) return porQra
+
+  const sigla = chave(linha.dados.sigla_viatura) || chave(existente?.sigla_viatura)
+  const doDia = sigla
+    ? cadastro.porEscala.get(escala(linha.dados.data_atendimento, sigla))
+    : undefined
+  return doDia?.id ? doDia : {}
 }
 
 async function ordemDePagamento(numeroOp?: string) {
@@ -114,16 +215,24 @@ async function ordemDePagamento(numeroOp?: string) {
 
 async function classificar(
   tipo: TipoRelatorio, linhas: Linha[], numeroOp?: string,
-): Promise<{ linhas: LinhaPreviaPorto[]; analise?: AnaliseOrdemPagamentoPorto }> {
+): Promise<{
+  linhas: LinhaPreviaPorto[]
+  analise?: AnaliseOrdemPagamentoPorto
+  orfas: OsSemSocorristaPorto[]
+}> {
   const validas = linhas.filter(l => l.acao !== 'ERRO')
   const hashes = validas.map(l => l.hashRegistro)
   const numeros = validas.map(numeroDaLinha).filter(Boolean)
 
-  const [absorvidos, { conhecidos, porNumero }, op] = await Promise.all([
+  const [absorvidos, { conhecidos, porNumero }, op, cadastro] = await Promise.all([
     hashesJaImportados(tipo, hashes),
     registrosExistentes(tipo, numeros),
     ordemDePagamento(numeroOp),
+    tipo === 'PREVISAO_RECEBER'
+      ? Promise.resolve({ porQra: new Map(), porEscala: new Map() } as Cadastro)
+      : cadastroDeSocorristas(validas.map(l => l.dados.data_atendimento ?? '')),
   ])
+  const orfas: OsSemSocorristaPorto[] = []
 
   const reassociacoes: ReassociacaoOsPorto[] = []
   const vistos = new Set<string>()
@@ -143,6 +252,24 @@ async function classificar(
     if (absorvidos.has(linha.hashRegistro)) {
       return { ...linha, acao: 'IGNORAR', mensagem: 'Registro já importado anteriormente.' }
     }
+
+    if (tipo !== 'PREVISAO_RECEBER') {
+      const dono = socorristaDaLinha(linha, porNumero.get(chave), cadastro)
+      if (!dono.id) {
+        orfas.push({
+          hashRegistro: linha.hashRegistro,
+          numeroOs: numero,
+          socorrista: linha.dados.socorrista || undefined,
+          qra: linha.dados.qra || undefined,
+          data: linha.dados.data_atendimento || undefined,
+        })
+      } else if (dono.nome) {
+        // Sugestao por QRA ou viatura: vale gravar junto, para o banco nao
+        // precisar adivinhar de novo com a mesma informacao.
+        linha.dados.motorista_id = String(dono.id)
+      }
+    }
+
     if (!conhecidos.has(chave)) return { ...linha, acao: 'IMPORTAR' }
 
     // A OS ja existe. Se pertence a outra OP, mudar de OP e uma decisao do
@@ -175,7 +302,7 @@ async function classificar(
       }
     : undefined
 
-  return { linhas: classificadas, analise }
+  return { linhas: classificadas, analise, orfas }
 }
 
 function resumir(tipo: TipoRelatorio, linhas: LinhaPreviaPorto[]): ResumoPreviaPorto {
@@ -208,9 +335,10 @@ async function montarPrevia(
     'Não foi possível registrar a importação.',
   ) as { id: number; status: string }
 
-  const { linhas } = await classificar(lida.tipo, lida.linhas)
+  const { linhas, orfas } = await classificar(lida.tipo, lida.linhas)
   return {
     id: registro.id,
+    orfas,
     nomeArquivo,
     tipo: lida.tipo,
     status: registro.status,
@@ -228,15 +356,22 @@ export async function criarPreviaPorto(arquivo: File): Promise<PreviaPorto> {
 }
 
 /**
- * Colagem do painel da Porto. A lista de servicos vem com os cabecalhos da OS
- * vinculada mas sem OP, entao tenta os dois leitores antes de desistir.
+ * Colagem da Porto, seja ela qual for.
+ *
+ * Duas coisas diferentes chegam por aqui: a lista de servicos, que tem os
+ * cabecalhos da OS vinculada mas nao traz OP, e o painel do dia, que nao e CSV
+ * e nao tem cabecalho nenhum. Quem cola nao deveria precisar saber qual e —
+ * entao tentamos os leitores em ordem, do mais estruturado ao mais solto, e o
+ * primeiro que reconhecer o conteudo manda.
  */
 export async function criarPreviaConteudoPorto(conteudo: string): Promise<PreviaPorto> {
   let lida: Previa
   try {
     lida = await lerCsvPorto(conteudo)
   } catch (erro) {
-    lida = await lerServicosGeraisPorto(conteudo).catch(() => { throw erro })
+    lida = await lerServicosGeraisPorto(conteudo)
+      .catch(() => lerPainelDiarioPorto(conteudo))
+      .catch(() => { throw erro })
   }
   return montarPrevia('Conteúdo colado', conteudo, lida)
 }
@@ -245,10 +380,10 @@ export async function criarPreviaConteudoPorto(conteudo: string): Promise<Previa
 export async function avaliarImportacaoPorto(
   previa: PreviaPorto, numeroOrdemPagamento: string,
 ): Promise<PreviaPorto> {
-  const { linhas, analise } = await classificar(
+  const { linhas, analise, orfas } = await classificar(
     previa.tipo as TipoRelatorio, previa.linhas as Linha[], numeroOrdemPagamento)
   return {
-    ...previa, linhas, analiseOrdemPagamento: analise,
+    ...previa, linhas, analiseOrdemPagamento: analise, orfas,
     totalLinhas: linhas.length, resumo: resumir(previa.tipo as TipoRelatorio, linhas),
   }
 }
@@ -267,6 +402,17 @@ export interface ConfirmacaoImportacao {
 export async function confirmarImportacaoPorto(
   previa: PreviaPorto, dados: ConfirmacaoImportacao = {},
 ): Promise<ConfirmacaoPorto> {
+  // OS sem socorrista e comissao que ninguem recebe, com o servico ja contado no
+  // faturamento. A previa mostra quais sao e deixa escolher; sem isso resolvido,
+  // a importacao nao acontece.
+  const orfas = (previa.orfas ?? []).filter(o =>
+    !previa.linhas.some(l => l.hashRegistro === o.hashRegistro && l.dados.motorista_id))
+  if (orfas.length) {
+    throw new ApiError(
+      `${orfas.length} ordem(ns) de serviço estão sem socorrista. Informe quem atendeu antes de importar.`,
+      422)
+  }
+
   const reassociacoes = previa.analiseOrdemPagamento?.quantidadeReassociacoes ?? 0
   if (reassociacoes && !dados.confirmarReassociacoes) {
     throw new ApiError(

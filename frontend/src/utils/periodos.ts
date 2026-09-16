@@ -1,14 +1,26 @@
-import type { CalendarioPorto } from '../types/modelos'
-import { hojeIso } from './formatadores'
+import type { OrdemPagamentoPorto } from '../types/modelos'
+import { data } from './formatadores'
 
 /**
- * O calendário da Porto é cadastrado com meses de antecedência, então o último ciclo da lista
- * está no futuro e ainda não tem OS paga. A tela precisa abrir no último ciclo que já foi pago,
- * que é onde a conferência acontece.
+ * O periodo, nas telas de comissao, e a ordem de pagamento.
+ *
+ * Antes era o ciclo do calendario, cadastrado a mao com meses de antecedencia —
+ * e a tela precisava adivinhar qual ciclo ja tinha sido pago para abrir no lugar
+ * certo. A OP nao tem esse problema: ela so existe depois de paga. A mais
+ * recente e a que interessa, e e nela que a conferencia acontece.
  */
-export function periodoCorrente(periodos: CalendarioPorto[]): CalendarioPorto | undefined {
-  const hoje = hojeIso(), doFimParaOInicio = [...periodos].reverse()
-  return doFimParaOInicio.find(p => p.ativo && p.dataPagamento <= hoje)
-    ?? doFimParaOInicio.find(p => p.ativo)
-    ?? periodos.at(-1)
+export function opCorrente(
+  ops: OrdemPagamentoPorto[],
+): OrdemPagamentoPorto | undefined {
+  return [...ops].sort((a, b) =>
+    (b.periodoFim ?? b.dataPagamentoProgramada ?? '')
+      .localeCompare(a.periodoFim ?? a.dataPagamentoProgramada ?? ''))[0]
+}
+
+/** "OP 06389821 · 30/03/2026 a 29/04/2026" — o numero e a janela que ele cobre. */
+export function rotuloOp(op: OrdemPagamentoPorto): string {
+  const janela = op.periodoInicio && op.periodoFim
+    ? ` · ${data(op.periodoInicio)} a ${data(op.periodoFim)}`
+    : ''
+  return `OP ${op.numero}${janela}`
 }

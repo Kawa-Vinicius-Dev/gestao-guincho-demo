@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { avaliarImportacaoPorto, cancelarImportacaoPorto, confirmarImportacaoPorto, criarPreviaConteudoPorto, criarPreviaPorto, listarCalendarioPorto } from '../dados/porto'
-import type { CalendarioPorto, PreviaPorto } from '../types/modelos'
+import { avaliarImportacaoPorto, cancelarImportacaoPorto, confirmarImportacaoPorto, criarPreviaConteudoPorto, criarPreviaPorto } from '../dados/porto'
+import { listarMotoristas } from '../dados/motoristas'
+import type { Motorista, PreviaPorto } from '../types/modelos'
 import { moeda } from '../utils/formatadores'
 import { Campo, Selecao } from '../components/Campos'
 import { MOTIVOS_COMPOSICAO } from './ops/opcoes'
@@ -25,7 +26,7 @@ function NumerosDeOs({numeros}:{numeros:string[]}){
 export default function PortoImportacoesPage(){
   const [arquivo,setArquivo]=useState<File|null>(null),[previa,setPrevia]=useState<PreviaPorto|null>(null)
   const [modo,setModo]=useState<'arquivo'|'colagem'>('arquivo'),[conteudo,setConteudo]=useState('')
-  const [periodos,setPeriodos]=useState<CalendarioPorto[]>([]),[numeroOp,setNumeroOp]=useState(''),[periodoId,setPeriodoId]=useState('')
+  const [motoristas,setMotoristas]=useState<Motorista[]>([]),[numeroOp,setNumeroOp]=useState('')
   const [semSocorrista,setSemSocorrista]=useState<string[]>([])
   const [mensagem,setMensagem]=useState(''),[erro,setErro]=useState(''),[carregando,setCarregando]=useState(false),[etapa,setEtapa]=useState(''),[validando,setValidando]=useState(false),[inputKey,setInputKey]=useState(0)
   const [chaveValidada,setChaveValidada]=useState('')
@@ -34,17 +35,35 @@ export default function PortoImportacoesPage(){
   const [falhaAoConfirmar,setFalhaAoConfirmar]=useState(false)
   const confirmacaoEmCurso=useRef(false)
 
-  useEffect(()=>{listarCalendarioPorto().then(setPeriodos).catch(e=>setErro(e.message))},[])
+  useEffect(()=>{listarMotoristas().then(setMotoristas).catch((e:Error)=>setErro(e.message))},[])
+
+  /**
+   * Quem atendeu cada OS orfa.
+   *
+   * OS sem socorrista e comissao que ninguem recebe, com o servico ja contado no
+   * faturamento — por isso a escolha acontece aqui, com o arquivo na frente, e
+   * nao depois numa lista de pendencias. So as orfas aparecem: as que o QRA
+   * resolveu passam direto.
+   */
+  function escolherSocorrista(hashRegistro:string,motoristaId:string){
+    setPrevia(atual=>atual?{...atual,linhas:atual.linhas.map(l=>l.hashRegistro===hashRegistro
+      ?{...l,dados:{...l.dados,motorista_id:motoristaId}}:l)}:atual)
+  }
+  function aplicarSocorristaEmTodas(motoristaId:string){
+    if(!motoristaId)return
+    setPrevia(atual=>atual?{...atual,linhas:atual.linhas.map(l=>orfas.some(o=>o.hashRegistro===l.hashRegistro)
+      ?{...l,dados:{...l.dados,motorista_id:motoristaId}}:l)}:atual)
+  }
 
   const numeroNormalizado=numeroOp.trim(),previaId=previa?.id,requerOrdemPagamento=Boolean(previa?.requerOrdemPagamento)
-  const chaveAvaliacao=previaId&&requerOrdemPagamento&&numeroNormalizado&&periodoId?`${previaId}:${numeroNormalizado}:${periodoId}`:''
+  const chaveAvaliacao=previaId&&requerOrdemPagamento&&numeroNormalizado?`${previaId}:${numeroNormalizado}`:''
   useEffect(()=>{
     if(!chaveAvaliacao||!previaId){setValidando(false);setChaveValidada('');return}
     if(chaveValidada===chaveAvaliacao){setValidando(false);return}
     const controller=new AbortController(),temporizador=window.setTimeout(async()=>{
       setValidando(true);setErro('')
       try{
-        const resposta=await avaliarImportacaoPorto(previa as PreviaPorto,{numeroOrdemPagamento:numeroNormalizado,calendarioPagamentoId:Number(periodoId)},controller.signal)
+        const resposta=await avaliarImportacaoPorto(previa as PreviaPorto,{numeroOrdemPagamento:numeroNormalizado},controller.signal)
         if(!controller.signal.aborted){setPrevia(resposta);setChaveValidada(chaveAvaliacao)}
       }catch(e){if(!controller.signal.aborted)setErro((e as Error).message)}
       finally{if(!controller.signal.aborted)setValidando(false)}
@@ -54,38 +73,40 @@ export default function PortoImportacoesPage(){
       // releituras do arquivo, e a tela ficava "validando" o tempo todo.
     },600)
     return()=>{window.clearTimeout(temporizador);controller.abort()}
-  },[chaveAvaliacao,chaveValidada,numeroNormalizado,periodoId,previaId])
+  },[chaveAvaliacao,chaveValidada,numeroNormalizado,previaId])
 
   function limparAvisos(){setMensagem('');setErro('');setSemSocorrista([])}
   function limparConfirmacoes(){setConfirmarDivergencias(false);setConfirmarReassociacoes(false);setMotivoDivergencia('');setJustificativaDivergencia('')}
   async function analisar(){
     if(modo==='arquivo'&&!arquivo||modo==='colagem'&&!conteudo.trim())return
-    setCarregando(true);setEtapa('Analisando arquivo…');limparAvisos();setFalhaAoConfirmar(false);setNumeroOp('');setPeriodoId('');setChaveValidada('');limparConfirmacoes()
+    setCarregando(true);setEtapa('Analisando arquivo…');limparAvisos();setFalhaAoConfirmar(false);setNumeroOp('');setChaveValidada('');limparConfirmacoes()
     try{setPrevia(modo==='arquivo'?await criarPreviaPorto(arquivo as File):await criarPreviaConteudoPorto(conteudo))}catch(e){setErro((e as Error).message)}finally{setEtapa('');setCarregando(false)}
   }
   function alterarNumero(valor:string){setNumeroOp(valor);setChaveValidada('');limparConfirmacoes()}
-  function alterarPeriodo(valor:string){setPeriodoId(valor);setChaveValidada('');limparConfirmacoes()}
   async function confirmar(){setSemSocorrista([])
-    if(confirmacaoEmCurso.current||!previa||previa.requerOrdemPagamento&&(!numeroNormalizado||!periodoId||chaveValidada!==chaveAvaliacao))return
+    if(confirmacaoEmCurso.current||!previa||previa.requerOrdemPagamento&&(!numeroNormalizado||chaveValidada!==chaveAvaliacao))return
     confirmacaoEmCurso.current=true
     setCarregando(true);setEtapa('Confirmando importação…');setErro('');setFalhaAoConfirmar(false)
     try{
       const r=previa.requerOrdemPagamento
-        ?await confirmarImportacaoPorto(previa,{numeroOrdemPagamento:numeroNormalizado,calendarioPagamentoId:Number(periodoId),confirmarDivergencias,confirmarReassociacoes,motivoDivergencia:motivoDivergencia||undefined,justificativaDivergencia:justificativaDivergencia.trim()||undefined})
+        ?await confirmarImportacaoPorto(previa,{numeroOrdemPagamento:numeroNormalizado,confirmarDivergencias,confirmarReassociacoes,motivoDivergencia:motivoDivergencia||undefined,justificativaDivergencia:justificativaDivergencia.trim()||undefined})
         :await confirmarImportacaoPorto(previa,{confirmarDivergencias})
       const financeiro=r.tipo==='OS_VINCULADAS'||r.tipo==='SERVICOS_GERAIS'?` · ${r.receitasCriadas} ${r.receitasCriadas===1?'receita criada':'receitas criadas'} · ${r.receitasAtualizadas} ${r.receitasAtualizadas===1?'receita atualizada':'receitas atualizadas'} · ${moeda(r.valorTotalRecebido)} recebidos${r.quinzena?` · período ${r.quinzena}`:''}${r.dataPagamento?` · pagamento em ${dataBr(r.dataPagamento)}`:''}`:''
       setMensagem(`${r.importados} ${r.importados===1?'registro importado':'registros importados'}${r.ignorados?` · ${r.ignorados} ignorados por duplicidade`:''}${financeiro}.`)
       setSemSocorrista(r.osSemSocorrista??[])
-      setPrevia(null);setArquivo(null);setNumeroOp('');setPeriodoId('');setChaveValidada('');limparConfirmacoes();setInputKey(x=>x+1)
+      setPrevia(null);setArquivo(null);setNumeroOp('');setChaveValidada('');limparConfirmacoes();setInputKey(x=>x+1)
     }catch(e){setErro((e as Error).message);setFalhaAoConfirmar(true)}finally{confirmacaoEmCurso.current=false;setEtapa('');setCarregando(false)}
   }
   async function cancelar(){
     if(!previa)return;setCarregando(true);limparAvisos();setFalhaAoConfirmar(false)
-    try{await cancelarImportacaoPorto(previa.id);setMensagem('Prévia cancelada. Corrija e reenvie o arquivo quando estiver pronto.');setPrevia(null);setArquivo(null);setNumeroOp('');setPeriodoId('');setChaveValidada('');limparConfirmacoes();setInputKey(x=>x+1)}catch(e){setErro((e as Error).message)}finally{setCarregando(false)}
+    try{await cancelarImportacaoPorto(previa.id);setMensagem('Prévia cancelada. Corrija e reenvie o arquivo quando estiver pronto.');setPrevia(null);setArquivo(null);setNumeroOp('');setChaveValidada('');limparConfirmacoes();setInputKey(x=>x+1)}catch(e){setErro((e as Error).message)}finally{setCarregando(false)}
   }
-  function limpar(){setConteudo('');setArquivo(null);setPrevia(null);limparAvisos();setFalhaAoConfirmar(false);setNumeroOp('');setPeriodoId('');setChaveValidada('');limparConfirmacoes();setInputKey(x=>x+1)}
+  function limpar(){setConteudo('');setArquivo(null);setPrevia(null);limparAvisos();setFalhaAoConfirmar(false);setNumeroOp('');setChaveValidada('');limparConfirmacoes();setInputKey(x=>x+1)}
 
   const temErros=Boolean(previa?.erros.length||previa?.linhas.some(l=>l.acao==='ERRO'))
+  // Orfa deixa de ser orfa assim que alguem e escolhido para ela.
+  const orfas=(previa?.orfas??[]).filter(o=>!previa?.linhas.some(
+    l=>l.hashRegistro===o.hashRegistro&&l.dados.motorista_id))
   const analise=chaveValidada===chaveAvaliacao&&previa?.analiseOrdemPagamento?.numero===numeroNormalizado?previa.analiseOrdemPagamento:undefined
   const numerosReassociados=new Set(analise?.reassociacoes.map(item=>item.numeroOs)??[])
   const temDivergenciasDados=Boolean(analise&&previa?.linhas.some(l=>l.acao==='DIVERGENCIA'&&!numerosReassociados.has(l.dados.numero_os)))
@@ -104,11 +125,8 @@ export default function PortoImportacoesPage(){
         {temErros?<div className="form-alert"><strong>Corrija e reenvie o arquivo.</strong> {previa.erros.join(' · ')}</div>:null}
         <footer className="porto-confirm porto-confirm-sticky" aria-label="Ações da prévia">
           <div className="porto-confirm-totals"><span><strong>{previa.totalLinhas}</strong> registros</span><span><strong>{moeda(previa.resumo?.valorTotal??0)}</strong> valor total</span></div>
-          {previa.requerOrdemPagamento?<label className="field"><span>Número da OP</span><input aria-label="Número da OP" inputMode="numeric" autoComplete="off" value={numeroOp} onChange={e=>alterarNumero(e.target.value)} required placeholder="Ex.: 06422281"/></label>:null}
-          {previa.requerOrdemPagamento?<Selecao rotulo="Período financeiro" required vazio="Selecione o período" value={periodoId}
-            onChange={e=>alterarPeriodo(e.target.value)}
-            opcoes={periodos.filter(p=>p.ativo||String(p.id)===periodoId)
-              .map(p=>({valor:p.id,texto:`${p.descricao} · ${dataBr(p.competenciaInicio)} a ${dataBr(p.competenciaFim)}`}))}/>:null}
+          {previa.requerOrdemPagamento?<label className="field"><span>Número da OP</span><input aria-label="Número da OP" value={numeroOp} onChange={e=>alterarNumero(e.target.value)} required placeholder="Ex.: 06422281"/></label>:null}
+
           {/* aria-live sem role="status": anuncia igual, e nao disputa o papel
               com o indicador de etapa la em cima, que ja e um status. */}
           <span className="porto-validando" aria-live="polite">
@@ -122,8 +140,16 @@ export default function PortoImportacoesPage(){
           {temReassociacoes?<div className="form-alert"><strong>{analise?.quantidadeReassociacoes} {analise?.quantidadeReassociacoes===1?'OS será movida':'OS serão movidas'} · {moeda(analise?.valorReassociacoes??0)}</strong><div className="table-scroll"><table><thead><tr><th>OS</th><th>OP atual</th><th>Nova OP</th><th>Valor</th></tr></thead><tbody>{analise?.reassociacoes.map(item=><tr key={item.numeroOs}><td>{item.numeroOs}</td><td>{item.opAtual}</td><td>{item.novaOp}</td><td>{moeda(item.valor)}</td></tr>)}</tbody></table></div><label className="porto-divergence"><input type="checkbox" aria-label="Confirmo a reassociação" checked={confirmarReassociacoes} onChange={e=>setConfirmarReassociacoes(e.target.checked)}/><span>Confirmo a reassociação das OS indicadas.</span></label></div>:null}
           {temDivergenciasDados&&!temDivergenciaFinanceira?<label className="porto-divergence"><input type="checkbox" aria-label="Confirmo a atualização dos dados" checked={confirmarDivergencias} onChange={e=>setConfirmarDivergencias(e.target.checked)}/><span>Confirmo a atualização dos dados divergentes.</span></label>:null}
           <button type="button" className="button button-ghost" disabled={carregando} onClick={cancelar}>Cancelar prévia</button>
-          <button className="button button-primary" disabled={carregando||validando||temErros||!divergenciaConfirmada||temReassociacoes&&!confirmarReassociacoes||previa.requerOrdemPagamento&&(!numeroNormalizado||!periodoId||!analise)||previa.linhas.length===0} onClick={confirmar}>Confirmar importação</button>
+          <button className="button button-primary" disabled={carregando||validando||temErros||!divergenciaConfirmada||temReassociacoes&&!confirmarReassociacoes||orfas.length>0||previa.requerOrdemPagamento&&(!numeroNormalizado||!analise)||previa.linhas.length===0} onClick={confirmar}>Confirmar importação</button>
         </footer>
+        {orfas.length?<div className="form-alert" role="alert"><strong>{orfas.length} {orfas.length===1?'ordem de serviço está':'ordens de serviço estão'} sem socorrista.</strong> Sem socorrista não há comissão, e o serviço entraria no faturamento sem dono. Informe quem atendeu para liberar a importação.
+          <div className="porto-orfas-atalho"><Selecao rotulo="Aplicar o mesmo socorrista a todas" vazio="Escolha para aplicar a todas" value=""
+            onChange={e=>aplicarSocorristaEmTodas(e.target.value)}
+            opcoes={motoristas.map(m=>({valor:m.id,texto:m.nome}))}/></div>
+          <div className="table-scroll"><table><thead><tr><th>OS</th><th>Atendimento</th><th>Como veio no arquivo</th><th>Socorrista</th></tr></thead><tbody>{orfas.map(o=><tr key={o.hashRegistro}><td><strong>{o.numeroOs}</strong></td><td>{dataBr(o.data)||'—'}</td><td>{o.socorrista||o.qra||'—'}</td><td><Selecao rotulo={`Socorrista da OS ${o.numeroOs}`} vazio="Selecione" value=""
+            onChange={e=>escolherSocorrista(o.hashRegistro,e.target.value)}
+            opcoes={motoristas.map(m=>({valor:m.id,texto:m.nome}))}/></td></tr>)}</tbody></table></div>
+        </div>:null}
         {previa.osSemSocorrista?.length?<div className="form-alert" role="alert"><strong>{previa.osSemSocorrista.length} {previa.osSemSocorrista.length===1?'ordem de serviço ficará':'ordens de serviço ficarão'} sem QRA no relatório.</strong> O socorrista é identificado pelo QRA, e só entre os que já estão cadastrados — o sistema nunca cria um cadastro novo a partir de um QRA desconhecido. Estas ficam sem identidade: associe o socorrista na tela Ordens de serviço.<NumerosDeOs numeros={previa.osSemSocorrista}/></div>:null}
         {/* O painel do dia nao tem valor nem OP: a coluna Valor ficaria vazia em toda linha.
             No lugar dela entram seguradora e situacao, que e o que existe de util ali. */}
