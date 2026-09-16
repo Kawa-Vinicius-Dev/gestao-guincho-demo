@@ -1552,3 +1552,11 @@ tbody tr{transition:background-color .14s ease}
 .dashboard-tech .trajetoria-degraus li>span:first-child{color:var(--muted);font-family:'IBM Plex Mono',monospace}
 .dashboard-tech .trajetoria-degraus li>span:nth-child(2){overflow:hidden;color:var(--ink);text-overflow:ellipsis;white-space:nowrap}
 .dashboard-tech .trajetoria-degraus li>strong{color:var(--ink);font:600 16px/1 'Barlow Condensed',sans-serif;font-variant-numeric:tabular-nums}
+
+/* Marca de desconto direto na lista: o gasto ja lancado tambem pode descontar. */
+.desconto-na-lista{display:flex;align-items:center;gap:6px;margin-top:4px;color:var(--muted);font-size:var(--t-rotulo);cursor:pointer;white-space:nowrap}
+.desconto-na-lista input{width:14px;height:14px;margin:0}
+
+/* Nome do socorrista leva para a ficha dele. */
+.faturamento-grupo-link{text-decoration:none}
+.faturamento-grupo-link:hover,.faturamento-grupo-link:focus-visible{color:var(--blue-600);text-decoration:underline}

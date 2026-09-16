@@ -43,6 +43,8 @@ const detalhe = {
       categoria: 'Alimentação', situacao: 'PAGO', aprovada: true, descontaDaComissao: true },
     { id: 11, descricao: 'Almoço da equipe', data: '2026-04-11', valor: 40,
       categoria: 'Alimentação', situacao: 'PAGO', aprovada: true, descontaDaComissao: false },
+    { id: 12, descricao: 'Pedágio pessoal', data: '2026-04-12', valor: 15,
+      categoria: 'Pedágio', situacao: 'PAGO', aprovada: true, descontaDaComissao: false, descontaEmOutraOp: true },
   ],
 }
 
@@ -156,4 +158,7 @@ test('o detalhe lista todos os gastos e diz quais descontam', async () => {
   const equipe = within(dialogo).getByText('Almoço da equipe').closest('tr')!
   expect(within(pessoal).getByText('Sim')).toBeInTheDocument()
   expect(within(equipe).getByText('Não')).toBeInTheDocument()
+  // A Porto paga a mesma quinzena em mais de uma OP: o gasto desconta numa so.
+  const outraOp = within(dialogo).getByText('Pedágio pessoal').closest('tr')!
+  expect(within(outraOp).getByText('Em outra OP do período')).toBeInTheDocument()
 })

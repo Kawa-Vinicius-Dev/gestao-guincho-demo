@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { moeda, moedaCurta, numero, percentual } from '../utils/formatadores'
 
 /**
@@ -19,7 +20,8 @@ function escala(valores:number[]){
 
 function Vazio({texto}:{texto:string}){return <p className="grafico-vazio">{texto}</p>}
 
-export type LinhaFaturamento={chave:string;rotulo:string;valor:number;quantidade?:number;detalhe?:string;semVinculo:boolean}
+/** `link`: para onde o nome leva — a ficha do socorrista, por exemplo. */
+export type LinhaFaturamento={chave:string;rotulo:string;valor:number;quantidade?:number;detalhe?:string;semVinculo:boolean;link?:string}
 
 /**
  * Quanto cada socorrista ou viatura faturou, uma barra por linha. A linha sem
@@ -35,7 +37,9 @@ export function FaturamentoPorGrupo({descricao,linhas,vazio}:{descricao:string;l
   const largura=(v:number)=>`${v>0?Math.max(v/maior*100,1.5):0}%`
   return <ul className="faturamento-grupo" aria-label={descricao}>
     {ordenadas.map(l=><li key={l.chave} className={l.semVinculo?'sem-vinculo':undefined}>
-      <span className="faturamento-grupo-rotulo" title={l.rotulo}>{l.rotulo}</span>
+      {l.link
+        ?<Link className="faturamento-grupo-rotulo faturamento-grupo-link" title={`Ver detalhes de ${l.rotulo}`} to={l.link}>{l.rotulo}</Link>
+        :<span className="faturamento-grupo-rotulo" title={l.rotulo}>{l.rotulo}</span>}
       <span className="faturamento-grupo-trilho" aria-hidden="true"><span style={{width:largura(l.valor)}}/></span>
       <strong>{moeda(l.valor)}</strong>
       <small>{l.detalhe??(l.quantidade==null?'':`${l.quantidade} ${l.quantidade===1?'serviço':'serviços'}`)}</small>

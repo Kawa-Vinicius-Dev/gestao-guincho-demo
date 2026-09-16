@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { alternarAtivoDespesaFixa, criarDespesaFixa, lancarDespesasFixasDoMes, listarDespesasFixas } from '../dados/despesasFixas'
-import { aprovarDespesa, criarDespesa, excluirDespesa, listarDespesas, pagarDespesa } from '../dados/despesas'
+import { aprovarDespesa, criarDespesa, excluirDespesa, listarDespesas, marcarDescontoComissao, pagarDespesa } from '../dados/despesas'
 import { abrirComprovante, anexarComprovante, removerComprovante } from '../dados/comprovantes'
 import { listarCategorias } from '../dados/cadastros'
 import { listarMotoristas } from '../dados/motoristas'
@@ -85,6 +85,13 @@ export default function DespesasPage(){
       await carregar()}
     catch(x){setErro((x as Error).message)}finally{setLancando(false)}
   }
+  async function alternarDesconto(d:Despesa){setErro('');setMensagem('')
+    try{await marcarDescontoComissao(d.id,!d.descontaComissao)
+      setMensagem(d.descontaComissao
+        ?`"${d.descricao}" não desconta mais da comissão de ${d.motorista}.`
+        :`"${d.descricao}" agora desconta da comissão de ${d.motorista}.`)
+      await carregar()}
+    catch(x){setErro((x as Error).message)}}
   async function aprovar(id:number){setErro('');try{await aprovarDespesa(id);await carregar()}catch(x){setErro((x as Error).message)}}
   async function pagar(id:number){setErro('');setMensagem('')
     try{await pagarDespesa(id,hoje(),'PIX');setMensagem('Pagamento registrado no caixa oficial.');await carregar()}catch(x){setErro((x as Error).message)}}
@@ -105,7 +112,9 @@ export default function DespesasPage(){
   return <div className="page-enter pagina-despesas"><header className="page-heading"><div><span className="eyebrow">Saídas</span><h1>Despesas</h1><p>Custos da operação vinculados a veículos, motoristas e protocolos.</p></div><button className="button button-primary" onClick={abrirForm}>Registrar despesa</button></header>
     {erro?<div className="form-alert" role="alert">{erro}</div>:null}{carregando?<Carregando/>:null}{mensagem?<div className="success-notice">{mensagem}</div>:null}
     {admin?<section className="panel">{lista.length?<div className="table-scroll"><table><thead><tr><th>Descrição</th><th>Categoria</th><th>Data</th><th>Veículo</th><th>Socorrista</th><th>Situação</th><th>Aprovação</th><th>Valor</th><th>Comprovante</th><th/></tr></thead><tbody>
-      {lista.map(d=><tr key={d.id}><td><strong>{d.descricao}</strong><small>{d.criadoPor}</small></td><td>{d.categoria}</td><td>{data(d.data)}</td><td>{d.veiculo||'—'}</td><td>{d.motorista||'—'}{d.descontaComissao?<small>Desconta da comissão</small>:null}</td><td><StatusBadge status={d.status}/></td><td>{d.aprovada?<span className="approved">Aprovada</span>:<button className="table-action" onClick={()=>void aprovar(d.id)}>Aprovar</button>}</td><td className="negative"><strong>{moeda(d.valor)}</strong></td>
+      {lista.map(d=><tr key={d.id}><td><strong>{d.descricao}</strong><small>{d.criadoPor}</small></td><td>{d.categoria}</td><td>{data(d.data)}</td><td>{d.veiculo||'—'}</td><td>{d.motorista||'—'}{d.motorista&&!d.protocolo?.startsWith('COMISSAO-')
+          ?<label className="desconto-na-lista"><input type="checkbox" checked={Boolean(d.descontaComissao)} onChange={()=>void alternarDesconto(d)} aria-label={`Descontar ${d.descricao} da comissão de ${d.motorista}`}/><span>Desconta da comissão</span></label>
+          :null}</td><td><StatusBadge status={d.status}/></td><td>{d.aprovada?<span className="approved">Aprovada</span>:<button className="table-action" onClick={()=>void aprovar(d.id)}>Aprovar</button>}</td><td className="negative"><strong>{moeda(d.valor)}</strong></td>
         <td>{d.comprovanteNomeOriginal?<span className="comprovante-anexado"><button className="table-action" onClick={()=>void abrir(d)}>Ver</button><button className="table-action table-action-danger" onClick={()=>void remover(d)}>Remover</button></span>
           :<label className="table-action file-action">Anexar comprovante<input type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" onChange={e=>{const arquivo=e.target.files?.[0];if(arquivo)void anexar(d,arquivo);e.target.value=''}}/></label>}</td>
         <td><span className="acoes-da-linha">{d.aprovada&&d.status!=='PAGO'&&d.status!=='REJEITADO'?<button className="table-action" onClick={()=>void pagar(d.id)}>Registrar pagamento</button>:null}

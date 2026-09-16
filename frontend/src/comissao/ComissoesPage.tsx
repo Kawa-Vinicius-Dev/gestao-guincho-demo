@@ -45,7 +45,7 @@ export default function ComissoesPage(){
       <h3>Serviços que formam a comissão</h3><div className="table-scroll"><table><thead><tr><th>OS</th><th>Atendimento</th><th>OP</th><th>Valor</th><th>Comissão</th></tr></thead><tbody>{detalhe.servicos.map(s=><tr key={s.id}><td>{s.numeroOs}</td><td>{data(s.dataAtendimento)}</td><td>{s.numeroOp}</td><td>{moeda(s.valorServico)}</td><td>{moeda(s.comissaoServico)}</td></tr>)}</tbody></table></div>
       <h3>Gastos do período</h3>
       {detalhe.gastos.length
-        ?<div className="table-scroll"><table><thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th>Viatura</th><th>Valor</th><th>Desconta da comissão</th></tr></thead><tbody>{detalhe.gastos.map(g=><tr key={g.id}><td>{data(g.data)}</td><td><strong>{g.descricao}</strong>{g.observacoes?<small>{g.observacoes}</small>:null}</td><td>{g.categoria}</td><td>{g.veiculo||'—'}</td><td>{moeda(g.valor)}</td><td>{g.descontaDaComissao?(g.aprovada?'Sim':'Sim, aguardando aprovação'):'Não'}</td></tr>)}</tbody></table></div>
+        ?<div className="table-scroll"><table><thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th>Viatura</th><th>Valor</th><th>Desconta da comissão</th></tr></thead><tbody>{detalhe.gastos.map(g=><tr key={g.id}><td>{data(g.data)}</td><td><strong>{g.descricao}</strong>{g.observacoes?<small>{g.observacoes}</small>:null}</td><td>{g.categoria}</td><td>{g.veiculo||'—'}</td><td>{moeda(g.valor)}</td><td>{g.descontaDaComissao?(g.aprovada?'Sim':'Sim, aguardando aprovação'):g.descontaEmOutraOp?'Em outra OP do período':'Não'}</td></tr>)}</tbody></table></div>
         :<p className="empty-inline">Nenhum gasto no nome dele neste período.</p>}
     </Modal>:null}
   </div>
