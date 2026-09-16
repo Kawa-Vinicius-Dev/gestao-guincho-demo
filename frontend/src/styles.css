@@ -1286,10 +1286,6 @@ tbody tr{transition:background-color .14s ease}
 .painel-atencao li .table-action{border:0;background:none;padding:6px 0 6px 10px;color:var(--blue-600);font-size:var(--t-apoio);font-weight:600;white-space:nowrap;text-decoration:none}
 .painel-atencao li .table-action:after{content:' →';transition:margin .16s ease}
 .painel-atencao li:hover .table-action:after{margin-left:3px}
-.painel-tudo-em-dia{display:flex;align-items:center;gap:var(--espaco-2);margin:0;padding:var(--espaco-3);border:1px solid var(--line);border-radius:10px;background:var(--superficie)}
-.painel-tudo-em-dia>span{display:grid;place-items:center;flex:0 0 30px;height:30px;border-radius:50%;color:var(--green);background:var(--ok-fundo);font-size:14px;font-weight:700}
-.painel-tudo-em-dia strong{color:var(--ink);font-size:var(--t-corpo)}
-.painel-tudo-em-dia small{margin-left:auto;color:var(--muted);font-size:var(--t-apoio)}
 
 /* Grafico: barra para producao, linha para dinheiro. */
 .segmented{display:inline-flex;padding:3px;border:1px solid var(--line);border-radius:9px;background:var(--superficie-2)}
@@ -1414,5 +1410,3 @@ tbody tr{transition:background-color .14s ease}
 /* Contexto do destaque com duas linhas de apoio (servicos e ticket medio). */
 .destaque-contexto small{display:block}
 .destaque-contexto small+small{margin-top:2px}
-/* "Tudo em dia" fora de painel: uma faixa discreta no lugar do bloco de atencao. */
-.painel-tudo-em-dia-solto{margin-bottom:var(--espaco-3);box-shadow:0 1px 2px rgba(7,20,38,.04)}

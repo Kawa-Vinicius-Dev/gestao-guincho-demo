@@ -234,11 +234,7 @@ export default function PortoDashboardPage() {
               </li>
             </ul>
           </Painel>
-        : <p className="painel-tudo-em-dia painel-tudo-em-dia-solto">
-            <span aria-hidden="true">✓</span>
-            <strong>Tudo em dia</strong>
-            <small>Nenhuma OP com divergência neste período.</small>
-          </p>}
+        : null}
 
       {dados.opsDestaque.length
         ? <Painel semRespiro className="painel-ops-titulo" etiqueta="Detalhe"

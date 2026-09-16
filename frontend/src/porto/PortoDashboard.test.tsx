@@ -88,16 +88,17 @@ test('a barra de indicadores mostra serviços, espera por OP e divergência', as
   expect(screen.getByText('Composição confere')).toBeInTheDocument()
 })
 
-// Zero divergencia e zero atraso sao boa noticia: a tela nao pode usar vermelho
-// para dizer isso, nem abrir uma lista de problemas vazia.
-test('sem pendência, mostra estado positivo em vez de lista de erros', async () => {
+// Sem divergencia nao ha o que resolver: o bloco de atencao nao aparece, e nada
+// entra no lugar dele — a barra ja diz "Composicao confere".
+test('sem divergência, não mostra bloco de atenção nem faixa no lugar', async () => {
   servidorDoPainel(painel())
   const Painel = await abrirPainel()
 
   render(<MemoryRouter><Painel/></MemoryRouter>)
 
-  expect(await screen.findByText('Tudo em dia')).toBeInTheDocument()
-  expect(screen.getByText(/Nenhuma OP com divergência/)).toBeInTheDocument()
+  expect(await screen.findByText('Composição confere')).toBeInTheDocument()
+  expect(screen.queryByText('Precisa de atenção')).not.toBeInTheDocument()
+  expect(screen.queryByText('Tudo em dia')).not.toBeInTheDocument()
   expect(screen.queryByText(/pendentes na porto/i)).not.toBeInTheDocument()
   // No modelo em que a OP chega paga nao existe OP vencida — o indicador saiu.
   expect(screen.queryByText(/vencida/i)).not.toBeInTheDocument()
