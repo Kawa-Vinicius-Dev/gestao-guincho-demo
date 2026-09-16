@@ -158,7 +158,7 @@ export function PainelFaturamentoPorSocorrista({ dados }: { dados: Dashboard }) 
   const pessoas = (dados.resultadoPorSocorrista ?? []).filter(p => p.servicos > 0)
   const linhas: LinhaFaturamento[] = pessoas.map(p => ({
     chave: String(p.motoristaId), rotulo: p.socorrista, valor: p.producao,
-    quantidade: p.servicos, semVinculo: false,
+    quantidade: p.servicos, semVinculo: false, link: `/equipe/${p.motoristaId}`,
   }))
   const semDono = (dados.producaoPaga ?? 0) - pessoas.reduce((soma, p) => soma + p.producao, 0)
   if (semDono > CENTAVO) linhas.push({ chave: 'sem', rotulo: 'Sem socorrista', valor: semDono, semVinculo: true })

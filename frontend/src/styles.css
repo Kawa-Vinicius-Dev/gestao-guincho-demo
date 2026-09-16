@@ -1556,3 +1556,7 @@ tbody tr{transition:background-color .14s ease}
 /* Marca de desconto direto na lista: o gasto ja lancado tambem pode descontar. */
 .desconto-na-lista{display:flex;align-items:center;gap:6px;margin-top:4px;color:var(--muted);font-size:var(--t-rotulo);cursor:pointer;white-space:nowrap}
 .desconto-na-lista input{width:14px;height:14px;margin:0}
+
+/* Nome do socorrista leva para a ficha dele. */
+.faturamento-grupo-link{text-decoration:none}
+.faturamento-grupo-link:hover,.faturamento-grupo-link:focus-visible{color:var(--blue-600);text-decoration:underline}

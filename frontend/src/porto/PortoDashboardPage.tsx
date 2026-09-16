@@ -271,7 +271,8 @@ export default function PortoDashboardPage() {
       <div className="painel-faturamento">
         <Painel etiqueta="Por pessoa" titulo="Faturamento por socorrista">
           <FaturamentoPorGrupo descricao="Faturamento por socorrista no período"
-            vazio="Nenhum serviço neste período." linhas={dados.faturamentoPorSocorrista}/>
+            vazio="Nenhum serviço neste período."
+            linhas={dados.faturamentoPorSocorrista.map(l => l.semVinculo ? l : { ...l, link: `/equipe/${l.chave}` })}/>
         </Painel>
         <Painel etiqueta="Por viatura" titulo="Faturamento por viatura">
           <FaturamentoPorGrupo descricao="Faturamento por viatura no período"
