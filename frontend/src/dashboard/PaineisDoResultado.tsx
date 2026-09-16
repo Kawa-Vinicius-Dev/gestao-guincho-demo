@@ -1,63 +1,95 @@
 import { Link } from 'react-router-dom'
-import { DespesaAcumulada, FaturamentoECusto, GastosPorCategoria, ProporcaoKm, ProporcaoServicos } from '../components/Graficos'
-import type { ResumoPortoDashboard } from '../dados/dashboard'
+import { DespesaAcumulada, FaturamentoPorGrupo, GastosPorCategoria, ProporcaoKm,
+  type LinhaFaturamento } from '../components/Graficos'
+import { GradeIndicadores, Indicador, Painel } from '../components/ui/Pagina'
 import type { Dashboard } from '../types/modelos'
 import { moeda, percentual } from '../utils/formatadores'
 
 /**
- * Os blocos da Visao geral. Ficam aqui porque a pagina era uma unica funcao com
- * cinco secoes em quatro linhas de mil caracteres, e mexer numa exigia achar
- * onde ela comecava no meio da outra.
+ * Os blocos da Visao geral, na mesma linguagem do painel Porto: um numero domina,
+ * o contexto fica ao lado, a barra de indicadores responde o que pede acao e os
+ * graficos dizem quem trouxe o dinheiro.
  */
 
+/** Diferenca de centavos de arredondamento nao vira linha "sem vinculo". */
+const CENTAVO = 0.005
+
 /**
- * Os quatro numeros que respondem "como esta o mes" antes de qualquer grafico.
- *
- * Ficam acima de tudo porque sao a leitura de quem so tem dez segundos; os
- * graficos abaixo explicam de onde cada um saiu. O lucro e o unico com destaque
- * proprio: e a conta que o dono do guincho abre o sistema para ver, e muda de
- * cor conforme o sinal, porque prejuizo em azul nao parece prejuizo.
+ * Lucro operacional em destaque: e a conta que o dono do guincho abre o sistema
+ * para ver. Receita e despesa ficam ao lado, porque sao as duas parcelas dele.
+ * "A receber" so aparece quando existe: na Porto a OP chega paga e o painel do
+ * dia nasce sem valor, entao ali ele seria sempre zero.
  */
-export function FaixaDeIndicadores({ dados, margem }: { dados: Dashboard; margem: number }) {
-  // O atraso ja faz parte de receitaPrevista; somar outra vez inflava o cartão.
-  const aReceber = dados.receitaPrevista
+export function ResultadoDoPeriodo({ dados, atualizando }: { dados: Dashboard; atualizando?: boolean }) {
   const lucro = dados.saldoRealizado
-  return <section className="kpi-grid" aria-label="Indicadores do período">
-    <article className="kpi">
-      <span>Receita recebida</span>
-      <strong>{moeda(dados.receitaRecebida)}</strong>
-      <small>Confirmada no financeiro</small>
-    </article>
-    <article className="kpi">
-      <span>Despesas pagas</span>
-      <strong className="negative">{moeda(dados.despesasPagas)}</strong>
-      <small>
-        {dados.receitaRecebida
-          ? `${percentual(dados.despesasPagas / dados.receitaRecebida * 100)} da receita`
-          : 'Aprovadas e quitadas'}
-      </small>
-    </article>
-    <article className={lucro < 0 ? 'kpi kpi-destaque kpi-negativo' : 'kpi kpi-destaque'}>
+  const margem = dados.receitaRecebida ? lucro / dados.receitaRecebida * 100 : null
+  const negativo = lucro < 0
+  return <div className={`destaque-corpo${atualizando ? ' atualizando' : ''}`}>
+    <div className="destaque-numero">
       <span>Lucro operacional</span>
-      <strong>{moeda(lucro)}</strong>
-      <small>Margem de {percentual(margem)}</small>
-    </article>
-    <article className="kpi">
-      <span>A receber</span>
-      <strong>{moeda(aReceber)}</strong>
+      <strong className={negativo ? 'destaque-negativo' : undefined}>{moeda(lucro)}</strong>
       <small>
-        {dados.totalAtrasado > 0
-          ? `${moeda(dados.totalAtrasado)} em atraso`
-          : 'Nada em atraso'}
+        {margem !== null
+          ? <><b className={negativo ? 'destaque-negativo' : undefined}>Margem de {percentual(margem)}</b> · </>
+          : null}
+        receita recebida − despesas pagas
       </small>
-    </article>
-  </section>
+    </div>
+
+    <dl className="destaque-contexto">
+      <div>
+        <dt><i className="marca-recebido"/>Receita recebida</dt>
+        <dd>{moeda(dados.receitaRecebida)}</dd>
+        {dados.servicosDoPeriodo
+          ? <small>{dados.servicosDoPeriodo} {dados.servicosDoPeriodo === 1 ? 'serviço' : 'serviços'} no período</small>
+          : null}
+      </div>
+      <div>
+        <dt><i className="marca-despesa"/>Despesas pagas</dt>
+        <dd>{moeda(dados.despesasPagas)}</dd>
+        <small>{dados.despesasPagas
+          ? dados.receitaRecebida
+            ? `${percentual(dados.despesasPagas / dados.receitaRecebida * 100)} da receita`
+            : 'Aprovadas e quitadas'
+          : 'Nenhuma despesa paga'}</small>
+      </div>
+      {dados.receitaPrevista > 0
+        ? <div>
+            <dt>A receber</dt>
+            <dd>{moeda(dados.receitaPrevista)}</dd>
+            <small>{dados.totalAtrasado > 0 ? `${moeda(dados.totalAtrasado)} em atraso` : 'Nada em atraso'}</small>
+          </div>
+        : null}
+    </dl>
+  </div>
 }
 
 /**
- * Para onde o dinheiro foi. Fica logo abaixo dos indicadores de proposito: eles
- * respondem "quanto sobrou" e este responde "no que foi", que e a pergunta
- * seguinte de quem abre o sistema.
+ * O que a operacao ainda deve ou espera. Comissao a repassar e dinheiro que ja e
+ * da equipe; despesa a pagar so entra quando existe.
+ */
+export function IndicadoresDaOperacao({ dados }: { dados: Dashboard }) {
+  const servicos = dados.servicosDoPeriodo ?? 0
+  const pendentes = dados.servicosPendentes ?? 0
+  const comissao = dados.comissaoAPagar ?? 0
+  return <GradeIndicadores>
+    <Indicador rotulo="Serviços do período" valor={servicos}
+      apoio={pendentes
+        ? `${pendentes} ${pendentes === 1 ? 'aguarda' : 'aguardam'} OP`
+        : servicos ? `${moeda(dados.producaoPaga ?? 0)} pagos pela Porto` : 'Nenhum serviço no período'}/>
+    <Indicador rotulo="Comissão a repassar" valor={moeda(comissao)}
+      tom={comissao > 0 ? 'atencao' : 'neutro'}
+      apoio={comissao > 0 ? 'Devida à equipe, ainda não paga' : 'Nenhuma comissão pendente'}/>
+    {dados.despesasPrevistas > 0
+      ? <Indicador rotulo="Despesas a pagar" valor={moeda(dados.despesasPrevistas)}
+          tom="atencao" apoio="Aprovadas, ainda não pagas"/>
+      : null}
+  </GradeIndicadores>
+}
+
+/**
+ * Para onde o dinheiro foi. A frase do cabecalho so aparece quando ha despesa;
+ * sem despesa, o proprio grafico diz que o periodo esta vazio.
  */
 export function PainelDeGastos({ dados, inicio, fim }: { dados: Dashboard; inicio: string; fim: string }) {
   const categorias = dados.despesasPorCategoria ?? []
@@ -72,7 +104,7 @@ export function PainelDeGastos({ dados, inicio, fim }: { dados: Dashboard; inici
               <strong>{maior.categoria}</strong> puxou {percentual(maior.participacao)} de tudo
               que saiu — {moeda(maior.valor)}.
             </p>
-          : <p>Nenhuma despesa paga no período.</p>}
+          : null}
       </div>
       <Link to="/despesas">Abrir despesas</Link>
     </header>
@@ -96,11 +128,7 @@ export function PainelDeGastos({ dados, inicio, fim }: { dados: Dashboard; inici
   </section>
 }
 
-/**
- * Quanto do rodado nao foi pago. Eram quatro cartoes com quatro numeros soltos —
- * rodado, morto, custo e despesa prevista — e a relacao entre eles, que e a
- * unica coisa que importa ali, ficava por conta de quem lia.
- */
+/** Quanto do rodado nao foi pago. So existe na tela quando ha km registrado. */
 export function PainelDeKm({ dados }: { dados: Dashboard }) {
   return <section className="panel">
     <header className="panel-title">
@@ -116,105 +144,42 @@ export function PainelDeKm({ dados }: { dados: Dashboard }) {
 }
 
 /**
- * Servico e comissao andam juntos: uma e 20% da outra, e ver so a receita esconde
- * metade do que o dia custou. Nenhum dos dois entra de novo no saldo — a receita
- * ja esta em "recebido" e a comissao vira despesa quando e paga.
+ * Faturamento por socorrista. O que foi pago sem socorrista vinculado vira a
+ * ultima linha, para a soma das barras fechar com a producao paga do periodo.
  */
-export function PainelDaProducao({ dados }: { dados: Dashboard }) {
-  const pendentes = dados.servicosPendentes ?? 0
-  const doPeriodo = dados.servicosDoPeriodo ?? 0
-  const producaoPendente = dados.producaoPendente ?? 0
-  return <section className="panel">
-    <header className="panel-title">
-      <div><span className="eyebrow">Serviços do período</span><h2>Produção e comissão</h2></div>
-      <Link to="/comissoes">Abrir comissões</Link>
-    </header>
-    <div className="fleet-summary">
-      <div>
-        <span>Serviços pagos</span><strong>{moeda(dados.producaoPaga ?? 0)}</strong>
-        <small>Valor total do serviço</small>
-      </div>
-      <div>
-        <span>Comissão sobre eles</span><strong>{moeda(dados.comissaoSobreProducao ?? 0)}</strong>
-        <small>20% do valor acima</small>
-      </div>
-      <div>
-        <span>Ainda não pagos</span><strong>{pendentes} de {doPeriodo}</strong>
-        <small>
-          {producaoPendente > 0
-            ? `${moeda(producaoPendente)} aguardando OP`
-            : 'Valor só sai quando a Porto fecha a OP'}
-        </small>
-      </div>
-      <div>
-        <span>Comissão a repassar</span><strong>{moeda(dados.comissaoAPagar ?? 0)}</strong>
-        <small>Já devida, ainda não paga à equipe</small>
-      </div>
-    </div>
-    <ProporcaoServicos pagos={doPeriodo - pendentes} pendentes={pendentes}
-      valorPago={dados.producaoPaga ?? 0} valorPendente={producaoPendente}/>
-    {pendentes > 0
-      ? <p className="empty-inline">
-          Serviço prestado não é serviço pago: a Porto só fecha a OP semanas depois. Estes entram
-          na comissão do ciclo em que forem pagos, não no ciclo em que aconteceram.
-        </p>
-      : null}
-  </section>
-}
+export function PainelFaturamentoPorSocorrista({ dados }: { dados: Dashboard }) {
+  const pessoas = (dados.resultadoPorSocorrista ?? []).filter(p => p.servicos > 0)
+  const linhas: LinhaFaturamento[] = pessoas.map(p => ({
+    chave: String(p.motoristaId), rotulo: p.socorrista, valor: p.producao,
+    quantidade: p.servicos, semVinculo: false,
+  }))
+  const semDono = (dados.producaoPaga ?? 0) - pessoas.reduce((soma, p) => soma + p.producao, 0)
+  if (semDono > CENTAVO) linhas.push({ chave: 'sem', rotulo: 'Sem socorrista', valor: semDono, semVinculo: true })
 
-export function PainelPorSocorrista({ dados }: { dados: Dashboard }) {
-  return <section className="panel">
-    <header className="panel-title">
-      <div><span className="eyebrow">Por pessoa</span><h2>Faturamento e custo por socorrista</h2></div>
-      <Link to="/equipe">Abrir socorristas</Link>
-    </header>
-    <FaturamentoECusto descricao="Faturamento e custo por socorrista"
-      vazio="Nenhum serviço pago com socorrista vinculado neste período."
-      linhas={(dados.resultadoPorSocorrista ?? []).map(p => ({
-        id: p.motoristaId, rotulo: p.socorrista, faturamento: p.producao, custo: p.custoTotal,
-      }))}/>
-  </section>
+  return <Painel etiqueta="Por pessoa" titulo="Faturamento por socorrista"
+    aoLado={<Link to="/equipe">Abrir socorristas</Link>}>
+    <FaturamentoPorGrupo descricao="Faturamento por socorrista no período"
+      vazio="Nenhum serviço pago neste período." linhas={linhas}/>
+  </Painel>
 }
-
-export function PainelPorVeiculo({ dados }: { dados: Dashboard }) {
-  return <section className="panel vehicle-results vehicle-results-v2">
-    <header className="panel-title">
-      <div><span className="eyebrow">Por viatura</span><h2>Faturamento e custo por veículo</h2></div>
-      <Link to="/veiculos">Abrir veículos</Link>
-    </header>
-    <FaturamentoECusto descricao="Faturamento e custo por veículo"
-      vazio="Nenhum resultado por veículo no período."
-      linhas={dados.resultadoPorVeiculo.map(v => ({
-        id: v.veiculoId, rotulo: v.veiculo, faturamento: v.receitas, custo: v.despesas,
-      }))}/>
-  </section>
-}
-
 
 /**
- * Faturamento Porto fica fora do caixa ate o recebimento confirmado.
- *
- * O tipo pede os quatro numeros que este bloco mostra, e nao o resumo inteiro da
- * conciliacao: exigir vinte e dois campos para ler quatro obrigaria quem chama a
- * buscar dezoito que ninguem desenha.
+ * Faturamento por viatura. A viatura vem da sigla da OS; o custo aparece ao lado
+ * quando a viatura teve despesa paga. Receita sem viatura fecha a conta na
+ * ultima linha.
  */
-export function ResumoPorto({ porto }: { porto: ResumoPortoDashboard }) {
-  return <section className="porto-finance-summary" aria-label="Faturamento Porto">
-    <header>
-      <div><span className="eyebrow">Porto Seguro</span><h2>Faturamento separado do caixa</h2></div>
-      <Link to="/porto/dashboard">Abrir módulo Porto →</Link>
-    </header>
-    <div>
-      <span>Previsto<strong>{moeda(porto.valorTotalPrevisto)}</strong>
-        <small>{porto.quantidadeTotalOps} OPs</small></span>
-      <span>Programado<strong>{moeda(porto.valorProgramado)}</strong>
-        <small>Ainda não recebido</small></span>
-      <span>Recebido no banco<strong>{moeda(porto.valorRecebido)}</strong>
-        <small>Confirmação financeira</small></span>
-    </div>
-    <p>
-      Valores previstos e programados não compõem o caixa, a DRE ou o lucro até o recebimento
-      confirmado.
-    </p>
-  </section>
+export function PainelFaturamentoPorViatura({ dados }: { dados: Dashboard }) {
+  const viaturas = dados.resultadoPorVeiculo.filter(v => v.receitas > 0 || v.despesas > 0)
+  const linhas: LinhaFaturamento[] = viaturas.map(v => ({
+    chave: String(v.veiculoId), rotulo: v.veiculo, valor: v.receitas, semVinculo: false,
+    detalhe: v.despesas > 0 ? `custo ${moeda(v.despesas)}` : undefined,
+  }))
+  const semDono = dados.receitaRecebida - viaturas.reduce((soma, v) => soma + v.receitas, 0)
+  if (semDono > CENTAVO) linhas.push({ chave: 'sem', rotulo: 'Sem viatura', valor: semDono, semVinculo: true })
+
+  return <Painel etiqueta="Por viatura" titulo="Faturamento por viatura"
+    aoLado={<Link to="/veiculos">Abrir veículos</Link>}>
+    <FaturamentoPorGrupo descricao="Faturamento por viatura no período"
+      vazio="Nenhuma receita neste período." linhas={linhas}/>
+  </Painel>
 }

@@ -102,8 +102,7 @@ button,input,select,textarea{font:inherit}button{color:inherit}a{color:inherit}:
 .modal{margin:auto;max-height:calc(100dvh - 64px);overflow-y:auto}
 .modal-financial{width:min(900px,100%)}
 .porto-view-switch{display:flex;gap:6px;margin-bottom:18px}.porto-view-switch button{border:1px solid var(--line);background:var(--superficie);border-radius:9px;padding:9px 16px;font-weight:700;color:var(--muted);cursor:pointer}.porto-view-switch button.active{background:var(--navy-900);border-color:var(--navy-900);color:#fff}
-.porto-finance-summary{border:1px solid #cfe0f4;background:linear-gradient(135deg,#f7fbff,#fff);border-radius:16px;padding:22px;margin:22px 0}.porto-finance-summary header{display:flex;align-items:center;justify-content:space-between}.porto-finance-summary h2{margin:4px 0 0}.porto-finance-summary>div{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:18px}.porto-finance-summary>div span{display:flex;flex-direction:column;gap:4px;padding:14px;background:var(--superficie);border-radius:12px}.porto-finance-summary strong{font-size:1.35rem;color:var(--navy-900)}.porto-finance-summary p{margin:14px 0 0;color:var(--muted);font-size:.9rem}.porto-composition-upload{display:flex;align-items:end;gap:12px;margin:18px 0}.porto-history{border-top:1px solid var(--line);margin-top:20px;padding-top:16px}.porto-history p{color:var(--muted)}
-@media(max-width:760px){.porto-finance-summary>div{grid-template-columns:1fr}}
+.porto-composition-upload{display:flex;align-items:end;gap:12px;margin:18px 0}.porto-history{border-top:1px solid var(--line);margin-top:20px;padding-top:16px}.porto-history p{color:var(--muted)}
 
 .porto-confirm-sticky{position:sticky;top:12px;z-index:15;margin:14px 0;padding:14px;border:1px solid #cfe0f4;border-radius:12px;background:rgba(255,255,255,.97);box-shadow:0 10px 28px rgba(9,36,66,.12);backdrop-filter:blur(8px)}
 .porto-confirm-totals{display:flex;gap:14px;margin-right:auto}.porto-confirm-totals span{display:flex;flex-direction:column;color:var(--muted);font-size:9px}.porto-confirm-totals strong{color:var(--ink);font:600 18px 'Barlow Condensed',sans-serif}.porto-preview-table tbody tr{content-visibility:auto;contain-intrinsic-size:0 48px}
@@ -1272,7 +1271,7 @@ tbody tr{transition:background-color .14s ease}
    fila de trabalho, evolucao em grafico, detalhe em tabela. Cor semantica so
    quando ha o que resolver - zero divergencia e boa noticia, nao alarme.
    Os espacos saem da escala (--e1..--e5); nenhum valor solto aqui. */
-.painel-porto>section,.painel-porto>div{margin-bottom:var(--espaco-3)}
+.painel-porto>section,.painel-porto>div,.painel-visao>section,.painel-visao>div{margin-bottom:var(--espaco-3)}
 .painel-filtros .ledger-filters{display:grid;grid-template-columns:minmax(240px,1.4fr) repeat(2,minmax(150px,.8fr)) auto;align-items:end;gap:var(--espaco-2)}
 
 /* Os tres numeros que respondem "quanto entrou". Unico bloco escuro da tela. */
@@ -1483,3 +1482,14 @@ tbody tr{transition:background-color .14s ease}
   .confirmar-saida .modal-actions{flex-direction:column-reverse}
   .confirmar-saida .modal-actions .button{width:100%}
 }
+
+/* Visao geral: periodo so com datas, lucro negativo e marca da despesa. */
+.destaque-periodo-datas{grid-template-columns:repeat(2,minmax(160px,220px))}
+.destaque-numero strong.destaque-negativo,.destaque-numero small b.destaque-negativo{color:var(--red)}
+.marca-despesa{display:inline-block;width:14px;height:3px;border-radius:2px;background:var(--red)}
+/* Na Visao geral, os paineis seguem a forma do painel Porto: cabecalho sem linha
+   e o mesmo respiro. As regras antigas de .dashboard-tech davam padding duplo. */
+.painel-visao .panel.panel-respiro>.panel-title{padding:0;border-bottom:0}
+.painel-visao .panel.painel-gastos>.panel-title{padding:var(--espaco-4) var(--espaco-4) var(--espaco-3);border-bottom:0}
+.painel-visao .painel-gastos .grafico-vazio{padding:var(--espaco-2) var(--espaco-4) var(--espaco-4);text-align:left}
+.painel-visao .painel-gastos .gastos-leitura>section{padding:var(--espaco-3) var(--espaco-4) var(--espaco-4)}

@@ -84,42 +84,24 @@ window.fetch = (async (entrada: RequestInfo | URL, init?: RequestInit) => {
   return original(entrada, init)
 }) as typeof window.fetch
 
+// Resposta real de dashboard_resumo('2026-04-01', '2026-04-30'), copiada do banco
+// em 16/09/2026: ainda nao ha despesa, km nem viatura nas OS.
 const visaoGeral = {
+  porto: { valorRecebido: 74770, valorProgramado: 74770, quantidadeTotalOps: 1, valorTotalPrevisto: 74770 },
   financeiro: {
-    receitaRecebida: 74770, receitaPrevista: 17630, totalAtrasado: 5230,
-    despesasPagas: 31240.5, despesasPrevistas: 4200,
-    saldoRealizado: 43529.5, saldoProjetado: 56959.5,
-    registrosImportados: 275, quilometragemTotal: 9840, kmRemunerado: 7320,
-    kmMorto: 2520, custoKmMorto: 4284, producaoPaga: 74770,
-    comissaoSobreProducao: 14954, producaoPendente: 3800,
-    servicosDoPeriodo: 275, servicosPendentes: 12, comissaoAPagar: 14166.28,
-    resultadoPorVeiculo: [
-      { veiculoId: 1, veiculo: 'L168', receitas: 24310, despesas: 8120, resultado: 16190, kmMorto: 640, custoKmMorto: 1088 },
-      { veiculoId: 2, veiculo: 'L25', receitas: 21870, despesas: 9340, resultado: 12530, kmMorto: 820, custoKmMorto: 1394 },
-      { veiculoId: 3, veiculo: 'L845', receitas: 19640, despesas: 7760, resultado: 11880, kmMorto: 610, custoKmMorto: 1037 },
-      { veiculoId: 4, veiculo: 'K85', receitas: 8950, despesas: 6020, resultado: 2930, kmMorto: 450, custoKmMorto: 765 },
-    ],
+    kmMorto: 0, custoKmMorto: 0, kmRemunerado: 0, producaoPaga: 74770, despesasPagas: 0,
+    totalAtrasado: 0, comissaoAPagar: 14166.28, saldoProjetado: 74770, saldoRealizado: 74770,
+    receitaPrevista: 0, receitaRecebida: 74770, producaoPendente: 0, despesasPrevistas: 0,
+    servicosDoPeriodo: 275, servicosPendentes: 0, quilometragemTotal: 0, registrosImportados: 275,
+    resultadoPorVeiculo: [], despesasPorCategoria: [], comissaoSobreProducao: 14954,
     resultadoPorSocorrista: [
-      { motoristaId: 1, socorrista: 'ANDERSON JORGE RIBEIRO', servicos: 85, producao: 19864.11, comissao: 3972.82, despesas: 640, custoTotal: 4612.82 },
-      { motoristaId: 2, socorrista: 'JEFERSON MARTINS DA SILVA', servicos: 49, producao: 23853.12, comissao: 4770.62, despesas: 380, custoTotal: 5150.62 },
-      { motoristaId: 3, socorrista: 'QEBSON RAMOS DA SILVA', servicos: 75, producao: 18787.95, comissao: 3757.59, despesas: 520, custoTotal: 4277.59 },
-      { motoristaId: 4, socorrista: 'NATANAEL JOSE DE FREITAS NETO', servicos: 50, producao: 8326.2, comissao: 1665.24, despesas: 290, custoTotal: 1955.24 },
+      { comissao: 3972.82, despesas: 0, producao: 19864.11, servicos: 85, custoTotal: 3972.82, socorrista: 'ANDERSON JORGE RIBEIRO', motoristaId: 9 },
+      { comissao: 4770.62, despesas: 0, producao: 23853.12, servicos: 49, custoTotal: 4770.62, socorrista: 'JEFERSON MARTINS DA SILVA', motoristaId: 1 },
+      { comissao: 1665.24, despesas: 0, producao: 8326.2, servicos: 50, custoTotal: 1665.24, socorrista: 'NATANAEL JOSE DE FREITAS NETO', motoristaId: 4 },
+      { comissao: 3757.59, despesas: 0, producao: 18787.95, servicos: 75, custoTotal: 3757.59, socorrista: 'QEBSON RAMOS DA SILVA', motoristaId: 2 },
     ],
-    despesasPorCategoria: [
-      { categoriaId: 1, categoria: 'Combustível', valor: 14200, participacao: 45.5 },
-      { categoriaId: 2, categoria: 'Manutenção', valor: 8320.5, participacao: 26.6 },
-      { categoriaId: 3, categoria: 'Alimentação', valor: 4870, participacao: 15.6 },
-      { categoriaId: 4, categoria: 'Pedágio', valor: 3850, participacao: 12.3 },
-    ],
-    despesasAcumuladasPorDia: [
-      { data: '2026-04-03', valorDia: 4200, acumulado: 4200 },
-      { data: '2026-04-09', valorDia: 6100, acumulado: 10300 },
-      { data: '2026-04-15', valorDia: 8600, acumulado: 18900 },
-      { data: '2026-04-22', valorDia: 7240.5, acumulado: 26140.5 },
-      { data: '2026-04-28', valorDia: 5100, acumulado: 31240.5 },
-    ],
+    despesasAcumuladasPorDia: [],
   },
-  porto: { quantidadeTotalOps: 4, valorTotalPrevisto: 92400, valorProgramado: 17630, valorRecebido: 74770 },
 }
 
 const daVisao = new URLSearchParams(location.search).get('tela') === 'visao'

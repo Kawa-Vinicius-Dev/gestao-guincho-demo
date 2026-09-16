@@ -4,42 +4,129 @@ import { expect,test } from 'vitest'
 import DashboardPage from '../DashboardPage'
 import { servidor } from '../test/servidor'
 import { MemoryRouter } from 'react-router-dom'
+import type { Dashboard } from '../types/modelos'
+import { invalidarCacheFinanceiro } from '../dados/dashboard'
 
-test('mostra a receita da OP paga na visão geral usando o dashboard real',async()=>{
-  servidor.use(
-    http.get('/api/dashboard',()=>HttpResponse.json({receitaRecebida:1000,receitaPrevista:0,totalAtrasado:0,despesasPagas:200,despesasPrevistas:0,saldoRealizado:800,saldoProjetado:800,registrosImportados:1,quilometragemTotal:0,kmRemunerado:0,kmMorto:0,custoKmMorto:0,resultadoPorVeiculo:[]})),
-    http.get('/api/porto/ordens-pagamento/resumo',()=>HttpResponse.json({quantidadeTotalOps:2,valorTotalPrevisto:900,quantidadeSemComposicao:1,valorSemComposicao:400,quantidadeConciliadas:1,valorConciliadas:500,quantidadeComDivergencia:0,valorTotalDivergencias:0,quantidadePagamentoProgramado:2,valorProgramado:900,quantidadeRecebidas:0,valorRecebido:0,quantidadeAguardandoRecebimento:2,valorAguardandoRecebimento:900,quantidadeVencidasNaoRecebidas:0,valorVencidoNaoRecebido:0,valorMedioPorOp:450,quantidadeOrdensServico:3})),
-  )
-  render(<MemoryRouter><DashboardPage/></MemoryRouter>)
-  const caixa=await screen.findByRole('region',{name:/indicadores do período/i});expect(within(caixa).getByText('R$ 1.000,00')).toBeInTheDocument();expect(within(caixa).getByText('R$ 200,00')).toBeInTheDocument();expect(within(caixa).getByText('R$ 800,00')).toBeInTheDocument()
-  const porto=await screen.findByRole('region',{name:/faturamento porto/i});expect(within(porto).getAllByText(/R\$\s*900,00/)).toHaveLength(2);expect(within(porto).getByText(/não compõem o caixa/i)).toBeInTheDocument()
+/** Numeros da primeira OP real: 275 servicos, R$ 74.770,00, nenhuma despesa lancada. */
+const dashboard=(extra:Partial<Dashboard>={}):Dashboard=>({
+  receitaRecebida:74770,receitaPrevista:0,totalAtrasado:0,despesasPagas:0,despesasPrevistas:0,
+  saldoRealizado:74770,saldoProjetado:74770,registrosImportados:275,quilometragemTotal:0,
+  kmRemunerado:0,kmMorto:0,custoKmMorto:0,producaoPaga:74770,comissaoSobreProducao:14954,
+  producaoPendente:0,servicosDoPeriodo:275,servicosPendentes:0,comissaoAPagar:14166.28,
+  resultadoPorVeiculo:[],despesasPorCategoria:[],despesasAcumuladasPorDia:[],
+  resultadoPorSocorrista:[
+    {motoristaId:1,socorrista:'JEFERSON MARTINS DA SILVA',servicos:49,producao:23853.12,comissao:4770.62,despesas:0,custoTotal:4770.62},
+    {motoristaId:9,socorrista:'ANDERSON JORGE RIBEIRO',servicos:85,producao:19864.11,comissao:3972.82,despesas:0,custoTotal:3972.82},
+    {motoristaId:2,socorrista:'QEBSON RAMOS DA SILVA',servicos:75,producao:18787.95,comissao:3757.59,despesas:0,custoTotal:3757.59},
+    {motoristaId:4,socorrista:'NATANAEL JOSE DE FREITAS NETO',servicos:50,producao:8326.2,comissao:1665.24,despesas:0,custoTotal:1665.24},
+  ],
+  ...extra,
 })
 
-// A Porto paga semanas depois do servico. Quem olhava o mes do atendimento via
-// receita zero e concluia que a importacao falhou — tres vezes na operacao. A
-// tela passa a dizer onde o dinheiro esta, em vez de so nao mostra-lo.
-test('avisa onde caiu o dinheiro dos serviços pagos fora da janela',async()=>{
+function servidorDaVisao(dados:Dashboard){
   servidor.use(
-    http.get('/api/dashboard',()=>HttpResponse.json({receitaRecebida:0,receitaPrevista:0,totalAtrasado:0,
-      despesasPagas:0,despesasPrevistas:0,saldoRealizado:0,saldoProjetado:0,registrosImportados:2,
-      quilometragemTotal:0,kmRemunerado:0,kmMorto:0,custoKmMorto:0,resultadoPorVeiculo:[],
-      recebimentosForaDoPeriodo:[{dataPagamento:'2026-08-28',valor:59246.5,servicos:248}]})),
+    http.get('/api/dashboard',()=>HttpResponse.json(dados)),
+    http.get('/api/porto/ordens-pagamento/resumo',()=>HttpResponse.json(null)),
   )
+}
+
+test('o lucro operacional abre a tela, com receita e despesa ao lado',async()=>{
+  servidorDaVisao(dashboard({despesasPagas:20000,saldoRealizado:54770}))
   render(<MemoryRouter><DashboardPage/></MemoryRouter>)
 
-  const aviso=await screen.findByRole('status',{name:/recebimento fora do período/i})
-  expect(within(aviso).getByText(/59\.246,50/)).toBeInTheDocument()
-  expect(within(aviso).getByText('28/08/2026')).toBeInTheDocument()
-  expect(aviso).toHaveTextContent(/248 serviços prestados/i)
+  const resultado=await screen.findByRole('region',{name:/resultado do período/i})
+  expect(await within(resultado).findByText('Lucro operacional')).toBeInTheDocument()
+  expect(within(resultado).getByText('R$ 54.770,00')).toBeInTheDocument()
+  expect(within(resultado).getByText(/Margem de 73,3%/)).toBeInTheDocument()
+  expect(within(resultado).getByText('R$ 74.770,00')).toBeInTheDocument()
+  expect(within(resultado).getByText('R$ 20.000,00')).toBeInTheDocument()
+  expect(within(resultado).getByText('26,7% da receita')).toBeInTheDocument()
 })
 
-test('sem pagamento fora da janela não há aviso nenhum',async()=>{
-  servidor.use(http.get('/api/dashboard',()=>HttpResponse.json({receitaRecebida:500,receitaPrevista:0,
-    totalAtrasado:0,despesasPagas:0,despesasPrevistas:0,saldoRealizado:500,saldoProjetado:500,
-    registrosImportados:0,quilometragemTotal:0,kmRemunerado:0,kmMorto:0,custoKmMorto:0,
-    resultadoPorVeiculo:[],recebimentosForaDoPeriodo:[]})))
+// Na Porto a OP chega paga e o painel do dia nasce sem valor: "a receber" zerado
+// seria um numero morto. Ele so aparece quando existe dinheiro previsto de fato.
+test('a receber só aparece quando existe',async()=>{
+  servidorDaVisao(dashboard())
   render(<MemoryRouter><DashboardPage/></MemoryRouter>)
 
-  await screen.findByRole('region',{name:/indicadores do período/i})
-  expect(screen.queryByRole('status',{name:/recebimento fora do período/i})).not.toBeInTheDocument()
+  const resultado=await screen.findByRole('region',{name:/resultado do período/i})
+  await within(resultado).findByText('Lucro operacional')
+  expect(within(resultado).queryByText('A receber')).not.toBeInTheDocument()
+})
+
+test('lucro negativo fica em vermelho',async()=>{
+  servidorDaVisao(dashboard({receitaRecebida:1000,despesasPagas:1500,saldoRealizado:-500}))
+  render(<MemoryRouter><DashboardPage/></MemoryRouter>)
+
+  const lucro=await screen.findByText('-R$ 500,00')
+  expect(lucro).toHaveClass('destaque-negativo')
+})
+
+test('a barra mostra serviços e a comissão que ainda é da equipe',async()=>{
+  servidorDaVisao(dashboard())
+  render(<MemoryRouter><DashboardPage/></MemoryRouter>)
+
+  expect(await screen.findByText('Serviços do período')).toBeInTheDocument()
+  expect(screen.getByText('275')).toBeInTheDocument()
+  expect(screen.getByText('Comissão a repassar')).toBeInTheDocument()
+  expect(screen.getByText('R$ 14.166,28')).toBeInTheDocument()
+  // Despesa a pagar zerada nao vira cartao.
+  expect(screen.queryByText('Despesas a pagar')).not.toBeInTheDocument()
+})
+
+// A soma das barras fecha com o que foi pago: o que nao tem socorrista ou viatura
+// vinculados aparece na ultima linha, em vez de sumir.
+test('faturamento por socorrista e por viatura fecha com o total pago',async()=>{
+  servidorDaVisao(dashboard())
+  render(<MemoryRouter><DashboardPage/></MemoryRouter>)
+
+  const pessoas=await screen.findByRole('list',{name:/faturamento por socorrista/i})
+  const linhas=within(pessoas).getAllByRole('listitem')
+  expect(linhas).toHaveLength(5)
+  expect(linhas[0]).toHaveTextContent('JEFERSON MARTINS DA SILVA')
+  expect(linhas[4]).toHaveTextContent('Sem socorrista')
+  expect(linhas[4]).toHaveTextContent(/R\$\s3\.938,62/)
+
+  const viaturas=screen.getByRole('list',{name:/faturamento por viatura/i})
+  expect(within(viaturas).getByText('Sem viatura')).toBeInTheDocument()
+  expect(within(viaturas).getByText(/R\$\s74\.770,00/)).toBeInTheDocument()
+})
+
+test('viatura com despesa mostra o custo ao lado do faturamento',async()=>{
+  servidorDaVisao(dashboard({resultadoPorVeiculo:[
+    {veiculoId:2,veiculo:'L168',receitas:74770,despesas:1200,resultado:73570,kmMorto:0,custoKmMorto:0},
+  ]}))
+  render(<MemoryRouter><DashboardPage/></MemoryRouter>)
+
+  const viaturas=await screen.findByRole('list',{name:/faturamento por viatura/i})
+  expect(within(viaturas).getByText('L168')).toBeInTheDocument()
+  expect(within(viaturas).getByText(/custo R\$\s1\.200,00/)).toBeInTheDocument()
+  expect(within(viaturas).queryByText('Sem viatura')).not.toBeInTheDocument()
+})
+
+test('km só aparece quando há km registrado',async()=>{
+  servidorDaVisao(dashboard())
+  const {unmount}=render(<MemoryRouter><DashboardPage/></MemoryRouter>)
+  await screen.findByText('Serviços do período')
+  expect(screen.queryByText(/km rodado × km morto/i)).not.toBeInTheDocument()
+  unmount()
+  // O mesmo periodo ficaria no cache de 60s; a segunda leitura precisa ir ao servidor.
+  invalidarCacheFinanceiro()
+
+  servidorDaVisao(dashboard({kmRemunerado:320,kmMorto:80,custoKmMorto:136,quilometragemTotal:400}))
+  render(<MemoryRouter><DashboardPage/></MemoryRouter>)
+  expect(await screen.findByText(/km rodado × km morto/i)).toBeInTheDocument()
+})
+
+// O resumo "Faturamento separado do caixa" repetia o recebido e mostrava um
+// "programado" que nao existe quando a OP chega paga. A nota de calculo dizia
+// que a OP contava pelo recebimento; ela conta no periodo da OP.
+test('sem resumo Porto duplicado e com a regra de período certa',async()=>{
+  servidorDaVisao(dashboard())
+  render(<MemoryRouter><DashboardPage/></MemoryRouter>)
+
+  await screen.findByText('Serviços do período')
+  expect(screen.queryByText(/faturamento separado do caixa/i)).not.toBeInTheDocument()
+  expect(screen.getByText(/conta no período da OP que o pagou/)).toBeInTheDocument()
+  expect(screen.queryByText(/vem do recebimento/)).not.toBeInTheDocument()
 })
