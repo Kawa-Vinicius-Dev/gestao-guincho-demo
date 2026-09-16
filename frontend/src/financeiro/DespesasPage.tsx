@@ -6,6 +6,7 @@ import { listarCategorias } from '../dados/cadastros'
 import { listarMotoristas } from '../dados/motoristas'
 import { listarVeiculos } from '../dados/veiculos'
 import { useAuth } from '../auth/AuthContext'
+import { useAoVivo } from '../dados/aoVivo'
 import { CampoNumero } from '../components/CamposMascarados'
 import { StatusBadge } from '../components/StatusBadge'
 import { Carregando, Vazio } from '../components/EstadoPagina'
@@ -33,6 +34,8 @@ export default function DespesasPage(){
   // precisa dizer qual e, com descricao e valor, senao confirmar e um chute.
   const [excluindo,setExcluindo]=useState<Despesa|null>(null),[apagando,setApagando]=useState(false)
   const carregar=()=>admin?listarDespesas().then(setLista):Promise.resolve()
+  // Despesa lancada por outra pessoa, ou comissao recalculada, entra na lista sozinha.
+  useAoVivo(()=>{carregar().catch(x=>setErro((x as Error).message))},admin)
   const [carregando,setCarregando]=useState(true)
   useEffect(()=>{carregar().catch(x=>setErro((x as Error).message)).finally(()=>setCarregando(false))
     Promise.all([listarCategorias('DESPESA'),listarVeiculos(),listarMotoristas()])

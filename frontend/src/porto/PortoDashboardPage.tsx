@@ -11,6 +11,7 @@ import { EvolucaoAcumulada, FaturamentoPorGrupo } from '../components/Graficos'
 import { CabecalhoPagina, Etiqueta, GradeIndicadores, Indicador, Painel } from '../components/ui/Pagina'
 import { rotuloOp } from '../utils/periodos'
 import { gravarFiltro, lerFiltro } from '../utils/filtroLembrado'
+import { useAoVivo } from '../dados/aoVivo'
 
 /**
  * Painel Porto.
@@ -105,6 +106,8 @@ export default function PortoDashboardPage() {
   useEffect(() => {
     gravarFiltro('porto-painel', { op: opEscolhida, inicio, fim, grao })
   }, [opEscolhida, inicio, fim, grao])
+  // Importacao, pendencia resolvida ou OP nova em qualquer lugar: recarrega.
+  useAoVivo(() => { void carregar(inicio, fim, grao) })
   // A lista de OPs e conveniencia: se nao carregar, as datas continuam valendo.
   useEffect(() => { listarPeriodosDeOp().then(setOps).catch(() => setOps([])) }, [])
 

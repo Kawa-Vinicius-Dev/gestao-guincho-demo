@@ -8,6 +8,7 @@ import type { Comissao,Motorista,OrdemPagamentoPorto,ResumoComissao } from '../t
 import { data,moeda } from '../utils/formatadores'
 import { opCorrente, rotuloOp } from '../utils/periodos'
 import { Modal } from '../components/Modal'
+import { useAoVivo } from '../dados/aoVivo'
 
 /**
  * Comissoes da OP.
@@ -21,6 +22,10 @@ export default function ComissoesPage(){
   useEffect(()=>{Promise.all([listarOpsComissao(),listarMotoristas()]).then(([p,m])=>{setPeriodos(p);setMotoristas(m);const atual=opCorrente(p);if(atual)setPeriodoId(atual.id);if(!atual)setCarregando(false)}).catch(e=>{setErro(e.message);setCarregando(false)})},[])
   const [carregando,setCarregando]=useState(true)
   useEffect(()=>{if(!periodoId)return;setCarregando(true);resumirComissoes(periodoId,motoristaId||undefined).then(setItens).catch(e=>setErro(e.message)).finally(()=>setCarregando(false))},[periodoId,motoristaId])
+  // OS que ganha dono ou gasto marcado muda a comissao na hora, detalhe aberto inclusive.
+  useAoVivo(()=>{if(!periodoId)return
+    resumirComissoes(periodoId,motoristaId||undefined).then(setItens).catch(e=>setErro(e.message))
+    if(detalhe)lerComissaoDaOp(periodoId,detalhe.motoristaId).then(setDetalhe).catch(e=>setErro(e.message))})
   async function abrir(id:number){try{setDetalhe(await lerComissaoDaOp(periodoId,id))}catch(e){setErro((e as Error).message)}}
   async function exportar(){setErro('');setExportando(true)
     try{await baixarRelatorioComissoes(periodoId)}
