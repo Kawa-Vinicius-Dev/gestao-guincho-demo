@@ -175,6 +175,21 @@ select pg_temp.checar('painel: OS aguardando OP',
 select pg_temp.checar('painel: nao cria receita',
   (select count(*)::text from public.receitas where descricao='OS 1234/26'), '0');
 
+\echo '========== OP COM COLUNA VAZIA NAO APAGA A VIATURA DO PAINEL =========='
+-- O relatorio da OP traz sigla e socorrista vazios. Texto vazio nao e nulo: sem
+-- tratar, o upsert trocava a viatura do painel diario por '' e o faturamento
+-- por viatura perdia o servico.
+select public.porto_registrar_importacao('op-sigla.csv','hash-op-sigla','OS_VINCULADAS',1);
+select public.porto_confirmar_importacao(
+  (select id from public.importacoes_porto where hash_arquivo='hash-op-sigla'),
+  '[{"numero_os":"1234/26","valor_total":"250.00","sigla_viatura":"","socorrista":" ","hash_registro":"o1"}]'::jsonb,
+  'OP-300'
+);
+select pg_temp.checar('OP vazia mantem a sigla do painel',
+  (select sigla_viatura from public.ordens_servico_porto where numero='1234/26'), 'L168');
+select pg_temp.checar('OP paga a OS do painel',
+  (select status_financeiro::text from public.ordens_servico_porto where numero='1234/26'), 'RECEBIDO');
+
 \echo '========== IMPORTACAO CONFIRMADA NAO SE CONFIRMA DE NOVO =========='
 select pg_temp.checar('confirmar duas vezes e recusado',
   pg_temp.erro_de($$select public.porto_confirmar_importacao(
