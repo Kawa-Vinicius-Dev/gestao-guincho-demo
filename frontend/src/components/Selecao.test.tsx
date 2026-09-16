@@ -97,3 +97,51 @@ test('campo sair de vista nao fecha o painel', async () => {
 
   expect(screen.getByRole('dialog', { name: 'Período' })).toBeInTheDocument()
 })
+
+// O painel abria no pointerdown: no celular, encostar num campo para rolar a
+// pagina ja o escancarava. Rolar uma tela de formulario virava uma sequencia de
+// dropdowns abrindo na cara de quem so queria descer.
+function dedo(elemento: Element, tipo: string, x: number, y: number) {
+  elemento.dispatchEvent(new PointerEvent(tipo, {
+    bubbles: true, cancelable: true, clientX: x, clientY: y, pointerId: 1,
+  }))
+}
+
+test('arrastar o dedo sobre o campo rola a pagina, nao abre o painel', async () => {
+  render(<Selecao rotulo="Período" opcoes={veiculos}/>)
+  const campo = screen.getByLabelText('Período')
+
+  act(() => {
+    dedo(campo, 'pointerdown', 100, 300)
+    dedo(campo, 'pointerup', 100, 120)   // desceu 180px: e rolagem
+  })
+
+  expect(screen.queryByRole('dialog', { name: 'Período' })).not.toBeInTheDocument()
+})
+
+test('toque parado no campo abre o painel', async () => {
+  render(<Selecao rotulo="Período" opcoes={veiculos}/>)
+  const campo = screen.getByLabelText('Período')
+
+  act(() => {
+    dedo(campo, 'pointerdown', 100, 300)
+    dedo(campo, 'pointerup', 103, 302)   // tremor normal do dedo
+  })
+
+  expect(await screen.findByRole('dialog', { name: 'Período' })).toBeInTheDocument()
+})
+
+// Rolagem interrompida pelo navegador (o gesto virou scroll nativo) nao pode
+// deixar o toque pendurado e abrir o painel no proximo encostar.
+test('toque cancelado nao abre o painel depois', async () => {
+  render(<Selecao rotulo="Período" opcoes={veiculos}/>)
+  const campo = screen.getByLabelText('Período')
+
+  act(() => {
+    dedo(campo, 'pointerdown', 100, 300)
+    dedo(campo, 'pointercancel', 100, 300)
+    dedo(campo, 'pointerup', 100, 300)
+  })
+
+  expect(screen.queryByRole('dialog', { name: 'Período' })).not.toBeInTheDocument()
+})

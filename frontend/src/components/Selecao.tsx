@@ -45,10 +45,21 @@ type Props = Omit<SelectHTMLAttributes<HTMLSelectElement>, 'children'> & {
 /** Acima disto a lista ganha um campo de busca. Periodos e veiculos passam disso. */
 const BUSCA_A_PARTIR_DE = 8
 
+/**
+ * Quanto o dedo pode andar e a acao ainda contar como toque, em pixels.
+ *
+ * O painel abria no pointerdown: no celular, encostar num campo para rolar a
+ * pagina ja o escancarava. Ninguem acerta o dedo parado no pixel, entao um
+ * toque de verdade tambem anda um pouco — a folga separa os dois sem exigir
+ * precisao de quem usa.
+ */
+const FOLGA_DO_TOQUE = 10
+
 export function Selecao({ rotulo, className, ajuda, vazio, opcoes, ...resto }: Props) {
   const campo = useRef<HTMLSelectElement>(null)
   const [aberto, setAberto] = useState(false)
   const [ancora, setAncora] = useState<DOMRect | null>(null)
+  const toque = useRef<{ x: number; y: number } | null>(null)
 
   const lista = useMemo<Opcao[]>(
     () => (vazio === undefined ? [...opcoes] : [{ valor: '', texto: vazio }, ...opcoes]),
@@ -122,7 +133,21 @@ export function Selecao({ rotulo, className, ajuda, vazio, opcoes, ...resto }: P
         {...resto}
         ref={campo}
         className="selecao-campo"
-        onPointerDown={evento => { evento.preventDefault(); abrir() }}
+        onPointerDown={evento => {
+          // Segue barrando a lista nativa, mas nao abre ainda: encostar no campo
+          // para rolar a pagina e um pointerdown igual ao de quem quer escolher.
+          evento.preventDefault()
+          toque.current = { x: evento.clientX, y: evento.clientY }
+        }}
+        onPointerUp={evento => {
+          const inicio = toque.current
+          toque.current = null
+          if (!inicio) return
+          // Dedo que andou foi rolagem, nao escolha.
+          const andou = Math.hypot(evento.clientX - inicio.x, evento.clientY - inicio.y)
+          if (andou <= FOLGA_DO_TOQUE) abrir()
+        }}
+        onPointerCancel={() => { toque.current = null }}
         onMouseDown={evento => evento.preventDefault()}
         >
         {lista.map(o => <option key={o.valor} value={o.valor}>{o.texto}</option>)}
