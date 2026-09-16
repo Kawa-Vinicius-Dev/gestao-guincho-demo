@@ -1,4 +1,4 @@
-import { useState, type CSSProperties } from 'react'
+import { useState } from 'react'
 import { moeda, moedaCurta, numero, percentual } from '../utils/formatadores'
 
 /**
@@ -68,29 +68,30 @@ function fatiasDeGasto(linhas:LinhaCategoria[],total:number):FatiaGasto[]{
 }
 
 /**
- * A rosca da a composicao num relance, mas nao carrega a leitura sozinha: a lista
- * ao lado mantem nome, valor e percentual exatos, em ordem de impacto.
+ * Para onde o dinheiro foi, sem rosca.
+ *
+ * O total dentro de um circulo precisava caber no furo do meio e nao cabia: com
+ * valores de cinco digitos o numero vazava pela borda. O total fica em destaque
+ * acima, a composicao vira uma faixa unica na mesma linguagem das outras barras
+ * do painel, e a lista guarda nome, percentual e valor exatos — cor nunca e a
+ * unica forma de leitura.
  */
 export function GastosPorCategoria({linhas,total}:{linhas:LinhaCategoria[];total:number}){
   if(!linhas.length)return <Vazio texto="Nenhuma despesa paga neste período."/>
   const fatias=fatiasDeGasto(linhas,total)
-  let cursor=0
-  const gradiente=fatias.map(fatia=>{
-    const inicio=cursor
-    cursor+=fatia.participacao
-    return `${fatia.cor} ${inicio}% ${Math.min(cursor,100)}%`
-  }).join(',')
-  const estilo={'--gastos-gradiente':`conic-gradient(${gradiente})`} as CSSProperties
   return <div className="gastos-categoria">
-    <div className="gastos-rosca" style={estilo} aria-hidden="true">
-      <span><small>Total pago</small><strong>{moeda(total)}</strong></span>
+    <div className="gastos-total"><span>Total pago</span><strong>{moeda(total)}</strong></div>
+    <div className="gastos-faixa" role="img"
+      aria-label={`Composição das despesas: ${fatias.map(f=>`${f.rotulo} ${percentual(f.participacao)}`).join(', ')}`}>
+      {fatias.map(fatia=><span key={fatia.id}
+        style={{width:`${fatia.valor>0?Math.max(fatia.participacao,1):0}%`,backgroundColor:fatia.cor}}/>)}
     </div>
     <ol aria-label="Despesas por categoria">
       {fatias.map(fatia=><li key={fatia.id}>
         <i style={{backgroundColor:fatia.cor}} aria-hidden="true"/>
         <span title={fatia.rotulo}>{fatia.rotulo}</span>
-        <strong>{moeda(fatia.valor)}</strong>
         <small>{percentual(fatia.participacao)}</small>
+        <strong>{moeda(fatia.valor)}</strong>
       </li>)}
     </ol>
   </div>
