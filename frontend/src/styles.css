@@ -1403,3 +1403,36 @@ tbody tr{transition:background-color .14s ease}
   .confirmar-saida .modal-actions{flex-direction:column-reverse}
   .confirmar-saida .modal-actions .button{width:100%}
 }
+
+/* ===========================================================================
+   Excluir despesa
+   ---------------------------------------------------------------------------
+   A lixeira fica apagada em repouso e so ganha o vermelho no hover e no foco:
+   uma coluna inteira de icones vermelhos numa tabela de trinta linhas vira um
+   alarme constante, e apagar nao e o que a pessoa vem fazer aqui. O alvo tem os
+   44px de toque da camada de padronizacao mesmo com o icone de 14px.
+
+   A confirmacao repete descricao, categoria, data e valor porque a lixeira fica
+   no fim de uma linha larga: quem rola a tabela ate o fim perde de vista qual
+   linha e, e "tem certeza?" sozinho nao da como conferir.
+   =========================================================================== */
+.acoes-da-linha{display:inline-flex;align-items:center;gap:var(--espaco-1);white-space:nowrap}
+.botao-lixeira{display:inline-grid;place-items:center;width:34px;min-width:34px;height:34px;padding:0;
+  border-color:transparent;background:none;color:var(--muted);transition:color .12s,background-color .12s,border-color .12s}
+.botao-lixeira:hover,.botao-lixeira:focus-visible{border-color:var(--erro-fundo);background:var(--erro-fundo);color:var(--erro-texto)}
+.confirmar-exclusao{width:min(468px,100%);border-top:3px solid var(--red)}
+.confirmar-exclusao .eyebrow{color:var(--erro-texto)}
+.confirmar-exclusao>header{margin-bottom:var(--espaco-3);padding-bottom:var(--espaco-2)}
+.confirmar-exclusao h2{font-size:27px}
+.confirmar-exclusao-resumo{display:grid;gap:var(--espaco-1);margin:var(--espaco-2) 0 0;
+  padding:var(--espaco-2);border-radius:8px;background:var(--superficie-2)}
+.confirmar-exclusao-resumo>div{display:flex;align-items:baseline;justify-content:space-between;gap:var(--espaco-2)}
+.confirmar-exclusao-resumo dt{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.07em}
+.confirmar-exclusao-resumo dd{margin:0;color:var(--ink);font-size:12px;font-weight:600;text-align:right}
+.confirmar-exclusao-resumo dd.negative{color:var(--red)}
+.confirmar-exclusao .modal-actions{margin-top:var(--espaco-3)}
+
+@media(max-width:480px){
+  .confirmar-exclusao .modal-actions{flex-direction:column-reverse}
+  .confirmar-exclusao .modal-actions .button{width:100%}
+}

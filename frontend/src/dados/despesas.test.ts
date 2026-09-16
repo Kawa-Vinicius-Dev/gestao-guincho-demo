@@ -186,3 +186,57 @@ test('lista vazia e estado vazio, nao erro', async () => {
 
   await expect(listarDespesas()).resolves.toEqual([])
 })
+
+test('excluir apaga a linha e o comprovante que ficaria órfão no bucket', async () => {
+  let apagouLinha = '', apagouArquivo: string[] = []
+  servidor.use(
+    http.delete(`${URL_SUPABASE}/rest/v1/despesas`, ({ request }) => {
+      apagouLinha = new URL(request.url).searchParams.get('id') ?? ''
+      return HttpResponse.json([{ id: 12 }])
+    }),
+    http.delete(`${URL_SUPABASE}/storage/v1/object/comprovantes`, async ({ request }) => {
+      apagouArquivo = ((await request.json()) as { prefixes: string[] }).prefixes
+      return HttpResponse.json([])
+    }),
+  )
+  comSessao()
+  const { excluirDespesa } = await carregar('auth,despesas')
+
+  await excluirDespesa({
+    id: 12, descricao: 'Diesel', categoria: 'Combustível', valor: 250,
+    data: '2026-09-08', status: 'PENDENTE', aprovada: false, criadoPor: 'Ana',
+    comprovante: 'despesas/12/nota.pdf',
+  })
+
+  expect(apagouLinha).toBe('eq.12')
+  expect(apagouArquivo).toEqual(['despesas/12/nota.pdf'])
+})
+
+// O PostgREST responde 200 com lista vazia quando a policy filtra tudo. Sem
+// olhar quantas linhas voltaram, a tela diria "excluida" e a despesa seguiria la.
+test('exclusão que a policy recusou não passa por bem-sucedida', async () => {
+  servidor.use(http.delete(`${URL_SUPABASE}/rest/v1/despesas`, () => HttpResponse.json([])))
+  comSessao()
+  const { excluirDespesa } = await carregar('auth,despesas')
+
+  await expect(excluirDespesa({
+    id: 12, descricao: 'Diesel', categoria: 'Combustível', valor: 250,
+    data: '2026-09-08', status: 'PENDENTE', aprovada: false, criadoPor: 'Ana',
+  })).rejects.toThrow(/não tem permissão/i)
+})
+
+// A despesa que representa o pagamento de uma comissao tem FK com `on delete
+// restrict`. A mensagem generica de "registro em uso" nao diz o que fazer.
+test('despesa de comissão explica o caminho em vez do erro genérico', async () => {
+  servidor.use(http.delete(`${URL_SUPABASE}/rest/v1/despesas`, () => HttpResponse.json({
+    code: '23503', message: 'update or delete on table "despesas" violates foreign key '
+      + 'constraint "pagamentos_comissao_despesa_id_fkey" on table "pagamentos_comissao"',
+  }, { status: 409 })))
+  comSessao()
+  const { excluirDespesa } = await carregar('auth,despesas')
+
+  await expect(excluirDespesa({
+    id: 12, descricao: 'Comissão Anderson', categoria: 'Comissões', valor: 900,
+    data: '2026-09-08', status: 'PAGO', aprovada: true, criadoPor: 'Ana',
+  })).rejects.toThrow(/cancele o pagamento da comissão/i)
+})

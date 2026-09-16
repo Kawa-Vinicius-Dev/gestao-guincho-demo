@@ -5,6 +5,7 @@ import { FaixaDeIndicadores, PainelDaProducao, PainelDeGastos, PainelDeKm,
   PainelPorSocorrista, PainelPorVeiculo, ResumoPorto } from './dashboard/PaineisDoResultado'
 import type { Dashboard, RecebimentoForaDoPeriodo } from './types/modelos'
 import { data, moeda } from './utils/formatadores'
+import { gravarFiltro, lerFiltro } from './utils/filtroLembrado'
 
 
 const meses=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez']
@@ -12,6 +13,16 @@ const rotuloMes=(mes:string)=>{const [ano,numeroMes]=mes.split('-').map(Number);
 /** Abre no mes corrente, que e o recorte mais pedido; a partir dai o periodo e livre. */
 function mesCorrente(){const d=new Date(),mes=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`
   return {inicio:`${mes}-01`,fim:`${mes}-${String(new Date(d.getFullYear(),d.getMonth()+1,0).getDate()).padStart(2,'0')}`}}
+/**
+ * O periodo escolhido sobrevive a ida e volta para outra tela.
+ *
+ * Quem abria um semestre aqui, ia registrar uma despesa e voltava, reencontrava
+ * o mes corrente e refazia as duas datas a cada consulta — a tela remonta a cada
+ * navegacao e o estado nascia do zero. O mes corrente continua sendo o padrao;
+ * so a primeira visita da sessao e que o usa.
+ */
+type Periodo={inicio:string,fim:string}
+const periodoInicial=():Periodo=>lerFiltro<Periodo>('visao-geral',mesCorrente())
 /** "Março/26" quando o periodo e um mes inteiro; senao mostra as duas datas. */
 function rotuloPeriodo(inicio:string,fim:string){
   if(!inicio||!fim)return ''
@@ -22,7 +33,7 @@ function rotuloPeriodo(inicio:string,fim:string){
 }
 
 export default function DashboardPage(){
-  const [{inicio,fim},setPeriodo]=useState(mesCorrente)
+  const [{inicio,fim},setPeriodo]=useState(periodoInicial)
   const [porto,setPorto]=useState<ResumoPortoDashboard|null>(null)
   const [financeiro,setFinanceiro]=useState<Dashboard|null>(null)
   const [erro,setErro]=useState('')
@@ -49,6 +60,12 @@ export default function DashboardPage(){
       .finally(()=>{if(valeu)setAtualizando(false)})
     return()=>{valeu=false}
   },[inicio,fim])
+
+  // Grava fora dos handlers das datas: assim nenhum caminho novo de troca de
+  // periodo esquece de lembrar o que escolheu. Data pela metade nao vai para o
+  // armazenamento — voltar para uma tela com "de" vazio e pior do que voltar
+  // para o mes corrente.
+  useEffect(()=>{if(inicio&&fim)gravarFiltro('visao-geral',{inicio,fim})},[inicio,fim])
 
   const margem=financeiro?.receitaRecebida
     ? financeiro.saldoRealizado/financeiro.receitaRecebida*100

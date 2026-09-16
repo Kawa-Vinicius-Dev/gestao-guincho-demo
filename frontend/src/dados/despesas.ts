@@ -1,4 +1,4 @@
-import { api } from '../api/http'
+import { ApiError, api } from '../api/http'
 import type { Despesa } from '../types/modelos'
 import { invalidarCacheFinanceiro } from './dashboard'
 import { ou, supabase, usuarioAtualId } from './cliente'
@@ -181,4 +181,42 @@ export async function pagarDespesa(
     }),
     'Não foi possível registrar o pagamento.',
   )
+}
+
+/**
+ * Exclusao de despesa.
+ *
+ * Existe porque errar o lancamento e comum — categoria trocada, valor com um
+ * zero a mais, despesa repetida pela segunda leva de fixas do mes — e ate agora
+ * o unico jeito de desfazer era mexer no banco pela mao.
+ *
+ * Dois cuidados que a chamada crua nao tem:
+ *
+ * O PostgREST nao reclama quando o DELETE nao casa com nenhuma linha: a policy
+ * filtra em silencio e a resposta volta vazia e feliz. Sem o `select`, quem nao
+ * e administrador veria "despesa excluida" e a linha continuaria na tela na
+ * proxima leitura. Com ele, zero linha e erro.
+ *
+ * E o comprovante: o arquivo vive no Storage, fora do Postgres, entao apagar a
+ * linha deixaria o objeto orfao no bucket, pago e invisivel. Vai depois da
+ * linha, e nao antes, porque o caminho contrario — arquivo apagado, exclusao
+ * recusada — deixaria uma despesa apontando para um arquivo que nao existe.
+ */
+export async function excluirDespesa(despesa: Despesa): Promise<void> {
+  invalidarCacheFinanceiro()
+  if (!moduloNoSupabase('despesas')) {
+    throw new ApiError('A exclusão de despesas só existe na versão que fala direto com o Supabase.', 501)
+  }
+
+  const apagadas = ou(
+    await supabase().from('despesas').delete().eq('id', despesa.id).select('id'),
+    'Não foi possível excluir a despesa.',
+  ) as { id: number }[]
+  if (!apagadas.length) {
+    throw new ApiError('Você não tem permissão para excluir despesas.', 403)
+  }
+
+  if (despesa.comprovante) {
+    await supabase().storage.from('comprovantes').remove([despesa.comprovante]).catch(() => {})
+  }
 }
