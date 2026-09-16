@@ -32,6 +32,10 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+# A bancada visual (npm run bancada) roda sem rede: a URL e a chave abaixo sao
+# de mentira e existem so para o cliente do Supabase subir. Sem segredo, e
+# versionada para qualquer um conseguir abrir as telas sem configurar nada.
+!frontend/.env.bancada
 .env.local
 backend/data/
 # Arquivos importados que ficaram no disco de quem rodou o sistema antes de

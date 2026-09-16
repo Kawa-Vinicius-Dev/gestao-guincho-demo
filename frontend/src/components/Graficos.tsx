@@ -1,5 +1,5 @@
 import { useState, type CSSProperties } from 'react'
-import { moeda, numero, percentual } from '../utils/formatadores'
+import { moeda, moedaCurta, numero, percentual } from '../utils/formatadores'
 
 /**
  * Graficos do dashboard. Sao desenhados com grid e divs, nao com uma biblioteca:
@@ -246,13 +246,14 @@ export function ProducaoXRecebimentos({ pontos, rotulo }: {
   const [ativo, setAtivo] = useState<number | null>(null)
   if (!pontos.length) return <Vazio texto="A evolução aparece quando houver serviços no período."/>
 
-  const largura = 720, altura = 260, topo = 18, base = 210, margem = 44
+  const largura = 720, altura = 272, topo = 20, base = 214, margem = 58
   const teto = escala(pontos.flatMap(p => [p.produzido, p.recebido, p.programado]))
   const passo = (largura - margem * 2) / Math.max(pontos.length, 1)
   const x = (i: number) => margem + passo * i + passo / 2
   const y = (v: number) => base - (v / teto) * (base - topo)
   const linha = (campo: 'recebido' | 'programado') => pontos
     .map((p, i) => `${i ? 'L' : 'M'} ${x(i).toFixed(1)} ${y(p[campo]).toFixed(1)}`).join(' ')
+  const area = `${linha('recebido')} L ${x(pontos.length - 1).toFixed(1)} ${base} L ${x(0).toFixed(1)} ${base} Z`
 
   const temRecebido = pontos.some(p => p.recebido > 0)
   const temProgramado = pontos.some(p => p.programado > 0)
@@ -271,14 +272,21 @@ export function ProducaoXRecebimentos({ pontos, rotulo }: {
         {[0, .25, .5, .75, 1].map(f => <g key={f}>
           <line className="producao-grade" x1={margem} x2={largura - margem}
             y1={topo + (base - topo) * f} y2={topo + (base - topo) * f}/>
-          <text className="producao-escala" x={margem - 8} y={topo + (base - topo) * f + 4}
-            textAnchor="end">{moeda(teto * (1 - f))}</text>
+          <text className="producao-escala" x={margem - 10} y={topo + (base - topo) * f + 4}
+            textAnchor="end">{moedaCurta(teto * (1 - f))}</text>
         </g>)}
 
         {pontos.map((p, i) => <rect key={`b${p.inicio}`} className="producao-barra"
           x={x(i) - Math.min(passo * .32, 16)} width={Math.min(passo * .64, 32)}
           y={y(p.produzido)} height={Math.max(base - y(p.produzido), p.produzido > 0 ? 2 : 0)}/>)}
 
+        <defs>
+          <linearGradient id="recebidoGradiente" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor="rgba(8,122,85,.16)"/>
+            <stop offset="100%" stopColor="rgba(8,122,85,0)"/>
+          </linearGradient>
+        </defs>
+        {temRecebido ? <path className="producao-area" d={area}/> : null}
         {temProgramado ? <path className="producao-linha-programado" d={linha('programado')}/> : null}
         {temRecebido ? <path className="producao-linha-recebido" d={linha('recebido')}/> : null}
         {temRecebido ? pontos.map((p, i) => p.recebido > 0

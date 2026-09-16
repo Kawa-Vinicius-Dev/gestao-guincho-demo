@@ -6,6 +6,7 @@ import { data, hojeIso, moeda, percentual } from '../utils/formatadores'
 import { Carregando } from '../components/EstadoPagina'
 import { Campo, Selecao } from '../components/Campos'
 import { ProducaoXRecebimentos } from '../components/Graficos'
+import { CabecalhoPagina, Etiqueta, GradeIndicadores, Indicador, Painel } from '../components/ui/Pagina'
 import { rotuloOp } from '../utils/periodos'
 
 /**
@@ -53,8 +54,7 @@ function rotuloDoBalde(grao: string) {
 }
 
 /** Um cartao so fica vermelho quando ha o que resolver: zero e uma boa noticia. */
-const tom = (valor: number, cor: 'alerta' | 'atencao') =>
-  valor > 0 ? `painel-card painel-card-${cor}` : 'painel-card'
+const tom = (valor: number, cor: 'alerta' | 'atencao') => (valor > 0 ? cor : 'neutro')
 
 export default function PortoDashboardPage() {
   const [dados, setDados] = useState<DashboardAltoNivelPorto | null>(null)
@@ -148,16 +148,12 @@ export default function PortoDashboardPage() {
   ].filter(Boolean) as string[] : []
 
   return <div className="page-enter painel-porto">
-    <header className="page-heading">
-      <div>
-        <span className="eyebrow">Porto Seguro</span>
-        <h1>Dashboard Porto</h1>
-        <p>Serviços realizados, pagamentos programados e valores efetivamente recebidos.</p>
-        <p className="painel-periodo">
-          <i aria-hidden="true"/>Período selecionado: <strong>{data(inicio)}</strong> → <strong>{data(fim)}</strong>
-        </p>
-      </div>
-      <div className="heading-actions">
+    <CabecalhoPagina
+      modulo="Porto Seguro"
+      titulo="Dashboard Porto"
+      descricao="Serviços realizados, pagamentos programados e valores efetivamente recebidos."
+      contexto={<>Período selecionado: <strong>{data(inicio)}</strong> → <strong>{data(fim)}</strong></>}
+      acoes={<>
         <Link className="button button-ghost" to="/porto/relatorios">Relatórios</Link>
         <button className="button button-ghost" disabled={baixando !== ''} onClick={() => void exportar('pdf')}>
           {baixando === 'pdf' ? 'Gerando PDF…' : 'Exportar PDF'}
@@ -165,8 +161,7 @@ export default function PortoDashboardPage() {
         <button className="button button-primary" disabled={baixando !== ''} onClick={() => void exportar('excel')}>
           {baixando === 'excel' ? 'Gerando Excel…' : 'Exportar Excel'}
         </button>
-      </div>
-    </header>
+      </>}/>
 
     {erro ? <div className="form-alert" role="alert">{erro}</div> : null}
 
@@ -215,32 +210,29 @@ export default function PortoDashboardPage() {
             {dados.quantidadeRecebidas} {dados.quantidadeRecebidas === 1 ? 'recebimento confirmado' : 'recebimentos confirmados'}
             {recebidoSobreProgramado !== null ? ` · ${percentual(recebidoSobreProgramado)} do programado` : ''}
           </small>
+          {recebidoSobreProgramado !== null
+            ? <span className="painel-progresso" aria-hidden="true">
+                <i style={{ width: `${Math.min(recebidoSobreProgramado, 100)}%` }}/>
+              </span>
+            : null}
         </article>
       </section>
 
-      <section className="painel-operacional" aria-label="Indicadores operacionais">
-        <article className="painel-card">
-          <span>Serviços realizados</span><strong>{dados.quantidadeTotalServicos}</strong>
-          <small>{moeda(dados.valorTotalRealizado)} no período</small>
-        </article>
-        <article className={tom(dados.quantidadeAguardandoOp, 'atencao')}>
-          <span>Aguardando OP</span><strong>{dados.quantidadeAguardandoOp}</strong>
-          <small>{moeda(dados.valorAguardandoOp)} sem cobrança</small>
-        </article>
-        <article className={tom(dados.quantidadeComDivergencia, 'alerta')}>
-          <span>OPs com divergência</span><strong>{dados.quantidadeComDivergencia}</strong>
-          <small>{dados.quantidadeComDivergencia ? moeda(dados.valorTotalDivergencias) : 'Composição confere'}</small>
-        </article>
-        <article className={tom(dados.quantidadeVencidasNaoRecebidas, 'alerta')}>
-          <span>OPs vencidas</span><strong>{dados.quantidadeVencidasNaoRecebidas}</strong>
-          <small>{dados.quantidadeVencidasNaoRecebidas ? moeda(dados.valorVencidoNaoRecebido) : 'Nenhum pagamento atrasado'}</small>
-        </article>
-      </section>
+      <GradeIndicadores>
+        <Indicador rotulo="Serviços realizados" valor={dados.quantidadeTotalServicos}
+          apoio={`${moeda(dados.valorTotalRealizado)} no período`}/>
+        <Indicador rotulo="Aguardando OP" valor={dados.quantidadeAguardandoOp}
+          tom={tom(dados.quantidadeAguardandoOp, 'atencao')}
+          apoio={`${moeda(dados.valorAguardandoOp)} sem cobrança`}/>
+        <Indicador rotulo="OPs com divergência" valor={dados.quantidadeComDivergencia}
+          tom={tom(dados.quantidadeComDivergencia, 'alerta')}
+          apoio={dados.quantidadeComDivergencia ? moeda(dados.valorTotalDivergencias) : 'Composição confere'}/>
+        <Indicador rotulo="OPs vencidas" valor={dados.quantidadeVencidasNaoRecebidas}
+          tom={tom(dados.quantidadeVencidasNaoRecebidas, 'alerta')}
+          apoio={dados.quantidadeVencidasNaoRecebidas ? moeda(dados.valorVencidoNaoRecebido) : 'Nenhum pagamento atrasado'}/>
+      </GradeIndicadores>
 
-      <section className="panel painel-atencao">
-        <header className="panel-title">
-          <div><span className="eyebrow">Ação</span><h2>Precisa de atenção</h2></div>
-        </header>
+      <Painel className="painel-atencao" etiqueta="Ação" titulo="Precisa de atenção">
         {atencao.length
           ? <ul>
               {atencao.map(item => <li key={item.chave} className={item.grave ? 'grave' : ''}>
@@ -254,45 +246,34 @@ export default function PortoDashboardPage() {
               <strong>Tudo em dia</strong>
               <small>Nenhuma pendência crítica encontrada neste período.</small>
             </p>}
-      </section>
+      </Painel>
 
-      <section className="panel chart-card painel-evolucao">
-        <header className="panel-title">
-          <div><span className="eyebrow">Evolução</span><h2>Produção × Recebimentos</h2></div>
-          <div className="segmented" role="group" aria-label="Agrupamento do gráfico">
-            {GRAOS.map(g => <button key={g.valor} type="button"
-              className={grao === g.valor ? 'active' : ''}
-              onClick={() => trocarGrao(g.valor as 'DIA' | 'SEMANA' | 'MES')}>{g.texto}</button>)}
-          </div>
-        </header>
+      <Painel className="painel-evolucao" etiqueta="Evolução" titulo="Produção × Recebimentos"
+        aoLado={<div className="segmented" role="group" aria-label="Agrupamento do gráfico">
+          {GRAOS.map(g => <button key={g.valor} type="button"
+            className={grao === g.valor ? 'active' : ''}
+            onClick={() => trocarGrao(g.valor as 'DIA' | 'SEMANA' | 'MES')}>{g.texto}</button>)}
+        </div>}>
         <ProducaoXRecebimentos pontos={dados.serie} rotulo={rotuloDoBalde(grao)}/>
-      </section>
+      </Painel>
 
       <div className="painel-inferior">
-        <section className="panel painel-pagamentos">
-          <header className="panel-title">
-            <div><span className="eyebrow">Caixa</span><h2>Situação dos pagamentos</h2></div>
-          </header>
+        <Painel etiqueta="Caixa" titulo="Situação dos pagamentos">
           <ProporcaoPagamentos recebido={dados.valorRecebido} aguardando={aReceber}
             vencido={dados.valorVencidoNaoRecebido} programado={dados.valorProgramado}/>
-        </section>
+        </Painel>
 
         {insights.length
-          ? <section className="panel painel-insights">
-              <header className="panel-title">
-                <div><span className="eyebrow">Leitura</span><h2>O que os números dizem</h2></div>
-              </header>
+          ? <Painel className="painel-insights" etiqueta="Leitura" titulo="O que os números dizem">
               <ul>{insights.map(frase => <li key={frase}>{frase}</li>)}</ul>
-            </section>
+            </Painel>
           : null}
       </div>
 
       {dados.opsDestaque.length
-        ? <section className="panel">
-            <header className="panel-title painel-ops-titulo">
-              <div><span className="eyebrow">Detalhe</span><h2>Ordens de pagamento do período</h2></div>
-              <Link to="/porto/ordens-pagamento">Ver todas</Link>
-            </header>
+        ? <Painel semRespiro className="painel-ops-titulo" etiqueta="Detalhe"
+            titulo="Ordens de pagamento do período"
+            aoLado={<Link to="/porto/ordens-pagamento">Ver todas</Link>}>
             <div className="table-scroll"><table>
               <thead><tr>
                 <th>OP</th><th>Período</th><th>OS</th><th>Valor</th>
@@ -309,7 +290,7 @@ export default function PortoDashboardPage() {
                 <td><Badge status={op.statusConciliacao}/></td>
               </tr>)}</tbody>
             </table></div>
-          </section>
+          </Painel>
         : null}
     </> : null}
   </div>
@@ -319,7 +300,7 @@ export default function PortoDashboardPage() {
 function Badge({ status }: { status: OpDestaquePorto['statusConciliacao'] }) {
   const tom = status === 'CONCILIADA' ? 'ok'
     : status === 'SEM_COMPOSICAO' ? 'neutro' : 'alerta'
-  return <span className={`painel-badge painel-badge-${tom}`}>{CONCILIACAO[status] ?? status}</span>
+  return <Etiqueta tom={tom}>{CONCILIACAO[status] ?? status}</Etiqueta>
 }
 
 /**
