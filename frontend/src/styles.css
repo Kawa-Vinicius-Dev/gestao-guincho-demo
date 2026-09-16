@@ -966,7 +966,7 @@ tbody tr{transition:background-color .14s ease}
 /* ===========================================================================
    Para onde o dinheiro foi
    ---------------------------------------------------------------------------
-   Rosca para composicao e linha em degraus para o momento de cada pagamento.
+   Faixa para composicao e linha em degraus para o momento de cada pagamento.
    A lista preserva os numeros exatos: cor nunca e a unica forma de leitura.
    =========================================================================== */
 .dashboard-tech .painel-gastos{margin-bottom:var(--espaco-2)}
@@ -978,58 +978,43 @@ tbody tr{transition:background-color .14s ease}
 .dashboard-tech .gastos-leitura h3{
   margin:0 0 16px;color:var(--muted);font:600 10px 'IBM Plex Sans',sans-serif;
   letter-spacing:.09em;text-transform:uppercase}
-.dashboard-tech .gastos-categoria{
-  display:grid;grid-template-columns:minmax(118px,154px) minmax(0,1fr);
-  align-items:center;gap:clamp(16px,2vw,26px)}
-.dashboard-tech .gastos-rosca{
-  position:relative;display:grid;place-items:center;width:100%;aspect-ratio:1;
-  border-radius:50%;background:var(--gastos-gradiente)}
-.dashboard-tech .gastos-rosca:before{
-  content:'';grid-area:1/1;width:61%;aspect-ratio:1;border-radius:50%;
-  background:var(--superficie);box-shadow:0 0 0 1px var(--linha-suave)}
-.dashboard-tech .gastos-rosca>span{z-index:1;grid-area:1/1;max-width:58%;text-align:center}
-.dashboard-tech .gastos-rosca small,.dashboard-tech .gastos-rosca strong{display:block}
-.dashboard-tech .gastos-rosca small{
-  color:var(--muted);font-size:8px;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
-.dashboard-tech .gastos-rosca strong{
-  margin-top:5px;color:var(--ink);font:600 clamp(12px,1.3vw,17px)/1.1 'IBM Plex Mono',monospace;
-  font-variant-numeric:tabular-nums;white-space:nowrap}
+.dashboard-tech .gastos-categoria{display:grid;gap:var(--espaco-3)}
+.dashboard-tech .gastos-total span{display:block;color:var(--muted);font-size:var(--t-apoio)}
+.dashboard-tech .gastos-total strong{display:block;margin-top:4px;color:var(--ink);font:600 30px/1 'Barlow Condensed',sans-serif;font-variant-numeric:tabular-nums}
+.dashboard-tech .gastos-faixa{display:flex;gap:2px;height:10px;overflow:hidden;border-radius:99px;background:var(--linha-suave)}
+.dashboard-tech .gastos-faixa>span{height:100%;transition:width .4s cubic-bezier(.22,1,.36,1)}
 .dashboard-tech .gastos-categoria ol{min-width:0;margin:0;padding:0;list-style:none}
 .dashboard-tech .gastos-categoria li{
-  display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;
-  gap:7px;min-height:34px;border-bottom:1px solid var(--linha-suave);font-size:10px}
+  display:grid;grid-template-columns:auto minmax(0,1fr) auto minmax(96px,auto);align-items:center;
+  gap:var(--espaco-2);min-height:40px;border-bottom:1px solid var(--linha-suave);color:var(--ink);font-size:var(--t-corpo)}
 .dashboard-tech .gastos-categoria li:last-child{border-bottom:0}
-.dashboard-tech .gastos-categoria li>i{width:8px;height:8px;border-radius:2px}
+.dashboard-tech .gastos-categoria li>i{width:10px;height:10px;border-radius:3px}
 .dashboard-tech .gastos-categoria li>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.dashboard-tech .gastos-categoria li>strong,.dashboard-tech .gastos-categoria li>small{
-  font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;white-space:nowrap}
-.dashboard-tech .gastos-categoria li>strong{color:var(--ink);font-size:10px}
-.dashboard-tech .gastos-categoria li>small{color:var(--muted);font-size:9px;text-align:right}
+.dashboard-tech .gastos-categoria li>small{color:var(--muted);font-size:var(--t-apoio);font-variant-numeric:tabular-nums}
+.dashboard-tech .gastos-categoria li>strong{color:var(--ink);font:600 17px/1 'Barlow Condensed',sans-serif;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
 .dashboard-tech .gastos-trajetoria{min-width:0}
 .dashboard-tech .trajetoria-resumo{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
-.dashboard-tech .trajetoria-resumo span{color:var(--muted);font-size:10px}
+.dashboard-tech .trajetoria-resumo span{color:var(--muted);font-size:var(--t-apoio)}
 .dashboard-tech .trajetoria-resumo strong{
-  color:var(--red);font:600 15px 'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums}
-.dashboard-tech .gastos-trajetoria svg{display:block;width:100%;height:auto;margin-top:7px;overflow:visible}
+  color:var(--ink);font:600 22px/1 'Barlow Condensed',sans-serif;font-variant-numeric:tabular-nums}
+.dashboard-tech .gastos-trajetoria svg{display:block;width:100%;height:auto;margin-top:var(--espaco-2);overflow:visible}
 .dashboard-tech .trajetoria-grade{stroke:var(--linha-suave);stroke-width:1}
 .dashboard-tech .trajetoria-area{fill:var(--red);opacity:.12}
 .dashboard-tech .trajetoria-linha{
-  fill:none;stroke:var(--red);stroke-width:3;stroke-linecap:round;stroke-linejoin:round;
+  fill:none;stroke:var(--red);stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;
   vector-effect:non-scaling-stroke}
 .dashboard-tech .trajetoria-ponto{
   fill:var(--superficie);stroke:var(--red);stroke-width:2;vector-effect:non-scaling-stroke}
 .dashboard-tech .trajetoria-eixo{
-  display:flex;justify-content:space-between;margin-top:-5px;color:var(--muted);
-  font:500 9px 'IBM Plex Mono',monospace}
-.dashboard-tech .gastos-trajetoria>p{margin:13px 0 0;color:var(--muted);font-size:10px}
+  display:flex;justify-content:space-between;margin-top:4px;color:var(--muted);
+  font:500 var(--t-rotulo) 'IBM Plex Mono',monospace}
+.dashboard-tech .gastos-trajetoria>p{margin:var(--espaco-2) 0 0;color:var(--muted);font-size:var(--t-apoio)}
 .dashboard-tech .gastos-trajetoria>p strong{color:var(--ink)}
 @media(max-width:760px){
   .dashboard-tech .gastos-leitura{grid-template-columns:minmax(0,1fr)}
   .dashboard-tech .gastos-leitura>section+section{border-top:1px solid var(--line);border-left:0}
 }
 @media(max-width:520px){
-  .dashboard-tech .gastos-categoria{grid-template-columns:minmax(0,1fr)}
-  .dashboard-tech .gastos-rosca{width:150px;justify-self:center}
   .dashboard-tech .gastos-categoria li{grid-template-columns:auto minmax(0,1fr) auto}
   .dashboard-tech .gastos-categoria li>small{grid-column:2;text-align:left}
 }
@@ -1559,3 +1544,11 @@ tbody tr{transition:background-color .14s ease}
 .despesa-desconto{max-width:none}
 .despesa-mais-detalhes>summary{cursor:pointer;color:var(--blue-600);font-size:var(--t-apoio);font-weight:600}
 .despesa-mais-detalhes[open]>summary{margin-bottom:var(--espaco-2)}
+
+/* Degraus do gasto acumulado: quando, de onde e quanto. */
+.dashboard-tech .trajetoria-degraus{margin:var(--espaco-2) 0 0;padding:0;list-style:none}
+.dashboard-tech .trajetoria-degraus li{display:grid;grid-template-columns:48px minmax(0,1fr) auto;align-items:center;gap:var(--espaco-2);min-height:34px;border-bottom:1px solid var(--linha-suave);font-size:var(--t-apoio)}
+.dashboard-tech .trajetoria-degraus li:last-child{border-bottom:0}
+.dashboard-tech .trajetoria-degraus li>span:first-child{color:var(--muted);font-family:'IBM Plex Mono',monospace}
+.dashboard-tech .trajetoria-degraus li>span:nth-child(2){overflow:hidden;color:var(--ink);text-overflow:ellipsis;white-space:nowrap}
+.dashboard-tech .trajetoria-degraus li>strong{color:var(--ink);font:600 16px/1 'Barlow Condensed',sans-serif;font-variant-numeric:tabular-nums}

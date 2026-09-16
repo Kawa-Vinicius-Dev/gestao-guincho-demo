@@ -22,13 +22,19 @@ test('rosca mantém valores exatos e agrupa só o que excede cinco categorias', 
 
 test('trajetória descreve os gastos e usa linha em degraus', () => {
   render(<DespesaAcumulada inicio="2026-09-01" fim="2026-09-30" pontos={[
-    { data:'2026-09-08', valorDia:400, acumulado:400 },
-    { data:'2026-09-21', valorDia:150, acumulado:550 },
+    { data:'2026-09-08', valorDia:400, acumulado:400,
+      origens:[{ categoria:'Comissão de socorrista', valor:300 }, { categoria:'Pedágio', valor:100 }] },
+    { data:'2026-09-21', valorDia:150, acumulado:550, origens:[{ categoria:'Alimentação', valor:150 }] },
   ]}/>)
 
   const grafico=screen.getByRole('img',{name:/08\/09: R\$\s*400,00 no dia/})
   expect(grafico.querySelector('.trajetoria-linha')?.getAttribute('d')).toContain(' H ')
-  expect(screen.getByText(/Maior gasto em 08\/09/)).toHaveTextContent('R$ 400,00')
+  // Kawa: o degrau precisa dizer de onde veio.
+  const degraus=within(screen.getByRole('list',{name:'Maiores gastos do período'})).getAllByRole('listitem')
+  expect(degraus[0]).toHaveTextContent('08/09')
+  expect(degraus[0]).toHaveTextContent('Comissão de socorrista e mais 1')
+  expect(degraus[0]).toHaveTextContent('R$ 400,00')
+  expect(degraus[1]).toHaveTextContent('Alimentação')
 })
 
 test('trajetória não desenha coordenadas inválidas ou fora do período', () => {

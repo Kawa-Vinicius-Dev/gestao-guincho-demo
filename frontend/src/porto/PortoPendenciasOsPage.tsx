@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { listarPendenciasOsPorto, resolverPendenciasOsPorto } from '../dados/porto'
+import { useAoVivo } from '../dados/aoVivo'
 import { listarMotoristas } from '../dados/motoristas'
 import type { AcertoPendenciaOsPorto, Motorista, PendenciaOsPorto } from '../types/modelos'
 import { data, hojeIso, moeda } from '../utils/formatadores'
@@ -51,6 +52,8 @@ export default function PortoPendenciasOsPage() {
   }, [])
 
   useEffect(() => { void carregar(primeiroDiaDoMes(), hojeIso()) }, [carregar])
+  // Recarrega sozinha, mas nunca por cima do que esta sendo preenchido e ainda nao foi salvo.
+  useAoVivo(() => { if (!Object.keys(acertos).length) void carregar(inicio, fim) })
   useEffect(() => {
     listarMotoristas().then(setMotoristas).catch((e: Error) => setErro(e.message))
   }, [])

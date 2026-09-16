@@ -6,6 +6,7 @@ import { Carregando,ErroPagina } from '../components/EstadoPagina'
 import type { DespesaDoSocorrista,DetalheSocorrista,OrdemPagamentoPorto } from '../types/modelos'
 import { data,moeda } from '../utils/formatadores'
 import { opCorrente, rotuloOp } from '../utils/periodos'
+import { useAoVivo } from '../dados/aoVivo'
 
 const statusPagamento={PAGO:'Pago',PAGO_EM_OUTRO_PERIODO:'Pago em outro período',AGUARDANDO_PAGAMENTO:'Aguardando pagamento'} as const
 
@@ -15,6 +16,7 @@ export default function EquipeDetalhePage(){
   const [carregandoPeriodos,setCarregandoPeriodos]=useState(true),[carregandoDetalhe,setCarregandoDetalhe]=useState(false),[erro,setErro]=useState('')
   useEffect(()=>{listarOpsComissao().then(lista=>{setPeriodos(lista);const atual=opCorrente(lista);if(atual)setPeriodoId(atual.id)}).catch((e:Error)=>setErro(e.message)).finally(()=>setCarregandoPeriodos(false))},[])
   useEffect(()=>{if(!motoristaId||!periodoId)return;setCarregandoDetalhe(true);setErro('');obterDetalheSocorrista(motoristaId,periodoId).then(setDetalhe).catch(e=>setErro(e.message)).finally(()=>setCarregandoDetalhe(false))},[motoristaId,periodoId])
+  useAoVivo(()=>{if(motoristaId&&periodoId)obterDetalheSocorrista(motoristaId,periodoId).then(setDetalhe).catch(e=>setErro(e.message))})
   if(carregandoPeriodos)return <Carregando/>
   if(erro&&!detalhe)return <ErroPagina mensagem={erro}/>
   return <div className="page-enter employee-detail-page">

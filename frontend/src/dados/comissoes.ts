@@ -1,6 +1,7 @@
 import type {
   AlimentacaoComissao, Comissao, DetalheSocorrista, ResumoComissao,
 } from '../types/modelos'
+import { invalidarCacheFinanceiro } from './cacheFinanceiro'
 import { ou, supabase } from './cliente'
 import { listarPeriodosDeOp } from './porto'
 
@@ -71,6 +72,7 @@ export async function registrarAlimentacao(
     }),
     'Não foi possível registrar a alimentação.',
   ) as Record<string, unknown>
+  invalidarCacheFinanceiro()
   return {
     id: d.id as number,
     motoristaId: d.motorista_id as number,

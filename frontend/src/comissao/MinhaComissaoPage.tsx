@@ -6,12 +6,14 @@ import { opCorrente, rotuloOp } from '../utils/periodos'
 import { CampoValor } from '../components/CampoValor'
 import { Carregando } from '../components/EstadoPagina'
 import { Selecao } from '../components/Campos'
+import { useAoVivo } from '../dados/aoVivo'
 
 export default function MinhaComissaoPage(){
   const [periodos,setPeriodos]=useState<OrdemPagamentoPorto[]>([]),[periodoId,setPeriodoId]=useState(0),[comissao,setComissao]=useState<Comissao|null>(null)
   const [erro,setErro]=useState(''),[mensagem,setMensagem]=useState(''),[salvando,setSalvando]=useState(false)
   useEffect(()=>{listarOpsComissao().then(lista=>{setPeriodos(lista);const atual=opCorrente(lista);if(atual)setPeriodoId(atual.id);if(!atual)setCarregando(false)}).catch((e:Error)=>{setErro(e.message);setCarregando(false)})},[])
   const [carregando,setCarregando]=useState(true)
+  useAoVivo(()=>{if(periodoId)lerComissaoDaOp(periodoId).then(setComissao).catch((e:Error)=>setErro(e.message))})
   useEffect(()=>{if(!periodoId)return;setCarregando(true);lerComissaoDaOp(periodoId).then(setComissao).catch((e:Error)=>setErro(e.message)).finally(()=>setCarregando(false))},[periodoId])
   async function salvar(event:FormEvent<HTMLFormElement>){event.preventDefault();const form=new FormData(event.currentTarget);setSalvando(true);setErro('');try{await registrarAlimentacao(String(form.get('data')),Number(form.get('valor')),String(form.get('observacoes')||''));setMensagem('Alimentação registrada e enviada para aprovação.');event.currentTarget.reset();setComissao(await lerComissaoDaOp(periodoId))}catch(e){setErro((e as Error).message)}finally{setSalvando(false)}}
   return <div className="page-enter commission-page"><header className="page-heading"><div><span className="eyebrow">Área do socorrista</span><h1>Minha comissão</h1><p>Seus serviços pagos, os gastos no seu nome e o que desconta da sua comissão.</p></div><Selecao rotulo="Ordem de pagamento" className="month-picker" vazio="Selecione" value={periodoId||''}

@@ -1,7 +1,8 @@
-import { useEffect,useState } from 'react'
+import { useEffect,useRef,useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Campo, Selecao } from './components/Campos'
 import { CabecalhoPagina } from './components/ui/Pagina'
+import { useAoVivo } from './dados/aoVivo'
 import { dashboardEmCache, lerDashboard } from './dados/dashboard'
 import { listarPeriodosDeOp } from './dados/porto'
 import { IndicadoresDaOperacao, PainelDeGastos, PainelDeKm, PainelFaturamentoPorSocorrista,
@@ -41,6 +42,11 @@ export default function DashboardPage(){
   // Enquanto revalida, a tela fica de pe com os numeros de antes em vez de
   // piscar o esqueleto a cada troca de periodo.
   const [atualizando,setAtualizando]=useState(false)
+  // Uma despesa, uma OP ou uma comissao mudou em qualquer lugar: a tela consulta
+  // de novo, mantendo os numeros de agora ate os novos chegarem.
+  const [versao,setVersao]=useState(0)
+  useAoVivo(()=>setVersao(v=>v+1))
+  const periodoCarregado=useRef('')
   const periodoValido=Boolean(inicio&&fim&&inicio<=fim)
   const avisoPeriodo=!inicio||!fim
     ? 'Informe a data inicial e a data final para consultar o período.'
@@ -52,7 +58,10 @@ export default function DashboardPage(){
     }
     let valeu=true
     const guardado=dashboardEmCache(inicio,fim)
+    const mesmoPeriodo=periodoCarregado.current===`${inicio}|${fim}`
+    periodoCarregado.current=`${inicio}|${fim}`
     if(guardado){setFinanceiro(guardado.financeiro);setAtualizando(true)}
+    else if(mesmoPeriodo)setAtualizando(true)
     else setFinanceiro(null)
     setErro('')
     lerDashboard(inicio,fim)
@@ -60,7 +69,7 @@ export default function DashboardPage(){
       .catch(e=>{if(valeu)setErro(e.message)})
       .finally(()=>{if(valeu)setAtualizando(false)})
     return()=>{valeu=false}
-  },[inicio,fim])
+  },[inicio,fim,versao])
 
   // Grava fora dos handlers das datas: assim nenhum caminho novo de troca de
   // periodo esquece de lembrar o que escolheu. Data pela metade nao vai para o
