@@ -110,3 +110,26 @@ test('a categoria que o campo já mostra ao abrir é a que vale', async () => {
   expect(within(janela).getByLabelText('Veículo')).toBeDisabled()
   expect(within(janela).getByText(/custo do socorrista, não da viatura/i)).toBeInTheDocument()
 })
+
+// Alimentação não tem viatura de propósito, e a coluna ficava com um traço: a
+// linha não dizia de quem era o almoço. O nome já vinha na consulta.
+test('a lista mostra de quem é a despesa, e não só a viatura', async () => {
+  servidor.use(http.get('/api/despesas', () => HttpResponse.json([
+    { ...diesel, id: 31, descricao: 'Almoço', categoria: 'Alimentação',
+      veiculo: null, motorista: 'Anderson Ribeiro' },
+    { ...diesel, id: 32, descricao: 'Diesel', categoria: 'Combustível',
+      veiculo: 'L168', motorista: null },
+  ])))
+  sessionStorage.setItem(TOKEN_KEY, 'token-admin-teste')
+  window.history.replaceState({}, '', '/despesas')
+  render(<App />)
+
+  const almoco = (await screen.findByText('Almoço')).closest('tr')!
+  expect(within(almoco).getByText('Anderson Ribeiro')).toBeInTheDocument()
+
+  // A despesa de viatura segue sem socorrista, e a coluna diz isso com um traço
+  // em vez de repetir a viatura no lugar errado.
+  const linhas = [...screen.getAllByRole('row')]
+  const diesel2 = linhas.find(l => within(l).queryByText('Diesel'))!
+  expect(within(diesel2).getByText('L168')).toBeInTheDocument()
+})
