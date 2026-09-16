@@ -6,7 +6,7 @@ import { data, hojeIso, moeda, percentual } from '../utils/formatadores'
 import { Carregando } from '../components/EstadoPagina'
 import { Campo, Selecao } from '../components/Campos'
 import { EvolucaoAcumulada } from '../components/Graficos'
-import { CabecalhoPagina, Etiqueta, Painel } from '../components/ui/Pagina'
+import { CabecalhoPagina, Etiqueta, GradeIndicadores, Indicador, Painel } from '../components/ui/Pagina'
 import { rotuloOp } from '../utils/periodos'
 
 /**
@@ -52,6 +52,9 @@ function rotuloDoBalde(grao: string) {
     return `${dia}/${mes}`
   }
 }
+
+/** Um cartao so fica colorido quando ha o que resolver: zero e uma boa noticia. */
+const tom = (valor: number, cor: 'alerta' | 'atencao') => (valor > 0 ? cor : 'neutro')
 
 export default function PortoDashboardPage() {
   const [dados, setDados] = useState<DashboardAltoNivelPorto | null>(null)
@@ -208,6 +211,17 @@ export default function PortoDashboardPage() {
     </section>
 
     {dados && !vazio ? <>
+      <GradeIndicadores>
+        <Indicador rotulo="Serviços realizados" valor={dados.quantidadeTotalServicos}
+          apoio={`${moeda(dados.valorTotalRealizado)} no período`}/>
+        <Indicador rotulo="Aguardando OP" valor={dados.quantidadeAguardandoOp}
+          tom={tom(dados.quantidadeAguardandoOp, 'atencao')}
+          apoio={`${moeda(dados.valorAguardandoOp)} sem cobrança`}/>
+        <Indicador rotulo="OPs com divergência" valor={dados.quantidadeComDivergencia}
+          tom={tom(dados.quantidadeComDivergencia, 'alerta')}
+          apoio={dados.quantidadeComDivergencia ? moeda(dados.valorTotalDivergencias) : 'Composição confere'}/>
+      </GradeIndicadores>
+
       {divergencias
         ? <Painel className="painel-atencao" etiqueta="Ação" titulo="Precisa de atenção">
             <ul>

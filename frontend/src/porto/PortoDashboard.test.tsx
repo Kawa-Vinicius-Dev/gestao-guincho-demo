@@ -74,6 +74,20 @@ test('o dinheiro abre a tela, com a leitura do que ele significa', async () => {
   expect(within(financeiro).getByText(/Ticket médio R\$\s271,89/)).toBeInTheDocument()
 })
 
+test('a barra de indicadores mostra serviços, espera por OP e divergência', async () => {
+  servidorDoPainel(painel({ quantidadeAguardandoOp: 12, valorAguardandoOp: 3800 }))
+  const Painel = await abrirPainel()
+
+  render(<MemoryRouter><Painel/></MemoryRouter>)
+
+  expect(await screen.findByText('Serviços realizados')).toBeInTheDocument()
+  expect(screen.getByText(/^R\$\s74\.770,00 no período$/)).toBeInTheDocument()
+  expect(screen.getByText('Aguardando OP')).toBeInTheDocument()
+  expect(screen.getByText(/^R\$\s3\.800,00 sem cobrança$/)).toBeInTheDocument()
+  expect(screen.getByText('OPs com divergência')).toBeInTheDocument()
+  expect(screen.getByText('Composição confere')).toBeInTheDocument()
+})
+
 // Zero divergencia e zero atraso sao boa noticia: a tela nao pode usar vermelho
 // para dizer isso, nem abrir uma lista de problemas vazia.
 test('sem pendência, mostra estado positivo em vez de lista de erros', async () => {
