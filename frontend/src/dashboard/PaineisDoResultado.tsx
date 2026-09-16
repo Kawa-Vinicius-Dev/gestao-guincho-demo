@@ -82,11 +82,16 @@ export function ResultadoDoPeriodo({ dados, atualizando }: { dados: Dashboard; a
 export function IndicadoresDaOperacao({ dados }: { dados: Dashboard }) {
   const servicos = dados.servicosDoPeriodo ?? 0
   const pendentes = dados.servicosPendentes ?? 0
+  // Comissao da equipe: 20% dos servicos pagos, somando todos os socorristas.
+  // Ja entra em despesas sozinha; aqui aparece o valor de cada um e o total.
+  const comissoes = (dados.resultadoPorSocorrista ?? []).reduce((soma, p) => soma + p.comissao, 0)
   return <GradeIndicadores>
     <Indicador rotulo="Serviços" valor={servicos}
       apoio={pendentes
         ? `${pendentes} ${pendentes === 1 ? 'aguarda' : 'aguardam'} OP`
         : servicos ? `${moeda(dados.producaoPaga ?? 0)} pagos pela Porto` : 'Nenhum serviço'}/>
+    <Indicador rotulo="Comissões" valor={moeda(comissoes)}
+      apoio={comissoes > 0 ? 'Total da equipe no período, já em despesas' : 'Nenhuma comissão no período'}/>
     {dados.despesasPrevistas > 0
       ? <Indicador rotulo="Despesas a pagar" valor={moeda(dados.despesasPrevistas)}
           tom="atencao" apoio="Aprovadas, ainda não pagas"/>
@@ -158,7 +163,8 @@ export function PainelFaturamentoPorSocorrista({ dados }: { dados: Dashboard }) 
   const pessoas = (dados.resultadoPorSocorrista ?? []).filter(p => p.servicos > 0)
   const linhas: LinhaFaturamento[] = pessoas.map(p => ({
     chave: String(p.motoristaId), rotulo: p.socorrista, valor: p.producao,
-    quantidade: p.servicos, semVinculo: false, link: `/equipe/${p.motoristaId}`,
+    semVinculo: false, link: `/equipe/${p.motoristaId}`,
+    detalhe: `${p.servicos} ${p.servicos === 1 ? 'serviço' : 'serviços'} · comissão ${moeda(p.comissao)}`,
   }))
   const semDono = (dados.producaoPaga ?? 0) - pessoas.reduce((soma, p) => soma + p.producao, 0)
   if (semDono > CENTAVO) linhas.push({ chave: 'sem', rotulo: 'Sem socorrista', valor: semDono, semVinculo: true })
