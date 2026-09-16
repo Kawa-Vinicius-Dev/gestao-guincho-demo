@@ -56,6 +56,18 @@ test('a prévia aponta só as OS que ficaram sem socorrista', async () => {
   expect(previa.orfas?.map(o => o.numeroOs)).toEqual(['5673329/26', '5673528/26'])
 })
 
+// Servico cancelado nao teve atendimento: nao ha comissao para dar dono. Pedir
+// socorrista para ele travava a importacao do painel do dia inteiro.
+test('serviço cancelado não fica órfão nem trava a importação', async () => {
+  servidorDePrevia()
+  const { criarPreviaConteudoPorto } = await carregar()
+
+  const previa = await criarPreviaConteudoPorto(`PORTO SEGURO	5677129/26	SOCORRO
+14/09/2026	09:02	09:02	CANCELADO	SERVIÇO CANCELADO	Não`)
+
+  expect(previa.orfas).toEqual([])
+})
+
 test('confirmar é recusado enquanto houver OS sem socorrista', async () => {
   servidorDePrevia()
   const { criarPreviaConteudoPorto, confirmarImportacaoPorto } = await carregar()

@@ -1549,3 +1549,13 @@ tbody tr{transition:background-color .14s ease}
    não depois: quem lê a coluna de valores já precisa saber que aquele dinheiro
    não sai do líquido do socorrista. */
 .nota-fora-do-fechamento{margin:0 0 var(--espaco-2);color:var(--muted);font-size:11px;line-height:1.55}
+
+/* Visao geral: o mesmo filtro de OP do painel Porto, sem botao (aplica ao mudar). */
+.destaque-periodo-sem-botao{grid-template-columns:minmax(240px,1.3fr) repeat(2,minmax(140px,.7fr))}
+@media(max-width:1180px){.destaque-periodo-sem-botao{grid-template-columns:1fr 1fr}}
+@media(max-width:620px){.destaque-periodo-sem-botao{grid-template-columns:1fr}}
+
+/* Registrar despesa: o essencial aberto, o raro em "Mais detalhes". */
+.despesa-desconto{max-width:none}
+.despesa-mais-detalhes>summary{cursor:pointer;color:var(--blue-600);font-size:var(--t-apoio);font-weight:600}
+.despesa-mais-detalhes[open]>summary{margin-bottom:var(--espaco-2)}

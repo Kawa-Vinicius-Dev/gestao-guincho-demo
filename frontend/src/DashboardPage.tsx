@@ -1,13 +1,15 @@
 import { useEffect,useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Campo } from './components/Campos'
+import { Campo, Selecao } from './components/Campos'
 import { CabecalhoPagina } from './components/ui/Pagina'
 import { dashboardEmCache, lerDashboard } from './dados/dashboard'
+import { listarPeriodosDeOp } from './dados/porto'
 import { IndicadoresDaOperacao, PainelDeGastos, PainelDeKm, PainelFaturamentoPorSocorrista,
   PainelFaturamentoPorViatura, ResultadoDoPeriodo } from './dashboard/PaineisDoResultado'
-import type { Dashboard } from './types/modelos'
+import type { Dashboard, OrdemPagamentoPorto } from './types/modelos'
 import { data } from './utils/formatadores'
 import { gravarFiltro, lerFiltro } from './utils/filtroLembrado'
+import { rotuloOp } from './utils/periodos'
 
 /**
  * Visao geral: o painel principal do sistema.
@@ -28,11 +30,12 @@ function mesCorrente(){const d=new Date(),mes=`${d.getFullYear()}-${String(d.get
  * navegacao e o estado nascia do zero. O mes corrente continua sendo o padrao;
  * so a primeira visita da sessao e que o usa.
  */
-type Periodo={inicio:string,fim:string}
+type Periodo={inicio:string,fim:string,op?:string}
 const periodoInicial=():Periodo=>lerFiltro<Periodo>('visao-geral',mesCorrente())
 
 export default function DashboardPage(){
-  const [{inicio,fim},setPeriodo]=useState(periodoInicial)
+  const [{inicio,fim,op:opEscolhida=''},setPeriodo]=useState(periodoInicial)
+  const [ops,setOps]=useState<OrdemPagamentoPorto[]>([])
   const [financeiro,setFinanceiro]=useState<Dashboard|null>(null)
   const [erro,setErro]=useState('')
   // Enquanto revalida, a tela fica de pe com os numeros de antes em vez de
@@ -63,7 +66,21 @@ export default function DashboardPage(){
   // periodo esquece de lembrar o que escolheu. Data pela metade nao vai para o
   // armazenamento — voltar para uma tela com "de" vazio e pior do que voltar
   // para o mes corrente.
-  useEffect(()=>{if(inicio&&fim)gravarFiltro('visao-geral',{inicio,fim})},[inicio,fim])
+  useEffect(()=>{if(inicio&&fim)gravarFiltro('visao-geral',{inicio,fim,op:opEscolhida})},[inicio,fim,opEscolhida])
+
+  // Mesmo atalho do painel Porto: escolher a OP preenche as datas com o periodo
+  // dela; mexer numa data volta para "Periodo personalizado". A lista e
+  // conveniencia — se nao carregar, as datas continuam valendo.
+  useEffect(()=>{listarPeriodosDeOp().then(setOps).catch(()=>setOps([]))},[])
+  function escolherOp(id:string){
+    const op=ops.find(o=>String(o.id)===id)
+    if(!op){setPeriodo(p=>({...p,op:''}));return}
+    setPeriodo({
+      op:id,
+      inicio:op.periodoInicio||op.dataPagamentoProgramada||inicio,
+      fim:op.periodoFim||op.dataPagamentoProgramada||fim,
+    })
+  }
 
   const temKm=Boolean(financeiro&&(financeiro.kmRemunerado||financeiro.kmMorto))
 
@@ -86,14 +103,17 @@ export default function DashboardPage(){
       : null}
 
     <section className="panel destaque" aria-label="Resultado do período">
-      <form className="destaque-periodo destaque-periodo-datas" onSubmit={e=>e.preventDefault()}>
+      <form className="destaque-periodo destaque-periodo-sem-botao" onSubmit={e=>e.preventDefault()}>
+        <Selecao rotulo="Ordem de pagamento" vazio="Período personalizado" value={opEscolhida}
+          onChange={e=>escolherOp(e.target.value)}
+          opcoes={ops.map(o=>({valor:String(o.id),texto:rotuloOp(o)}))}/>
         <Campo rotulo="De">
           <input aria-label="Data inicial" type="date" value={inicio} max={fim||undefined}
-            onChange={e=>setPeriodo(p=>({...p,inicio:e.target.value}))}/>
+            onChange={e=>setPeriodo(p=>({...p,op:'',inicio:e.target.value}))}/>
         </Campo>
         <Campo rotulo="Até">
           <input aria-label="Data final" type="date" value={fim} min={inicio||undefined}
-            onChange={e=>setPeriodo(p=>({...p,fim:e.target.value}))}/>
+            onChange={e=>setPeriodo(p=>({...p,op:'',fim:e.target.value}))}/>
         </Campo>
       </form>
 

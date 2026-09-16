@@ -75,21 +75,18 @@ export function ResultadoDoPeriodo({ dados, atualizando }: { dados: Dashboard; a
 }
 
 /**
- * O que a operacao ainda deve ou espera. Comissao a repassar e dinheiro que ja e
- * da equipe; despesa a pagar so entra quando existe.
+ * O que a operacao ainda espera. A comissao nao aparece aqui: ela vira despesa
+ * paga sozinha quando a OP chega, e ja esta em Despesas. Despesa a pagar so
+ * entra quando existe.
  */
 export function IndicadoresDaOperacao({ dados }: { dados: Dashboard }) {
   const servicos = dados.servicosDoPeriodo ?? 0
   const pendentes = dados.servicosPendentes ?? 0
-  const comissao = dados.comissaoAPagar ?? 0
   return <GradeIndicadores>
     <Indicador rotulo="Serviços" valor={servicos}
       apoio={pendentes
         ? `${pendentes} ${pendentes === 1 ? 'aguarda' : 'aguardam'} OP`
         : servicos ? `${moeda(dados.producaoPaga ?? 0)} pagos pela Porto` : 'Nenhum serviço'}/>
-    <Indicador rotulo="Comissão a pagar" valor={moeda(comissao)}
-      tom={comissao > 0 ? 'atencao' : 'neutro'}
-      apoio={comissao > 0 ? 'Ainda não paga à equipe' : 'Nada a pagar'}/>
     {dados.despesasPrevistas > 0
       ? <Indicador rotulo="Despesas a pagar" valor={moeda(dados.despesasPrevistas)}
           tom="atencao" apoio="Aprovadas, ainda não pagas"/>
