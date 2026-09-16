@@ -34,12 +34,13 @@ const painel = {
   quantidadeServicosDevolvidos: 2,
   porEspecialidade: [], porSocorrista: [],
   grao: 'SEMANA',
+  // Caso real: a OP de 30/03 a 29/04 e paga de uma vez e cai no fim do periodo.
   serie: [
     { inicio: '2026-03-30', produzido: 615, servicos: 3, recebido: 0, programado: 0 },
     { inicio: '2026-04-06', produzido: 0, servicos: 0, recebido: 0, programado: 0 },
-    { inicio: '2026-04-13', produzido: 22610.49, servicos: 93, recebido: 18400, programado: 21000 },
-    { inicio: '2026-04-20', produzido: 37189.63, servicos: 124, recebido: 31200, programado: 36000 },
-    { inicio: '2026-04-27', produzido: 14354.88, servicos: 55, recebido: 25170, programado: 35400 },
+    { inicio: '2026-04-13', produzido: 22610.49, servicos: 93, recebido: 0, programado: 0 },
+    { inicio: '2026-04-20', produzido: 37189.63, servicos: 124, recebido: 0, programado: 0 },
+    { inicio: '2026-04-27', produzido: 14354.88, servicos: 55, recebido: 74770, programado: 74770 },
   ],
   opsDestaque: [
     { id: 9, numero: '06422281', valorTotal: 22870, valorRecebido: null,

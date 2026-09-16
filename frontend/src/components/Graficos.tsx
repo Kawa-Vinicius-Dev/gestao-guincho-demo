@@ -319,3 +319,78 @@ export function ProducaoXRecebimentos({ pontos, rotulo }: {
     </div>
   </div>
 }
+
+/**
+ * Produção e recebimento acumulados no período.
+ *
+ * O recebimento da Porto não entra aos poucos: entra de uma vez, quando a OP
+ * fecha. Por período, isso vira um pico solto no fim e uma linha no chão antes
+ * dele — parece quebrado, com os números certos. Acumulado, a história aparece:
+ * a produção sobe semana a semana, o recebido dá um degrau quando a OP paga, e o
+ * espaço entre as duas linhas é exatamente o que ainda falta entrar.
+ *
+ * O desenho segue a referência que o Kawã escolheu (Stripe): linha fina, grade
+ * quase invisível, dois rótulos no eixo e o detalhe no ponteiro.
+ */
+export function EvolucaoAcumulada({ pontos, rotulo }: {
+  pontos: PontoProducao[]
+  rotulo: (inicio: string) => string
+}) {
+  const [ativo, setAtivo] = useState<number | null>(null)
+  if (!pontos.length) return <Vazio texto="A evolução aparece quando houver serviços no período."/>
+
+  let produzido = 0, recebido = 0
+  const acumulado = pontos.map(p => {
+    produzido += p.produzido
+    recebido += p.recebido
+    return { ...p, produzidoAcumulado: produzido, recebidoAcumulado: recebido }
+  })
+
+  const largura = 760, altura = 230, topo = 16, base = 196, lado = 8
+  const teto = Math.max(produzido, recebido, 1)
+  const x = (i: number) => lado + (acumulado.length === 1 ? (largura - lado * 2) / 2
+    : (i / (acumulado.length - 1)) * (largura - lado * 2))
+  const y = (v: number) => base - (v / teto) * (base - topo)
+  const caminho = (campo: 'produzidoAcumulado' | 'recebidoAcumulado') => acumulado
+    .map((p, i) => `${i ? 'L' : 'M'} ${x(i).toFixed(1)} ${y(p[campo]).toFixed(1)}`).join(' ')
+
+  // A faixa entre as duas linhas: produção por cima, recebido voltando por baixo.
+  const volta = [...acumulado].reverse()
+    .map((p, i) => `L ${x(acumulado.length - 1 - i).toFixed(1)} ${y(p.recebidoAcumulado).toFixed(1)}`).join(' ')
+  const faixa = `${caminho('produzidoAcumulado')} ${volta} Z`
+
+  const ponto = ativo === null ? null : acumulado[ativo]
+  const passo = (largura - lado * 2) / Math.max(acumulado.length - 1, 1)
+
+  return <div className="acumulado-chart">
+    <div className="acumulado-plot" onMouseLeave={() => setAtivo(null)}>
+      <svg viewBox={`0 0 ${largura} ${altura}`} role="img" preserveAspectRatio="none"
+        aria-label={`Produção acumulada ${moeda(produzido)} e recebido acumulado ${moeda(recebido)} no período.`}>
+        <line className="acumulado-base" x1={lado} x2={largura - lado} y1={base} y2={base}/>
+        <path className="acumulado-faixa" d={faixa}/>
+        <path className="acumulado-linha-produzido" d={caminho('produzidoAcumulado')}/>
+        <path className="acumulado-linha-recebido" d={caminho('recebidoAcumulado')}/>
+        {acumulado.map((p, i) => <rect key={p.inicio} className="acumulado-alvo"
+          x={x(i) - passo / 2} y={0} width={passo} height={altura}
+          onMouseEnter={() => setAtivo(i)}/>)}
+        {ponto ? <>
+          <line className="acumulado-guia" x1={x(ativo!)} x2={x(ativo!)} y1={topo} y2={base}/>
+          <circle className="acumulado-ponto-produzido" cx={x(ativo!)} cy={y(ponto.produzidoAcumulado)} r="4"/>
+          <circle className="acumulado-ponto-recebido" cx={x(ativo!)} cy={y(ponto.recebidoAcumulado)} r="4"/>
+        </> : null}
+      </svg>
+
+      {ponto ? <div className="acumulado-tooltip"
+        style={{ left: `${Math.min(Math.max((x(ativo!) / largura) * 100, 14), 86)}%` }}>
+        <strong>Até {rotulo(ponto.inicio)}</strong>
+        <span><i className="marca-produzido"/>Produzido<b>{moeda(ponto.produzidoAcumulado)}</b></span>
+        <span><i className="marca-recebido"/>Recebido<b>{moeda(ponto.recebidoAcumulado)}</b></span>
+        <span className="acumulado-tooltip-falta">A receber<b>{moeda(ponto.produzidoAcumulado - ponto.recebidoAcumulado)}</b></span>
+      </div> : null}
+    </div>
+    <div className="acumulado-eixo" aria-hidden="true">
+      <span>{rotulo(acumulado[0].inicio)}</span>
+      <span>{rotulo(acumulado[acumulado.length - 1].inicio)}</span>
+    </div>
+  </div>
+}

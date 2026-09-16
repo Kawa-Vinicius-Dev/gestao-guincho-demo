@@ -1350,3 +1350,67 @@ tbody tr{transition:background-color .14s ease}
   .pagamentos-proporcao dl{grid-template-columns:1fr}
   .producao-tooltip{left:50%!important}
 }
+
+/* ---------------------------------------------------------------- destaque
+   Referencia escolhida pelo Kawa: Stripe. Um numero domina, o contexto fica ao
+   lado em tipo menor, a curva logo abaixo, e o periodo e controle do proprio
+   bloco. Branco, linha fina, grade quase invisivel. A cor aparece so nas duas
+   linhas do grafico e no que ainda falta receber. */
+.destaque{margin-bottom:var(--espaco-3);padding:0;overflow:visible}
+.destaque-periodo{display:grid;grid-template-columns:minmax(240px,1.3fr) repeat(2,minmax(140px,.7fr)) auto;align-items:end;gap:var(--espaco-2);padding:var(--espaco-3) var(--espaco-4);border-bottom:1px solid var(--linha-suave)}
+.destaque-periodo .field>span{margin-bottom:6px;color:var(--muted);font-size:var(--t-rotulo);font-weight:600;text-transform:uppercase;letter-spacing:.07em}
+
+.destaque-corpo{display:grid;grid-template-columns:minmax(300px,1fr) minmax(0,1.4fr);gap:var(--espaco-4) calc(var(--espaco-4) * 1.5);padding:calc(var(--espaco-4) * 1.2) var(--espaco-4) var(--espaco-4);transition:opacity .2s ease}
+.destaque-corpo.atualizando{opacity:.55}
+
+.destaque-numero span,.destaque-numero strong,.destaque-numero small{display:block}
+.destaque-numero>span{color:var(--muted);font-size:var(--t-corpo);font-weight:500}
+.destaque-numero strong{margin:var(--espaco-1) 0 var(--espaco-2);color:var(--navy-900);font:600 clamp(44px,4.6vw,64px)/1 'Barlow Condensed',sans-serif;letter-spacing:-.018em;font-variant-numeric:tabular-nums}
+.destaque-numero small{color:var(--muted);font-size:var(--t-apoio);line-height:1.5}
+.destaque-numero small b{color:var(--green);font-weight:600}
+
+.destaque-contexto{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-self:end;gap:var(--espaco-3);margin:0}
+.destaque-contexto>div{padding-left:var(--espaco-2);border-left:1px solid var(--line)}
+.destaque-contexto dt{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:var(--t-apoio)}
+.destaque-contexto dd{margin:6px 0 4px;color:var(--ink);font:600 24px/1.1 'Barlow Condensed',sans-serif;font-variant-numeric:tabular-nums}
+.destaque-contexto small{color:#8a99a9;font-size:var(--t-rotulo);line-height:1.4}
+.destaque-falta{color:var(--blue-600)!important}
+
+.destaque-grafico{grid-column:1/-1;padding-top:var(--espaco-3);border-top:1px solid var(--linha-suave)}
+.destaque-grafico>header{display:flex;align-items:center;justify-content:space-between;gap:var(--espaco-2);margin-bottom:var(--espaco-2)}
+.destaque-legenda{display:flex;flex-wrap:wrap;gap:var(--espaco-3);color:var(--muted);font-size:var(--t-apoio)}
+.destaque-legenda>span{display:flex;align-items:center;gap:7px}
+.marca-produzido,.marca-recebido{display:inline-block;width:14px;height:3px;border-radius:2px}
+.marca-produzido{background:var(--blue-500)}
+.marca-recebido{background:var(--green)}
+
+.acumulado-chart{position:relative}
+.acumulado-plot{position:relative;height:230px}
+.acumulado-plot svg{display:block;width:100%;height:100%;overflow:visible}
+.acumulado-base{stroke:var(--line);stroke-width:1;vector-effect:non-scaling-stroke}
+.acumulado-faixa{fill:rgba(46,144,250,.08)}
+.acumulado-linha-produzido{fill:none;stroke:var(--blue-500);stroke-width:2;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.acumulado-linha-recebido{fill:none;stroke:var(--green);stroke-width:2.25;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.acumulado-alvo{fill:transparent;cursor:crosshair}
+.acumulado-guia{stroke:var(--navy-800);stroke-width:1;opacity:.18;vector-effect:non-scaling-stroke}
+.acumulado-ponto-produzido,.acumulado-ponto-recebido{fill:#fff;stroke-width:2;vector-effect:non-scaling-stroke}
+.acumulado-ponto-produzido{stroke:var(--blue-500)}
+.acumulado-ponto-recebido{stroke:var(--green)}
+.acumulado-eixo{display:flex;justify-content:space-between;margin-top:var(--espaco-1);color:var(--muted);font:500 var(--t-rotulo) 'IBM Plex Mono',monospace}
+.acumulado-tooltip{position:absolute;top:-6px;transform:translateX(-50%);min-width:220px;padding:var(--espaco-2) var(--espaco-3);border:1px solid var(--line);border-radius:10px;background:var(--superficie);box-shadow:0 14px 34px rgba(7,20,38,.12);pointer-events:none}
+.acumulado-tooltip strong{display:block;margin-bottom:var(--espaco-1);color:var(--ink);font-size:var(--t-apoio);font-weight:600}
+.acumulado-tooltip span{display:flex;align-items:center;gap:7px;margin-top:6px;color:var(--muted);font-size:var(--t-apoio)}
+.acumulado-tooltip b{margin-left:auto;padding-left:var(--espaco-2);color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+.acumulado-tooltip-falta{margin-top:var(--espaco-1)!important;padding-top:var(--espaco-1);border-top:1px solid var(--linha-suave)}
+.acumulado-tooltip-falta b{color:var(--blue-600)}
+
+@media(max-width:1180px){
+  .destaque-corpo{grid-template-columns:1fr}
+  .destaque-periodo{grid-template-columns:1fr 1fr}
+}
+@media(max-width:620px){
+  .destaque-periodo{grid-template-columns:1fr;padding:var(--espaco-2)}
+  .destaque-corpo{padding:var(--espaco-3) var(--espaco-2)}
+  .destaque-contexto{grid-template-columns:1fr}
+  .destaque-grafico>header{flex-direction:column;align-items:flex-start}
+}

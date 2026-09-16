@@ -5,7 +5,7 @@ import type { DashboardAltoNivelPorto, OpDestaquePorto, OrdemPagamentoPorto } fr
 import { data, hojeIso, moeda, percentual } from '../utils/formatadores'
 import { Carregando } from '../components/EstadoPagina'
 import { Campo, Selecao } from '../components/Campos'
-import { ProducaoXRecebimentos } from '../components/Graficos'
+import { EvolucaoAcumulada } from '../components/Graficos'
 import { CabecalhoPagina, Etiqueta, GradeIndicadores, Indicador, Painel } from '../components/ui/Pagina'
 import { rotuloOp } from '../utils/periodos'
 
@@ -165,58 +165,81 @@ export default function PortoDashboardPage() {
 
     {erro ? <div className="form-alert" role="alert">{erro}</div> : null}
 
-    <section className="panel painel-filtros">
-      <form className="ledger-filters" onSubmit={e => { e.preventDefault(); void carregar(inicio, fim, grao) }}>
-        <Selecao rotulo="Período" vazio="Personalizado" value={opEscolhida}
+    <section className="panel destaque" aria-label="Resumo financeiro">
+      <form className="destaque-periodo" onSubmit={e => { e.preventDefault(); void carregar(inicio, fim, grao) }}>
+        <Selecao rotulo="Ordem de pagamento" vazio="Período personalizado" value={opEscolhida}
           onChange={e => escolherOp(e.target.value)}
           opcoes={ops.map(o => ({ valor: String(o.id), texto: rotuloOp(o) }))}/>
-        <Campo rotulo="Data inicial">
+        <Campo rotulo="De">
           <input type="date" value={inicio} onChange={e => { setOpEscolhida(''); setInicio(e.target.value) }} required/>
         </Campo>
-        <Campo rotulo="Data final">
+        <Campo rotulo="Até">
           <input type="date" value={fim} onChange={e => { setOpEscolhida(''); setFim(e.target.value) }} required/>
         </Campo>
-        <button className="button button-primary">Aplicar período</button>
+        <button className="button button-ghost">Aplicar</button>
       </form>
+
+      {carregando && !dados ? <Carregando/> : null}
+
+      {dados && vazio && !carregando
+        ? <div className="painel-vazio">
+            <div className="empty-ledger" aria-hidden="true"/>
+            <h2>Nenhum dado da Porto neste período</h2>
+            <p>Importe um relatório da Porto ou escolha outro período para ver produção, pagamentos e recebimentos.</p>
+            <Link className="button button-primary" to="/porto/importacoes">Importar relatório</Link>
+          </div>
+        : null}
+
+      {dados && !vazio
+        ? <div className={`destaque-corpo${carregando ? ' atualizando' : ''}`}>
+            <div className="destaque-numero">
+              <span>Recebido no período</span>
+              <strong>{moeda(dados.valorRecebido)}</strong>
+              <small>
+                {recebidoSobreProgramado !== null
+                  ? <><b>{percentual(recebidoSobreProgramado)} do programado</b> · </>
+                  : null}
+                {dados.quantidadeRecebidas} {dados.quantidadeRecebidas === 1 ? 'recebimento confirmado' : 'recebimentos confirmados'}
+              </small>
+            </div>
+
+            <dl className="destaque-contexto">
+              <div>
+                <dt><i className="marca-produzido"/>Realizado</dt>
+                <dd>{moeda(dados.valorTotalRealizado)}</dd>
+                <small>{dados.quantidadeTotalServicos} serviços executados</small>
+              </div>
+              <div>
+                <dt>Programado</dt>
+                <dd>{moeda(dados.valorProgramado)}</dd>
+                <small>{dados.quantidadePagamentoProgramado} {dados.quantidadePagamentoProgramado === 1 ? 'ordem de pagamento' : 'ordens de pagamento'}</small>
+              </div>
+              <div>
+                <dt>A receber</dt>
+                <dd className={aReceber > 0 ? 'destaque-falta' : ''}>{moeda(aReceber)}</dd>
+                <small>{aReceber > 0 ? 'Programado e ainda não recebido' : 'Nada pendente'}</small>
+              </div>
+            </dl>
+
+            <div className="destaque-grafico">
+              <header>
+                <span className="destaque-legenda">
+                  <span><i className="marca-produzido"/>Produção acumulada</span>
+                  <span><i className="marca-recebido"/>Recebido acumulado</span>
+                </span>
+                <div className="segmented" role="group" aria-label="Agrupamento do gráfico">
+                  {GRAOS.map(g => <button key={g.valor} type="button"
+                    className={grao === g.valor ? 'active' : ''}
+                    onClick={() => trocarGrao(g.valor as 'DIA' | 'SEMANA' | 'MES')}>{g.texto}</button>)}
+                </div>
+              </header>
+              <EvolucaoAcumulada pontos={dados.serie} rotulo={rotuloDoBalde(grao)}/>
+            </div>
+          </div>
+        : null}
     </section>
 
-    {carregando ? <Carregando/> : null}
-
-    {dados && vazio && !carregando
-      ? <section className="panel painel-vazio">
-          <div className="empty-ledger" aria-hidden="true"/>
-          <h2>Nenhum dado da Porto neste período</h2>
-          <p>Importe um relatório da Porto ou escolha outro período para ver produção, pagamentos e recebimentos.</p>
-          <Link className="button button-primary" to="/porto/importacoes">Importar relatório</Link>
-        </section>
-      : null}
-
     {dados && !vazio ? <>
-      <section className="painel-financeiro" aria-label="Resumo financeiro">
-        <article>
-          <span>Realizado</span>
-          <strong>{moeda(dados.valorTotalRealizado)}</strong>
-          <small>{dados.quantidadeTotalServicos} serviços executados</small>
-        </article>
-        <article>
-          <span>Programado</span>
-          <strong>{moeda(dados.valorProgramado)}</strong>
-          <small>{dados.quantidadePagamentoProgramado} {dados.quantidadePagamentoProgramado === 1 ? 'ordem de pagamento' : 'ordens de pagamento'}</small>
-        </article>
-        <article className="painel-financeiro-recebido">
-          <span>Recebido</span>
-          <strong>{moeda(dados.valorRecebido)}</strong>
-          <small>
-            {dados.quantidadeRecebidas} {dados.quantidadeRecebidas === 1 ? 'recebimento confirmado' : 'recebimentos confirmados'}
-            {recebidoSobreProgramado !== null ? ` · ${percentual(recebidoSobreProgramado)} do programado` : ''}
-          </small>
-          {recebidoSobreProgramado !== null
-            ? <span className="painel-progresso" aria-hidden="true">
-                <i style={{ width: `${Math.min(recebidoSobreProgramado, 100)}%` }}/>
-              </span>
-            : null}
-        </article>
-      </section>
 
       <GradeIndicadores>
         <Indicador rotulo="Serviços realizados" valor={dados.quantidadeTotalServicos}
@@ -246,15 +269,6 @@ export default function PortoDashboardPage() {
               <strong>Tudo em dia</strong>
               <small>Nenhuma pendência crítica encontrada neste período.</small>
             </p>}
-      </Painel>
-
-      <Painel className="painel-evolucao" etiqueta="Evolução" titulo="Produção × Recebimentos"
-        aoLado={<div className="segmented" role="group" aria-label="Agrupamento do gráfico">
-          {GRAOS.map(g => <button key={g.valor} type="button"
-            className={grao === g.valor ? 'active' : ''}
-            onClick={() => trocarGrao(g.valor as 'DIA' | 'SEMANA' | 'MES')}>{g.texto}</button>)}
-        </div>}>
-        <ProducaoXRecebimentos pontos={dados.serie} rotulo={rotuloDoBalde(grao)}/>
       </Painel>
 
       <div className="painel-inferior">
