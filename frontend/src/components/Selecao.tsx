@@ -49,11 +49,15 @@ const BUSCA_A_PARTIR_DE = 8
  * Quanto o dedo pode andar e a acao ainda contar como toque, em pixels.
  *
  * O painel abria no pointerdown: no celular, encostar num campo para rolar a
- * pagina ja o escancarava. Ninguem acerta o dedo parado no pixel, entao um
- * toque de verdade tambem anda um pouco — a folga separa os dois sem exigir
- * precisao de quem usa.
+ * pagina ja o escancarava. Esperar o pointerup resolveu isso, mas com 10px de
+ * folga o campo passou a exigir toque demorado: um toque rapido de polegar rola
+ * uns quinze, vinte pixels enquanto sobe, e caia fora da conta. Quem usava
+ * precisava segurar o dedo parado ate o campo abrir.
+ *
+ * 24px e a largura do rolar de um polegar, nao de uma rolagem — que arrasta
+ * dezenas ou centenas. Separa os dois sem cobrar precisao de quem usa.
  */
-const FOLGA_DO_TOQUE = 10
+const FOLGA_DO_TOQUE = 24
 
 export function Selecao({ rotulo, className, ajuda, vazio, opcoes, ...resto }: Props) {
   const campo = useRef<HTMLSelectElement>(null)
@@ -148,6 +152,11 @@ export function Selecao({ rotulo, className, ajuda, vazio, opcoes, ...resto }: P
           if (andou <= FOLGA_DO_TOQUE) abrir()
         }}
         onPointerCancel={() => { toque.current = null }}
+        // Rede de seguranca: em parte dos navegadores o preventDefault do
+        // pointerdown engole o pointerup de um toque rapido. O click nasce so de
+        // toque de verdade — rolagem nao gera click —, entao serve de reserva
+        // sem reabrir o que a rolagem deveria ter ignorado.
+        onClick={() => { if (!aberto) abrir() }}
         onMouseDown={evento => evento.preventDefault()}
         >
         {lista.map(o => <option key={o.valor} value={o.valor}>{o.texto}</option>)}

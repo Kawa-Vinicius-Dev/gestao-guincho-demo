@@ -10,6 +10,7 @@ import { Campo, Selecao } from '../components/Campos'
 import { EvolucaoAcumulada, FaturamentoPorGrupo } from '../components/Graficos'
 import { CabecalhoPagina, Etiqueta, GradeIndicadores, Indicador, Painel } from '../components/ui/Pagina'
 import { rotuloOp } from '../utils/periodos'
+import { gravarFiltro, lerFiltro } from '../utils/filtroLembrado'
 
 /**
  * Painel Porto.
@@ -30,6 +31,19 @@ import { rotuloOp } from '../utils/periodos'
  * de linha vive na tela de ordens de servico, onde ha linhas para filtrar.
  */
 const primeiroDiaDoMes = () => `${hojeIso().slice(0, 8)}01`
+
+/**
+ * O recorte escolhido sobrevive a ida e volta para outra tela.
+ *
+ * Sem isto, quem escolhia uma OP, abria as ordens de servico para conferir uma
+ * linha e voltava, caia de novo no mes corrente e tinha de reescolher a OP a
+ * cada consulta. O padrao continua sendo o mes corrente — so a primeira visita
+ * da sessao e que o usa.
+ */
+type Recorte = { op: string, inicio: string, fim: string, grao: 'DIA' | 'SEMANA' | 'MES' }
+const recorteInicial = (): Recorte => lerFiltro<Recorte>('porto-painel', {
+  op: '', inicio: primeiroDiaDoMes(), fim: hojeIso(), grao: 'DIA',
+})
 
 const GRAOS = [
   { valor: 'DIA', texto: 'Diário' },
@@ -69,10 +83,11 @@ const tom = (valor: number, cor: 'alerta' | 'atencao') => (valor > 0 ? cor : 'ne
 export default function PortoDashboardPage() {
   const [dados, setDados] = useState<DashboardAltoNivelPorto | null>(null)
   const [ops, setOps] = useState<OrdemPagamentoPorto[]>([])
-  const [opEscolhida, setOpEscolhida] = useState('')
-  const [inicio, setInicio] = useState(primeiroDiaDoMes())
-  const [fim, setFim] = useState(hojeIso())
-  const [grao, setGrao] = useState<'DIA' | 'SEMANA' | 'MES'>('DIA')
+  const [recorte] = useState(recorteInicial)
+  const [opEscolhida, setOpEscolhida] = useState(recorte.op)
+  const [inicio, setInicio] = useState(recorte.inicio)
+  const [fim, setFim] = useState(recorte.fim)
+  const [grao, setGrao] = useState<'DIA' | 'SEMANA' | 'MES'>(recorte.grao)
   const [carregando, setCarregando] = useState(true)
   const [baixando, setBaixando] = useState('')
   const [erro, setErro] = useState('')
@@ -84,7 +99,12 @@ export default function PortoDashboardPage() {
     finally { setCarregando(false) }
   }, [])
 
-  useEffect(() => { void carregar(primeiroDiaDoMes(), hojeIso(), 'DIA') }, [carregar])
+  useEffect(() => { void carregar(recorte.inicio, recorte.fim, recorte.grao) }, [carregar, recorte])
+  // Grava depois de cada mudanca, e nao dentro de cada handler: assim nenhum
+  // caminho novo de alteracao de periodo esquece de lembrar o que escolheu.
+  useEffect(() => {
+    gravarFiltro('porto-painel', { op: opEscolhida, inicio, fim, grao })
+  }, [opEscolhida, inicio, fim, grao])
   // A lista de OPs e conveniencia: se nao carregar, as datas continuam valendo.
   useEffect(() => { listarPeriodosDeOp().then(setOps).catch(() => setOps([])) }, [])
 

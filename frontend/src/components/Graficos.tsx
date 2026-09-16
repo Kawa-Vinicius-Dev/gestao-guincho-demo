@@ -270,10 +270,15 @@ export function ProducaoXRecebimentos({ pontos, rotulo }: {
   const [ativo, setAtivo] = useState<number | null>(null)
   if (!pontos.length) return <Vazio texto="A evolução aparece quando houver serviços no período."/>
 
-  const largura = 720, altura = 272, topo = 20, base = 214, margem = 58
+  // A margem esquerda precisa caber o maior rotulo do eixo: "R$ 74,8 mil" sao
+  // onze caracteres de monospace 10px, uns 66px, mais o respiro ate a grade. Com
+  // a margem simetrica de antes sobravam 48px e o texto vazava para fora do
+  // painel, colado na borda. A direita nao carrega rotulo, entao pede menos.
+  const largura = 720, altura = 272, topo = 20, base = 214
+  const margemEsquerda = 82, margemDireita = 32
   const teto = escala(pontos.flatMap(p => [p.produzido, p.recebido, p.programado]))
-  const passo = (largura - margem * 2) / Math.max(pontos.length, 1)
-  const x = (i: number) => margem + passo * i + passo / 2
+  const passo = (largura - margemEsquerda - margemDireita) / Math.max(pontos.length, 1)
+  const x = (i: number) => margemEsquerda + passo * i + passo / 2
   const y = (v: number) => base - (v / teto) * (base - topo)
   const linha = (campo: 'recebido' | 'programado') => pontos
     .map((p, i) => `${i ? 'L' : 'M'} ${x(i).toFixed(1)} ${y(p[campo]).toFixed(1)}`).join(' ')
@@ -294,9 +299,9 @@ export function ProducaoXRecebimentos({ pontos, rotulo }: {
         aria-label={`Produção e recebimentos por período. ${pontos.map(p =>
           `${rotulo(p.inicio)}: produzido ${moeda(p.produzido)}, recebido ${moeda(p.recebido)}`).join('. ')}`}>
         {[0, .25, .5, .75, 1].map(f => <g key={f}>
-          <line className="producao-grade" x1={margem} x2={largura - margem}
+          <line className="producao-grade" x1={margemEsquerda} x2={largura - margemDireita}
             y1={topo + (base - topo) * f} y2={topo + (base - topo) * f}/>
-          <text className="producao-escala" x={margem - 10} y={topo + (base - topo) * f + 4}
+          <text className="producao-escala" x={margemEsquerda - 10} y={topo + (base - topo) * f + 4}
             textAnchor="end">{moedaCurta(teto * (1 - f))}</text>
         </g>)}
 
@@ -320,7 +325,7 @@ export function ProducaoXRecebimentos({ pontos, rotulo }: {
         {/* Faixa invisivel por periodo: o alvo do ponteiro e a coluna inteira,
             nao a barra — mirar numa barra de 2px de altura seria impossivel. */}
         {pontos.map((p, i) => <rect key={`h${p.inicio}`} className="producao-alvo"
-          x={margem + passo * i} y={topo} width={passo} height={base - topo}
+          x={margemEsquerda + passo * i} y={topo} width={passo} height={base - topo}
           onMouseEnter={() => setAtivo(i)}/>)}
 
         {ativo !== null

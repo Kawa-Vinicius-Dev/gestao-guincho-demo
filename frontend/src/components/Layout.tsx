@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { listarFavoritos, salvarFavoritos } from '../dados/favoritos'
 import { useAuth } from '../auth/AuthContext'
 import { MarcaJms } from './MarcaJms'
+import { ConfirmarSaida } from './ConfirmarSaida'
 
 const itens = [
   ['/', 'Visão geral', true, 'financeiro'],
@@ -109,6 +110,7 @@ export function Layout() {
   const { usuario, logout } = useAuth()
   const { pathname } = useLocation()
   const [aberto,setAberto]=useState(false)
+  const [saindo,setSaindo]=useState(false)
   const admin=usuario?.perfil==='ADMINISTRADOR'
 
   // Qual grupo contem a tela atual. E ele que abre quando nao ha escolha guardada,
@@ -192,11 +194,12 @@ export function Layout() {
         <div className="operator">
           <span className="operator-avatar">{usuario?.nome.slice(0,2).toUpperCase()}</span>
           <span><strong>{usuario?.nome}</strong><small>{usuario?.perfil==='ADMINISTRADOR'?'Administrador':'Socorrista'}</small></span>
-          <button className="logout-button" onClick={logout}>Sair</button>
+          <button className="logout-button" onClick={()=>setSaindo(true)}>Sair</button>
         </div>
       </header>
       <main className="content"><Outlet/></main>
     </div>
     {aberto?<button className="sidebar-scrim" aria-label="Fechar menu" onClick={()=>setAberto(false)}/>:null}
+    {saindo?<ConfirmarSaida nome={usuario?.nome} aoCancelar={()=>setSaindo(false)} aoConfirmar={logout}/>:null}
   </div>
 }

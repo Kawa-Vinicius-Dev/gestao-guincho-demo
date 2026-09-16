@@ -433,6 +433,16 @@ tbody tr{transition:background-color .14s ease}
 :root[data-tema="escuro"] .table-scroll thead th{box-shadow:0 1px 0 var(--line)}
 :root[data-tema="escuro"] .table-scroll thead th:first-child{box-shadow:7px 0 9px -7px rgba(0,0,0,.6),0 1px 0 var(--line)}
 :root[data-tema="escuro"] .table-scroll tbody td:first-child{box-shadow:7px 0 9px -7px rgba(0,0,0,.6)}
+/* Quilometragem: o destaque de km morto nasceu como um lavado rosa claro
+   (#fff8f9, #fff7f8) escrito direto na regra, de quando so havia tema claro. No
+   escuro esses cartoes viravam retangulos brancos no meio da tela, com o valor
+   em texto claro por cima — ilegivel justamente no cartao que avisa do problema.
+   O trilho da barra tinha o mesmo defeito. Aqui eles ganham o equivalente
+   escuro; o tema claro segue como estava. */
+:root[data-tema="escuro"] .km-overview>div.danger{background:#2b1622}
+:root[data-tema="escuro"] .km-comparison article.danger{border-color:#5a2436;background:#231521}
+:root[data-tema="escuro"] .km-scale{background:#1b2f47}
+:root[data-tema="escuro"] .km-overview small{color:var(--muted)}
 /* Escolha de tema na tela de Configuracoes. */
 .tema-escolha{width:max-content;margin:4px 0 2px}
 .tema-escolha button{padding:0 20px}
@@ -1066,6 +1076,10 @@ tbody tr{transition:background-color .14s ease}
 .app-shell .page-enter>section+.panel,
 .app-shell .page-enter>.panel+article,
 .app-shell .page-enter>.table-scroll+.panel{margin-top:var(--espaco-2)}
+/* A grade de indicadores so tem margem embaixo, porque quase sempre abre a tela.
+   Em Pendencias do periodo ela vem depois do cartao de filtros, e sem margem em
+   cima os dois encostavam: a borda do filtro virava a borda do primeiro KPI. */
+.app-shell .page-enter>.panel+.grade-indicadores{margin-top:var(--espaco-2)}
 
 /* Nada verde na tela de Despesas.
    Verde no sistema inteiro significa dinheiro entrando. Numa tela em que toda
@@ -1430,3 +1444,42 @@ tbody tr{transition:background-color .14s ease}
 .faturamento-grupo .sem-vinculo .faturamento-grupo-trilho>span{background:#e0a530}
 @media(max-width:1180px){.painel-faturamento{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){.faturamento-grupo-trilho>span{transition:none}}
+
+/* ===========================================================================
+   Confirmacao de saida
+   ---------------------------------------------------------------------------
+   Um modal estreito, porque a pergunta e curta e uma janela de 620px para duas
+   linhas de texto parece um formulario que sumiu. O topo leva uma faixa no
+   vermelho do tema — o mesmo sinal que o sistema ja usa para acao que encerra
+   alguma coisa —, e o eyebrow acompanha, em vez do azul de navegacao.
+
+   Todas as cores saem dos tokens, entao a janela nasce certa nos dois temas:
+   no claro, superficie branca e faixa rosa; no escuro, superficie #111f33 e a
+   mesma faixa no vermelho claro, ambas medidas contra o fundo em que caem.
+   =========================================================================== */
+.confirmar-saida{width:min(452px,100%);border-top:3px solid var(--red)}
+.confirmar-saida .eyebrow{color:var(--erro-texto)}
+.confirmar-saida>header{margin-bottom:var(--espaco-3);padding-bottom:var(--espaco-2)}
+.confirmar-saida h2{font-size:27px}
+.saida-texto{margin:0;color:var(--ink);font-size:12.5px;line-height:1.65}
+.saida-texto strong{font-weight:600}
+/* A segunda linha e tranquilizadora, nao um aviso: fica menor e no tom apagado,
+   para nao competir com a frase que diz o que se perde. */
+.saida-nota{margin:var(--espaco-1) 0 0;padding:var(--espaco-2);border-radius:8px;
+  background:var(--superficie-2);color:var(--muted);font-size:11px;line-height:1.55}
+.confirmar-saida .modal-actions{margin-top:var(--espaco-3)}
+
+/* O botao de acao destrutiva usava --erro-texto como fundo com texto branco. No
+   tema claro esse token e o vermelho escuro (#b42318) e da 7.4:1; no escuro ele
+   vira o rosa claro (#f79aa8), e branco sobre ele cai para 1.9:1 — ilegivel. O
+   fundo abaixo da 5.5:1 com branco e continua lendo como perigo. Vale para todo
+   botao vermelho do sistema, nao so o de sair. */
+:root[data-tema="escuro"] .button-danger{border-color:#c0334a;background:#c0334a;color:#fff}
+:root[data-tema="escuro"] .button-danger:hover{border-color:#a92c40;background:#a92c40}
+
+@media(max-width:480px){
+  /* Nesta largura os dois botoes lado a lado espremem "Continuar no sistema" em
+     duas linhas; empilhados, cada um fica com o alvo de toque inteiro. */
+  .confirmar-saida .modal-actions{flex-direction:column-reverse}
+  .confirmar-saida .modal-actions .button{width:100%}
+}
