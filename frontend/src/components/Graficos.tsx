@@ -44,7 +44,8 @@ export function FaturamentoPorGrupo({descricao,linhas,vazio}:{descricao:string;l
 }
 
 export type LinhaCategoria={id:number;rotulo:string;valor:number;participacao:number}
-export type PontoDespesaAcumulada={data:string;valorDia:number;acumulado:number}
+export type OrigemDoGasto={categoria:string;valor:number}
+export type PontoDespesaAcumulada={data:string;valorDia:number;acumulado:number;origens?:OrigemDoGasto[]}
 
 const CORES_GASTOS=['#c4324c','#1570ef','#46c7ee','#607d9b','#d59a32','#0b1d33']
 
@@ -133,7 +134,13 @@ export function DespesaAcumulada({pontos,inicio,fim}:{pontos:PontoDespesaAcumula
   for(const ponto of ordenados)caminho+=` H ${x(ponto.data)} V ${y(ponto.acumulado)}`
   caminho+=` H ${largura-margemX}`
   const area=`${caminho} V ${base} H ${margemX} Z`
-  const maiorDia=ordenados.reduce((maior,ponto)=>ponto.valorDia>maior.valorDia?ponto:maior,ordenados[0])
+  // Os degraus que mais pesaram, com a origem: um salto sem nome nao explica nada.
+  const maiores=[...ordenados].sort((a,b)=>b.valorDia-a.valorDia).slice(0,3)
+  const origem=(ponto:PontoDespesaAcumulada)=>{
+    const lista=ponto.origens??[]
+    if(!lista.length)return 'Despesas do dia'
+    return lista.length>1?`${lista[0].categoria} e mais ${lista.length-1}`:lista[0].categoria
+  }
   const descricao=ordenados.map(ponto=>
     `${dataCurta(ponto.data)}: ${moeda(ponto.valorDia)} no dia, ${moeda(ponto.acumulado)} acumulados`).join('. ')
   return <div className="gastos-trajetoria">
@@ -148,10 +155,18 @@ export function DespesaAcumulada({pontos,inicio,fim}:{pontos:PontoDespesaAcumula
       <path className="trajetoria-area" d={area}/>
       <path className="trajetoria-linha" d={caminho}/>
       {ordenados.length<=45?ordenados.map(ponto=><circle key={ponto.data}
-        className="trajetoria-ponto" cx={x(ponto.data)} cy={y(ponto.acumulado)} r="3.5"/>):null}
+        className="trajetoria-ponto" cx={x(ponto.data)} cy={y(ponto.acumulado)} r="3.5">
+        <title>{`${dataCurta(ponto.data)}: ${moeda(ponto.valorDia)} · ${origem(ponto)}`}</title>
+      </circle>):null}
     </svg>
     <div className="trajetoria-eixo" aria-hidden="true"><span>{dataCurta(inicio)}</span><span>{dataCurta(fim)}</span></div>
-    <p>Maior gasto em {dataCurta(maiorDia.data)}: <strong>{moeda(maiorDia.valorDia)}</strong></p>
+    <ol className="trajetoria-degraus" aria-label="Maiores gastos do período">
+      {maiores.map(ponto=><li key={ponto.data}>
+        <span>{dataCurta(ponto.data)}</span>
+        <span title={(ponto.origens??[]).map(o=>`${o.categoria}: ${moeda(o.valor)}`).join(' · ')}>{origem(ponto)}</span>
+        <strong>{moeda(ponto.valorDia)}</strong>
+      </li>)}
+    </ol>
   </div>
 }
 

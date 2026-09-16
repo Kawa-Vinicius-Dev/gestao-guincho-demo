@@ -110,8 +110,8 @@ const visaoGeral = {
       { comissao: 3757.59, despesas: 0, producao: 18787.95, servicos: 75, custoTotal: 3757.59, socorrista: 'QEBSON RAMOS DA SILVA', motoristaId: 2 },
     ],
     despesasAcumuladasPorDia: [
-      { data: '2026-04-26', valorDia: 200, acumulado: 200 },
-      { data: '2026-04-29', valorDia: 14166.27, acumulado: 14366.27 },
+      { data: '2026-04-26', valorDia: 200, acumulado: 200, origens: [{ categoria: 'Alimentação', valor: 200 }] },
+      { data: '2026-04-29', valorDia: 14166.27, acumulado: 14366.27, origens: [{ categoria: 'Comissão de socorrista', valor: 14166.27 }] },
     ],
   },
 }

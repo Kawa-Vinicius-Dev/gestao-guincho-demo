@@ -67,7 +67,7 @@ export interface RecebimentoForaDoPeriodo { dataPagamento:string; valor:number; 
 /** Para onde o dinheiro foi: despesa paga do periodo somada por categoria. */
 export interface GastoPorCategoria { categoriaId:number; categoria:string; valor:number; participacao:number }
 /** Movimento pago do dia e a soma progressiva usada na trajetória financeira. */
-export interface DespesaAcumuladaDia { data:string; valorDia:number; acumulado:number }
+export interface DespesaAcumuladaDia { data:string; valorDia:number; acumulado:number; origens?:{ categoria:string; valor:number }[] }
 export interface ResultadoSocorrista { motoristaId:number; socorrista:string; servicos:number; producao:number; comissao:number; despesas:number; custoTotal:number }
 export interface ItemImportacao {
   id:number; protocolo?:string; dataServico:string; veiculoAtendido?:string; placaAtendida?:string;
