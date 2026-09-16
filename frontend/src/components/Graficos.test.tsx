@@ -2,7 +2,7 @@ import { render, screen, within } from '@testing-library/react'
 import { expect, test } from 'vitest'
 import { FaixaDeIndicadores } from '../dashboard/PaineisDoResultado'
 import type { Dashboard } from '../types/modelos'
-import { DespesaAcumulada, GastosPorCategoria } from './Graficos'
+import { DespesaAcumulada, GastosPorCategoria, ProducaoXRecebimentos } from './Graficos'
 
 test('rosca mantém valores exatos e agrupa só o que excede cinco categorias', () => {
   render(<GastosPorCategoria total={1000} linhas={[
@@ -60,4 +60,26 @@ test('a receber não soma de novo o valor que já está em atraso', () => {
   expect(cartao).toHaveTextContent('R$ 300,00')
   expect(cartao).not.toHaveTextContent('R$ 500,00')
   expect(cartao).toHaveTextContent('R$ 200,00 em atraso')
+})
+
+// Os rotulos do eixo sao desenhados para a esquerda a partir da margem. Com a
+// margem simetrica de antes sobravam 48px para "R$ 74,8 mil" — onze caracteres
+// de monospace 10px, uns 66px —, e o texto vazava do painel, colado na borda.
+test('o maior rótulo do eixo cabe dentro do gráfico, sem vazar pela esquerda', () => {
+  const { container } = render(<ProducaoXRecebimentos
+    pontos={[
+      { inicio: '2026-04-23', produzido: 74800, recebido: 0, programado: 0, servicos: 1 },
+      { inicio: '2026-04-24', produzido: 12000, recebido: 74800, programado: 0, servicos: 1 },
+    ]}
+    rotulo={inicio => inicio.slice(8)}/>)
+
+  const rotulos = [...container.querySelectorAll('text.producao-escala')]
+  expect(rotulos.length).toBeGreaterThan(0)
+
+  const LARGURA_DO_CARACTERE = 6   // monospace 10px
+  for (const rotulo of rotulos) {
+    const direita = Number(rotulo.getAttribute('x'))
+    const esquerda = direita - (rotulo.textContent ?? '').length * LARGURA_DO_CARACTERE
+    expect(esquerda, `"${rotulo.textContent}" comeca em ${esquerda}`).toBeGreaterThan(0)
+  }
 })

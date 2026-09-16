@@ -433,6 +433,16 @@ tbody tr{transition:background-color .14s ease}
 :root[data-tema="escuro"] .table-scroll thead th{box-shadow:0 1px 0 var(--line)}
 :root[data-tema="escuro"] .table-scroll thead th:first-child{box-shadow:7px 0 9px -7px rgba(0,0,0,.6),0 1px 0 var(--line)}
 :root[data-tema="escuro"] .table-scroll tbody td:first-child{box-shadow:7px 0 9px -7px rgba(0,0,0,.6)}
+/* Quilometragem: o destaque de km morto nasceu como um lavado rosa claro
+   (#fff8f9, #fff7f8) escrito direto na regra, de quando so havia tema claro. No
+   escuro esses cartoes viravam retangulos brancos no meio da tela, com o valor
+   em texto claro por cima — ilegivel justamente no cartao que avisa do problema.
+   O trilho da barra tinha o mesmo defeito. Aqui eles ganham o equivalente
+   escuro; o tema claro segue como estava. */
+:root[data-tema="escuro"] .km-overview>div.danger{background:#2b1622}
+:root[data-tema="escuro"] .km-comparison article.danger{border-color:#5a2436;background:#231521}
+:root[data-tema="escuro"] .km-scale{background:#1b2f47}
+:root[data-tema="escuro"] .km-overview small{color:var(--muted)}
 /* Escolha de tema na tela de Configuracoes. */
 .tema-escolha{width:max-content;margin:4px 0 2px}
 .tema-escolha button{padding:0 20px}
@@ -1066,6 +1076,10 @@ tbody tr{transition:background-color .14s ease}
 .app-shell .page-enter>section+.panel,
 .app-shell .page-enter>.panel+article,
 .app-shell .page-enter>.table-scroll+.panel{margin-top:var(--espaco-2)}
+/* A grade de indicadores so tem margem embaixo, porque quase sempre abre a tela.
+   Em Pendencias do periodo ela vem depois do cartao de filtros, e sem margem em
+   cima os dois encostavam: a borda do filtro virava a borda do primeiro KPI. */
+.app-shell .page-enter>.panel+.grade-indicadores{margin-top:var(--espaco-2)}
 
 /* Nada verde na tela de Despesas.
    Verde no sistema inteiro significa dinheiro entrando. Numa tela em que toda

@@ -135,3 +135,28 @@ test('trocar o agrupamento recarrega a série com o novo grão', async () => {
 
   expect(grao).toBe('SEMANA')
 })
+
+// Escolher a OP e voltar para o mes corrente ao sair da tela era o
+// comportamento antigo: o estado nascia do zero a cada montagem, entao quem
+// consultava uma OS e voltava reescolhia a OP toda vez.
+test('a OP escolhida continua escolhida ao voltar para a tela', async () => {
+  servidorDoPainel(painel())
+  servidor.use(http.get(`${SUPA}/rest/v1/porto_ops_conciliadas`, () => HttpResponse.json([{
+    id: 7, numero: '06389821', valor_total: 74770, situacao_financeira: 'RECEBIDO',
+    periodo_inicio: '2026-03-30', periodo_fim: '2026-04-29',
+    data_pagamento_programada: '2026-05-10',
+  }])))
+  const Painel = await abrirPainel()
+
+  const primeira = render(<MemoryRouter><Painel/></MemoryRouter>)
+  const periodo = await screen.findByLabelText('Período')
+  await userEvent.selectOptions(periodo, '7')
+  expect(await screen.findByDisplayValue('2026-03-30')).toBeInTheDocument()
+  primeira.unmount()
+
+  render(<MemoryRouter><Painel/></MemoryRouter>)
+
+  expect(await screen.findByDisplayValue('2026-03-30')).toBeInTheDocument()
+  expect(screen.getByDisplayValue('2026-04-29')).toBeInTheDocument()
+  expect(await screen.findByLabelText('Período')).toHaveValue('7')
+})
