@@ -59,7 +59,7 @@ test('a linha chega no formato que a tela ja usa', async () => {
 
   expect((await listarMotoristas())[0]).toEqual({
     id: 3, nome: 'Anderson Ribeiro', telefone: '11999990000', documento: undefined,
-    qra: 'QRA7', ativo: true, veiculoId: 5, veiculo: 'L168',
+    qra: 'QRA7', codigosPorto: [], ativo: true, veiculoId: 5, veiculo: 'L168',
     usuarioId: '33333333-3333-3333-3333-333333333333',
   })
 })

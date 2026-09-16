@@ -14,7 +14,7 @@ export interface Categoria { id: number; nome: string; tipo: 'RECEITA' | 'DESPES
  * Supabase e o uuid do perfil. A tela so pergunta se ha vinculo, nunca mostra o
  * valor, entao os dois servem e conviver evita tocar a tela na migracao.
  */
-export interface Motorista { id: number; nome: string; telefone?: string; documento?: string; qra?:string; usuarioId?: number | string; ativo: boolean; veiculoId?: number; veiculo?: string }
+export interface Motorista { id: number; nome: string; telefone?: string; documento?: string; qra?:string; codigosPorto?: string[]; usuarioId?: number | string; ativo: boolean; veiculoId?: number; veiculo?: string }
 export interface ContaReceber {
   id: number; contratante: Contratante; protocolo?: string; descricao: string; valorPrevisto: number;
   valorRecebido?: number; diferenca?: number; dataCompetencia: string; vencimento: string;
