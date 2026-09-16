@@ -140,7 +140,23 @@ export async function listarDespesas(): Promise<Despesa[]> {
   return linhas.map(paraModelo)
 }
 
-export async function criarDespesa(dados: DadosDespesa): Promise<Despesa> {
+/**
+ * Lanca a despesa.
+ *
+ * `jaAprovada` diz que quem esta lancando responde pelo caixa, e por isso a
+ * despesa nao precisa de um segundo par de olhos: ela nasce aprovada, e paga se
+ * o formulario disse que ja foi paga. Antes, o administrador preenchia o
+ * formulario, escolhia "Paga" e ainda clicava em Aprovar e em Registrar
+ * pagamento para o valor chegar na Visao geral — tres acoes para registrar um
+ * almoco que ele mesmo pagou, com o campo "Situacao" do formulario nao valendo
+ * nada.
+ *
+ * A bandeira nao decide sozinha: ela escolhe o caminho, e o caminho aprovado e
+ * uma RPC que confere quem esta chamando. Cliente que mentir na bandeira nao
+ * ganha nada — a policy de insercao direta continua exigindo `not aprovada`, e
+ * so a RPC, que roda `exigir_administrador()`, escreve uma despesa ja aprovada.
+ */
+export async function criarDespesa(dados: DadosDespesa, jaAprovada = false): Promise<Despesa> {
   // Toda escrita que mexe em dinheiro derruba o cache do dashboard: servir por
   // ate um minuto um total que a propria pessoa acabou de alterar e pior do que
   // esperar a consulta.
@@ -153,6 +169,35 @@ export async function criarDespesa(dados: DadosDespesa): Promise<Despesa> {
   // estado que nenhuma tela consegue usar, e a despesa sumiria da viatura sem
   // aparecer em lugar nenhum.
   const alimentacao = dados.natureza === 'ALIMENTACAO_FUNCIONARIO' && Boolean(dados.motoristaId)
+
+  if (jaAprovada) {
+    const linha = ou(
+      await supabase().rpc('registrar_despesa_aprovada', {
+        p_descricao: dados.descricao,
+        p_categoria_id: dados.categoriaId,
+        p_valor: dados.valor,
+        p_data: dados.data,
+        p_vencimento: dados.vencimento || null,
+        p_forma_pagamento: dados.formaPagamento || null,
+        p_veiculo_id: dados.veiculoId || null,
+        p_motorista_id: dados.motoristaId || null,
+        p_protocolo: dados.protocolo || null,
+        p_observacoes: dados.observacoes || null,
+        p_natureza: alimentacao ? 'ALIMENTACAO_FUNCIONARIO' : 'GERAL',
+        p_paga: dados.status === 'PAGO',
+        p_data_pagamento: dados.dataPagamento || null,
+      }),
+      'Não foi possível registrar a despesa.',
+    ) as { id: number }
+    // A RPC devolve a linha crua da tabela, sem os nomes de categoria, viatura e
+    // socorrista que a tela mostra. Em vez de montar meia despesa aqui, le a
+    // linha pronta pelo mesmo caminho da listagem.
+    const completa = ou(
+      await supabase().from('despesas').select(COLUNAS).eq('id', linha.id).single(),
+      'Não foi possível registrar a despesa.',
+    ) as unknown as LinhaDespesa
+    return paraModelo(completa)
+  }
 
   // Toda despesa nasce pendente e nao aprovada, qualquer que seja a situacao
   // escolhida no formulario. Nao e limitacao tecnica: "paga sem ter sido

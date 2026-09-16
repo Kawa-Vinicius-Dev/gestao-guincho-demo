@@ -16,8 +16,8 @@ function abrir() {
   servidor.use(
     http.get('/api/despesas', () => HttpResponse.json([diesel])),
     http.get('/api/categorias', () => HttpResponse.json([
-      { id: 2, nome: 'Combustível', tipo: 'DESPESA', ativo: true },
       { id: 3, nome: 'Alimentação', tipo: 'DESPESA', ativo: true },
+      { id: 2, nome: 'Combustível', tipo: 'DESPESA', ativo: true },
     ])),
     http.get('/api/motoristas', () => HttpResponse.json([{ id: 7, nome: 'Anderson Ribeiro', ativo: true }])),
   )
@@ -65,6 +65,7 @@ test('escolher Alimentação desativa a viatura e exige o socorrista', async () 
 
   await userEvent.click(await screen.findByRole('button', { name: /^registrar despesa$/i }))
   const janela = screen.getByRole('dialog', { name: /registrar despesa/i })
+  await userEvent.selectOptions(within(janela).getByLabelText('Categoria'), '2')
   expect(within(janela).getByLabelText('Veículo')).toBeEnabled()
 
   await userEvent.selectOptions(within(janela).getByLabelText('Categoria'), '3')
@@ -93,4 +94,19 @@ test('a despesa de alimentação sai marcada e sem viatura', async () => {
   expect(enviado.natureza).toBe('ALIMENTACAO_FUNCIONARIO')
   expect(enviado.motoristaId).toBe(7)
   expect(enviado.veiculoId).toBeNull()
+})
+
+// O <select> de categoria nao tem opcao vazia: abre ja na primeira da lista.
+// O estado nascia em '' enquanto a tela mostrava "Alimentação", entao o campo de
+// veiculo so desativava depois de reescolher a opcao que ja estava a vista.
+test('a categoria que o campo já mostra ao abrir é a que vale', async () => {
+  abrir()
+
+  await userEvent.click(await screen.findByRole('button', { name: /^registrar despesa$/i }))
+  const janela = screen.getByRole('dialog', { name: /registrar despesa/i })
+
+  // Alimentação é a primeira da lista devolvida pelo servidor deste teste.
+  expect(within(janela).getByLabelText('Categoria')).toHaveValue('3')
+  expect(within(janela).getByLabelText('Veículo')).toBeDisabled()
+  expect(within(janela).getByText(/custo do socorrista, não da viatura/i)).toBeInTheDocument()
 })

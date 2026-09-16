@@ -30,7 +30,13 @@ export default function DespesasPage(){
   const [excluindo,setExcluindo]=useState<Despesa|null>(null),[apagando,setApagando]=useState(false)
   // Qual categoria esta escolhida no formulario, so para saber se e alimentacao.
   const [categoriaEscolhida,setCategoriaEscolhida]=useState('')
-  const alimentacao=eAlimentacao(categorias.find(c=>String(c.id)===categoriaEscolhida)?.nome??'')
+  // O <select> de categoria nao tem opcao vazia: ele ja abre na primeira da
+  // lista. Sem isto, o estado nascia em '' enquanto a tela mostrava "Alimentação"
+  // — e o campo de veiculo so desativava depois de reescolher a mesma opcao que
+  // ja estava a vista.
+  const primeiraCategoria=categorias.length?String(categorias[0]!.id):''
+  const categoriaAtual=categoriaEscolhida||primeiraCategoria
+  const alimentacao=eAlimentacao(categorias.find(c=>String(c.id)===categoriaAtual)?.nome??'')
   const carregar=()=>admin?listarDespesas().then(setLista):Promise.resolve()
   const [carregando,setCarregando]=useState(true)
   useEffect(()=>{carregar().catch(x=>setErro((x as Error).message)).finally(()=>setCarregando(false))
@@ -45,7 +51,16 @@ export default function DespesasPage(){
       protocolo:texto('protocolo'),observacoes:texto('observacoes'),status:(texto('status')??'PENDENTE') as Despesa['status'],
       natureza:alimentacao?'ALIMENTACAO_FUNCIONARIO' as const:'GERAL' as const}
     setErro('');setMensagem('')
-    try{await criarDespesa(body);setForm(false);setMensagem(admin?'Despesa registrada. Aprove para incluí-la nos totais.':'Despesa enviada para aprovação do administrador.');await carregar()}catch(x){setErro((x as Error).message)}
+    // Quem responde pelo caixa nao precisa aprovar o proprio lancamento: a
+    // despesa do administrador ja nasce aprovada, e paga se ele disse que ja
+    // pagou. A RPC confere o perfil, entao a bandeira so escolhe o caminho.
+    try{await criarDespesa(body,admin);setForm(false)
+      setMensagem(admin
+        ?(body.status==='PAGO'
+          ?'Despesa registrada e paga. Já está na Visão geral.'
+          :'Despesa registrada e aprovada. Registre o pagamento quando ele sair.')
+        :'Despesa enviada para aprovação do administrador.')
+      await carregar()}catch(x){setErro((x as Error).message)}
   }
   const carregarFixas=()=>admin?listarDespesasFixas().then(setFixas):Promise.resolve()
   async function salvarFixa(e:FormEvent<HTMLFormElement>){e.preventDefault();const formulario=e.currentTarget;const f=new FormData(formulario)
@@ -106,7 +121,7 @@ export default function DespesasPage(){
         <button className="button button-ghost">Adicionar</button></form></section>:null}
     {form?<Modal etiqueta="Comprovante operacional" titulo="Registrar despesa" largo aoFechar={()=>setForm(false)}>
       <form onSubmit={salvar} className="form-grid three-columns"><label className="field field-wide"><span>Descrição</span><input name="descricao" required autoCapitalize="sentences" autoComplete="off"/></label>
-        <Selecao rotulo="Categoria" name="categoriaId" required value={categoriaEscolhida}
+        <Selecao rotulo="Categoria" name="categoriaId" required value={categoriaAtual}
           onChange={e=>setCategoriaEscolhida(e.target.value)}
           opcoes={categorias.map(x=>({valor:x.id,texto:x.nome}))}/>
         <CampoValor rotulo="Valor" name="valor" required/>

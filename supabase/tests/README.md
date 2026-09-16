@@ -19,6 +19,10 @@ Validam as migrations num Postgres local, sem depender de um projeto Supabase.
   na tela do socorrista: a janela da OP, o que fica de fora (rejeitada, de outro
   período, o pagamento da própria comissão) e, principalmente, que listar não
   mudou o que desconta do líquido dele.
+- `70_lancamento_em_um_passo.sql` — 18 asserções sobre quem lança e quem aprova:
+  o administrador em um passo, o funcionário continuando pela aprovação, a trava
+  de autoaprovação de pé, e alimentação perdendo a viatura por todas as portas
+  (despesa fixa, insert direto, correção de categoria).
 - `30_financeiro.sql` — 33 asserções sobre as regras que mexem em dinheiro:
   recorte de periodo e suas bordas, atraso derivado do vencimento, despesa nao
   aprovada fora do resultado, custo do km congelado no registro, producao e
