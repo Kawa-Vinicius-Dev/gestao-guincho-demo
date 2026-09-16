@@ -1364,3 +1364,42 @@ tbody tr{transition:background-color .14s ease}
   .pagamentos-proporcao dl{grid-template-columns:1fr}
   .producao-tooltip{left:50%!important}
 }
+
+/* ===========================================================================
+   Confirmacao de saida
+   ---------------------------------------------------------------------------
+   Um modal estreito, porque a pergunta e curta e uma janela de 620px para duas
+   linhas de texto parece um formulario que sumiu. O topo leva uma faixa no
+   vermelho do tema — o mesmo sinal que o sistema ja usa para acao que encerra
+   alguma coisa —, e o eyebrow acompanha, em vez do azul de navegacao.
+
+   Todas as cores saem dos tokens, entao a janela nasce certa nos dois temas:
+   no claro, superficie branca e faixa rosa; no escuro, superficie #111f33 e a
+   mesma faixa no vermelho claro, ambas medidas contra o fundo em que caem.
+   =========================================================================== */
+.confirmar-saida{width:min(452px,100%);border-top:3px solid var(--red)}
+.confirmar-saida .eyebrow{color:var(--erro-texto)}
+.confirmar-saida>header{margin-bottom:var(--espaco-3);padding-bottom:var(--espaco-2)}
+.confirmar-saida h2{font-size:27px}
+.saida-texto{margin:0;color:var(--ink);font-size:12.5px;line-height:1.65}
+.saida-texto strong{font-weight:600}
+/* A segunda linha e tranquilizadora, nao um aviso: fica menor e no tom apagado,
+   para nao competir com a frase que diz o que se perde. */
+.saida-nota{margin:var(--espaco-1) 0 0;padding:var(--espaco-2);border-radius:8px;
+  background:var(--superficie-2);color:var(--muted);font-size:11px;line-height:1.55}
+.confirmar-saida .modal-actions{margin-top:var(--espaco-3)}
+
+/* O botao de acao destrutiva usava --erro-texto como fundo com texto branco. No
+   tema claro esse token e o vermelho escuro (#b42318) e da 7.4:1; no escuro ele
+   vira o rosa claro (#f79aa8), e branco sobre ele cai para 1.9:1 — ilegivel. O
+   fundo abaixo da 5.5:1 com branco e continua lendo como perigo. Vale para todo
+   botao vermelho do sistema, nao so o de sair. */
+:root[data-tema="escuro"] .button-danger{border-color:#c0334a;background:#c0334a;color:#fff}
+:root[data-tema="escuro"] .button-danger:hover{border-color:#a92c40;background:#a92c40}
+
+@media(max-width:480px){
+  /* Nesta largura os dois botoes lado a lado espremem "Continuar no sistema" em
+     duas linhas; empilhados, cada um fica com o alvo de toque inteiro. */
+  .confirmar-saida .modal-actions{flex-direction:column-reverse}
+  .confirmar-saida .modal-actions .button{width:100%}
+}

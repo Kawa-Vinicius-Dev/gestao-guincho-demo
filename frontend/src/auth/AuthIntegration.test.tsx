@@ -89,7 +89,10 @@ test('atualização restaura a sessão e logout remove o token', async () => {
   expect(await screen.findByRole('heading', { name: /visão financeira/i })).toBeInTheDocument()
   expect(tokenRestaurado).toBe('Bearer token-sessao-existente')
 
+  // Sair passa por confirmacao desde que o botao da barra virou um clique
+  // deliberado: um alvo ao lado do avatar nao encerra sessao sozinho.
   await userEvent.click(screen.getByRole('button', { name: /^sair$/i }))
+  await userEvent.click(screen.getByRole('button', { name: /sair do sistema/i }))
   expect(await screen.findByRole('heading', { name: /entre na sua conta/i })).toBeInTheDocument()
   expect(sessionStorage.getItem(TOKEN_KEY)).toBeNull()
 })
