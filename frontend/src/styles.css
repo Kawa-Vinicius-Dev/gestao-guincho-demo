@@ -1418,7 +1418,7 @@ tbody tr{transition:background-color .14s ease}
 /* Faturamento por socorrista e por viatura, lado a lado. */
 .painel-faturamento{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--espaco-3)}
 .faturamento-grupo{display:grid;gap:var(--espaco-2);margin:0;padding:0;list-style:none}
-.faturamento-grupo li{display:grid;grid-template-columns:minmax(0,190px) minmax(60px,1fr) 104px 74px;align-items:center;gap:var(--espaco-2)}
+.faturamento-grupo li{display:grid;grid-template-columns:minmax(0,190px) minmax(60px,1fr) 104px 190px;align-items:center;gap:var(--espaco-2)}
 .faturamento-grupo-rotulo{overflow:hidden;color:var(--ink);font-size:var(--t-apoio);font-weight:500;text-overflow:ellipsis;white-space:nowrap}
 .faturamento-grupo-trilho{position:relative;height:10px;overflow:hidden;border-radius:99px;background:var(--linha-suave)}
 .faturamento-grupo-trilho>span{position:absolute;top:0;bottom:0;left:0;border-radius:99px;background:var(--blue-500);transition:width .4s cubic-bezier(.22,1,.36,1)}
