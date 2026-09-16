@@ -24,8 +24,8 @@ const PortoImportacoes=lazy(()=>import('./porto/PortoImportacoesPage'))
 const PortoDashboard=lazy(()=>import('./porto/PortoDashboardPage'))
 const PortoOps=lazy(()=>import('./porto/PortoOrdensPagamentoPage'))
 const PortoOss=lazy(()=>import('./porto/PortoOrdensServicoPage'))
-const PortoPendencias=lazy(()=>import('./porto/PortoPendenciasPage'))
-const PortoCalendario=lazy(()=>import('./porto/PortoCalendarioPage'))
+const PortoPendenciasOs=lazy(()=>import('./porto/PortoPendenciasOsPage'))
+const PortoDevolvidos=lazy(()=>import('./porto/PortoPendenciasPage'))
 const PortoRelatorios=lazy(()=>import('./porto/PortoRelatoriosPage'))
 const Configuracoes=lazy(()=>import('./configuracoes/ConfiguracoesPage'))
 const TrocarSenha=lazy(()=>import('./configuracoes/TrocarSenhaPage'))
@@ -95,8 +95,8 @@ export default function App(){
         <Route path="/porto/dashboard" element={<PortoDashboard/>}/>
         <Route path="/porto/ordens-pagamento" element={<PortoOps/>}/>
         <Route path="/porto/ordens-servico" element={<PortoOss/>}/>
-        <Route path="/porto/pendencias" element={<PortoPendencias/>}/>
-        <Route path="/porto/calendario" element={<PortoCalendario/>}/>
+        <Route path="/porto/pendencias" element={<PortoPendenciasOs/>}/>
+        <Route path="/porto/devolvidos" element={<PortoDevolvidos/>}/>
         <Route path="/porto/relatorios" element={<PortoRelatorios/>}/>
         <Route path="/usuarios" element={<Equipe/>}/>
         <Route path="/configuracoes" element={<Configuracoes/>}/>

@@ -1,6 +1,6 @@
 import type {
   AnaliseOrdemPagamentoPorto, ConfirmacaoPorto, LinhaPreviaPorto,
-  PreviaPorto, ReassociacaoOsPorto, ResumoPreviaPorto,
+  OsSemSocorristaPorto, PreviaPorto, ReassociacaoOsPorto, ResumoPreviaPorto,
 } from '../../types/modelos'
 import { ApiError } from '../../api/http'
 import { ou, supabase } from '../cliente'
@@ -77,6 +77,8 @@ interface OsExistente {
   numero_normalizado: string
   ordem_pagamento_id: number | null
   valor_total: number
+  motorista_id: number | null
+  sigla_viatura: string | null
   // O PostgREST devolve o vinculo para-um como objeto, mas sem tipos gerados
   // ele chega tipado como lista; os dois formatos sao aceitos aqui.
   ordens_pagamento_porto: { numero: string } | { numero: string }[] | null
@@ -109,7 +111,7 @@ async function registrosExistentes(tipo: TipoRelatorio, numeros: string[]) {
 
   const oss = ou(
     await supabase().from('ordens_servico_porto')
-      .select('numero_normalizado,ordem_pagamento_id,valor_total,ordens_pagamento_porto(numero)')
+      .select('numero_normalizado,ordem_pagamento_id,valor_total,motorista_id,sigla_viatura,ordens_pagamento_porto(numero)')
       .in('numero_normalizado', numeros.map(normalizarNumero)),
     'Não foi possível verificar as ordens de serviço existentes.',
   ) as OsExistente[]
@@ -118,6 +120,62 @@ async function registrosExistentes(tipo: TipoRelatorio, numeros: string[]) {
     porNumero.set(os.numero_normalizado, os)
   }
   return { conhecidos, porNumero }
+}
+
+/**
+ * Quem pode ser o socorrista de uma OS, na mesma ordem que o banco usa ao
+ * aplicar: o QRA identifica a pessoa, e a viatura e o palpite seguinte.
+ *
+ * A previa precisa dessa conta antes de gravar, e nao depois: OS sem socorrista
+ * e comissao que ninguem recebe, com o servico ja contado no faturamento. Ver
+ * isso na tela, com o arquivo na frente, e diferente de descobrir depois numa
+ * lista de pendencias.
+ */
+interface Cadastro {
+  porQra: Map<string, { id: number; nome: string }>
+  porSigla: Map<string, { id: number; nome: string }>
+}
+
+const chave = (valor?: string | null) => (valor ?? '').trim().toUpperCase()
+
+async function cadastroDeSocorristas(): Promise<Cadastro> {
+  const [motoristas, veiculos] = await Promise.all([
+    supabase().from('motoristas').select('id,nome,qra,veiculo_id').eq('ativo', true),
+    supabase().from('veiculos').select('id,sigla_porto'),
+  ])
+  const pessoas = ou(motoristas, 'Não foi possível carregar os socorristas.') as
+    { id: number; nome: string; qra: string | null; veiculo_id: number | null }[]
+  const frota = ou(veiculos, 'Não foi possível carregar as viaturas.') as
+    { id: number; sigla_porto: string | null }[]
+
+  const siglaDoVeiculo = new Map(frota
+    .filter(v => chave(v.sigla_porto))
+    .map(v => [v.id, chave(v.sigla_porto)]))
+
+  const porQra = new Map<string, { id: number; nome: string }>()
+  const porSigla = new Map<string, { id: number; nome: string }>()
+  for (const pessoa of pessoas) {
+    const identidade = { id: pessoa.id, nome: pessoa.nome }
+    if (chave(pessoa.qra)) porQra.set(chave(pessoa.qra), identidade)
+    const sigla = pessoa.veiculo_id ? siglaDoVeiculo.get(pessoa.veiculo_id) : undefined
+    // Duas pessoas na mesma viatura tornam o palpite ambiguo; ai ninguem e
+    // sugerido, e a escolha fica com quem importa.
+    if (sigla) porSigla.set(sigla, porSigla.has(sigla) ? { id: 0, nome: '' } : identidade)
+  }
+  return { porQra, porSigla }
+}
+
+function socorristaDaLinha(
+  linha: Linha, existente: OsExistente | undefined, cadastro: Cadastro,
+): { id?: number; nome?: string } {
+  if (existente?.motorista_id) return { id: existente.motorista_id }
+
+  const porQra = cadastro.porQra.get(chave(linha.dados.qra))
+  if (porQra) return porQra
+
+  const sigla = chave(linha.dados.sigla_viatura) || chave(existente?.sigla_viatura)
+  const porSigla = sigla ? cadastro.porSigla.get(sigla) : undefined
+  return porSigla?.id ? porSigla : {}
 }
 
 async function ordemDePagamento(numeroOp?: string) {
@@ -131,16 +189,24 @@ async function ordemDePagamento(numeroOp?: string) {
 
 async function classificar(
   tipo: TipoRelatorio, linhas: Linha[], numeroOp?: string,
-): Promise<{ linhas: LinhaPreviaPorto[]; analise?: AnaliseOrdemPagamentoPorto }> {
+): Promise<{
+  linhas: LinhaPreviaPorto[]
+  analise?: AnaliseOrdemPagamentoPorto
+  orfas: OsSemSocorristaPorto[]
+}> {
   const validas = linhas.filter(l => l.acao !== 'ERRO')
   const hashes = validas.map(l => l.hashRegistro)
   const numeros = validas.map(numeroDaLinha).filter(Boolean)
 
-  const [absorvidos, { conhecidos, porNumero }, op] = await Promise.all([
+  const [absorvidos, { conhecidos, porNumero }, op, cadastro] = await Promise.all([
     hashesJaImportados(tipo, hashes),
     registrosExistentes(tipo, numeros),
     ordemDePagamento(numeroOp),
+    tipo === 'PREVISAO_RECEBER'
+      ? Promise.resolve({ porQra: new Map(), porSigla: new Map() } as Cadastro)
+      : cadastroDeSocorristas(),
   ])
+  const orfas: OsSemSocorristaPorto[] = []
 
   const reassociacoes: ReassociacaoOsPorto[] = []
   const vistos = new Set<string>()
@@ -160,6 +226,24 @@ async function classificar(
     if (absorvidos.has(linha.hashRegistro)) {
       return { ...linha, acao: 'IGNORAR', mensagem: 'Registro já importado anteriormente.' }
     }
+
+    if (tipo !== 'PREVISAO_RECEBER') {
+      const dono = socorristaDaLinha(linha, porNumero.get(chave), cadastro)
+      if (!dono.id) {
+        orfas.push({
+          hashRegistro: linha.hashRegistro,
+          numeroOs: numero,
+          socorrista: linha.dados.socorrista || undefined,
+          qra: linha.dados.qra || undefined,
+          data: linha.dados.data_atendimento || undefined,
+        })
+      } else if (dono.nome) {
+        // Sugestao por QRA ou viatura: vale gravar junto, para o banco nao
+        // precisar adivinhar de novo com a mesma informacao.
+        linha.dados.motorista_id = String(dono.id)
+      }
+    }
+
     if (!conhecidos.has(chave)) return { ...linha, acao: 'IMPORTAR' }
 
     // A OS ja existe. Se pertence a outra OP, mudar de OP e uma decisao do
@@ -192,7 +276,7 @@ async function classificar(
       }
     : undefined
 
-  return { linhas: classificadas, analise }
+  return { linhas: classificadas, analise, orfas }
 }
 
 function resumir(tipo: TipoRelatorio, linhas: LinhaPreviaPorto[]): ResumoPreviaPorto {
@@ -225,9 +309,10 @@ async function montarPrevia(
     'Não foi possível registrar a importação.',
   ) as { id: number; status: string }
 
-  const { linhas } = await classificar(lida.tipo, lida.linhas)
+  const { linhas, orfas } = await classificar(lida.tipo, lida.linhas)
   return {
     id: registro.id,
+    orfas,
     nomeArquivo,
     tipo: lida.tipo,
     status: registro.status,
@@ -269,10 +354,10 @@ export async function criarPreviaConteudoPorto(conteudo: string): Promise<Previa
 export async function avaliarImportacaoPorto(
   previa: PreviaPorto, numeroOrdemPagamento: string,
 ): Promise<PreviaPorto> {
-  const { linhas, analise } = await classificar(
+  const { linhas, analise, orfas } = await classificar(
     previa.tipo as TipoRelatorio, previa.linhas as Linha[], numeroOrdemPagamento)
   return {
-    ...previa, linhas, analiseOrdemPagamento: analise,
+    ...previa, linhas, analiseOrdemPagamento: analise, orfas,
     totalLinhas: linhas.length, resumo: resumir(previa.tipo as TipoRelatorio, linhas),
   }
 }
@@ -291,6 +376,17 @@ export interface ConfirmacaoImportacao {
 export async function confirmarImportacaoPorto(
   previa: PreviaPorto, dados: ConfirmacaoImportacao = {},
 ): Promise<ConfirmacaoPorto> {
+  // OS sem socorrista e comissao que ninguem recebe, com o servico ja contado no
+  // faturamento. A previa mostra quais sao e deixa escolher; sem isso resolvido,
+  // a importacao nao acontece.
+  const orfas = (previa.orfas ?? []).filter(o =>
+    !previa.linhas.some(l => l.hashRegistro === o.hashRegistro && l.dados.motorista_id))
+  if (orfas.length) {
+    throw new ApiError(
+      `${orfas.length} ordem(ns) de serviço estão sem socorrista. Informe quem atendeu antes de importar.`,
+      422)
+  }
+
   const reassociacoes = previa.analiseOrdemPagamento?.quantidadeReassociacoes ?? 0
   if (reassociacoes && !dados.confirmarReassociacoes) {
     throw new ApiError(

@@ -1,16 +1,13 @@
 import type { FormEvent } from 'react'
 import { Campo, Selecao } from '../../components/Campos'
 import { Modal } from '../../components/Modal'
-import type { CalendarioPorto, DetalheOpPorto, PreviaPorto } from '../../types/modelos'
+import type { DetalheOpPorto, PreviaPorto } from '../../types/modelos'
 import { moeda } from '../../utils/formatadores'
 import { MOTIVOS_COMPOSICAO, MOTIVOS_DIVERGENCIA, data, rotulo } from './opcoes'
 import { CampoArquivo } from '../../components/CampoArquivo'
 
 type Props = {
   detalhe: DetalheOpPorto
-  periodos: CalendarioPorto[]
-  periodo: number
-  aoTrocarPeriodo: (periodo: number) => void
   previa: PreviaPorto | null
   aoEscolherArquivo: (arquivo: File | null) => void
   arquivoEscolhido: boolean
@@ -26,7 +23,7 @@ type Props = {
 }
 
 export function ModalDetalheOp(props: Props) {
-  const { detalhe, periodos, periodo, aoTrocarPeriodo, previa, aoEscolherArquivo,
+  const { detalhe, previa, aoEscolherArquivo,
     arquivoEscolhido, nomeArquivo, aoAnalisar, aoConfirmarComposicao, aoJustificar, aoEditar,
     aoExportar, baixando, aoFechar } = props
   const op = detalhe.ordemPagamento
@@ -62,8 +59,7 @@ export function ModalDetalheOp(props: Props) {
     </div>
 
     {previa
-      ? <FormularioComposicao previa={previa} detalhe={detalhe} periodos={periodos}
-          periodo={periodo} aoTrocarPeriodo={aoTrocarPeriodo} aoEnviar={aoConfirmarComposicao}/>
+      ? <FormularioComposicao previa={previa} detalhe={detalhe} aoEnviar={aoConfirmarComposicao}/>
       : null}
 
     <div className="table-scroll">
@@ -100,29 +96,19 @@ export function ModalDetalheOp(props: Props) {
 type ComposicaoProps = {
   previa: PreviaPorto
   detalhe: DetalheOpPorto
-  periodos: CalendarioPorto[]
-  periodo: number
-  aoTrocarPeriodo: (periodo: number) => void
   aoEnviar: (evento: FormEvent<HTMLFormElement>) => void
 }
 
-function FormularioComposicao({ previa, detalhe, periodos, periodo, aoTrocarPeriodo, aoEnviar }: ComposicaoProps) {
+function FormularioComposicao({ previa, detalhe, aoEnviar }: ComposicaoProps) {
   const op = detalhe.ordemPagamento
   const somaDaPrevia = previa.resumo?.valorTotal ?? 0
   // Um centavo de folga: o previsto da OP e a soma das OS vem de arredondamentos
   // diferentes, e exigir igualdade exata pediria justificativa por nada.
   const temDiferenca = Math.abs(somaDaPrevia - op.valorTotal) > .01
   const temErro = previa.linhas.some(linha => linha.acao === 'ERRO')
-  const disponiveis = periodos.filter(p => p.ativo || p.id === op.calendarioPagamentoId)
 
   return <form className="porto-justification" onSubmit={aoEnviar}>
     <strong>{previa.totalLinhas} serviços na prévia · {moeda(somaDaPrevia)}</strong>
-    <Selecao rotulo="Período financeiro da OP" required vazio="Selecione" value={periodo || ''}
-      onChange={evento => aoTrocarPeriodo(Number(evento.target.value))}
-      opcoes={disponiveis.map(p => ({
-        valor: p.id,
-        texto: `${p.descricao} · ${data(p.competenciaInicio)} a ${data(p.competenciaFim)}`,
-      }))}/>
     {temDiferenca
       ? <>
           <Selecao rotulo="Motivo da diferença" name="motivo" required vazio="Selecione"
@@ -130,6 +116,6 @@ function FormularioComposicao({ previa, detalhe, periodos, periodo, aoTrocarPeri
           <Campo rotulo="Justificativa da diferença"><textarea name="justificativa" required/></Campo>
         </>
       : null}
-    <button className="button button-primary" disabled={!periodo || temErro}>Confirmar composição</button>
+    <button className="button button-primary" disabled={temErro}>Confirmar composição</button>
   </form>
 }

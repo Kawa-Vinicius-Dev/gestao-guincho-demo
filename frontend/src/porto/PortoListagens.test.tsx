@@ -7,26 +7,15 @@ import PortoOrdensServicoPage from './PortoOrdensServicoPage'
 import PortoPendenciasPage from './PortoPendenciasPage'
 import { servidor } from '../test/servidor'
 
-test('confirma recebimento manual de OP programada', async()=>{
-  let recebida=false
-  servidor.use(
-    http.get('/api/porto/ordens-pagamento',()=>HttpResponse.json([{id:1,numero:'OP-100',valorTotal:1500,dataPagamentoProgramada:'2026-08-15',calendarioPagamentoId:1,situacao:recebida?'RECEBIDO':'PROGRAMADO',...(recebida&&{valorRecebido:1490,dataRecebimento:'2026-08-16'})}])),
-    http.patch('/api/porto/ordens-pagamento/1/receber',()=>{recebida=true;return HttpResponse.json({id:1,numero:'OP-100',valorTotal:1500,valorRecebido:1490,dataRecebimento:'2026-08-16',situacao:'RECEBIDO'})}),
-  )
-  const user=userEvent.setup();render(<PortoOrdensPagamentoPage/>)
-  expect(await screen.findByText('Programado')).toBeInTheDocument()
-  await user.click(screen.getByRole('button',{name:/confirmar recebimento/i}))
-  await user.clear(screen.getByLabelText(/valor recebido/i));await user.type(screen.getByLabelText(/valor recebido/i),'1490')
-  await user.click(screen.getByRole('button',{name:/salvar recebimento/i}))
-  expect(await screen.findByText('Recebido')).toBeInTheDocument()
-})
-
 test('cria OP processada sem marcar como recebida',async()=>{
   let payload:Record<string,unknown>={},criada:Record<string,unknown>|null=null
   servidor.use(http.get('/api/porto/ordens-pagamento',()=>HttpResponse.json(criada?[criada]:[])),http.post('/api/porto/ordens-pagamento',async({request})=>{payload=await request.json() as Record<string,unknown>;criada={id:4,numero:payload.numero,valorTotal:payload.valorInformado,dataPagamentoProgramada:payload.dataPrevista,situacao:'A_CONFIRMAR',statusPorto:'PROCESSADO',quantidadeOrdensServico:0,valorOrdensServico:0,divergencia:payload.valorInformado,statusConciliacao:'SEM_COMPOSICAO'};return HttpResponse.json(criada,{status:201})}))
   const user=userEvent.setup();render(<PortoOrdensPagamentoPage/>);await screen.findByText('Nenhuma OP');await user.click(screen.getByRole('button',{name:/nova ordem de pagamento/i}));const dialogo=screen.getByRole('dialog')
   await user.type(within(dialogo).getByLabelText(/número da op/i),'OP-MANUAL-4');await user.type(within(dialogo).getByLabelText(/data prevista/i),'2026-09-16');await user.type(within(dialogo).getByLabelText(/valor informado/i),'48000');await user.selectOptions(within(dialogo).getByLabelText(/status porto/i),'PROCESSADO');await user.selectOptions(within(dialogo).getByLabelText(/situação financeira/i),'A_CONFIRMAR');await user.click(within(dialogo).getByRole('button',{name:/salvar ordem/i}))
-  expect(payload.pagamentoConfirmado).toBe(false);expect(await screen.findByText('OP-MANUAL-4')).toBeInTheDocument();expect(screen.getByText('A confirmar')).toBeInTheDocument()
+  expect(payload.pagamentoConfirmado).toBe(false);expect(await screen.findByText('OP-MANUAL-4')).toBeInTheDocument()
+  // A coluna de situacao saiu junto com o passo de confirmar recebimento: toda
+  // OP importada chega paga, e a manual se resolve pela edicao.
+  expect(screen.queryByRole('button',{name:/confirmar recebimento/i})).not.toBeInTheDocument()
 })
 
 test('edita uma OP manual e oferece os relatórios individuais',async()=>{

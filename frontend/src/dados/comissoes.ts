@@ -1,9 +1,10 @@
 import type {
   AlimentacaoComissao, Comissao, DetalheSocorrista,
-  OrdemPagamentoPorto, PagamentoComissao, ResumoComissao,
+  PagamentoComissao, ResumoComissao,
 } from '../types/modelos'
 import { invalidarCacheFinanceiro } from './cacheFinanceiro'
 import { ou, supabase } from './cliente'
+import { listarPeriodosDeOp } from './porto'
 
 
 /**
@@ -22,6 +23,13 @@ import { ou, supabase } from './cliente'
  * ele e devolve so as linhas dele, em vez de abrir o caixa da Porto inteiro.
  */
 
+/**
+ * O periodo das telas de comissao e a propria OP — a mesma listagem que o painel
+ * Porto usa, reexportada aqui para as telas de comissao nao precisarem saber de
+ * onde ela vem.
+ */
+export { listarPeriodosDeOp as listarOpsComissao }
+
 export async function lerComissaoDaOp(
   ordemPagamentoId: number, motoristaId?: number,
 ): Promise<Comissao> {
@@ -32,39 +40,6 @@ export async function lerComissaoDaOp(
     }),
     'Não foi possível carregar a comissão.',
   ) as Comissao
-}
-
-/**
- * As OPs que servem de periodo na tela de comissoes.
- *
- * Nao existe uma "lista de periodos" separada para manter em dia: o periodo
- * agora e a propria OP. A consulta e daqui, e nao emprestada da tela de ordens
- * de pagamento, porque a comissao nao pode depender do modulo Porto estar
- * ligado — quem ve a propria comissao nem alcanca aquela tela.
- *
- * So o suficiente para o seletor: numero e janela.
- */
-export async function listarOpsComissao(): Promise<OrdemPagamentoPorto[]> {
-  const linhas = ou(
-    await supabase().from('porto_ops_conciliadas')
-      .select('id,numero,valor_total,situacao_financeira,periodo_inicio,periodo_fim,data_pagamento_programada')
-      .order('periodo_fim', { ascending: false, nullsFirst: false }),
-    'Não foi possível carregar as ordens de pagamento.',
-  ) as Record<string, unknown>[]
-
-  return linhas.map(l => ({
-    id: l.id as number,
-    numero: l.numero as string,
-    valorTotal: Number(l.valor_total ?? 0),
-    situacao: l.situacao_financeira as OrdemPagamentoPorto['situacao'],
-    quantidadeOrdensServico: 0,
-    valorOrdensServico: 0,
-    divergencia: 0,
-    statusConciliacao: 'CONCILIADA',
-    periodoInicio: (l.periodo_inicio as string) ?? undefined,
-    periodoFim: (l.periodo_fim as string) ?? undefined,
-    dataPagamentoProgramada: (l.data_pagamento_programada as string) ?? undefined,
-  }))
 }
 
 export async function resumirComissoes(
