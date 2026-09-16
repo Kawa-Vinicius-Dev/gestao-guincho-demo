@@ -115,5 +115,5 @@ export interface ServicoSocorrista { id:number; numeroOs:string; dataAtendimento
  * as duas leituras: todo gasto ligado a ele aparece na tela dele, mas so o que
  * foi marcado para descontar sai da comissao — mostrar nao e cobrar.
  */
-export interface DespesaDoSocorrista { id:number; descricao:string; data:string; valor:number; categoria:string; veiculo?:string; situacao:Despesa['status']; aprovada:boolean; descontaDaComissao:boolean; observacoes?:string }
+export interface DespesaDoSocorrista { id:number; descricao:string; data:string; valor:number; categoria:string; veiculo?:string; situacao:Despesa['status']; aprovada:boolean; descontaDaComissao:boolean; descontaEmOutraOp?:boolean; observacoes?:string }
 export interface DetalheSocorrista { id:number; nome:string; ativo:boolean; telefone?:string; email?:string; qra?:string; veiculosUtilizados:string[]; totalServicosPrestados:number; comissao:Comissao; servicos:ServicoSocorrista[]; despesas:DespesaDoSocorrista[] }
