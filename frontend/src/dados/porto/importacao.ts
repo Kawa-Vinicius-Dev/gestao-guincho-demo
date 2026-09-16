@@ -7,6 +7,7 @@ import { ou, supabase } from '../cliente'
 import { invalidarCacheFinanceiro } from '../dashboard'
 import type { Previa, TipoRelatorio } from './csv'
 import { lerCsvPorto, lerServicosGeraisPorto } from './csv'
+import { lerPainelDiarioPorto } from './painelDiario'
 import type { Linha } from './linha'
 
 /**
@@ -24,7 +25,23 @@ import type { Linha } from './linha'
 /** Relatorio que traz dinheiro precisa de OP e de ciclo antes de confirmar. */
 const PAGA: TipoRelatorio[] = ['OS_VINCULADAS', 'SERVICOS_GERAIS']
 
-const normalizarNumero = (valor: string) => valor.replace(/[^0-9]/g, '')
+/**
+ * Chave de comparacao da OS: o miolo do numero mais o ano.
+ *
+ * A Porto escreve a mesma OS de dois jeitos — `5673329/26` no painel diario e
+ * `01/3195073-26` no relatorio da OP, onde o prefixo de um ou dois digitos so
+ * aparece neste ultimo. Comparar os digitos crus fazia `0131950732` e
+ * `319507326` parecerem servicos diferentes, e o mesmo atendimento entrava duas
+ * vezes. Precisa continuar igual a `numero_os_normalizado` do banco: e a mesma
+ * chave dos dois lados.
+ */
+const NUMERO_OS = /^(?:\d{1,2}[/-])?(\d{4,})[-/](\d{2})$/
+
+const normalizarNumero = (valor: string) => {
+  const limpo = valor.trim()
+  const m = limpo.match(NUMERO_OS)
+  return m ? `${m[1]}${m[2]}` : limpo.replace(/[^0-9]/g, '')
+}
 
 function numeroDaLinha(linha: Linha) {
   return linha.dados.numero_os?.trim() || linha.dados.numero_op?.trim() || ''
@@ -228,15 +245,22 @@ export async function criarPreviaPorto(arquivo: File): Promise<PreviaPorto> {
 }
 
 /**
- * Colagem do painel da Porto. A lista de servicos vem com os cabecalhos da OS
- * vinculada mas sem OP, entao tenta os dois leitores antes de desistir.
+ * Colagem da Porto, seja ela qual for.
+ *
+ * Duas coisas diferentes chegam por aqui: a lista de servicos, que tem os
+ * cabecalhos da OS vinculada mas nao traz OP, e o painel do dia, que nao e CSV
+ * e nao tem cabecalho nenhum. Quem cola nao deveria precisar saber qual e —
+ * entao tentamos os leitores em ordem, do mais estruturado ao mais solto, e o
+ * primeiro que reconhecer o conteudo manda.
  */
 export async function criarPreviaConteudoPorto(conteudo: string): Promise<PreviaPorto> {
   let lida: Previa
   try {
     lida = await lerCsvPorto(conteudo)
   } catch (erro) {
-    lida = await lerServicosGeraisPorto(conteudo).catch(() => { throw erro })
+    lida = await lerServicosGeraisPorto(conteudo)
+      .catch(() => lerPainelDiarioPorto(conteudo))
+      .catch(() => { throw erro })
   }
   return montarPrevia('Conteúdo colado', conteudo, lida)
 }

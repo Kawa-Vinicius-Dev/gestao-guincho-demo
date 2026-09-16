@@ -1,34 +1,41 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { baixarRelatorioPorto, obterDashboardPorto } from '../dados/porto'
-import type { DashboardPorto } from '../types/modelos'
+import { baixarRelatorioPorto, listarCalendarioPorto, obterDashboardPorto } from '../dados/porto'
+import type { CalendarioPorto, DashboardPorto } from '../types/modelos'
 import { hojeIso, moeda } from '../utils/formatadores'
 import { Carregando } from '../components/EstadoPagina'
 import { Campo, Selecao } from '../components/Campos'
 
-/** Janelas de tempo do painel Porto. */
-const JANELAS = [
-  { valor: 'DIARIO', texto: 'Dia' }, { valor: 'SEMANAL', texto: 'Semana' },
-  { valor: 'QUINZENAL', texto: 'Quinzena' }, { valor: 'MENSAL', texto: 'Mês' },
-  { valor: 'PERSONALIZADO', texto: 'Personalizado' },
-]
+/**
+ * O periodo do painel e o ciclo de pagamento da Porto, nao um mes do calendario
+ * comum: e o ciclo que define em qual recorte um servico entra, porque e ele que
+ * decide quando o dinheiro cai e em qual comissao o servico conta. Escolher o
+ * ciclo preenche as duas datas; quem precisar de outro recorte edita as datas a
+ * mao, e ai o periodo volta a ser "Personalizado".
+ */
+const primeiroDiaDoMes = () => `${hojeIso().slice(0, 8)}01`
 
 export default function PortoDashboardPage(){
   const [dados,setDados]=useState<DashboardPorto|null>(null),[erro,setErro]=useState(''),[parametros,setParametros]=useState(new URLSearchParams())
-  const [visao,setVisao]=useState<'PRODUCAO'|'PAGAMENTOS'>('PRODUCAO'),[periodo,setPeriodo]=useState('MENSAL'),[baixando,setBaixando]=useState('')
+  const [visao,setVisao]=useState<'PRODUCAO'|'PAGAMENTOS'>('PRODUCAO'),[baixando,setBaixando]=useState('')
+  const [ciclos,setCiclos]=useState<CalendarioPorto[]>([]),[ciclo,setCiclo]=useState('')
+  const [inicio,setInicio]=useState(primeiroDiaDoMes()),[fim,setFim]=useState(hojeIso())
   async function carregar(params:URLSearchParams){setErro('');try{setDados(await obterDashboardPorto(params));setParametros(new URLSearchParams(params))}catch(e){setErro((e as Error).message)}}
   const [carregando,setCarregando]=useState(true)
-  useEffect(()=>{const params=new URLSearchParams({periodo:'MENSAL',visao:'PRODUCAO',referencia:hojeIso()});void carregar(params).finally(()=>setCarregando(false))},[])
-  async function trocarVisao(nova:'PRODUCAO'|'PAGAMENTOS'){setVisao(nova);const params=new URLSearchParams(parametros);params.set('visao',nova);params.set('periodo',periodo);await carregar(params)}
-  async function aplicar(event:FormEvent<HTMLFormElement>){event.preventDefault();const form=new FormData(event.currentTarget),params=new URLSearchParams({periodo,visao});for(const nome of ['referencia','dataInicio','dataFim','numeroOs','numeroOp','especialidade','socorrista','statusOperacional','statusFinanceiro','statusConciliacao']){const valor=String(form.get(nome)??'');if(valor)params.set(nome,valor)}await carregar(params)}
+  // O calendario e conveniencia: se nao carregar, as datas continuam valendo.
+  useEffect(()=>{listarCalendarioPorto().then(setCiclos).catch(()=>setCiclos([]))},[])
+  useEffect(()=>{const params=new URLSearchParams({periodo:'PERSONALIZADO',visao:'PRODUCAO',dataInicio:primeiroDiaDoMes(),dataFim:hojeIso()});void carregar(params).finally(()=>setCarregando(false))},[])
+  async function trocarVisao(nova:'PRODUCAO'|'PAGAMENTOS'){setVisao(nova);const params=new URLSearchParams(parametros);params.set('visao',nova);await carregar(params)}
+  /** Escolher o ciclo preenche as datas; a competencia manda, e a data de pagamento e o recuo quando o ciclo nao a declara. */
+  function escolherCiclo(id:string){setCiclo(id);const c=ciclos.find(x=>String(x.id)===id);if(!c)return;setInicio(c.competenciaInicio||c.dataPagamento);setFim(c.competenciaFim||c.dataPagamento)}
+  function editarData(qual:'inicio'|'fim',valor:string){setCiclo('');if(qual==='inicio')setInicio(valor);else setFim(valor)}
+  async function aplicar(event:FormEvent<HTMLFormElement>){event.preventDefault();const form=new FormData(event.currentTarget),params=new URLSearchParams({periodo:'PERSONALIZADO',visao,dataInicio:inicio,dataFim:fim});for(const nome of ['numeroOs','numeroOp','especialidade','socorrista','statusOperacional','statusFinanceiro','statusConciliacao']){const valor=String(form.get(nome)??'');if(valor)params.set(nome,valor)}await carregar(params)}
   async function exportar(formato:'excel'|'pdf'){setErro('');setBaixando(formato);try{await baixarRelatorioPorto(formato,parametros)}catch(e){setErro((e as Error).message)}finally{setBaixando('')}}
   return <div className="page-enter dashboard-tech"><header className="page-heading"><div><span className="eyebrow">Porto Seguro</span><h1>Dashboard Porto</h1><p>Serviços realizados, pagamentos programados e valores efetivamente recebidos.</p></div><div className="heading-actions"><button className="button button-ghost" disabled={baixando!==''} onClick={()=>void exportar('pdf')}>{baixando==='pdf'?'Gerando PDF…':'Exportar PDF'}</button><button className="button button-primary" disabled={baixando!==''} onClick={()=>void exportar('excel')}>{baixando==='excel'?'Gerando Excel…':'Exportar Excel'}</button></div></header>{erro?<div className="form-alert">{erro}</div>:null}{carregando?<Carregando/>:null}
     <section className="panel"><div className="porto-view-switch" role="group" aria-label="Linha do tempo Porto"><button className={visao==='PRODUCAO'?'active':''} onClick={()=>void trocarVisao('PRODUCAO')}>Produção</button><button className={visao==='PAGAMENTOS'?'active':''} onClick={()=>void trocarVisao('PAGAMENTOS')}>Pagamentos</button></div><form className="ledger-filters porto-dashboard-filters" onSubmit={aplicar}>
-      <Selecao rotulo="Período" value={periodo} onChange={e=>setPeriodo(e.target.value)} opcoes={JANELAS}/>
-      <Campo rotulo="Referência"><input name="referencia" type="date" defaultValue={hojeIso()}/></Campo>
-      {periodo==='PERSONALIZADO'?<>
-        <Campo rotulo="Data inicial"><input name="dataInicio" type="date" required/></Campo>
-        <Campo rotulo="Data final"><input name="dataFim" type="date" required/></Campo>
-      </>:null}
+      <Selecao rotulo="Período" vazio="Personalizado" value={ciclo} onChange={e=>escolherCiclo(e.target.value)}
+        opcoes={ciclos.map(c=>({valor:String(c.id),texto:c.descricao}))}/>
+      <Campo rotulo="Data inicial"><input name="dataInicio" type="date" value={inicio} onChange={e=>editarData('inicio',e.target.value)} required/></Campo>
+      <Campo rotulo="Data final"><input name="dataFim" type="date" value={fim} onChange={e=>editarData('fim',e.target.value)} required/></Campo>
       <Campo rotulo="Número da OS" className="filter-grow"><input name="numeroOs"/></Campo>
       <Campo rotulo="Número da OP"><input name="numeroOp"/></Campo>
       <Campo rotulo="Especialidade"><input name="especialidade"/></Campo>
