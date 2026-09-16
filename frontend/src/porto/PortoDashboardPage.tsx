@@ -2,14 +2,14 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { baixarRelatorioPorto, listarPeriodosDeOp, obterDashboardAltoNivelPorto } from '../dados/porto'
 import type {
-  DashboardAltoNivelPorto, OpDestaquePorto, OrdemPagamentoPorto, PendenciasVinculoPorto,
+  DashboardAltoNivelPorto, OpDestaquePorto, PendenciasVinculoPorto,
 } from '../types/modelos'
 import { data, hojeIso, moeda, percentual } from '../utils/formatadores'
 import { Carregando } from '../components/EstadoPagina'
 import { Campo, Selecao } from '../components/Campos'
 import { EvolucaoAcumulada, FaturamentoPorGrupo } from '../components/Graficos'
 import { CabecalhoPagina, Etiqueta, GradeIndicadores, Indicador, Painel } from '../components/ui/Pagina'
-import { rotuloOp } from '../utils/periodos'
+import { agruparPorPeriodo, rotuloPeriodo, type PeriodoPorto } from '../utils/periodos'
 import { gravarFiltro, lerFiltro } from '../utils/filtroLembrado'
 import { useAoVivo } from '../dados/aoVivo'
 
@@ -83,7 +83,7 @@ const tom = (valor: number, cor: 'alerta' | 'atencao') => (valor > 0 ? cor : 'ne
 
 export default function PortoDashboardPage() {
   const [dados, setDados] = useState<DashboardAltoNivelPorto | null>(null)
-  const [ops, setOps] = useState<OrdemPagamentoPorto[]>([])
+  const [periodos, setPeriodos] = useState<PeriodoPorto[]>([])
   const [recorte] = useState(recorteInicial)
   const [opEscolhida, setOpEscolhida] = useState(recorte.op)
   const [inicio, setInicio] = useState(recorte.inicio)
@@ -109,14 +109,16 @@ export default function PortoDashboardPage() {
   // Importacao, pendencia resolvida ou OP nova em qualquer lugar: recarrega.
   useAoVivo(() => { void carregar(inicio, fim, grao) })
   // A lista de OPs e conveniencia: se nao carregar, as datas continuam valendo.
-  useEffect(() => { listarPeriodosDeOp().then(setOps).catch(() => setOps([])) }, [])
+  useEffect(() => {
+    listarPeriodosDeOp().then(ops => setPeriodos(agruparPorPeriodo(ops))).catch(() => setPeriodos([]))
+  }, [])
 
   function escolherOp(id: string) {
     setOpEscolhida(id)
-    const op = ops.find(o => String(o.id) === id)
-    if (!op) return
-    const de = op.periodoInicio || op.dataPagamentoProgramada || inicio
-    const ate = op.periodoFim || op.dataPagamentoProgramada || fim
+    const periodo = periodos.find(p => p.id === id)
+    if (!periodo) return
+    const de = periodo.periodoInicio || inicio
+    const ate = periodo.periodoFim || fim
     setInicio(de); setFim(ate)
     void carregar(de, ate, grao)
   }
@@ -166,9 +168,9 @@ export default function PortoDashboardPage() {
 
     <section className="panel destaque" aria-label="Resumo financeiro">
       <form className="destaque-periodo" onSubmit={e => { e.preventDefault(); void carregar(inicio, fim, grao) }}>
-        <Selecao rotulo="Ordem de pagamento" vazio="Período personalizado" value={opEscolhida}
+        <Selecao rotulo="Período" vazio="Período personalizado" value={opEscolhida}
           onChange={e => escolherOp(e.target.value)}
-          opcoes={ops.map(o => ({ valor: String(o.id), texto: rotuloOp(o) }))}/>
+          opcoes={periodos.map(p => ({ valor: p.id, texto: rotuloPeriodo(p) }))}/>
         <Campo rotulo="De">
           <input type="date" value={inicio} onChange={e => { setOpEscolhida(''); setInicio(e.target.value) }} required/>
         </Campo>

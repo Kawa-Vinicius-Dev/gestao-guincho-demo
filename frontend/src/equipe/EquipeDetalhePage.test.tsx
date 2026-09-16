@@ -50,9 +50,9 @@ function configurarAdmin(){
     http.get('/api/auth/me',()=>HttpResponse.json({id:1,nome:'Administrador',email:'admin@local.test',perfil:'ADMINISTRADOR'})),
     http.get('/api/motoristas',()=>{confirmarConsultaMotoristas();return HttpResponse.json([{id:4,nome:'Ana Motorista',telefone:'(85) 99999-1234',qra:'QRA-ANA',usuarioId:8,ativo:true}])}),
     http.get(`${URL_SUPABASE}/rest/v1/porto_ops_conciliadas`,()=>HttpResponse.json(ops)),
-    http.post(`${URL_SUPABASE}/rest/v1/rpc/detalhe_socorrista_op`,async({request})=>{
-      const corpo=await request.json() as {p_op_id:number}
-      return HttpResponse.json(corpo.p_op_id===6?detalheAnterior:detalheAtual)
+    http.post(`${URL_SUPABASE}/rest/v1/rpc/detalhe_socorrista_ops`,async({request})=>{
+      const corpo=await request.json() as {p_op_ids:number[]}
+      return HttpResponse.json(corpo.p_op_ids.includes(6)?detalheAnterior:detalheAtual)
     }),
   )
   return consultaMotoristas
@@ -90,7 +90,7 @@ test('administrador abre o socorrista pela Equipe e consulta composição oficia
   expect(within(within(resumo).getByText('Descontos').closest('article')!).getByText('R$ 30,00')).toBeInTheDocument()
   expect(within(within(resumo).getByText('Líquido').closest('article')!).getByText('R$ 70,00')).toBeInTheDocument()
 
-  await escolher(user, /ordem de pagamento/i, /OP-JULHO/)
+  await escolher(user, /^período$/i, /OP-JULHO/)
   expect(await screen.findByText('OS-ANTIGA')).toBeInTheDocument()
   expect(screen.getAllByText('VTR-99')).not.toHaveLength(0)
   expect(screen.queryByText('OS-PENDENTE')).not.toBeInTheDocument()
@@ -102,7 +102,7 @@ test('socorrista comum não acessa a ficha administrativa nem chama o endpoint d
   window.history.replaceState({},'','/equipe/4')
   servidor.use(
     http.get('/api/auth/me',()=>HttpResponse.json({id:2,nome:'Socorrista',email:'socorrista@local.test',perfil:'FUNCIONARIO'})),
-    http.post(`${URL_SUPABASE}/rest/v1/rpc/detalhe_socorrista_op`,()=>{chamadas+=1;return HttpResponse.json(detalheAtual)}),
+    http.post(`${URL_SUPABASE}/rest/v1/rpc/detalhe_socorrista_ops`,()=>{chamadas+=1;return HttpResponse.json(detalheAtual)}),
   )
   const App=await abrirApp()
 

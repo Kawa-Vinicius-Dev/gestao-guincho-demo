@@ -33,7 +33,7 @@ test('escolher a OP preenche as datas com o período dela', async () => {
   const user = userEvent.setup()
   render(<MemoryRouter><Visao/></MemoryRouter>)
 
-  const op = await screen.findByLabelText('Ordem de pagamento')
+  const op = await screen.findByLabelText('Período')
   await screen.findByRole('option', { name: /OP 06389821/ })
   await user.selectOptions(op, '1')
 
@@ -46,7 +46,7 @@ test('mexer numa data volta para período personalizado', async () => {
   const user = userEvent.setup()
   render(<MemoryRouter><Visao/></MemoryRouter>)
 
-  const op = await screen.findByLabelText('Ordem de pagamento')
+  const op = await screen.findByLabelText('Período')
   await screen.findByRole('option', { name: /OP 06389821/ })
   await user.selectOptions(op, '1')
   const fim = screen.getByLabelText('Data final')
