@@ -65,9 +65,12 @@ test('o dinheiro abre a tela, com a leitura do que ele significa', async () => {
   render(<MemoryRouter><Painel/></MemoryRouter>)
 
   const financeiro = await screen.findByRole('region', { name: /resumo financeiro/i })
-  expect(within(financeiro).getAllByText('R$ 74.770,00')).toHaveLength(3)
+  // Recebido em destaque e realizado ao lado; toda OP chega paga, entao nao ha
+  // "programado" separado para mostrar.
+  expect(within(financeiro).getAllByText('R$ 74.770,00')).toHaveLength(2)
   expect(within(financeiro).getByText(/275 serviços executados/)).toBeInTheDocument()
-  expect(within(financeiro).getByText(/100,0% do programado/)).toBeInTheDocument()
+  expect(within(financeiro).getByText(/100,0% da produção/)).toBeInTheDocument()
+  expect(within(financeiro).queryByText(/programado/i)).not.toBeInTheDocument()
   expect(screen.getByText(/Ticket médio de R\$ 271,89 por serviço\./)).toBeInTheDocument()
 })
 
@@ -81,13 +84,14 @@ test('sem pendência, mostra estado positivo em vez de lista de erros', async ()
 
   expect(await screen.findByText('Tudo em dia')).toBeInTheDocument()
   expect(screen.getByText(/Nenhuma pendência crítica/)).toBeInTheDocument()
-  expect(screen.getByText('Nenhum pagamento atrasado')).toBeInTheDocument()
+  expect(screen.getByText('Nada travado do lado deles')).toBeInTheDocument()
+  // No modelo em que a OP chega paga nao existe OP vencida — o indicador saiu.
+  expect(screen.queryByText(/vencida/i)).not.toBeInTheDocument()
 })
 
-test('com divergência e atraso, cada item leva para onde se resolve', async () => {
+test('com divergência e serviços fora de OP, cada item leva para onde se resolve', async () => {
   servidorDoPainel(painel({
     quantidadeComDivergencia: 3, valorTotalDivergencias: 1250.5,
-    quantidadeVencidasNaoRecebidas: 2, valorVencidoNaoRecebido: 12400,
     quantidadeAguardandoOp: 12, valorAguardandoOp: 3800,
   }))
   const Painel = await abrirPainel()
@@ -95,8 +99,8 @@ test('com divergência e atraso, cada item leva para onde se resolve', async () 
   render(<MemoryRouter><Painel/></MemoryRouter>)
 
   expect(await screen.findByText('3 OPs com divergência')).toBeInTheDocument()
-  expect(screen.getByText('2 OPs vencidas')).toBeInTheDocument()
-  expect(screen.getByText('12 serviços aguardando OP')).toBeInTheDocument()
+  // Aparece no topo, como contexto do "a receber", e na fila de atencao.
+  expect(screen.getAllByText('12 serviços aguardando OP')).toHaveLength(2)
   expect(screen.getByRole('link', { name: /ver serviços/i }))
     .toHaveAttribute('href', '/porto/ordens-servico')
 })
@@ -134,4 +138,17 @@ test('trocar o agrupamento recarrega a série com o novo grão', async () => {
   await user.click(screen.getByRole('button', { name: 'Semanal' }))
 
   expect(grao).toBe('SEMANA')
+})
+
+// O painel do dia traz servico sem preco. Doze servicos somando zero nao e
+// "nada a receber": e "ainda nao se sabe quanto".
+test('serviço aguardando OP sem preço aparece como a precificar, não como R$ 0,00', async () => {
+  servidorDoPainel(painel({ quantidadeAguardandoOp: 12, valorAguardandoOp: 0 }))
+  const Painel = await abrirPainel()
+
+  render(<MemoryRouter><Painel/></MemoryRouter>)
+
+  const financeiro = await screen.findByRole('region', { name: /resumo financeiro/i })
+  expect(within(financeiro).getByText('A precificar')).toBeInTheDocument()
+  expect(screen.getByText(/12 serviços aguardam OP e ainda não têm preço/)).toBeInTheDocument()
 })
