@@ -1213,3 +1213,125 @@ tbody tr{transition:background-color .14s ease}
 /* Edicao do valor na propria linha: campo estreito para nao alargar a coluna. */
 .porto-valor-inline{display:flex;align-items:center;gap:6px}
 .porto-valor-inline input{width:92px;padding:4px 6px;border:1px solid var(--line);border-radius:5px;font:inherit}
+
+/* ---------------------------------------------------------------- painel Porto
+   A hierarquia e a mensagem: dinheiro em destaque sobre fundo escuro, operacao
+   em cartoes claros, e cor semantica so quando ha o que resolver. Nada aqui e
+   decoracao - cada bloco responde a uma pergunta de quem administra. */
+.painel-periodo{display:flex;align-items:center;gap:8px;margin-top:12px!important;color:var(--muted);font:500 11px 'IBM Plex Mono',monospace;letter-spacing:.02em}
+.painel-periodo i{width:7px;height:7px;border-radius:50%;background:var(--cyan);box-shadow:0 0 0 4px rgba(70,199,238,.15)}
+.painel-periodo strong{color:var(--ink);font-weight:600}
+.painel-filtros{margin-bottom:16px;padding:16px 18px}
+.painel-filtros .ledger-filters{display:grid;grid-template-columns:minmax(220px,1.3fr) repeat(2,minmax(140px,.8fr)) auto;align-items:end;gap:12px}
+
+/* Os tres numeros que respondem "quanto entrou": o unico bloco escuro da tela,
+   porque e onde o olho precisa cair primeiro. */
+.painel-financeiro{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;margin-bottom:14px;overflow:hidden;border-radius:12px;background:rgba(255,255,255,.08);box-shadow:0 18px 45px rgba(7,20,38,.18)}
+.painel-financeiro article{position:relative;padding:26px 28px 24px;background:linear-gradient(150deg,var(--navy-900),#10345a);color:#fff;transition:background .2s ease}
+.painel-financeiro article:hover{background:linear-gradient(150deg,#0d2440,#134066)}
+.painel-financeiro span,.painel-financeiro strong,.painel-financeiro small{display:block}
+.painel-financeiro span{color:#92a9bf;font:500 9px 'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.12em}
+.painel-financeiro strong{margin:14px 0 8px;font:600 clamp(32px,3.4vw,46px)/1 'Barlow Condensed',sans-serif;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+.painel-financeiro small{color:#7f97ae;font-size:11px;line-height:1.4}
+.painel-financeiro-recebido:after{content:'';position:absolute;left:0;top:0;width:3px;height:100%;background:#2fbf8f}
+.painel-financeiro-recebido strong{color:#7ef0c2}
+
+/* Operacao: mesma familia, peso menor. Vermelho e amarelo entram so com valor. */
+.painel-operacional{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}
+.painel-card{padding:18px 20px;border:1px solid var(--line);border-top:3px solid var(--line);border-radius:10px;background:var(--superficie);transition:transform .16s ease,box-shadow .16s ease}
+.painel-card:hover{transform:translateY(-2px);box-shadow:0 12px 26px rgba(7,20,38,.07)}
+.painel-card span,.painel-card strong,.painel-card small{display:block}
+.painel-card span{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.07em}
+.painel-card strong{margin:12px 0 6px;font:600 30px 'Barlow Condensed',sans-serif;font-variant-numeric:tabular-nums}
+.painel-card small{color:#8a99a9;font-size:10.5px}
+.painel-card-alerta{border-top-color:var(--red);background:#fffafb}
+.painel-card-alerta strong{color:var(--red)}
+.painel-card-atencao{border-top-color:#e0a530;background:#fffdf7}
+.painel-card-atencao strong{color:#8a6410}
+
+/* "Precisa de atencao" e uma fila de trabalho, nao uma lista de erros: cada item
+   diz o que e, quanto custa e para onde ir. */
+.painel-atencao{margin-bottom:16px;padding:22px}
+.painel-atencao ul{margin:14px 0 0;padding:0;list-style:none;display:grid;gap:9px}
+.painel-atencao li{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:13px;padding:14px 16px;border:1px solid var(--linha-suave);border-radius:9px;background:var(--superficie-2);transition:border-color .16s ease,background .16s ease}
+.painel-atencao li:hover{border-color:var(--blue-100);background:var(--blue-50)}
+.painel-atencao li strong{display:block;font-size:13px}
+.painel-atencao li small{display:block;margin-top:3px;color:var(--muted);font-size:11px}
+.painel-atencao-marca{width:9px;height:9px;border-radius:50%;background:#e0a530;box-shadow:0 0 0 4px rgba(224,165,48,.14)}
+.painel-atencao li.grave .painel-atencao-marca{background:var(--red);box-shadow:0 0 0 4px rgba(196,50,76,.13)}
+.painel-tudo-em-dia{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:4px 14px;margin:16px 0 0;padding:20px;border:1px solid #bee8da;border-radius:9px;background:var(--ok-fundo)}
+.painel-tudo-em-dia>span{grid-row:1/3;display:grid;place-items:center;width:34px;height:34px;border-radius:50%;color:#fff;background:var(--green);font-size:15px}
+.painel-tudo-em-dia strong{color:#086546;font-size:14px}
+.painel-tudo-em-dia small{color:#3f7d69;font-size:11px}
+
+/* Grafico: barras para producao, linhas para dinheiro. */
+.painel-evolucao{margin-bottom:16px}
+.segmented{display:inline-flex;padding:3px;border:1px solid var(--line);border-radius:8px;background:var(--superficie-2)}
+.segmented button{padding:6px 13px;border:0;border-radius:6px;background:none;color:var(--muted);cursor:pointer;font-size:11px;font-weight:600;transition:.16s ease}
+.segmented button:hover{color:var(--ink)}
+.segmented button.active{color:var(--blue-600);background:var(--superficie);box-shadow:0 1px 3px rgba(7,20,38,.1)}
+.producao-chart{margin-top:18px}
+.producao-plot{position:relative}
+.producao-chart svg{width:100%;height:auto;overflow:visible}
+.producao-grade{stroke:var(--linha-suave);stroke-width:1}
+.producao-escala,.producao-eixo{fill:var(--muted);font:500 9px 'IBM Plex Mono',monospace}
+.producao-barra{fill:var(--blue-100);transition:fill .16s ease}
+.producao-plot:hover .producao-barra{fill:#cfe3fb}
+.producao-linha-recebido{fill:none;stroke:var(--green);stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round}
+.producao-linha-programado{fill:none;stroke:#9db4cc;stroke-width:2;stroke-dasharray:5 4}
+.producao-ponto{fill:#fff;stroke:var(--green);stroke-width:2.5}
+.producao-alvo{fill:transparent}
+.producao-guia{stroke:var(--navy-800);stroke-width:1;stroke-dasharray:3 3;opacity:.35}
+.producao-tooltip{position:absolute;top:8px;transform:translateX(-50%);min-width:190px;padding:12px 14px;border-radius:9px;color:#fff;background:rgba(7,20,38,.95);box-shadow:0 14px 30px rgba(7,20,38,.25);pointer-events:none}
+.producao-tooltip strong{display:block;margin-bottom:8px;font:600 13px 'Barlow Condensed',sans-serif;letter-spacing:.04em;text-transform:uppercase}
+.producao-tooltip span{display:flex;align-items:center;gap:7px;margin-top:5px;color:#a9bdd0;font-size:11px}
+.producao-tooltip i{width:8px;height:8px;border-radius:2px}
+.producao-tooltip b{margin-left:auto;color:#fff;font-variant-numeric:tabular-nums}
+.producao-tooltip small{display:block;margin-top:9px;padding-top:8px;border-top:1px solid rgba(255,255,255,.12);color:#7f97ae;font-size:10px}
+.legend-produzido{background:var(--blue-500)}
+.legend-recebido{background:var(--green)}
+.legend-programado{background:#9db4cc}
+
+.painel-inferior{display:grid;grid-template-columns:1.25fr .75fr;gap:16px;margin-bottom:16px}
+.painel-pagamentos,.painel-insights{padding:22px}
+.pagamentos-proporcao{margin-top:18px}
+.pagamentos-trilho{display:flex;height:12px;overflow:hidden;border-radius:99px;background:var(--linha-suave)}
+.pagamentos-trilho span{transition:width .35s ease}
+.fatia-recebido{background:var(--green)}
+.fatia-aguardando{background:var(--blue-500)}
+.fatia-vencido{background:var(--red)}
+.pagamentos-proporcao dl{display:grid;grid-template-columns:repeat(2,1fr);gap:14px 18px;margin:20px 0 0}
+.pagamentos-proporcao dl>div{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding-bottom:10px;border-bottom:1px solid var(--linha-suave)}
+.pagamentos-proporcao dt{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:11px}
+.pagamentos-proporcao dt i{width:9px;height:9px;border-radius:3px}
+.pagamentos-proporcao dd{margin:0;font:600 17px 'Barlow Condensed',sans-serif;font-variant-numeric:tabular-nums}
+.painel-insights ul{margin:16px 0 0;padding:0;list-style:none;display:grid;gap:10px}
+.painel-insights li{position:relative;padding-left:20px;color:#40536a;font-size:12.5px;line-height:1.5}
+.painel-insights li:before{content:'';position:absolute;left:0;top:7px;width:7px;height:7px;border-radius:2px;background:var(--blue-500)}
+
+.painel-ops-titulo{padding:22px 22px 0}
+.painel-ops-titulo>a{color:var(--blue-600);font-size:11px;font-weight:600;text-decoration:none}
+.painel-ops-titulo>a:hover{text-decoration:underline}
+.painel-badge{display:inline-block;padding:4px 9px;border-radius:5px;font-size:10px;font-weight:600}
+.painel-badge-ok{color:var(--ok-texto);background:var(--ok-fundo)}
+.painel-badge-neutro{color:var(--muted);background:var(--superficie-2)}
+.painel-badge-alerta{color:var(--erro-texto);background:var(--erro-fundo)}
+.painel-vencida{margin-top:4px;color:var(--red)!important;font-weight:600}
+.painel-vazio{display:grid;place-items:center;gap:6px;padding:60px 30px;text-align:center}
+.painel-vazio h2{margin:16px 0 0;font:600 26px 'Barlow Condensed',sans-serif}
+.painel-vazio p{max-width:440px;margin:0 0 8px;color:var(--muted);font-size:12.5px}
+
+@media(max-width:1180px){
+  .painel-financeiro{grid-template-columns:1fr}
+  .painel-operacional{grid-template-columns:repeat(2,1fr)}
+  .painel-inferior{grid-template-columns:1fr}
+  .painel-filtros .ledger-filters{grid-template-columns:1fr 1fr}
+}
+@media(max-width:620px){
+  .painel-filtros .ledger-filters{grid-template-columns:1fr}
+  .painel-operacional{grid-template-columns:1fr}
+  .painel-atencao li{grid-template-columns:auto 1fr;row-gap:10px}
+  .painel-atencao li>a{grid-column:2}
+  .pagamentos-proporcao dl{grid-template-columns:1fr}
+  .producao-tooltip{left:50%!important}
+}

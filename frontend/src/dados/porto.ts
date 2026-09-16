@@ -1,6 +1,6 @@
 import { ApiError, api } from '../api/http'
 import type {
-  AcertoPendenciaOsPorto, ConfirmacaoPorto, DashboardPorto, DetalheOpPorto,
+  AcertoPendenciaOsPorto, ConfirmacaoPorto, DashboardAltoNivelPorto, DashboardPorto, DetalheOpPorto,
   JustificativaPorto, OrdemPagamentoPorto, OrdemServicoPorto, PendenciaOsPorto, PendenciaPorto,
   PreviaPorto, ResumoOpsPorto,
 } from '../types/modelos'
@@ -148,6 +148,22 @@ export async function obterDashboardPorto(params?: URLSearchParams): Promise<Das
     }),
     'Não foi possível carregar o painel da Porto.',
   ) as DashboardPorto
+}
+
+/**
+ * O painel Porto inteiro numa chamada: resumo, evolucao no tempo e as OPs que
+ * pedem atencao. A tela abre com os tres ao mesmo tempo, entao separa-los em
+ * tres consultas seria tres esperas para desenhar uma tela.
+ */
+export async function obterDashboardAltoNivelPorto(
+  inicio: string, fim: string, grao: 'DIA' | 'SEMANA' | 'MES' = 'DIA',
+): Promise<DashboardAltoNivelPorto> {
+  return ou(
+    await supabase().rpc('porto_dashboard_alto_nivel', {
+      p_inicio: inicio, p_fim: fim, p_grao: grao,
+    }),
+    'Não foi possível carregar o painel da Porto.',
+  ) as DashboardAltoNivelPorto
 }
 
 export async function detalharOrdemPagamentoPorto(id: number): Promise<DetalheOpPorto> {
@@ -571,6 +587,11 @@ export async function criarPreviaComposicaoPorto(
  * O backend entregava XLSX e PDF. No Supabase sai CSV, montado no navegador a
  * partir dos mesmos dados que a tela ja mostra — ver dados/porto/relatorios.ts.
  * ------------------------------------------------------------------ */
+
+/** Fechamento do dia: servicos prestados, por socorrista e por especialidade. */
+export async function baixarRelatorioDiarioPorto(dia: string): Promise<void> {
+  return relatoriosPorto.baixarRelatorioDiarioPorto(dia)
+}
 
 export async function baixarRelatorioPorto(
   formato: 'excel' | 'pdf', params?: URLSearchParams,

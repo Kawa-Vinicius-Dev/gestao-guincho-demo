@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { listarPendenciasOsPorto, resolverPendenciasOsPorto } from '../dados/porto'
 import { listarMotoristas } from '../dados/motoristas'
 import type { AcertoPendenciaOsPorto, Motorista, PendenciaOsPorto } from '../types/modelos'
@@ -83,9 +84,13 @@ export default function PortoPendenciasOsPage() {
         <h1>Pendências do período</h1>
         <p>Ordens de serviço sem valor, sem socorrista ou sem viatura. Preencha o que faltar e salve de uma vez.</p>
       </div>
-      <button className="button button-primary" disabled={!pendentes || salvando} onClick={() => void salvar()}>
-        {salvando ? 'Salvando…' : `Salvar ${pendentes || ''} ${pendentes === 1 ? 'acerto' : 'acertos'}`.trim()}
-      </button>
+      <div className="heading-actions">
+        <Link className="button button-ghost" to="/porto/ordens-servico">Ordens de serviço</Link>
+        <Link className="button button-ghost" to="/porto/devolvidos">Serviços devolvidos</Link>
+        <button className="button button-primary" disabled={!pendentes || salvando} onClick={() => void salvar()}>
+          {salvando ? 'Salvando…' : `Salvar ${pendentes || ''} ${pendentes === 1 ? 'acerto' : 'acertos'}`.trim()}
+        </button>
+      </div>
     </header>
 
     {erro ? <div className="form-alert" role="alert">{erro}</div> : null}

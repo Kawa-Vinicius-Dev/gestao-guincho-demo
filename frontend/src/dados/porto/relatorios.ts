@@ -72,6 +72,67 @@ export async function baixarRelatorioOpPorto(id: number): Promise<void> {
   ]), `op-porto-${op.numero}.csv`)
 }
 
+/**
+ * Relatorio diario dos servicos prestados.
+ *
+ * E o fechamento do dia de quem opera: o que a equipe atendeu, com quem estava
+ * na viatura e quanto cada servico vale. Sai por socorrista e por especialidade
+ * porque sao as duas perguntas que vem logo depois de "quantos foram" — quem
+ * produziu e o que a operacao fez mais.
+ *
+ * O valor pode nao existir ainda: o painel do dia nao traz preco, e a Porto so
+ * precifica na OP. Servico sem valor aparece como "a precificar", e nao como
+ * R$ 0,00 — zero seria uma afirmacao errada.
+ */
+export async function baixarRelatorioDiarioPorto(dia: string): Promise<void> {
+  const params = new URLSearchParams({ dataInicio: dia, dataFim: dia })
+  const servicos = await listarOrdensServicoPorto(params)
+  const validos = servicos.filter(os => os.statusOperacional !== 'CANCELADO')
+  const cancelados = servicos.length - validos.length
+
+  const soma = (lista: OrdemServicoPorto[]) =>
+    lista.reduce((total, os) => total + (os.valorTotal ?? 0), 0)
+
+  // Zero aqui nao e "nao faturou": e "ainda nao tem preco". Sao coisas
+  // diferentes, e escrever R$ 0,00 afirmaria a errada.
+  const valorOuPendente = (total: number) => (total > 0 ? moeda(total) : 'a precificar')
+
+  const agrupar = (chave: (os: OrdemServicoPorto) => string) => {
+    const grupos = new Map<string, OrdemServicoPorto[]>()
+    for (const os of validos) {
+      const nome = chave(os) || 'Não informado'
+      grupos.set(nome, [...(grupos.get(nome) ?? []), os])
+    }
+    return [...grupos.entries()]
+      .sort((a, b) => soma(b[1]) - soma(a[1]) || b[1].length - a[1].length)
+      .map(([nome, lista]) => [nome, lista.length, valorOuPendente(soma(lista))])
+  }
+
+  const valorDaLinha = (os: OrdemServicoPorto) => valorOuPendente(os.valorTotal)
+
+  baixarArquivoCsv(paraCsv([
+    [`Serviços prestados em ${formatarData(dia)}`], [],
+    ['Serviços', validos.length],
+    ['Valor conhecido', valorOuPendente(soma(validos))],
+    ['Sem valor ainda', validos.filter(os => os.valorTotal <= 0).length],
+    ...(cancelados ? [['Cancelados', cancelados]] : []),
+    [],
+    ['OS', 'Hora', 'Seguradora', 'Especialidade', 'Viatura', 'Socorrista', 'Valor', 'Situação'],
+    ...validos.map(os => [
+      os.numero,
+      os.dataHoraAtendimento ? os.dataHoraAtendimento.slice(11, 16) : '',
+      os.seguradora ?? '', os.especialidade ?? '', os.viatura ?? '',
+      os.socorrista ?? os.motorista ?? '', valorDaLinha(os), os.statusOperacional,
+    ]),
+    [],
+    ['Por socorrista'], ['Socorrista', 'Serviços', 'Valor'],
+    ...agrupar(os => os.motorista ?? os.socorrista ?? ''),
+    [],
+    ['Por especialidade'], ['Especialidade', 'Serviços', 'Valor'],
+    ...agrupar(os => os.especialidade ?? ''),
+  ]), `servicos-prestados-${dia}.csv`)
+}
+
 export async function baixarOrdensServicoPorto(params?: URLSearchParams): Promise<void> {
   const oss = await listarOrdensServicoPorto(params)
   baixarArquivoCsv(
