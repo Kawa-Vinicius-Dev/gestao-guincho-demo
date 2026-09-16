@@ -47,9 +47,10 @@ export default function DespesasPage(){
     // Descricao e opcional: sem ela, o nome da categoria ja diz o que foi.
     const descricao=texto('descricao')??categorias.find(c=>c.id===categoriaId)?.nome??'Despesa'
     const body={descricao,categoriaId,valor:Number(f.get('valor')),data:String(f.get('data')),
-      vencimento:texto('vencimento'),dataPagamento:null,formaPagamento:texto('formaPagamento'),
+      vencimento:null,dataPagamento:null,formaPagamento:texto('formaPagamento'),
       veiculoId:f.get('veiculoId')?Number(f.get('veiculoId')):null,motoristaId:f.get('motoristaId')?Number(f.get('motoristaId')):null,
-      protocolo:texto('protocolo'),observacoes:texto('observacoes'),status:(texto('status')??'PENDENTE') as Despesa['status'],
+      protocolo:texto('protocolo'),observacoes:texto('observacoes'),// Do administrador a despesa ja nasce paga; do socorrista vai para aprovacao.
+      status:(admin?'PAGO':'PENDENTE') as Despesa['status'],
       natureza:'GERAL' as const,descontaComissao:f.get('descontaComissao')==='on'}
     setErro('');setMensagem('')
     // Quem responde pelo caixa nao precisa aprovar o proprio lancamento: a
@@ -152,9 +153,7 @@ export default function DespesasPage(){
         <details className="field-wide despesa-mais-detalhes">
           <summary>Mais detalhes</summary>
           <div className="form-grid three-columns">
-            {admin?<Selecao rotulo="Situação" name="status" opcoes={[{valor:'PAGO',texto:'Paga'},{valor:'PENDENTE',texto:'A pagar'}]}/>:null}
             <Selecao rotulo="Forma de pagamento" name="formaPagamento" vazio="Não informada" opcoes={FORMAS_PAGAMENTO}/>
-            <label className="field"><span>Vencimento</span><input name="vencimento" type="date"/></label>
             <label className="field"><span>Protocolo ou referência</span><input name="protocolo" autoCapitalize="characters" autoCorrect="off" spellCheck={false}/></label>
             <label className="field two-span"><span>Observações</span><input name="observacoes" autoCapitalize="sentences" autoComplete="off"/></label>
           </div>
