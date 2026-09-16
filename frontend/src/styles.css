@@ -1286,7 +1286,6 @@ tbody tr{transition:background-color .14s ease}
 .painel-atencao li .table-action{border:0;background:none;padding:6px 0 6px 10px;color:var(--blue-600);font-size:var(--t-apoio);font-weight:600;white-space:nowrap;text-decoration:none}
 .painel-atencao li .table-action:after{content:' →';transition:margin .16s ease}
 .painel-atencao li:hover .table-action:after{margin-left:3px}
-.painel-atencao-marca{display:none}
 .painel-tudo-em-dia{display:flex;align-items:center;gap:var(--espaco-2);margin:0;padding:var(--espaco-3);border:1px solid var(--line);border-radius:10px;background:var(--superficie)}
 .painel-tudo-em-dia>span{display:grid;place-items:center;flex:0 0 30px;height:30px;border-radius:50%;color:var(--green);background:var(--ok-fundo);font-size:14px;font-weight:700}
 .painel-tudo-em-dia strong{color:var(--ink);font-size:var(--t-corpo)}
@@ -1321,20 +1320,6 @@ tbody tr{transition:background-color .14s ease}
 .legend-recebido{background:var(--green)}
 .legend-programado{background:#9db4cc}
 
-.painel-inferior{display:grid;grid-template-columns:1.25fr .75fr;gap:var(--espaco-3)}
-.pagamentos-trilho{display:flex;height:14px;overflow:hidden;border-radius:99px;background:var(--linha-suave)}
-.pagamentos-trilho span{transition:width .4s cubic-bezier(.22,1,.36,1)}
-.fatia-recebido{background:var(--green)}
-.fatia-aguardando{background:var(--blue-500)}
-.fatia-vencido{background:var(--red)}
-.pagamentos-proporcao dl{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--espaco-2) var(--espaco-4);margin:var(--espaco-4) 0 0}
-.pagamentos-proporcao dl>div{display:flex;align-items:baseline;justify-content:space-between;gap:var(--espaco-2);padding-bottom:var(--espaco-2);border-bottom:1px solid var(--linha-suave)}
-.pagamentos-proporcao dt{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:var(--t-apoio)}
-.pagamentos-proporcao dt i{width:9px;height:9px;border-radius:3px}
-.pagamentos-proporcao dd{margin:0;font:600 19px 'Barlow Condensed',sans-serif;font-variant-numeric:tabular-nums}
-.painel-insights ul{margin:0;padding:0;list-style:none;display:grid;gap:var(--espaco-2)}
-.painel-insights li{position:relative;padding-left:var(--espaco-3);color:#40536a;font-size:var(--t-corpo);line-height:1.6}
-.painel-insights li:before{content:'';position:absolute;left:0;top:8px;width:6px;height:6px;border-radius:2px;background:var(--blue-500)}
 
 .painel-ops-titulo>a{color:var(--blue-600);font-size:var(--t-apoio);font-weight:600;text-decoration:none}
 .painel-ops-titulo>a:hover{text-decoration:underline}
@@ -1345,14 +1330,12 @@ tbody tr{transition:background-color .14s ease}
 
 @media(max-width:1180px){
   .painel-financeiro{grid-template-columns:1fr}
-  .painel-inferior{grid-template-columns:1fr}
   .painel-filtros .ledger-filters{grid-template-columns:1fr 1fr}
 }
 @media(max-width:620px){
   .painel-filtros .ledger-filters{grid-template-columns:1fr}
   .painel-atencao li{grid-template-columns:auto 1fr;row-gap:var(--espaco-2)}
   .painel-atencao li>a{grid-column:2}
-  .pagamentos-proporcao dl{grid-template-columns:1fr}
   .producao-tooltip{left:50%!important}
 }
 
@@ -1427,3 +1410,9 @@ tbody tr{transition:background-color .14s ease}
 @media(max-width:560px){
   .grade-indicadores{grid-auto-flow:row;grid-template-columns:1fr}
 }
+
+/* Contexto do destaque com duas linhas de apoio (servicos e ticket medio). */
+.destaque-contexto small{display:block}
+.destaque-contexto small+small{margin-top:2px}
+/* "Tudo em dia" fora de painel: uma faixa discreta no lugar do bloco de atencao. */
+.painel-tudo-em-dia-solto{margin-bottom:var(--espaco-3);box-shadow:0 1px 2px rgba(7,20,38,.04)}

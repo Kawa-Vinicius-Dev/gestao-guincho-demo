@@ -6,7 +6,7 @@ import { data, hojeIso, moeda, percentual } from '../utils/formatadores'
 import { Carregando } from '../components/EstadoPagina'
 import { Campo, Selecao } from '../components/Campos'
 import { EvolucaoAcumulada } from '../components/Graficos'
-import { CabecalhoPagina, Etiqueta, GradeIndicadores, Indicador, Painel } from '../components/ui/Pagina'
+import { CabecalhoPagina, Etiqueta, Painel } from '../components/ui/Pagina'
 import { rotuloOp } from '../utils/periodos'
 
 /**
@@ -52,9 +52,6 @@ function rotuloDoBalde(grao: string) {
     return `${dia}/${mes}`
   }
 }
-
-/** Um cartao so fica vermelho quando ha o que resolver: zero e uma boa noticia. */
-const tom = (valor: number, cor: 'alerta' | 'atencao') => (valor > 0 ? cor : 'neutro')
 
 export default function PortoDashboardPage() {
   const [dados, setDados] = useState<DashboardAltoNivelPorto | null>(null)
@@ -109,36 +106,12 @@ export default function PortoDashboardPage() {
     ? (dados.valorRecebido / dados.valorTotalRealizado) * 100
     : null
 
-  // Cada item so existe quando ha o que resolver, e leva para onde se resolve.
-  const atencao = dados ? [
-    dados.quantidadeComDivergencia > 0 && {
-      chave: 'divergencia', grave: true,
-      titulo: `${dados.quantidadeComDivergencia} ${dados.quantidadeComDivergencia === 1 ? 'OP com divergência' : 'OPs com divergência'}`,
-      detalhe: `${moeda(dados.valorTotalDivergencias)} entre o valor da OP e a soma das OS`,
-      acao: 'Ver ordens de pagamento', para: '/porto/ordens-pagamento',
-    },
-    dados.quantidadeAguardandoOp > 0 && {
-      chave: 'aguardando', grave: false,
-      titulo: `${dados.quantidadeAguardandoOp} ${dados.quantidadeAguardandoOp === 1 ? 'serviço aguardando OP' : 'serviços aguardando OP'}`,
-      detalhe: `${moeda(dados.valorAguardandoOp)} ainda não cobrados pela Porto`,
-      acao: 'Ver serviços', para: '/porto/ordens-servico',
-    },
-  ].filter(Boolean) as { chave: string; grave: boolean; titulo: string; detalhe: string; acao: string; para: string }[]
-    : []
-
-  // Frases so aparecem quando o numero que as sustenta existe.
-  const insights = dados ? [
-    recebidoSobreProducao !== null && dados.valorRecebido > 0
-      && `${percentual(Math.min(recebidoSobreProducao, 100))} da produção do período já foi paga pela Porto.`,
-    dados.quantidadeAguardandoOp > 0
-      && (aReceber > 0
-        ? `${moeda(aReceber)} em serviços ainda aguardam entrar numa OP.`
-        : `${dados.quantidadeAguardandoOp} ${dados.quantidadeAguardandoOp === 1 ? 'serviço aguarda' : 'serviços aguardam'} OP e ainda não têm preço.`),
-    dados.quantidadeTotalOps > 0
-      && `${dados.quantidadeTotalOps} ${dados.quantidadeTotalOps === 1 ? 'OP pagou' : 'OPs pagaram'} os serviços deste período.`,
-    dados.quantidadeTotalServicos > 0 && dados.valorTotalRealizado > 0
-      && `Ticket médio de ${moeda(dados.valorTotalRealizado / dados.quantidadeTotalServicos)} por serviço.`,
-  ].filter(Boolean) as string[] : []
+  // Atencao e so o que pede providencia. Servico aguardando OP e a espera normal
+  // pela Porto: ja aparece como "a receber" no topo e nao pede acao de ninguem.
+  const divergencias = dados?.quantidadeComDivergencia ?? 0
+  const ticketMedio = dados && dados.quantidadeTotalServicos > 0
+    ? dados.valorTotalRealizado / dados.quantidadeTotalServicos
+    : null
 
   return <div className="page-enter painel-porto">
     <CabecalhoPagina
@@ -201,6 +174,7 @@ export default function PortoDashboardPage() {
                 <dt><i className="marca-produzido"/>Realizado</dt>
                 <dd>{moeda(dados.valorTotalRealizado)}</dd>
                 <small>{dados.quantidadeTotalServicos} serviços executados</small>
+                {ticketMedio !== null ? <small>Ticket médio {moeda(ticketMedio)}</small> : null}
               </div>
               <div>
                 <dt>A receber</dt>
@@ -234,46 +208,23 @@ export default function PortoDashboardPage() {
     </section>
 
     {dados && !vazio ? <>
-
-      <GradeIndicadores>
-        <Indicador rotulo="Serviços realizados" valor={dados.quantidadeTotalServicos}
-          apoio={`${moeda(dados.valorTotalRealizado)} no período`}/>
-        <Indicador rotulo="Aguardando OP" valor={dados.quantidadeAguardandoOp}
-          tom={tom(dados.quantidadeAguardandoOp, 'atencao')}
-          apoio={`${moeda(dados.valorAguardandoOp)} sem cobrança`}/>
-        <Indicador rotulo="OPs com divergência" valor={dados.quantidadeComDivergencia}
-          tom={tom(dados.quantidadeComDivergencia, 'alerta')}
-          apoio={dados.quantidadeComDivergencia ? moeda(dados.valorTotalDivergencias) : 'Composição confere'}/>
-      </GradeIndicadores>
-
-      <Painel className="painel-atencao" etiqueta="Ação" titulo="Precisa de atenção">
-        {atencao.length
-          ? <ul>
-              {atencao.map(item => <li key={item.chave} className={item.grave ? 'grave' : ''}>
-                <span className="painel-atencao-marca" aria-hidden="true"/>
-                <span><strong>{item.titulo}</strong><small>{item.detalhe}</small></span>
-                <Link className="table-action" to={item.para}>{item.acao}</Link>
-              </li>)}
+      {divergencias
+        ? <Painel className="painel-atencao" etiqueta="Ação" titulo="Precisa de atenção">
+            <ul>
+              <li className="grave">
+                <span>
+                  <strong>{divergencias} {divergencias === 1 ? 'OP com divergência' : 'OPs com divergência'}</strong>
+                  <small>{moeda(dados.valorTotalDivergencias)} entre o valor da OP e a soma das OS</small>
+                </span>
+                <Link className="table-action" to="/porto/ordens-pagamento">Ver ordens de pagamento</Link>
+              </li>
             </ul>
-          : <p className="painel-tudo-em-dia">
-              <span aria-hidden="true">✓</span>
-              <strong>Tudo em dia</strong>
-              <small>Nenhuma pendência crítica encontrada neste período.</small>
-            </p>}
-      </Painel>
-
-      <div className="painel-inferior">
-        <Painel etiqueta="Caixa" titulo="Produção paga × aguardando OP">
-          <ProporcaoPagamentos recebido={dados.valorRecebido} aguardando={aReceber}
-            realizado={dados.valorTotalRealizado}/>
-        </Painel>
-
-        {insights.length
-          ? <Painel className="painel-insights" etiqueta="Leitura" titulo="O que os números dizem">
-              <ul>{insights.map(frase => <li key={frase}>{frase}</li>)}</ul>
-            </Painel>
-          : null}
-      </div>
+          </Painel>
+        : <p className="painel-tudo-em-dia painel-tudo-em-dia-solto">
+            <span aria-hidden="true">✓</span>
+            <strong>Tudo em dia</strong>
+            <small>Nenhuma OP com divergência neste período.</small>
+          </p>}
 
       {dados.opsDestaque.length
         ? <Painel semRespiro className="painel-ops-titulo" etiqueta="Detalhe"
@@ -306,32 +257,4 @@ function Badge({ status }: { status: OpDestaquePorto['statusConciliacao'] }) {
   const tom = status === 'CONCILIADA' ? 'ok'
     : status === 'SEM_COMPOSICAO' ? 'neutro' : 'alerta'
   return <Etiqueta tom={tom}>{CONCILIACAO[status] ?? status}</Etiqueta>
-}
-
-/**
- * Onde esta o dinheiro da Porto, numa barra so.
- *
- * No modelo em que toda OP chega paga, o dinheiro da producao so tem dois
- * estados: ja entrou numa OP, e portanto esta pago, ou ainda esta esperando uma
- * OP. Nao ha "vencido" nem "programado nao recebido" — esses dois pedacos da
- * barra antiga nunca poderiam aparecer com dado real.
- */
-function ProporcaoPagamentos({ recebido, aguardando, realizado }: {
-  recebido: number; aguardando: number; realizado: number
-}) {
-  const total = Math.max(recebido + aguardando, 1)
-  const fatia = (v: number) => `${Math.max((v / total) * 100, v > 0 ? 1.5 : 0)}%`
-
-  return <div className="pagamentos-proporcao">
-    <div className="pagamentos-trilho" role="img"
-      aria-label={`${moeda(recebido)} pagos pela Porto e ${moeda(aguardando)} aguardando OP.`}>
-      {recebido > 0 ? <span className="fatia-recebido" style={{ width: fatia(recebido) }}/> : null}
-      {aguardando > 0 ? <span className="fatia-aguardando" style={{ width: fatia(aguardando) }}/> : null}
-    </div>
-    <dl>
-      <div><dt><i className="fatia-recebido"/>Pago pela Porto</dt><dd>{moeda(recebido)}</dd></div>
-      <div><dt><i className="fatia-aguardando"/>Aguardando OP</dt><dd>{moeda(aguardando)}</dd></div>
-      <div><dt>Produção do período</dt><dd>{moeda(realizado)}</dd></div>
-    </dl>
-  </div>
 }

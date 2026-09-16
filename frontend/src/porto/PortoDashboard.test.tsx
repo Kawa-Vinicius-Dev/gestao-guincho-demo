@@ -71,7 +71,7 @@ test('o dinheiro abre a tela, com a leitura do que ele significa', async () => {
   expect(within(financeiro).getByText(/275 serviços executados/)).toBeInTheDocument()
   expect(within(financeiro).getByText(/100,0% da produção/)).toBeInTheDocument()
   expect(within(financeiro).queryByText(/programado/i)).not.toBeInTheDocument()
-  expect(screen.getByText(/Ticket médio de R\$ 271,89 por serviço\./)).toBeInTheDocument()
+  expect(within(financeiro).getByText(/Ticket médio R\$\s271,89/)).toBeInTheDocument()
 })
 
 // Zero divergencia e zero atraso sao boa noticia: a tela nao pode usar vermelho
@@ -83,13 +83,13 @@ test('sem pendência, mostra estado positivo em vez de lista de erros', async ()
   render(<MemoryRouter><Painel/></MemoryRouter>)
 
   expect(await screen.findByText('Tudo em dia')).toBeInTheDocument()
-  expect(screen.getByText(/Nenhuma pendência crítica/)).toBeInTheDocument()
+  expect(screen.getByText(/Nenhuma OP com divergência/)).toBeInTheDocument()
   expect(screen.queryByText(/pendentes na porto/i)).not.toBeInTheDocument()
   // No modelo em que a OP chega paga nao existe OP vencida — o indicador saiu.
   expect(screen.queryByText(/vencida/i)).not.toBeInTheDocument()
 })
 
-test('com divergência e serviços fora de OP, cada item leva para onde se resolve', async () => {
+test('divergência pede providência e leva para as ordens de pagamento', async () => {
   servidorDoPainel(painel({
     quantidadeComDivergencia: 3, valorTotalDivergencias: 1250.5,
     quantidadeAguardandoOp: 12, valorAguardandoOp: 3800,
@@ -99,10 +99,11 @@ test('com divergência e serviços fora de OP, cada item leva para onde se resol
   render(<MemoryRouter><Painel/></MemoryRouter>)
 
   expect(await screen.findByText('3 OPs com divergência')).toBeInTheDocument()
-  // Aparece no topo, como contexto do "a receber", e na fila de atencao.
-  expect(screen.getAllByText('12 serviços aguardando OP')).toHaveLength(2)
-  expect(screen.getByRole('link', { name: /ver serviços/i }))
-    .toHaveAttribute('href', '/porto/ordens-servico')
+  expect(screen.getByRole('link', { name: /ver ordens de pagamento/i }))
+    .toHaveAttribute('href', '/porto/ordens-pagamento')
+  // Servico aguardando OP e espera normal pela Porto, nao providencia: aparece
+  // uma vez, como "a receber" no topo, e nao na fila de atencao.
+  expect(screen.getAllByText('12 serviços aguardando OP')).toHaveLength(1)
 })
 
 test('período sem dados não mostra três zeros, e oferece a saída', async () => {
@@ -150,5 +151,5 @@ test('serviço aguardando OP sem preço aparece como a precificar, não como R$ 
 
   const financeiro = await screen.findByRole('region', { name: /resumo financeiro/i })
   expect(within(financeiro).getByText('A precificar')).toBeInTheDocument()
-  expect(screen.getByText(/12 serviços aguardam OP e ainda não têm preço/)).toBeInTheDocument()
+  expect(within(financeiro).getByText('12 serviços aguardando OP')).toBeInTheDocument()
 })
