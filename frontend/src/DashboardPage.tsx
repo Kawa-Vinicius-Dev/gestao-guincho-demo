@@ -7,6 +7,7 @@ import { IndicadoresDaOperacao, PainelDeGastos, PainelDeKm, PainelFaturamentoPor
   PainelFaturamentoPorViatura, ResultadoDoPeriodo } from './dashboard/PaineisDoResultado'
 import type { Dashboard } from './types/modelos'
 import { data } from './utils/formatadores'
+import { gravarFiltro, lerFiltro } from './utils/filtroLembrado'
 
 /**
  * Visao geral: o painel principal do sistema.
@@ -19,9 +20,19 @@ import { data } from './utils/formatadores'
 /** Abre no mes corrente, que e o recorte mais pedido; a partir dai o periodo e livre. */
 function mesCorrente(){const d=new Date(),mes=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`
   return {inicio:`${mes}-01`,fim:`${mes}-${String(new Date(d.getFullYear(),d.getMonth()+1,0).getDate()).padStart(2,'0')}`}}
+/**
+ * O periodo escolhido sobrevive a ida e volta para outra tela.
+ *
+ * Quem abria um semestre aqui, ia registrar uma despesa e voltava, reencontrava
+ * o mes corrente e refazia as duas datas a cada consulta — a tela remonta a cada
+ * navegacao e o estado nascia do zero. O mes corrente continua sendo o padrao;
+ * so a primeira visita da sessao e que o usa.
+ */
+type Periodo={inicio:string,fim:string}
+const periodoInicial=():Periodo=>lerFiltro<Periodo>('visao-geral',mesCorrente())
 
 export default function DashboardPage(){
-  const [{inicio,fim},setPeriodo]=useState(mesCorrente)
+  const [{inicio,fim},setPeriodo]=useState(periodoInicial)
   const [financeiro,setFinanceiro]=useState<Dashboard|null>(null)
   const [erro,setErro]=useState('')
   // Enquanto revalida, a tela fica de pe com os numeros de antes em vez de
@@ -47,6 +58,12 @@ export default function DashboardPage(){
       .finally(()=>{if(valeu)setAtualizando(false)})
     return()=>{valeu=false}
   },[inicio,fim])
+
+  // Grava fora dos handlers das datas: assim nenhum caminho novo de troca de
+  // periodo esquece de lembrar o que escolheu. Data pela metade nao vai para o
+  // armazenamento — voltar para uma tela com "de" vazio e pior do que voltar
+  // para o mes corrente.
+  useEffect(()=>{if(inicio&&fim)gravarFiltro('visao-geral',{inicio,fim})},[inicio,fim])
 
   const temKm=Boolean(financeiro&&(financeiro.kmRemunerado||financeiro.kmMorto))
 

@@ -1,4 +1,4 @@
-import { api } from '../api/http'
+import { ApiError, api } from '../api/http'
 import type { Despesa } from '../types/modelos'
 import { invalidarCacheFinanceiro } from './dashboard'
 import { ou, supabase, usuarioAtualId } from './cliente'
@@ -91,6 +91,14 @@ export interface DadosDespesa {
   protocolo?: string | null
   observacoes?: string | null
   status?: Despesa['status']
+  /**
+   * Quem lanca pela tela nao marca alimentacao: o cartao da equipe e vinculado a
+   * viatura, entao a refeicao comprada nele e custo daquela viatura, como o
+   * diesel. ALIMENTACAO_FUNCIONARIO fica para `registrar_alimentacao` — o
+   * socorrista lancando a refeicao que ele mesmo pagou, do bolso dele, que e a
+   * unica que desconta da comissao.
+   */
+  natureza?: 'GERAL' | 'ALIMENTACAO_FUNCIONARIO'
 }
 
 /**
@@ -116,13 +124,36 @@ export async function listarDespesas(): Promise<Despesa[]> {
   return linhas.map(paraModelo)
 }
 
-export async function criarDespesa(dados: DadosDespesa): Promise<Despesa> {
+/**
+ * Lanca a despesa.
+ *
+ * `jaAprovada` diz que quem esta lancando responde pelo caixa, e por isso a
+ * despesa nao precisa de um segundo par de olhos: ela nasce aprovada, e paga se
+ * o formulario disse que ja foi paga. Antes, o administrador preenchia o
+ * formulario, escolhia "Paga" e ainda clicava em Aprovar e em Registrar
+ * pagamento para o valor chegar na Visao geral — tres acoes para registrar um
+ * almoco que ele mesmo pagou, com o campo "Situacao" do formulario nao valendo
+ * nada.
+ *
+ * A bandeira nao decide sozinha: ela escolhe o caminho, e o caminho aprovado e
+ * uma RPC que confere quem esta chamando. Cliente que mentir na bandeira nao
+ * ganha nada — a policy de insercao direta continua exigindo `not aprovada`, e
+ * so a RPC, que roda `exigir_administrador()`, escreve uma despesa ja aprovada.
+ */
+export async function criarDespesa(dados: DadosDespesa, jaAprovada = false): Promise<Despesa> {
   // Toda escrita que mexe em dinheiro derruba o cache do dashboard: servir por
   // ate um minuto um total que a propria pessoa acabou de alterar e pior do que
   // esperar a consulta.
   invalidarCacheFinanceiro()
   if (!moduloNoSupabase('despesas')) {
     return api<Despesa>('/api/despesas', { method: 'POST', body: JSON.stringify(dados) })
+  }
+
+  if (jaAprovada) {
+    const aprovada = await lancarJaAprovada(dados)
+    if (aprovada) return aprovada
+    // A funcao nao existe neste banco: cai no caminho de sempre logo abaixo, e
+    // a tela avisa que a despesa ficou pendente. Ver `lancarJaAprovada`.
   }
 
   // Toda despesa nasce pendente e nao aprovada, qualquer que seja a situacao
@@ -142,6 +173,7 @@ export async function criarDespesa(dados: DadosDespesa): Promise<Despesa> {
       motorista_id: dados.motoristaId || null,
       protocolo: dados.protocolo || null,
       observacoes: dados.observacoes || null,
+      natureza: dados.natureza ?? 'GERAL',
       status: 'PENDENTE',
       aprovada: false,
       criado_por: await usuarioAtualId(),
@@ -181,4 +213,85 @@ export async function pagarDespesa(
     }),
     'Não foi possível registrar o pagamento.',
   )
+}
+
+/**
+ * Exclusao de despesa.
+ *
+ * Existe porque errar o lancamento e comum — categoria trocada, valor com um
+ * zero a mais, despesa repetida pela segunda leva de fixas do mes — e ate agora
+ * o unico jeito de desfazer era mexer no banco pela mao.
+ *
+ * Dois cuidados que a chamada crua nao tem:
+ *
+ * O PostgREST nao reclama quando o DELETE nao casa com nenhuma linha: a policy
+ * filtra em silencio e a resposta volta vazia e feliz. Sem o `select`, quem nao
+ * e administrador veria "despesa excluida" e a linha continuaria na tela na
+ * proxima leitura. Com ele, zero linha e erro.
+ *
+ * E o comprovante: o arquivo vive no Storage, fora do Postgres, entao apagar a
+ * linha deixaria o objeto orfao no bucket, pago e invisivel. Vai depois da
+ * linha, e nao antes, porque o caminho contrario — arquivo apagado, exclusao
+ * recusada — deixaria uma despesa apontando para um arquivo que nao existe.
+ */
+export async function excluirDespesa(despesa: Despesa): Promise<void> {
+  invalidarCacheFinanceiro()
+  if (!moduloNoSupabase('despesas')) {
+    throw new ApiError('A exclusão de despesas só existe na versão que fala direto com o Supabase.', 501)
+  }
+
+  const apagadas = ou(
+    await supabase().from('despesas').delete().eq('id', despesa.id).select('id'),
+    'Não foi possível excluir a despesa.',
+  ) as { id: number }[]
+  if (!apagadas.length) {
+    throw new ApiError('Você não tem permissão para excluir despesas.', 403)
+  }
+
+  if (despesa.comprovante) {
+    await supabase().storage.from('comprovantes').remove([despesa.comprovante]).catch(() => {})
+  }
+}
+
+/**
+ * Erro do PostgREST para "esta funcao nao existe no banco".
+ *
+ * Acontece quando o site sobe com uma migracao ainda nao aplicada — que e
+ * exatamente o intervalo entre publicar o frontend e rodar o SQL. Antes, esse
+ * intervalo derrubava o lancamento inteiro e jogava a assinatura da funcao em
+ * ingles na cara de quem so queria registrar um almoco.
+ */
+const FUNCAO_AUSENTE = 'PGRST202'
+
+/** Lanca a despesa ja aprovada, ou devolve null se o banco ainda nao tem a RPC. */
+async function lancarJaAprovada(dados: DadosDespesa): Promise<Despesa | null> {
+  const resposta = await supabase().rpc('registrar_despesa_aprovada', {
+    p_descricao: dados.descricao,
+    p_categoria_id: dados.categoriaId,
+    p_valor: dados.valor,
+    p_data: dados.data,
+    p_vencimento: dados.vencimento || null,
+    p_forma_pagamento: dados.formaPagamento || null,
+    p_veiculo_id: dados.veiculoId || null,
+    p_motorista_id: dados.motoristaId || null,
+    p_protocolo: dados.protocolo || null,
+    p_observacoes: dados.observacoes || null,
+    p_natureza: dados.natureza ?? 'GERAL',
+    p_paga: dados.status === 'PAGO',
+    p_data_pagamento: dados.dataPagamento || null,
+  })
+  // So a ausencia da funcao volta para o caminho antigo. Recusa de permissao,
+  // valor invalido e qualquer outro erro sobem como erro: sao respostas de
+  // verdade, e engoli-las esconderia o motivo.
+  if (resposta.error?.code === FUNCAO_AUSENTE) return null
+  const linha = ou(resposta, 'Não foi possível registrar a despesa.') as { id: number }
+
+  // A RPC devolve a linha crua da tabela, sem os nomes de categoria, viatura e
+  // socorrista que a tela mostra. Em vez de montar meia despesa aqui, le a
+  // linha pronta pelo mesmo caminho da listagem.
+  const completa = ou(
+    await supabase().from('despesas').select(COLUNAS).eq('id', linha.id).single(),
+    'Não foi possível registrar a despesa.',
+  ) as unknown as LinhaDespesa
+  return paraModelo(completa)
 }

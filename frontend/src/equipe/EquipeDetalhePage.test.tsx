@@ -28,11 +28,16 @@ const ops=[
   {id:7,numero:'OP-AGOSTO',valor_total:500,situacao_financeira:'RECEBIDO',periodo_inicio:'2027-08-01',periodo_fim:'2027-08-31',quantidade_ordens_servico:1,valor_ordens_servico:500,divergencia:0,status_conciliacao:'CONCILIADA'},
 ]
 const comissaoAtual={ordemPagamentoId:7,periodo:'01/08/2027 a 31/08/2027',socorrista:'Ana Motorista',motoristaId:4,quantidadeServicosPagos:1,producaoPaga:500,percentualComissao:.2,comissaoBruta:100,alimentacaoAprovada:30,alimentacaoPendente:12,liquido:70,aguardandoOp:false,servicos:[{id:1,numeroOs:'OS-PAGA',especialidade:'GUINCHO',dataAtendimento:'2027-06-15',numeroOp:'OP-77',valorServico:500,comissaoServico:100}],alimentacoes:[{id:9,motoristaId:4,data:'2027-08-21',valor:30,situacao:'PENDENTE',aprovada:true},{id:10,motoristaId:4,data:'2027-08-22',valor:12,situacao:'PENDENTE',aprovada:false}]}
-const detalheAtual={id:4,nome:'Ana Motorista',ativo:true,telefone:'(85) 99999-1234',email:'ana@local.test',qra:'QRA-ANA',veiculosUtilizados:['VTR-07','VTR-12'],totalServicosPrestados:2,comissao:comissaoAtual,servicos:[
+const despesasDela=[
+  {id:9,descricao:'Almoço',data:'2027-08-21',valor:30,categoria:'Alimentação',veiculo:null,situacao:'PAGO',aprovada:true,descontaDaComissao:true,observacoes:null},
+  {id:21,descricao:'Pedágio da viagem',data:'2027-08-19',valor:18,categoria:'Pedágio',veiculo:'VTR-12',situacao:'PAGO',aprovada:true,descontaDaComissao:false,observacoes:null},
+  {id:22,descricao:'Peça do guincho',data:'2027-08-18',valor:240,categoria:'Manutenção',veiculo:'VTR-07',situacao:'PENDENTE',aprovada:false,descontaDaComissao:false,observacoes:'Orçamento aprovado por telefone'},
+]
+const detalheAtual={id:4,nome:'Ana Motorista',ativo:true,telefone:'(85) 99999-1234',email:'ana@local.test',qra:'QRA-ANA',veiculosUtilizados:['VTR-07','VTR-12'],totalServicosPrestados:2,comissao:comissaoAtual,despesas:despesasDela,servicos:[
   {id:2,numeroOs:'OS-PENDENTE',dataAtendimento:'2027-08-20',especialidade:'REMOÇÃO',viatura:'VTR-12',numeroOp:null,valorServico:300,statusPagamento:'AGUARDANDO_PAGAMENTO',pagoNoPeriodo:false,comissaoGerada:null},
   {id:1,numeroOs:'OS-PAGA',dataAtendimento:'2027-06-15',especialidade:'GUINCHO',viatura:'VTR-07',numeroOp:'OP-77',valorServico:500,statusPagamento:'PAGO',pagoNoPeriodo:true,comissaoGerada:100},
 ]}
-const detalheAnterior={...detalheAtual,veiculosUtilizados:['VTR-99'],totalServicosPrestados:1,comissao:{...comissaoAtual,ordemPagamentoId:6,periodo:'01/07/2027 a 31/07/2027',quantidadeServicosPagos:0,producaoPaga:0,comissaoBruta:0,alimentacaoAprovada:0,alimentacaoPendente:0,liquido:0,aguardandoOp:true,servicos:[],alimentacoes:[]},servicos:[{id:3,numeroOs:'OS-ANTIGA',dataAtendimento:'2027-07-10',especialidade:'PANE',viatura:'VTR-99',numeroOp:null,valorServico:200,statusPagamento:'AGUARDANDO_PAGAMENTO',pagoNoPeriodo:false,comissaoGerada:null}]}
+const detalheAnterior={...detalheAtual,despesas:[],veiculosUtilizados:['VTR-99'],totalServicosPrestados:1,comissao:{...comissaoAtual,ordemPagamentoId:6,periodo:'01/07/2027 a 31/07/2027',quantidadeServicosPagos:0,producaoPaga:0,comissaoBruta:0,alimentacaoAprovada:0,alimentacaoPendente:0,liquido:0,aguardandoOp:true,servicos:[],alimentacoes:[]},servicos:[{id:3,numeroOs:'OS-ANTIGA',dataAtendimento:'2027-07-10',especialidade:'PANE',viatura:'VTR-99',numeroOp:null,valorServico:200,statusPagamento:'AGUARDANDO_PAGAMENTO',pagoNoPeriodo:false,comissaoGerada:null}]}
 
 beforeEach(()=>{localStorage.clear();sessionStorage.clear();window.history.replaceState({},'','/equipe')})
 afterEach(()=>vi.unstubAllEnvs())
@@ -107,4 +112,41 @@ test('socorrista comum não acessa a ficha administrativa nem chama o endpoint d
   expect(window.location.pathname).toBe('/despesas')
   expect(chamadas).toBe(0)
   expect(screen.queryByText('OS-PENDENTE')).not.toBeInTheDocument()
+})
+
+// O formulario de despesa pede o socorrista em qualquer categoria, mas so a
+// alimentacao entra no fechamento. As outras nao apareciam em lugar nenhum
+// ligado a pessoa: o campo prometia um vinculo que nenhuma tela mostrava.
+test('as despesas no nome do socorrista que não descontam aparecem à parte',async()=>{
+  const consultaMotoristas=configurarAdmin()
+  const App=await abrirApp()
+  const user=userEvent.setup()
+  render(<App/>)
+  await consultaMotoristas
+  const cartao=(await screen.findByText('Ana Motorista')).closest('article')
+  await user.click(within(cartao!).getByRole('link',{name:/ver detalhes/i}))
+
+  const painel=await screen.findByRole('region',{name:/outras despesas no nome do socorrista/i})
+  expect(within(painel).getByText('Pedágio da viagem')).toBeInTheDocument()
+  expect(within(painel).getByText('Peça do guincho')).toBeInTheDocument()
+  expect(within(painel).getByText('Orçamento aprovado por telefone')).toBeInTheDocument()
+  expect(within(painel).getByText('VTR-12')).toBeInTheDocument()
+  // R$ 18 + R$ 240. A alimentacao nao entra: ela desconta, e ja tem painel.
+  expect(within(painel).getByText('R$ 258,00')).toBeInTheDocument()
+  expect(within(painel).queryByText('Almoço')).not.toBeInTheDocument()
+})
+
+// A garantia que mais importa: listar nao mudou o que sai do bolso dela.
+test('mostrar as outras despesas não mexe no líquido da comissão',async()=>{
+  const consultaMotoristas=configurarAdmin()
+  const App=await abrirApp()
+  const user=userEvent.setup()
+  render(<App/>)
+  await consultaMotoristas
+  const cartao=(await screen.findByText('Ana Motorista')).closest('article')
+  await user.click(within(cartao!).getByRole('link',{name:/ver detalhes/i}))
+
+  const resumo=await screen.findByRole('region',{name:/resumo do período/i})
+  // Comissao 100 menos alimentacao 30. Os R$ 258 de pedagio e peca ficam fora.
+  expect(within(resumo).getByText('R$ 70,00')).toBeInTheDocument()
 })

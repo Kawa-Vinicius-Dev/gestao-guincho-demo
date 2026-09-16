@@ -123,6 +123,15 @@ export function erroDoBanco(erro: ErroSupabase, contexto: string): ApiError {
   }
   // 23503 foreign_key_violation — apagar algo que ainda e referido.
   if (codigo === '23503') {
+    // A despesa que representa o pagamento de uma comissao e o unico caso em
+    // que a mensagem generica nao ajuda: ela nao foi digitada por ninguem, e
+    // quem tenta apagar precisa saber que o caminho e desfazer o pagamento.
+    if (detalhe.includes('pagamentos_comissao')) {
+      return new ApiError(
+        'Esta despesa é o pagamento da comissão de um socorrista. Para desfazê-la, cancele o pagamento da comissão.',
+        409,
+      )
+    }
     return new ApiError('Este registro está em uso e não pode ser removido.', 409)
   }
   // 23514 check_violation — um valor fora da regra da tabela.

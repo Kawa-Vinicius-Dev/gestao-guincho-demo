@@ -3,7 +3,7 @@ import { Link,useParams } from 'react-router-dom'
 import { Selecao } from '../components/Campos'
 import { listarOpsComissao, obterDetalheSocorrista } from '../dados/comissoes'
 import { Carregando,ErroPagina } from '../components/EstadoPagina'
-import type { DetalheSocorrista,OrdemPagamentoPorto } from '../types/modelos'
+import type { DespesaDoSocorrista,DetalheSocorrista,OrdemPagamentoPorto } from '../types/modelos'
 import { data,moeda } from '../utils/formatadores'
 import { opCorrente, rotuloOp } from '../utils/periodos'
 
@@ -51,6 +51,47 @@ export default function EquipeDetalhePage(){
         <div className="table-scroll"><table><thead><tr><th>Data</th><th>Valor</th><th>Situação</th><th>Observação</th></tr></thead><tbody>{detalhe.comissao.alimentacoes.map(alimentacao=><tr key={alimentacao.id}><td>{data(alimentacao.data)}</td><td>{moeda(alimentacao.valor)}</td><td>{alimentacao.aprovada?'Aprovada':alimentacao.situacao.toLowerCase()}</td><td>{alimentacao.observacoes||'—'}</td></tr>)}</tbody></table></div>
         {!detalhe.comissao.alimentacoes.length?<p className="empty-inline">Nenhum lançamento de alimentação neste período.</p>:null}
       </section>
+
+      <OutrasDespesas detalhe={detalhe}/>
     </>:null}
   </div>
+}
+
+/**
+ * Despesas lancadas no nome do socorrista que NAO descontam da comissao.
+ *
+ * O formulario pede o socorrista em qualquer categoria, mas so a alimentacao
+ * entra no fechamento — um pedagio, uma peca, um diesel lancado no nome dele
+ * conta na viatura ou no resultado geral. Antes, essas nao apareciam em lugar
+ * nenhum ligado a pessoa: o campo prometia um vinculo que nenhuma tela mostrava.
+ *
+ * Painel separado, e nao uma linha a mais na tabela de alimentacao, justamente
+ * porque as duas nao valem a mesma coisa no bolso de quem recebe. A de cima e o
+ * fechamento; esta e historico. Mostrar nao e cobrar.
+ */
+function OutrasDespesas({ detalhe }:{ detalhe:DetalheSocorrista }){
+  const outras:DespesaDoSocorrista[]=(detalhe.despesas??[]).filter(despesa=>!despesa.descontaDaComissao)
+  const total=outras.reduce((soma,despesa)=>soma+despesa.valor,0)
+  return <section className="panel employee-food" aria-label="Outras despesas no nome do socorrista">
+    <header className="panel-title">
+      <div><span className="eyebrow">Não entra no fechamento</span><h2>Outras despesas no nome dele</h2></div>
+      <div className="food-totals"><span>Total no período<strong>{moeda(total)}</strong></span></div>
+    </header>
+    <p className="nota-fora-do-fechamento">
+      Lançadas com o socorrista preenchido, mas sem ser alimentação: pesam na viatura ou no
+      resultado geral da operação, e não no líquido dele.
+    </p>
+    <div className="table-scroll"><table>
+      <thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th>Viatura</th><th>Situação</th><th>Valor</th></tr></thead>
+      <tbody>{outras.map(despesa=><tr key={despesa.id}>
+        <td>{data(despesa.data)}</td>
+        <td><strong>{despesa.descricao}</strong>{despesa.observacoes?<small>{despesa.observacoes}</small>:null}</td>
+        <td>{despesa.categoria}</td>
+        <td>{despesa.veiculo?<span className="vehicle-chip">{despesa.veiculo}</span>:'—'}</td>
+        <td>{despesa.aprovada?'Aprovada':despesa.situacao.toLowerCase()}</td>
+        <td className="negative">{moeda(despesa.valor)}</td>
+      </tr>)}</tbody>
+    </table></div>
+    {!outras.length?<p className="empty-inline">Nenhuma outra despesa no nome dele neste período.</p>:null}
+  </section>
 }
