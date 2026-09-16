@@ -125,7 +125,9 @@ test('toque parado no campo abre o painel', async () => {
 
   act(() => {
     dedo(campo, 'pointerdown', 100, 300)
-    dedo(campo, 'pointerup', 103, 302)   // tremor normal do dedo
+    // Um toque rapido de polegar rola uns quinze pixels enquanto sobe: com folga
+    // apertada demais o campo so abria se a pessoa segurasse o dedo parado.
+    dedo(campo, 'pointerup', 112, 316)
   })
 
   expect(await screen.findByRole('dialog', { name: 'Período' })).toBeInTheDocument()
