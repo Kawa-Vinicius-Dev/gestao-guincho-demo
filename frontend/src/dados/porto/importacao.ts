@@ -140,6 +140,19 @@ async function registrosExistentes(tipo: TipoRelatorio, numeros: string[]) {
 interface Cadastro {
   porQra: Map<string, { id: number; nome: string }>
   porEscala: Map<string, { id: number; nome: string }>
+  nomes: Map<number, string>
+}
+
+/**
+ * Registra quem rodou a viatura naquele dia. Duas pessoas na mesma viatura no
+ * mesmo dia tornam o palpite ambiguo; ai ninguem e sugerido, e a escolha fica
+ * com quem importa.
+ */
+function anotarEscala(
+  mapa: Map<string, { id: number; nome: string }>, posicao: string, id: number, nome: string,
+) {
+  const jaVisto = mapa.get(posicao)
+  mapa.set(posicao, jaVisto && jaVisto.id !== id ? { id: 0, nome: '' } : jaVisto ?? { id, nome })
 }
 
 const escala = (dataAtendimento?: string | null, sigla?: string | null) =>
@@ -150,7 +163,7 @@ const chave = (valor?: string | null) => (valor ?? '').trim().toUpperCase()
 async function cadastroDeSocorristas(datas: string[]): Promise<Cadastro> {
   const dias = [...new Set(datas.filter(Boolean).map(d => d.slice(0, 10)))]
   const [motoristas, doDia] = await Promise.all([
-    supabase().from('motoristas').select('id,nome,qra').eq('ativo', true),
+    supabase().from('motoristas').select('id,nome,qra,codigos_porto').eq('ativo', true),
     dias.length
       ? supabase().from('ordens_servico_porto')
           .select('data_atendimento,sigla_viatura,motorista_id,motoristas(nome)')
@@ -158,7 +171,7 @@ async function cadastroDeSocorristas(datas: string[]): Promise<Cadastro> {
       : Promise.resolve({ data: [], error: null }),
   ])
   const pessoas = ou(motoristas, 'Não foi possível carregar os socorristas.') as
-    { id: number; nome: string; qra: string | null }[]
+    { id: number; nome: string; qra: string | null; codigos_porto?: string[] | null }[]
   const servicos = ou(doDia, 'Não foi possível carregar a escala do período.') as {
     data_atendimento: string | null
     sigla_viatura: string | null
@@ -167,8 +180,16 @@ async function cadastroDeSocorristas(datas: string[]): Promise<Cadastro> {
   }[]
 
   const porQra = new Map<string, { id: number; nome: string }>()
+  const nomes = new Map<number, string>()
   for (const pessoa of pessoas) {
-    if (chave(pessoa.qra)) porQra.set(chave(pessoa.qra), { id: pessoa.id, nome: pessoa.nome })
+    nomes.set(pessoa.id, pessoa.nome)
+    // O QRA e os codigos que a Porto usa no lugar dele identificam a mesma pessoa.
+    // Codigo repetido em duas pessoas nao sugere ninguem.
+    for (const codigo of [pessoa.qra, ...(pessoa.codigos_porto ?? [])]) {
+      if (!chave(codigo)) continue
+      const jaVisto = porQra.get(chave(codigo))
+      porQra.set(chave(codigo), jaVisto && jaVisto.id !== pessoa.id ? { id: 0, nome: '' } : { id: pessoa.id, nome: pessoa.nome })
+    }
   }
 
   const porEscala = new Map<string, { id: number; nome: string }>()
@@ -176,17 +197,10 @@ async function cadastroDeSocorristas(datas: string[]): Promise<Cadastro> {
     if (!chave(servico.sigla_viatura)) continue
     const vinculo = servico.motoristas
     const nome = (Array.isArray(vinculo) ? vinculo[0] : vinculo)?.nome ?? ''
-    const posicao = escala(servico.data_atendimento, servico.sigla_viatura)
-    const jaVisto = porEscala.get(posicao)
-    // Duas pessoas na mesma viatura no mesmo dia tornam o palpite ambiguo; ai
-    // ninguem e sugerido, e a escolha fica com quem importa.
-    porEscala.set(posicao,
-      jaVisto && jaVisto.id !== servico.motorista_id
-        ? { id: 0, nome: '' }
-        : jaVisto ?? { id: servico.motorista_id, nome })
+    anotarEscala(porEscala, escala(servico.data_atendimento, servico.sigla_viatura), servico.motorista_id, nome)
   }
 
-  return { porQra, porEscala }
+  return { porQra, porEscala, nomes }
 }
 
 function socorristaDaLinha(
@@ -195,7 +209,7 @@ function socorristaDaLinha(
   if (existente?.motorista_id) return { id: existente.motorista_id }
 
   const porQra = cadastro.porQra.get(chave(linha.dados.qra))
-  if (porQra) return porQra
+  if (porQra?.id) return porQra
 
   const sigla = chave(linha.dados.sigla_viatura) || chave(existente?.sigla_viatura)
   const doDia = sigla
@@ -229,10 +243,22 @@ async function classificar(
     registrosExistentes(tipo, numeros),
     ordemDePagamento(numeroOp),
     tipo === 'PREVISAO_RECEBER'
-      ? Promise.resolve({ porQra: new Map(), porEscala: new Map() } as Cadastro)
+      ? Promise.resolve({ porQra: new Map(), porEscala: new Map(), nomes: new Map() } as Cadastro)
       : cadastroDeSocorristas(validas.map(l => l.dados.data_atendimento ?? '')),
   ])
   const orfas: OsSemSocorristaPorto[] = []
+
+  // A escala tambem sai do proprio arquivo: o painel do dia traz a viatura de
+  // cada servico, e as OS que ja vieram numa OP ja tem dono. Se a L168 atendeu
+  // uma OS do Djalma no dia 08/09, as outras da L168 naquele dia sao dele — a
+  // menos que outra pessoa tambem tenha rodado a L168 no mesmo dia.
+  for (const linha of validas) {
+    const sigla = chave(linha.dados.sigla_viatura)
+    const dono = porNumero.get(normalizarNumero(numeroDaLinha(linha)))?.motorista_id
+    if (!sigla || !dono || linha.dados.cancelado === 'true') continue
+    anotarEscala(cadastro.porEscala, escala(linha.dados.data_atendimento, sigla),
+      dono, cadastro.nomes.get(dono) ?? '')
+  }
 
   const reassociacoes: ReassociacaoOsPorto[] = []
   const vistos = new Set<string>()
@@ -265,9 +291,10 @@ async function classificar(
           data: linha.dados.data_atendimento || undefined,
         })
       } else if (dono.nome) {
-        // Sugestao por QRA ou viatura: vale gravar junto, para o banco nao
-        // precisar adivinhar de novo com a mesma informacao.
-        linha.dados.motorista_id = String(dono.id)
+        // Sugestao por QRA ou pela escala do dia. Vai como sugestao, e nao como
+        // escolha: o QRA que chegar depois na OP e a identidade oficial e pode
+        // corrigir o palpite. Escolha feita na tela continua travada.
+        linha.dados.motorista_sugerido_id = String(dono.id)
       }
     }
 

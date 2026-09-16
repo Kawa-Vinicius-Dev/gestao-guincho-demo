@@ -19,7 +19,7 @@ import { moduloNoSupabase } from './modo'
  * banco. A alternativa seria listar motoristas e depois buscar o nome de cada
  * viatura — o N+1 classico, uma consulta por linha da lista.
  */
-const COLUNAS = 'id,nome,telefone,documento,qra,ativo,veiculo_id,perfil_id,veiculos(identificacao)'
+const COLUNAS = 'id,nome,telefone,documento,qra,codigos_porto,ativo,veiculo_id,perfil_id,veiculos(identificacao)'
 
 type LinhaMotorista = {
   id: number
@@ -27,6 +27,7 @@ type LinhaMotorista = {
   telefone: string | null
   documento: string | null
   qra: string | null
+  codigos_porto?: string[] | null
   ativo: boolean
   veiculo_id: number | null
   perfil_id: string | null
@@ -45,6 +46,7 @@ function paraModelo(linha: LinhaMotorista): Motorista {
     telefone: linha.telefone ?? undefined,
     documento: linha.documento ?? undefined,
     qra: linha.qra ?? undefined,
+    codigosPorto: linha.codigos_porto ?? [],
     ativo: linha.ativo,
     veiculoId: linha.veiculo_id ?? undefined,
     veiculo: identificacaoDaViatura(linha.veiculos),
@@ -60,6 +62,8 @@ export interface DadosMotorista {
   telefone?: string | null
   documento?: string | null
   qra?: string | null
+  /** Codigos que a Porto usa no lugar do QRA para esta pessoa. */
+  codigosPorto?: string[]
   veiculoId?: number | null
 }
 
@@ -69,6 +73,7 @@ function paraBanco(dados: DadosMotorista) {
     telefone: dados.telefone || null,
     documento: dados.documento || null,
     qra: dados.qra || null,
+    ...(dados.codigosPorto ? { codigos_porto: dados.codigosPorto } : {}),
     veiculo_id: dados.veiculoId || null,
   }
 }
