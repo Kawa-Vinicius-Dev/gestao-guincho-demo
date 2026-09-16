@@ -32,7 +32,7 @@ const painel = {
   quantidadeAguardandoOp: 12, valorAguardandoOp: 3800,
   quantidadeServicosPagamentoProgramado: 275, valorServicosPagamentoProgramado: 74770,
   valorPrevistoAReceber: 74770, valorConciliado: 74770, valorEfetivamenteRecebido: 74770,
-  quantidadeServicosPendentes: 3, valorServicosPendentes: 940,
+  quantidadeServicosPendentes: 0, valorServicosPendentes: 0,
   quantidadeServicosDevolvidos: 2,
   porEspecialidade: [], porSocorrista: [],
   grao: 'SEMANA',

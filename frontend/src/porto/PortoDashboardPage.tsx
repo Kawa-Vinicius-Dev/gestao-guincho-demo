@@ -123,12 +123,6 @@ export default function PortoDashboardPage() {
       detalhe: `${moeda(dados.valorAguardandoOp)} ainda não cobrados pela Porto`,
       acao: 'Ver serviços', para: '/porto/ordens-servico',
     },
-    dados.quantidadeServicosPendentes > 0 && {
-      chave: 'pendentes', grave: false,
-      titulo: `${dados.quantidadeServicosPendentes} ${dados.quantidadeServicosPendentes === 1 ? 'serviço pendente' : 'serviços pendentes'} na Porto`,
-      detalhe: `${moeda(dados.valorServicosPendentes)} travados do lado deles`,
-      acao: 'Ver pendências', para: '/porto/pendencias',
-    },
   ].filter(Boolean) as { chave: string; grave: boolean; titulo: string; detalhe: string; acao: string; para: string }[]
     : []
 
@@ -250,9 +244,6 @@ export default function PortoDashboardPage() {
         <Indicador rotulo="OPs com divergência" valor={dados.quantidadeComDivergencia}
           tom={tom(dados.quantidadeComDivergencia, 'alerta')}
           apoio={dados.quantidadeComDivergencia ? moeda(dados.valorTotalDivergencias) : 'Composição confere'}/>
-        <Indicador rotulo="Pendentes na Porto" valor={dados.quantidadeServicosPendentes}
-          tom={tom(dados.quantidadeServicosPendentes, 'atencao')}
-          apoio={dados.quantidadeServicosPendentes ? `${moeda(dados.valorServicosPendentes)} travados` : 'Nada travado do lado deles'}/>
       </GradeIndicadores>
 
       <Painel className="painel-atencao" etiqueta="Ação" titulo="Precisa de atenção">

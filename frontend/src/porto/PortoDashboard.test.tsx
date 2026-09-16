@@ -84,7 +84,7 @@ test('sem pendência, mostra estado positivo em vez de lista de erros', async ()
 
   expect(await screen.findByText('Tudo em dia')).toBeInTheDocument()
   expect(screen.getByText(/Nenhuma pendência crítica/)).toBeInTheDocument()
-  expect(screen.getByText('Nada travado do lado deles')).toBeInTheDocument()
+  expect(screen.queryByText(/pendentes na porto/i)).not.toBeInTheDocument()
   // No modelo em que a OP chega paga nao existe OP vencida — o indicador saiu.
   expect(screen.queryByText(/vencida/i)).not.toBeInTheDocument()
 })
