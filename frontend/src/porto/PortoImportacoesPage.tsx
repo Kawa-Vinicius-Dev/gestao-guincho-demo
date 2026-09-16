@@ -125,7 +125,7 @@ export default function PortoImportacoesPage(){
         {temErros?<div className="form-alert"><strong>Corrija e reenvie o arquivo.</strong> {previa.erros.join(' · ')}</div>:null}
         <footer className="porto-confirm porto-confirm-sticky" aria-label="Ações da prévia">
           <div className="porto-confirm-totals"><span><strong>{previa.totalLinhas}</strong> registros</span><span><strong>{moeda(previa.resumo?.valorTotal??0)}</strong> valor total</span></div>
-          {previa.requerOrdemPagamento?<label className="field"><span>Número da OP</span><input aria-label="Número da OP" inputMode="numeric" autoComplete="off" value={numeroOp} onChange={e=>alterarNumero(e.target.value)} required placeholder="Ex.: 06422281"/></label>:null}
+          {previa.requerOrdemPagamento?<label className="field"><span>Número da OP</span><input aria-label="Número da OP" inputMode="numeric" autoComplete="off" value={numeroOp} onChange={e=>alterarNumero(e.target.value)} required placeholder="00000000"/></label>:null}
 
           {/* aria-live sem role="status": anuncia igual, e nao disputa o papel
               com o indicador de etapa la em cima, que ja e um status. */}
