@@ -1,7 +1,8 @@
 import { ApiError, api } from '../api/http'
 import type {
-  CalendarioPorto, ConfirmacaoPorto, DashboardPorto, DetalheOpPorto, JustificativaPorto,
-  OrdemPagamentoPorto, OrdemServicoPorto, PendenciaPorto, PreviaPorto, ResumoOpsPorto,
+  AcertoPendenciaOsPorto, ConfirmacaoPorto, DashboardPorto, DetalheOpPorto,
+  JustificativaPorto, OrdemPagamentoPorto, OrdemServicoPorto, PendenciaOsPorto, PendenciaPorto,
+  PreviaPorto, ResumoOpsPorto,
 } from '../types/modelos'
 import * as importacao from './porto/importacao'
 import * as relatoriosPorto from './porto/relatorios'
@@ -23,7 +24,8 @@ const consulta = (params?: URLSearchParams) => (params?.toString() ? `?${params}
 const COLUNAS_OP = [
   'id', 'numero', 'valor_total', 'nome_codigo', 'data_pagamento_programada',
   'valor_recebido', 'data_recebimento', 'situacao_financeira', 'status_porto',
-  'observacao', 'calendario_pagamento_id', 'quantidade_ordens_servico',
+  'observacao', 'calendario_pagamento_id', 'periodo_inicio', 'periodo_fim',
+  'quantidade_ordens_servico',
   'valor_ordens_servico', 'divergencia', 'status_conciliacao', 'periodo_financeiro',
 ].join(',')
 
@@ -46,6 +48,8 @@ function opParaModelo(l: LinhaOp): OrdemPagamentoPorto {
     statusPorto: (l.status_porto as string) ?? undefined,
     observacao: (l.observacao as string) ?? undefined,
     calendarioPagamentoId: (l.calendario_pagamento_id as number) ?? undefined,
+    periodoInicio: (l.periodo_inicio as string) ?? undefined,
+    periodoFim: (l.periodo_fim as string) ?? undefined,
     periodoFinanceiro: (l.periodo_financeiro as string) ?? undefined,
   }
 }
@@ -105,8 +109,10 @@ export async function listarOrdensPagamentoPorto(
   let q = supabase().from('porto_ops_conciliadas').select(COLUNAS_OP)
   const inicio = params?.get('dataInicio')
   const fim = params?.get('dataFim')
-  if (inicio) q = q.gte('data_pagamento_programada', inicio)
-  if (fim) q = q.lte('data_pagamento_programada', fim)
+  // O recorte da OP e o periodo dela: uma OP de abril paga em junho continua
+  // sendo de abril, que e quando os servicos aconteceram.
+  if (inicio) q = q.gte('periodo_fim', inicio)
+  if (fim) q = q.lte('periodo_fim', fim)
   const numero = params?.get('numeroOp')
   if (numero) q = q.ilike('numero', `%${numero}%`)
 
@@ -208,27 +214,6 @@ export async function atualizarOrdemPagamentoPorto(
   return (await detalharOrdemPagamentoPorto(id)).ordemPagamento
 }
 
-export async function receberOrdemPagamentoPorto(
-  id: number, valorRecebido: number, dataRecebimento: string, calendarioPagamentoId?: number,
-): Promise<OrdemPagamentoPorto> {
-  invalidarCacheFinanceiro()
-  if (!moduloNoSupabase('porto')) {
-    return api<OrdemPagamentoPorto>(`/api/porto/ordens-pagamento/${id}/receber`, {
-      method: 'PATCH',
-      body: JSON.stringify({ valorRecebido, dataRecebimento, calendarioPagamentoId: calendarioPagamentoId ?? null }),
-    })
-  }
-  // RPC: grava o recebimento e marca as OSs da OP no mesmo commit.
-  const detalhe = ou(
-    await supabase().rpc('porto_receber_op', {
-      p_id: id, p_valor_recebido: valorRecebido,
-      p_data_recebimento: dataRecebimento, p_calendario_id: calendarioPagamentoId ?? null,
-    }),
-    'Não foi possível registrar o recebimento.',
-  ) as { ordemPagamento: LinhaOp }
-  return opParaModelo(detalhe.ordemPagamento)
-}
-
 export async function justificarOrdemPagamentoPorto(
   id: number, motivo: string, observacao: string,
 ): Promise<JustificativaPorto> {
@@ -298,6 +283,74 @@ export async function associarMotoristaPorto(
     'Não foi possível associar o socorrista.',
   ) as unknown as Record<string, unknown>
   return osParaModelo(linha)
+}
+
+/**
+ * As OPs que servem de periodo nas telas.
+ *
+ * Nao existe mais uma "lista de periodos" separada para manter em dia: o
+ * periodo agora e a propria OP. Traz so o suficiente para o seletor — numero e
+ * janela —, e nao passa pelo filtro de modulo, porque quem ve a propria comissao
+ * nem alcanca a tela de ordens de pagamento.
+ */
+export async function listarPeriodosDeOp(): Promise<OrdemPagamentoPorto[]> {
+  const linhas = ou(
+    await supabase().from('porto_ops_conciliadas')
+      .select('id,numero,valor_total,situacao_financeira,periodo_inicio,periodo_fim,data_pagamento_programada')
+      .order('periodo_fim', { ascending: false, nullsFirst: false }),
+    'Não foi possível carregar as ordens de pagamento.',
+  ) as Record<string, unknown>[]
+
+  return linhas.map(l => ({
+    id: l.id as number,
+    numero: l.numero as string,
+    valorTotal: Number(l.valor_total ?? 0),
+    situacao: l.situacao_financeira as OrdemPagamentoPorto['situacao'],
+    quantidadeOrdensServico: 0,
+    valorOrdensServico: 0,
+    divergencia: 0,
+    statusConciliacao: 'CONCILIADA',
+    periodoInicio: (l.periodo_inicio as string) ?? undefined,
+    periodoFim: (l.periodo_fim as string) ?? undefined,
+    dataPagamentoProgramada: (l.data_pagamento_programada as string) ?? undefined,
+  }))
+}
+
+/**
+ * O que falta para fechar o periodo.
+ *
+ * Tres faltas impedem o fechamento e todas nascem do painel do dia, que traz o
+ * acionamento cru: sem valor (a Porto so precifica na OP), sem socorrista
+ * (quando o QRA nao casou com ninguem) e sem viatura (a sigla vem vazia no
+ * relatorio da OP). Sempre dentro do periodo escolhido: um ano inteiro de
+ * pendencias numa tela so nao e uma tela de trabalho, e sim um relatorio que
+ * ninguem termina.
+ */
+export async function listarPendenciasOsPorto(
+  inicio: string, fim: string,
+): Promise<PendenciaOsPorto[]> {
+  return ou(
+    await supabase().rpc('porto_pendencias_os', { p_inicio: inicio, p_fim: fim }),
+    'Não foi possível carregar as pendências do período.',
+  ) as PendenciaOsPorto[]
+}
+
+/**
+ * Acerto em lote: a tela manda so o que foi digitado.
+ *
+ * Uma chamada por linha faria dezenas de idas para uma sentada de trabalho, e a
+ * metade gravada em caso de queda deixaria o periodo pela metade.
+ */
+export async function resolverPendenciasOsPorto(
+  itens: AcertoPendenciaOsPorto[],
+): Promise<number> {
+  if (!itens.length) return 0
+  const total = ou(
+    await supabase().rpc('porto_resolver_pendencias', { p_itens: itens }),
+    'Não foi possível salvar as pendências.',
+  ) as number
+  invalidarCacheFinanceiro()
+  return total
 }
 
 /**
@@ -429,82 +482,7 @@ export async function resolverPendenciaPorto(id: number): Promise<PendenciaPorto
   return { id, tipo: 'SERVICO_PENDENTE', referenciaId: 0, referencia: '', valor: 0, situacao: 'RESOLVIDA' }
 }
 
-// ---------------------------------------------------------------- calendario
-
-const COLUNAS_CAL = 'id,data_pagamento,competencia_inicio,competencia_fim,descricao,ativo,estimado,criado_em,atualizado_em'
-
-const calParaModelo = (l: Record<string, unknown>): CalendarioPorto => ({
-  id: l.id as number,
-  dataPagamento: l.data_pagamento as string,
-  competenciaInicio: l.competencia_inicio as string,
-  competenciaFim: l.competencia_fim as string,
-  descricao: l.descricao as string,
-  ativo: l.ativo as boolean,
-  estimado: l.estimado as boolean,
-  criadoEm: l.criado_em as string,
-  atualizadoEm: l.atualizado_em as string,
-})
-
-export async function listarCalendarioPorto(): Promise<CalendarioPorto[]> {
-  if (!moduloNoSupabase('porto')) return api<CalendarioPorto[]>('/api/porto/calendario')
-
-  const linhas = ou(
-    await supabase().from('calendario_pagamentos_porto').select(COLUNAS_CAL)
-      .order('data_pagamento', { ascending: false }),
-    'Não foi possível carregar o calendário.',
-  ) as Record<string, unknown>[]
-  return linhas.map(calParaModelo)
-}
-
-type DadosCalendario = {
-  dataPagamento: string; competenciaInicio: string; competenciaFim: string
-  descricao: string; ativo: boolean
-}
-
-const paraBancoCal = (d: DadosCalendario) => ({
-  data_pagamento: d.dataPagamento,
-  competencia_inicio: d.competenciaInicio || null,
-  competencia_fim: d.competenciaFim || null,
-  descricao: d.descricao,
-  ativo: d.ativo,
-})
-
-export async function criarDataCalendarioPorto(dados: DadosCalendario): Promise<CalendarioPorto> {
-  if (!moduloNoSupabase('porto')) {
-    return api<CalendarioPorto>('/api/porto/calendario', { method: 'POST', body: JSON.stringify(dados) })
-  }
-  return calParaModelo(ou(
-    await supabase().from('calendario_pagamentos_porto').insert(paraBancoCal(dados))
-      .select(COLUNAS_CAL).single(),
-    'Não foi possível cadastrar a data.',
-  ) as Record<string, unknown>)
-}
-
-export async function atualizarDataCalendarioPorto(
-  id: number, dados: DadosCalendario,
-): Promise<CalendarioPorto> {
-  if (!moduloNoSupabase('porto')) {
-    return api<CalendarioPorto>(`/api/porto/calendario/${id}`, { method: 'PUT', body: JSON.stringify(dados) })
-  }
-  return calParaModelo(ou(
-    await supabase().from('calendario_pagamentos_porto').update(paraBancoCal(dados))
-      .eq('id', id).select(COLUNAS_CAL).single(),
-    'Não foi possível salvar a data.',
-  ) as Record<string, unknown>)
-}
-
-export async function desativarDataCalendarioPorto(id: number): Promise<CalendarioPorto> {
-  if (!moduloNoSupabase('porto')) {
-    return api<CalendarioPorto>(`/api/porto/calendario/${id}/desativar`, { method: 'PATCH' })
-  }
-  return calParaModelo(ou(
-    await supabase().from('calendario_pagamentos_porto').update({ ativo: false })
-      .eq('id', id).select(COLUNAS_CAL).single(),
-    'Não foi possível desativar a data.',
-  ) as Record<string, unknown>)
-}
-
-/* ------------------------------------------------------------------ *
+/* ------------------------------------------------------------------
  * Importacao de relatorios
  *
  * No modo Supabase o arquivo e lido no navegador e aplicado por RPC; no modo
@@ -532,7 +510,8 @@ export async function criarPreviaConteudoPorto(conteudo: string): Promise<Previa
 
 export async function avaliarImportacaoPorto(
   previa: PreviaPorto,
-  dados: { numeroOrdemPagamento: string; calendarioPagamentoId: number },
+  // O ciclo saiu: a OP define o proprio periodo pelas OS que ela paga.
+  dados: { numeroOrdemPagamento: string },
   signal?: AbortSignal,
 ): Promise<PreviaPorto> {
   if (!moduloNoSupabase('porto')) {

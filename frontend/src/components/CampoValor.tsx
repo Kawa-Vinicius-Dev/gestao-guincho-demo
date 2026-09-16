@@ -43,6 +43,13 @@ type Props = {
   defaultValue?: number | string
   /** Bloqueia o envio de zero. Ligado por padrao: despesa de R$ 0,00 e engano. */
   exigirPositivo?: boolean
+  /**
+   * Avisa o valor em reais a cada digito, para quem nao usa <form>.
+   *
+   * A tela de pendencias edita dezenas de OS numa tabela e envia tudo de uma
+   * vez: nao ha formulario por linha de onde o valor sairia pelo `name`.
+   */
+  onValor?: (valor: number) => void
 }
 
 const porCursorNoFim = (evento: { target: EventTarget | null }) => {
@@ -50,7 +57,7 @@ const porCursorNoFim = (evento: { target: EventTarget | null }) => {
   if (alvo instanceof HTMLInputElement) alvo.setSelectionRange(alvo.value.length, alvo.value.length)
 }
 
-export function CampoValor({ rotulo, name, className, ajuda, required, defaultValue, exigirPositivo = true }: Props) {
+export function CampoValor({ rotulo, name, className, ajuda, required, defaultValue, exigirPositivo = true, onValor }: Props) {
   const inicial = Math.round(Number(defaultValue ?? 0) * 100) || 0
   const [centavos, setCentavos] = useState(inicial)
   const [tocado, setTocado] = useState(inicial > 0)
@@ -90,8 +97,10 @@ export function CampoValor({ rotulo, name, className, ajuda, required, defaultVa
         value={tocado ? formatarCentavos(centavos) : ''}
         placeholder="0,00"
         onChange={evento => {
+          const centavosDigitados = centavosDe(evento.target.value)
           setTocado(true)
-          setCentavos(centavosDe(evento.target.value))
+          setCentavos(centavosDigitados)
+          onValor?.(centavosDigitados / 100)
         }}
         onFocus={porCursorNoFim}
         onClick={porCursorNoFim}/>
