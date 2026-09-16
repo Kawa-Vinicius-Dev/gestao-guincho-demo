@@ -6,6 +6,7 @@ import type { AcertoPendenciaOsPorto, Motorista, PendenciaOsPorto } from '../typ
 import { data, hojeIso, moeda } from '../utils/formatadores'
 import { Campo, Selecao } from '../components/Campos'
 import { Carregando } from '../components/EstadoPagina'
+import { CabecalhoPagina, GradeIndicadores, Indicador, Painel } from '../components/ui/Pagina'
 import { CampoValor } from '../components/CampoValor'
 
 /**
@@ -76,27 +77,28 @@ export default function PortoPendenciasOsPage() {
         : filtro === 'SOCORRISTA' ? item.semSocorrista
           : item.semViatura)
   const pendentes = Object.keys(acertos).length
+  const semValor = itens.filter(i => i.semValor).length
+  const semSocorrista = itens.filter(i => i.semSocorrista).length
+  const semViatura = itens.filter(i => i.semViatura).length
 
   return <div className="page-enter">
-    <header className="page-heading">
-      <div>
-        <span className="eyebrow">Módulo Porto</span>
-        <h1>Pendências do período</h1>
-        <p>Ordens de serviço sem valor, sem socorrista ou sem viatura. Preencha o que faltar e salve de uma vez.</p>
-      </div>
-      <div className="heading-actions">
+    <CabecalhoPagina
+      modulo="Módulo Porto"
+      titulo="Pendências do período"
+      descricao="Ordens de serviço sem valor, sem socorrista ou sem viatura. Preencha o que faltar e salve de uma vez."
+      contexto={<>Período: <strong>{data(inicio)}</strong> → <strong>{data(fim)}</strong></>}
+      acoes={<>
         <Link className="button button-ghost" to="/porto/ordens-servico">Ordens de serviço</Link>
         <Link className="button button-ghost" to="/porto/devolvidos">Serviços devolvidos</Link>
         <button className="button button-primary" disabled={!pendentes || salvando} onClick={() => void salvar()}>
           {salvando ? 'Salvando…' : `Salvar ${pendentes || ''} ${pendentes === 1 ? 'acerto' : 'acertos'}`.trim()}
         </button>
-      </div>
-    </header>
+      </>}/>
 
     {erro ? <div className="form-alert" role="alert">{erro}</div> : null}
     {mensagem ? <div className="success-notice">{mensagem}</div> : null}
 
-    <section className="panel">
+    <Painel className="painel-filtros">
       <form className="ledger-filters" onSubmit={e => { e.preventDefault(); void carregar(inicio, fim) }}>
         <Campo rotulo="Data inicial">
           <input type="date" value={inicio} onChange={e => setInicio(e.target.value)} required/>
@@ -107,16 +109,25 @@ export default function PortoPendenciasOsPage() {
         <Selecao rotulo="Mostrar" value={filtro} onChange={e => setFiltro(e.target.value)} opcoes={FILTROS}/>
         <button className="button button-primary">Aplicar filtros</button>
       </form>
+    </Painel>
 
-      {carregando ? <Carregando/> : null}
+    {carregando ? <Carregando/> : null}
 
-      <div className="porto-preview-summary">
-        <span><strong>{itens.length}</strong> com pendência</span>
-        <span><strong>{itens.filter(i => i.semValor).length}</strong> sem valor</span>
-        <span><strong>{itens.filter(i => i.semSocorrista).length}</strong> sem socorrista</span>
-        <span><strong>{itens.filter(i => i.semViatura).length}</strong> sem viatura</span>
-      </div>
+      <GradeIndicadores>
+        <Indicador rotulo="Com pendência" valor={itens.length}
+          apoio={itens.length ? 'Ordens de serviço a acertar' : 'Fechamento limpo'}/>
+        <Indicador rotulo="Sem valor" valor={semValor}
+          tom={semValor ? 'atencao' : 'neutro'}
+          apoio="A Porto só precifica na OP"/>
+        <Indicador rotulo="Sem socorrista" valor={semSocorrista}
+          tom={semSocorrista ? 'alerta' : 'neutro'}
+          apoio={semSocorrista ? 'Sem socorrista não há comissão' : 'Todas com dono'}/>
+        <Indicador rotulo="Sem viatura" valor={semViatura}
+          tom={semViatura ? 'atencao' : 'neutro'}
+          apoio="A viatura chega pelo painel do dia"/>
+      </GradeIndicadores>
 
+    <Painel semRespiro>
       {!carregando && !itens.length
         ? <p className="empty-inline">Nada pendente neste período. O fechamento está limpo.</p>
         : <div className="table-scroll"><table>
@@ -147,6 +158,6 @@ export default function PortoPendenciasOsPage() {
               : item.siglaViatura}</td>
           </tr>)}</tbody>
         </table></div>}
-    </section>
+    </Painel>
   </div>
 }

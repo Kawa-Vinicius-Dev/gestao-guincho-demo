@@ -12,6 +12,16 @@
       "port": 5173
     },
     {
+      "name": "bancada",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "bancada"
+      ],
+      "cwd": "frontend",
+      "port": 5174
+    },
+    {
       "name": "api",
       "runtimeExecutable": ".\\mvnw.cmd",
       "runtimeArgs": [

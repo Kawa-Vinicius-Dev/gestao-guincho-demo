@@ -19,3 +19,17 @@ export const hojeIso = () => {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
 }
+
+/**
+ * Dinheiro encurtado, para eixo de grafico e espacos estreitos.
+ *
+ * "R$ 37.189,63" num eixo vira ruido: cinco rotulos assim empilhados competem
+ * com a propria linha que deveriam medir. A leitura exata continua no tooltip e
+ * nos cartoes, onde o numero importa ao centavo.
+ */
+export function moedaCurta(valor: number): string {
+  const absoluto = Math.abs(valor)
+  if (absoluto >= 1000000) return `R$ ${(valor / 1000000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} mi`
+  if (absoluto >= 1000) return `R$ ${(valor / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} mil`
+  return moeda(valor)
+}
