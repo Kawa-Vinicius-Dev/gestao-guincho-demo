@@ -188,6 +188,27 @@ export async function criarDespesa(dados: DadosDespesa, jaAprovada = false): Pro
   return paraModelo(linha)
 }
 
+/**
+ * Marca ou desmarca o gasto como pessoal do socorrista, que sai da comissao dele.
+ *
+ * Existe para a despesa ja lancada: a marca so aparecia no formulario de uma
+ * despesa nova, e o gasto lancado antes ficava sem como descontar. O banco
+ * recalcula a comissao sozinho quando a marca muda.
+ */
+export async function marcarDescontoComissao(id: number, desconta: boolean): Promise<void> {
+  invalidarCacheFinanceiro()
+  if (!moduloNoSupabase('despesas')) {
+    throw new ApiError('Marcar desconto só existe na versão que fala direto com o Supabase.', 501)
+  }
+  const alteradas = ou(
+    await supabase().from('despesas').update({ desconta_comissao: desconta }).eq('id', id).select('id'),
+    'Não foi possível alterar o desconto da comissão.',
+  ) as { id: number }[]
+  if (!alteradas.length) {
+    throw new ApiError('Você não tem permissão para alterar esta despesa.', 403)
+  }
+}
+
 export async function aprovarDespesa(id: number): Promise<void> {
   invalidarCacheFinanceiro()
   if (!moduloNoSupabase('despesas')) {

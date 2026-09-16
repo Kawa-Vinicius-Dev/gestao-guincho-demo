@@ -1,7 +1,7 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
-import { expect, test } from 'vitest'
+import { expect, test, vi } from 'vitest'
 import App from '../App'
 import { servidor } from '../test/servidor'
 import { escolher } from '../test/dropdown'
@@ -112,4 +112,26 @@ test('descontar da comissão só aparece com socorrista escolhido', async () => 
   await escolher(user, /^socorrista$/i, 'Anderson Ribeiro', janela)
 
   expect(within(janela).getByLabelText(/descontar da comissão/i)).not.toBeChecked()
+})
+
+// A marca so existia no formulario de despesa nova: o almoco do Jeferson, lancado
+// antes, nao tinha como descontar. Agora marca direto na lista.
+test('despesa já lançada pode passar a descontar da comissão', async () => {
+  vi.stubEnv('VITE_SUPABASE_URL', 'https://projeto-teste.supabase.co')
+  vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'chave-anon-de-teste')
+  vi.stubEnv('VITE_SUPABASE_MODULOS', 'tudo')
+  vi.resetModules()
+  const { esquecerCliente } = await import('../dados/cliente')
+  esquecerCliente()
+  let enviado: Record<string, unknown> = {}
+  servidor.use(http.patch('https://projeto-teste.supabase.co/rest/v1/despesas', async ({ request }) => {
+    enviado = await request.json() as Record<string, unknown>
+    return HttpResponse.json([{ id: 6 }])
+  }))
+  const { marcarDescontoComissao } = await import('../dados/despesas')
+
+  await marcarDescontoComissao(6, true)
+
+  expect(enviado).toEqual({ desconta_comissao: true })
+  vi.unstubAllEnvs()
 })
