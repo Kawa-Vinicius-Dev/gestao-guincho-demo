@@ -3,10 +3,10 @@ import { Carregando } from '../components/EstadoPagina'
 import { Selecao } from '../components/Campos'
 import { listarMotoristas } from '../dados/motoristas'
 import { baixarRelatorioComissoes } from '../dados/relatorios'
-import { lerComissaoDaOp, listarOpsComissao, resumirComissoes } from '../dados/comissoes'
-import type { Comissao,Motorista,OrdemPagamentoPorto,ResumoComissao } from '../types/modelos'
+import { lerComissaoDaOp, listarPeriodosComissao, resumirComissoes } from '../dados/comissoes'
+import type { Comissao,Motorista,ResumoComissao } from '../types/modelos'
 import { data,moeda } from '../utils/formatadores'
-import { opCorrente, rotuloOp } from '../utils/periodos'
+import { periodoCorrente, rotuloPeriodo, type PeriodoPorto } from '../utils/periodos'
 import { Modal } from '../components/Modal'
 import { useAoVivo } from '../dados/aoVivo'
 
@@ -18,23 +18,24 @@ import { useAoVivo } from '../dados/aoVivo'
  * OS ganha dono ou entra um gasto marcado para descontar. Esta tela confere.
  */
 export default function ComissoesPage(){
-  const [periodos,setPeriodos]=useState<OrdemPagamentoPorto[]>([]),[motoristas,setMotoristas]=useState<Motorista[]>([]),[periodoId,setPeriodoId]=useState(0),[motoristaId,setMotoristaId]=useState(0),[itens,setItens]=useState<ResumoComissao[]>([]),[detalhe,setDetalhe]=useState<Comissao|null>(null),[erro,setErro]=useState(''),[exportando,setExportando]=useState(false)
-  useEffect(()=>{Promise.all([listarOpsComissao(),listarMotoristas()]).then(([p,m])=>{setPeriodos(p);setMotoristas(m);const atual=opCorrente(p);if(atual)setPeriodoId(atual.id);if(!atual)setCarregando(false)}).catch(e=>{setErro(e.message);setCarregando(false)})},[])
+  const [periodos,setPeriodos]=useState<PeriodoPorto[]>([]),[motoristas,setMotoristas]=useState<Motorista[]>([]),[periodoId,setPeriodoId]=useState(''),[motoristaId,setMotoristaId]=useState(0),[itens,setItens]=useState<ResumoComissao[]>([]),[detalhe,setDetalhe]=useState<Comissao|null>(null),[erro,setErro]=useState(''),[exportando,setExportando]=useState(false)
+  const ids=periodos.find(p=>p.id===periodoId)?.ids??[]
+  useEffect(()=>{Promise.all([listarPeriodosComissao(),listarMotoristas()]).then(([p,m])=>{setPeriodos(p);setMotoristas(m);const atual=periodoCorrente(p);if(atual)setPeriodoId(atual.id);if(!atual)setCarregando(false)}).catch(e=>{setErro(e.message);setCarregando(false)})},[])
   const [carregando,setCarregando]=useState(true)
-  useEffect(()=>{if(!periodoId)return;setCarregando(true);resumirComissoes(periodoId,motoristaId||undefined).then(setItens).catch(e=>setErro(e.message)).finally(()=>setCarregando(false))},[periodoId,motoristaId])
+  useEffect(()=>{if(!ids.length)return;setCarregando(true);resumirComissoes(ids,motoristaId||undefined).then(setItens).catch(e=>setErro(e.message)).finally(()=>setCarregando(false))},[periodoId,motoristaId,periodos])
   // OS que ganha dono ou gasto marcado muda a comissao na hora, detalhe aberto inclusive.
-  useAoVivo(()=>{if(!periodoId)return
-    resumirComissoes(periodoId,motoristaId||undefined).then(setItens).catch(e=>setErro(e.message))
-    if(detalhe)lerComissaoDaOp(periodoId,detalhe.motoristaId).then(setDetalhe).catch(e=>setErro(e.message))})
-  async function abrir(id:number){try{setDetalhe(await lerComissaoDaOp(periodoId,id))}catch(e){setErro((e as Error).message)}}
+  useAoVivo(()=>{if(!ids.length)return
+    resumirComissoes(ids,motoristaId||undefined).then(setItens).catch(e=>setErro(e.message))
+    if(detalhe)lerComissaoDaOp(ids,detalhe.motoristaId).then(setDetalhe).catch(e=>setErro(e.message))})
+  async function abrir(id:number){try{setDetalhe(await lerComissaoDaOp(ids,id))}catch(e){setErro((e as Error).message)}}
   async function exportar(){setErro('');setExportando(true)
-    try{await baixarRelatorioComissoes(periodoId)}
+    try{await baixarRelatorioComissoes(ids)}
     catch(e){setErro((e as Error).message)}
     finally{setExportando(false)}
   }
   return <div className="page-enter commission-page"><header className="page-heading"><div><span className="eyebrow">Equipe e pagamentos</span><h1>Comissões</h1><p>20% dos serviços pagos na OP, menos os gastos marcados para descontar. Já entra em despesas sozinha.</p></div><button className="button button-ghost" disabled={!periodoId||exportando} onClick={()=>void exportar()}>{exportando?'Gerando CSV…':'Exportar CSV'}</button></header>{erro?<div className="form-alert">{erro}</div>:null}{carregando?<Carregando/>:null}
-    <section className="panel"><div className="ledger-filters"><Selecao rotulo="Ordem de pagamento" vazio="Selecione" value={periodoId||''} onChange={e=>setPeriodoId(Number(e.target.value))}
-      opcoes={periodos.map(p=>({valor:p.id,texto:rotuloOp(p)}))}/>
+    <section className="panel"><div className="ledger-filters"><Selecao rotulo="Período" vazio="Selecione" value={periodoId} onChange={e=>setPeriodoId(e.target.value)}
+      opcoes={periodos.map(p=>({valor:p.id,texto:rotuloPeriodo(p)}))}/>
       <Selecao rotulo="Socorrista" vazio="Todos" value={motoristaId||''} onChange={e=>setMotoristaId(Number(e.target.value))}
       opcoes={motoristas.map(m=>({valor:m.id,texto:m.nome}))}/></div>
       <div className="table-scroll"><table><thead><tr><th>Socorrista</th><th>Serviços pagos</th><th>Produção paga</th><th>Comissão 20%</th><th>Descontos</th><th>Líquido</th><th>Em despesas</th><th/></tr></thead><tbody>{itens.map(item=><tr key={item.motoristaId}><td><strong>{item.socorrista}</strong></td><td>{item.quantidadeServicosPagos}</td><td>{moeda(item.producaoPaga)}</td><td>{moeda(item.comissaoBruta)}</td><td>{moeda(item.descontos)}</td><td className={item.liquido<0?'negative':'positive'}><strong>{moeda(item.liquido)}</strong></td><td>{item.pagamento?`Lançada em ${data(item.pagamento.dataPagamento)}`:'Sem valor a lançar'}</td><td><button className="table-action" onClick={()=>void abrir(item.motoristaId)}>Detalhar</button></td></tr>)}</tbody></table></div></section>

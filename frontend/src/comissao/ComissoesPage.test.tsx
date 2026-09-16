@@ -55,7 +55,7 @@ test('socorrista vê composição auditável, saldo negativo e registra alimenta
   let corpo: Record<string, unknown> = {}
   servidor.use(
     listaDeOps(),
-    http.post(`${URL_SUPABASE}/rest/v1/rpc/comissao_da_op`, () => HttpResponse.json(detalhe)),
+    http.post(`${URL_SUPABASE}/rest/v1/rpc/comissao_das_ops`, () => HttpResponse.json(detalhe)),
     http.post(`${URL_SUPABASE}/rest/v1/rpc/registrar_alimentacao`, async ({ request }) => {
       corpo = await request.json() as Record<string, unknown>
       return HttpResponse.json({ id: 10, motorista_id: 4, data_lancamento: '2026-04-20',
@@ -86,11 +86,11 @@ test('administrador filtra resumo e abre o detalhamento que forma a comissão', 
     listaDeOps(),
     http.get(`${URL_SUPABASE}/rest/v1/motoristas`, () =>
       HttpResponse.json([{ id: 4, nome: 'Ana Motorista', qra: 'ANA', ativo: true }])),
-    http.post(`${URL_SUPABASE}/rest/v1/rpc/resumo_comissoes_op`, () => HttpResponse.json([
+    http.post(`${URL_SUPABASE}/rest/v1/rpc/resumo_comissoes_ops`, () => HttpResponse.json([
       { motoristaId: 4, socorrista: 'Ana Motorista', quantidadeServicosPagos: 2,
         producaoPaga: 1000, comissaoBruta: 200, descontos: 250, liquido: -50 },
     ])),
-    http.post(`${URL_SUPABASE}/rest/v1/rpc/comissao_da_op`, () => HttpResponse.json(detalhe)),
+    http.post(`${URL_SUPABASE}/rest/v1/rpc/comissao_das_ops`, () => HttpResponse.json(detalhe)),
   )
   const ComissoesPage = await abrirPagina(() => import('./ComissoesPage'))
   const user = userEvent.setup()
@@ -113,12 +113,12 @@ test('comissão já lançada em despesas, sem botão de pagar', async () => {
     listaDeOps(),
     http.get(`${URL_SUPABASE}/rest/v1/motoristas`, () =>
       HttpResponse.json([{ id: 4, nome: 'Ana Motorista', qra: 'ANA', ativo: true }])),
-    http.post(`${URL_SUPABASE}/rest/v1/rpc/resumo_comissoes_op`, () => HttpResponse.json([
+    http.post(`${URL_SUPABASE}/rest/v1/rpc/resumo_comissoes_ops`, () => HttpResponse.json([
       { motoristaId: 4, socorrista: 'Ana Motorista', quantidadeServicosPagos: 2,
         producaoPaga: 1000, comissaoBruta: 200, descontos: 30, liquido: 170,
         pagamento: { id: 12, dataPagamento: '2026-04-29' } },
     ])),
-    http.post(`${URL_SUPABASE}/rest/v1/rpc/comissao_da_op`, () => HttpResponse.json(positivo)),
+    http.post(`${URL_SUPABASE}/rest/v1/rpc/comissao_das_ops`, () => HttpResponse.json(positivo)),
   )
   const ComissoesPage = await abrirPagina(() => import('./ComissoesPage'))
   const user = userEvent.setup()
@@ -140,11 +140,11 @@ test('o detalhe lista todos os gastos e diz quais descontam', async () => {
     listaDeOps(),
     http.get(`${URL_SUPABASE}/rest/v1/motoristas`, () =>
       HttpResponse.json([{ id: 4, nome: 'Ana Motorista', qra: 'ANA', ativo: true }])),
-    http.post(`${URL_SUPABASE}/rest/v1/rpc/resumo_comissoes_op`, () => HttpResponse.json([
+    http.post(`${URL_SUPABASE}/rest/v1/rpc/resumo_comissoes_ops`, () => HttpResponse.json([
       { motoristaId: 4, socorrista: 'Ana Motorista', quantidadeServicosPagos: 2,
         producaoPaga: 1000, comissaoBruta: 200, descontos: 250, liquido: -50 },
     ])),
-    http.post(`${URL_SUPABASE}/rest/v1/rpc/comissao_da_op`, () => HttpResponse.json(detalhe)),
+    http.post(`${URL_SUPABASE}/rest/v1/rpc/comissao_das_ops`, () => HttpResponse.json(detalhe)),
   )
   const ComissoesPage = await abrirPagina(() => import('./ComissoesPage'))
   const user = userEvent.setup()

@@ -157,15 +157,15 @@ test('contas: receber conta ja recebida chega com a frase do banco', async () =>
 // ---------------------------------------------------------------- comissoes
 test('comissao: o administrador consulta a de um socorrista', async () => {
   let corpo: unknown = null
-  servidor.use(http.post(`${URL_SUPABASE}/rest/v1/rpc/comissao_da_op`, async ({ request }) => {
+  servidor.use(http.post(`${URL_SUPABASE}/rest/v1/rpc/comissao_das_ops`, async ({ request }) => {
     corpo = await request.json()
     return HttpResponse.json({ comissaoBruta: 200, liquido: 150, servicos: [] })
   }))
   const { lerComissaoDaOp } = await carregar('auth,comissoes', () => import('./comissoes'))
 
-  const comissao = await lerComissaoDaOp(1, 7)
+  const comissao = await lerComissaoDaOp([1], 7)
 
-  expect(corpo).toEqual({ p_op_id: 1, p_motorista_id: 7 })
+  expect(corpo).toEqual({ p_op_ids: [1], p_motorista_id: 7 })
   expect(comissao.liquido).toBe(150)
 })
 
@@ -173,22 +173,22 @@ test('comissao: o administrador consulta a de um socorrista', async () => {
 // precisa (nem pode) informar de quem e a comissao.
 test('comissao: o socorrista pede a propria, sem informar quem e', async () => {
   let corpo: Record<string, unknown> = {}
-  servidor.use(http.post(`${URL_SUPABASE}/rest/v1/rpc/comissao_da_op`, async ({ request }) => {
+  servidor.use(http.post(`${URL_SUPABASE}/rest/v1/rpc/comissao_das_ops`, async ({ request }) => {
     corpo = await request.json() as Record<string, unknown>
     return HttpResponse.json({ comissaoBruta: 200, liquido: 150, servicos: [] })
   }))
   const { lerComissaoDaOp } = await carregar('auth,comissoes', () => import('./comissoes'))
 
-  await lerComissaoDaOp(1)
+  await lerComissaoDaOp([1])
 
   expect(corpo.p_motorista_id).toBeNull()
 })
 
 test('comissao: pedir a de outro chega com a recusa do banco', async () => {
-  servidor.use(http.post(`${URL_SUPABASE}/rest/v1/rpc/comissao_da_op`, () =>
+  servidor.use(http.post(`${URL_SUPABASE}/rest/v1/rpc/comissao_das_ops`, () =>
     HttpResponse.json({ code: '42501', message: 'negado' }, { status: 403 })))
   const { lerComissaoDaOp } = await carregar('auth,comissoes', () => import('./comissoes'))
 
-  await expect(lerComissaoDaOp(1, 99))
+  await expect(lerComissaoDaOp([1], 99))
     .rejects.toThrow('Você não tem permissão para esta operação.')
 })

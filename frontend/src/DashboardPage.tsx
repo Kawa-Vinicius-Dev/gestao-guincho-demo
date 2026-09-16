@@ -7,10 +7,10 @@ import { dashboardEmCache, lerDashboard } from './dados/dashboard'
 import { listarPeriodosDeOp } from './dados/porto'
 import { IndicadoresDaOperacao, PainelDeGastos, PainelDeKm, PainelFaturamentoPorSocorrista,
   PainelFaturamentoPorViatura, ResultadoDoPeriodo } from './dashboard/PaineisDoResultado'
-import type { Dashboard, OrdemPagamentoPorto } from './types/modelos'
+import type { Dashboard } from './types/modelos'
 import { data } from './utils/formatadores'
 import { gravarFiltro, lerFiltro } from './utils/filtroLembrado'
-import { rotuloOp } from './utils/periodos'
+import { agruparPorPeriodo, rotuloPeriodo, type PeriodoPorto } from './utils/periodos'
 
 /**
  * Visao geral: o painel principal do sistema.
@@ -36,7 +36,7 @@ const periodoInicial=():Periodo=>lerFiltro<Periodo>('visao-geral',mesCorrente())
 
 export default function DashboardPage(){
   const [{inicio,fim,op:opEscolhida=''},setPeriodo]=useState(periodoInicial)
-  const [ops,setOps]=useState<OrdemPagamentoPorto[]>([])
+  const [periodos,setPeriodos]=useState<PeriodoPorto[]>([])
   const [financeiro,setFinanceiro]=useState<Dashboard|null>(null)
   const [erro,setErro]=useState('')
   // Enquanto revalida, a tela fica de pe com os numeros de antes em vez de
@@ -80,15 +80,11 @@ export default function DashboardPage(){
   // Mesmo atalho do painel Porto: escolher a OP preenche as datas com o periodo
   // dela; mexer numa data volta para "Periodo personalizado". A lista e
   // conveniencia — se nao carregar, as datas continuam valendo.
-  useEffect(()=>{listarPeriodosDeOp().then(setOps).catch(()=>setOps([]))},[])
+  useEffect(()=>{listarPeriodosDeOp().then(ops=>setPeriodos(agruparPorPeriodo(ops))).catch(()=>setPeriodos([]))},[])
   function escolherOp(id:string){
-    const op=ops.find(o=>String(o.id)===id)
-    if(!op){setPeriodo(p=>({...p,op:''}));return}
-    setPeriodo({
-      op:id,
-      inicio:op.periodoInicio||op.dataPagamentoProgramada||inicio,
-      fim:op.periodoFim||op.dataPagamentoProgramada||fim,
-    })
+    const periodo=periodos.find(p=>p.id===id)
+    if(!periodo){setPeriodo(p=>({...p,op:''}));return}
+    setPeriodo({op:id,inicio:periodo.periodoInicio||inicio,fim:periodo.periodoFim||fim})
   }
 
   const temKm=Boolean(financeiro&&(financeiro.kmRemunerado||financeiro.kmMorto))
@@ -113,9 +109,9 @@ export default function DashboardPage(){
 
     <section className="panel destaque" aria-label="Resultado do período">
       <form className="destaque-periodo destaque-periodo-sem-botao" onSubmit={e=>e.preventDefault()}>
-        <Selecao rotulo="Ordem de pagamento" vazio="Período personalizado" value={opEscolhida}
+        <Selecao rotulo="Período" vazio="Período personalizado" value={opEscolhida}
           onChange={e=>escolherOp(e.target.value)}
-          opcoes={ops.map(o=>({valor:String(o.id),texto:rotuloOp(o)}))}/>
+          opcoes={periodos.map(p=>({valor:p.id,texto:rotuloPeriodo(p)}))}/>
         <Campo rotulo="De">
           <input aria-label="Data inicial" type="date" value={inicio} max={fim||undefined}
             onChange={e=>setPeriodo(p=>({...p,op:'',inicio:e.target.value}))}/>

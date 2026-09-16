@@ -1,29 +1,30 @@
 import { useEffect,useState } from 'react'
 import { Link,useParams } from 'react-router-dom'
 import { Selecao } from '../components/Campos'
-import { listarOpsComissao, obterDetalheSocorrista } from '../dados/comissoes'
+import { listarPeriodosComissao, obterDetalheSocorrista } from '../dados/comissoes'
 import { Carregando,ErroPagina } from '../components/EstadoPagina'
-import type { DespesaDoSocorrista,DetalheSocorrista,OrdemPagamentoPorto } from '../types/modelos'
+import type { DespesaDoSocorrista,DetalheSocorrista } from '../types/modelos'
 import { data,moeda } from '../utils/formatadores'
-import { opCorrente, rotuloOp } from '../utils/periodos'
+import { periodoCorrente, rotuloPeriodo, type PeriodoPorto } from '../utils/periodos'
 import { useAoVivo } from '../dados/aoVivo'
 
 const statusPagamento={PAGO:'Pago',PAGO_EM_OUTRO_PERIODO:'Pago em outro período',AGUARDANDO_PAGAMENTO:'Aguardando pagamento'} as const
 
 export default function EquipeDetalhePage(){
   const motoristaId=Number(useParams().id)
-  const [periodos,setPeriodos]=useState<OrdemPagamentoPorto[]>([]),[periodoId,setPeriodoId]=useState(0),[detalhe,setDetalhe]=useState<DetalheSocorrista|null>(null)
+  const [periodos,setPeriodos]=useState<PeriodoPorto[]>([]),[periodoId,setPeriodoId]=useState(''),[detalhe,setDetalhe]=useState<DetalheSocorrista|null>(null)
   const [carregandoPeriodos,setCarregandoPeriodos]=useState(true),[carregandoDetalhe,setCarregandoDetalhe]=useState(false),[erro,setErro]=useState('')
-  useEffect(()=>{listarOpsComissao().then(lista=>{setPeriodos(lista);const atual=opCorrente(lista);if(atual)setPeriodoId(atual.id)}).catch((e:Error)=>setErro(e.message)).finally(()=>setCarregandoPeriodos(false))},[])
-  useEffect(()=>{if(!motoristaId||!periodoId)return;setCarregandoDetalhe(true);setErro('');obterDetalheSocorrista(motoristaId,periodoId).then(setDetalhe).catch(e=>setErro(e.message)).finally(()=>setCarregandoDetalhe(false))},[motoristaId,periodoId])
-  useAoVivo(()=>{if(motoristaId&&periodoId)obterDetalheSocorrista(motoristaId,periodoId).then(setDetalhe).catch(e=>setErro(e.message))})
+  const ids=periodos.find(p=>p.id===periodoId)?.ids??[]
+  useEffect(()=>{listarPeriodosComissao().then(lista=>{setPeriodos(lista);const atual=periodoCorrente(lista);if(atual)setPeriodoId(atual.id)}).catch((e:Error)=>setErro(e.message)).finally(()=>setCarregandoPeriodos(false))},[])
+  useEffect(()=>{if(!motoristaId||!ids.length)return;setCarregandoDetalhe(true);setErro('');obterDetalheSocorrista(motoristaId,ids).then(setDetalhe).catch(e=>setErro(e.message)).finally(()=>setCarregandoDetalhe(false))},[motoristaId,periodoId,periodos])
+  useAoVivo(()=>{if(motoristaId&&ids.length)obterDetalheSocorrista(motoristaId,ids).then(setDetalhe).catch(e=>setErro(e.message))})
   if(carregandoPeriodos)return <Carregando/>
   if(erro&&!detalhe)return <ErroPagina mensagem={erro}/>
   return <div className="page-enter employee-detail-page">
     <header className="employee-detail-heading">
       <div><Link className="back-link" to="/equipe">← Voltar para socorristas</Link><span className="eyebrow">Ficha administrativa</span><h1>{detalhe?.nome||'Socorrista'}</h1><p>Histórico operacional e composição financeira por fechamento Porto.</p></div>
-      <Selecao rotulo="Ordem de pagamento" className="month-picker" vazio="Selecione" value={periodoId||''} onChange={event=>setPeriodoId(Number(event.target.value))}
-        opcoes={periodos.map(rotuloEOp=>({valor:rotuloEOp.id,texto:rotuloOp(rotuloEOp)}))}/>
+      <Selecao rotulo="Período" className="month-picker" vazio="Selecione" value={periodoId} onChange={event=>setPeriodoId(event.target.value)}
+        opcoes={periodos.map(periodo=>({valor:periodo.id,texto:rotuloPeriodo(periodo)}))}/>
     </header>
     {erro?<div className="form-alert" role="alert">{erro}</div>:null}
     {carregandoDetalhe&&!detalhe?<Carregando/>:null}

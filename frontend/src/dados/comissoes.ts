@@ -4,6 +4,7 @@ import type {
 import { invalidarCacheFinanceiro } from './cacheFinanceiro'
 import { ou, supabase } from './cliente'
 import { listarPeriodosDeOp } from './porto'
+import { agruparPorPeriodo, type PeriodoPorto } from '../utils/periodos'
 
 
 /**
@@ -29,12 +30,17 @@ import { listarPeriodosDeOp } from './porto'
  */
 export { listarPeriodosDeOp as listarOpsComissao }
 
+/** Os periodos das telas de comissao: as OPs de cada quinzena juntas. */
+export async function listarPeriodosComissao(): Promise<PeriodoPorto[]> {
+  return agruparPorPeriodo(await listarPeriodosDeOp())
+}
+
 export async function lerComissaoDaOp(
-  ordemPagamentoId: number, motoristaId?: number,
+  ordensPagamento: number[], motoristaId?: number,
 ): Promise<Comissao> {
   return ou(
-    await supabase().rpc('comissao_da_op', {
-      p_op_id: ordemPagamentoId,
+    await supabase().rpc('comissao_das_ops', {
+      p_op_ids: ordensPagamento,
       p_motorista_id: motoristaId ?? null,
     }),
     'Não foi possível carregar a comissão.',
@@ -42,22 +48,22 @@ export async function lerComissaoDaOp(
 }
 
 export async function resumirComissoes(
-  ordemPagamentoId: number, motoristaId?: number,
+  ordensPagamento: number[], motoristaId?: number,
 ): Promise<ResumoComissao[]> {
   return ou(
-    await supabase().rpc('resumo_comissoes_op', {
-      p_op_id: ordemPagamentoId, p_motorista_id: motoristaId ?? null,
+    await supabase().rpc('resumo_comissoes_ops', {
+      p_op_ids: ordensPagamento, p_motorista_id: motoristaId ?? null,
     }),
     'Não foi possível carregar o resumo de comissões.',
   ) as ResumoComissao[]
 }
 
 export async function obterDetalheSocorrista(
-  motoristaId: number, ordemPagamentoId: number,
+  motoristaId: number, ordensPagamento: number[],
 ): Promise<DetalheSocorrista> {
   return ou(
-    await supabase().rpc('detalhe_socorrista_op', {
-      p_motorista_id: motoristaId, p_op_id: ordemPagamentoId,
+    await supabase().rpc('detalhe_socorrista_ops', {
+      p_motorista_id: motoristaId, p_op_ids: ordensPagamento,
     }),
     'Não foi possível carregar o socorrista.',
   ) as DetalheSocorrista

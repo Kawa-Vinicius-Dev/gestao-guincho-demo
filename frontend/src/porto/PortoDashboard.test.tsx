@@ -253,7 +253,7 @@ test('a OP escolhida continua escolhida ao voltar para a tela', async () => {
   const Painel = await abrirPainel()
 
   const primeira = render(<MemoryRouter><Painel/></MemoryRouter>)
-  const periodo = await screen.findByLabelText('Ordem de pagamento')
+  const periodo = await screen.findByLabelText('Período')
   await userEvent.selectOptions(periodo, '7')
   expect(await screen.findByDisplayValue('2026-03-30')).toBeInTheDocument()
   primeira.unmount()
@@ -262,5 +262,5 @@ test('a OP escolhida continua escolhida ao voltar para a tela', async () => {
 
   expect(await screen.findByDisplayValue('2026-03-30')).toBeInTheDocument()
   expect(screen.getByDisplayValue('2026-04-29')).toBeInTheDocument()
-  expect(await screen.findByLabelText('Ordem de pagamento')).toHaveValue('7')
+  expect(await screen.findByLabelText('Período')).toHaveValue('7')
 })
