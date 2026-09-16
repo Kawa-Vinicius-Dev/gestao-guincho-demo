@@ -64,14 +64,14 @@ test('lucro negativo fica em vermelho',async()=>{
   expect(lucro).toHaveClass('destaque-negativo')
 })
 
-test('a barra mostra serviços e a comissão que ainda é da equipe',async()=>{
+// A comissao vira despesa paga sozinha quando a OP chega: "a pagar" nao existe.
+test('a barra mostra os serviços, sem comissão a pagar',async()=>{
   servidorDaVisao(dashboard())
   render(<MemoryRouter><DashboardPage/></MemoryRouter>)
 
   expect(await screen.findByText('Serviços')).toBeInTheDocument()
   expect(screen.getByText('275')).toBeInTheDocument()
-  expect(screen.getByText('Comissão a pagar')).toBeInTheDocument()
-  expect(screen.getByText('R$ 14.166,28')).toBeInTheDocument()
+  expect(screen.queryByText(/comissão a pagar/i)).not.toBeInTheDocument()
   // Despesa a pagar zerada nao vira cartao.
   expect(screen.queryByText('Despesas a pagar')).not.toBeInTheDocument()
 })

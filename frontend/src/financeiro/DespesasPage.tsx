@@ -24,6 +24,10 @@ export default function DespesasPage(){
   const {usuario}=useAuth(),admin=usuario?.perfil==='ADMINISTRADOR'
   const [lista,setLista]=useState<Despesa[]>([]),[categorias,setCategorias]=useState<Categoria[]>([]),[veiculos,setVeiculos]=useState<Veiculo[]>([]),[motoristas,setMotoristas]=useState<Motorista[]>([])
   const [form,setForm]=useState(false),[mensagem,setMensagem]=useState(''),[erro,setErro]=useState('')
+  // O socorrista escolhido decide se a marca de desconto aparece: sem ele nao ha
+  // de quem descontar.
+  const [socorristaDoForm,setSocorristaDoForm]=useState('')
+  const abrirForm=()=>{setSocorristaDoForm('');setForm(true)}
   const [fixas,setFixas]=useState<DespesaRecorrente[]>([]),[mes,setMes]=useState(mesAtual()),[lancando,setLancando]=useState(false)
   // Qual despesa esta na janela de confirmacao, e nao um booleano: a janela
   // precisa dizer qual e, com descricao e valor, senao confirmar e um chute.
@@ -36,11 +40,14 @@ export default function DespesasPage(){
     carregarFixas().catch(x=>setErro((x as Error).message))},[admin])
   async function salvar(e:FormEvent<HTMLFormElement>){e.preventDefault();const f=new FormData(e.currentTarget)
     const texto=(campo:string)=>String(f.get(campo)||'')||null
-    const body={descricao:String(f.get('descricao')),categoriaId:Number(f.get('categoriaId')),valor:Number(f.get('valor')),data:String(f.get('data')),
-      vencimento:texto('vencimento'),dataPagamento:texto('dataPagamento'),formaPagamento:texto('formaPagamento'),
+    const categoriaId=Number(f.get('categoriaId'))
+    // Descricao e opcional: sem ela, o nome da categoria ja diz o que foi.
+    const descricao=texto('descricao')??categorias.find(c=>c.id===categoriaId)?.nome??'Despesa'
+    const body={descricao,categoriaId,valor:Number(f.get('valor')),data:String(f.get('data')),
+      vencimento:texto('vencimento'),dataPagamento:null,formaPagamento:texto('formaPagamento'),
       veiculoId:f.get('veiculoId')?Number(f.get('veiculoId')):null,motoristaId:f.get('motoristaId')?Number(f.get('motoristaId')):null,
       protocolo:texto('protocolo'),observacoes:texto('observacoes'),status:(texto('status')??'PENDENTE') as Despesa['status'],
-      natureza:'GERAL' as const}
+      natureza:'GERAL' as const,descontaComissao:f.get('descontaComissao')==='on'}
     setErro('');setMensagem('')
     // Quem responde pelo caixa nao precisa aprovar o proprio lancamento: a
     // despesa do administrador ja nasce aprovada, e paga se ele disse que ja
@@ -92,18 +99,20 @@ export default function DespesasPage(){
     // A janela fica aberta quando da erro: fechar levaria embora a unica
     // explicacao de por que a despesa continua na lista.
     catch(x){setErro((x as Error).message)}finally{setApagando(false)}}
-  return <div className="page-enter pagina-despesas"><header className="page-heading"><div><span className="eyebrow">Saídas</span><h1>Despesas</h1><p>Custos da operação vinculados a veículos, motoristas e protocolos.</p></div><button className="button button-primary" onClick={()=>setForm(true)}>Registrar despesa</button></header>
+  return <div className="page-enter pagina-despesas"><header className="page-heading"><div><span className="eyebrow">Saídas</span><h1>Despesas</h1><p>Custos da operação vinculados a veículos, motoristas e protocolos.</p></div><button className="button button-primary" onClick={abrirForm}>Registrar despesa</button></header>
     {erro?<div className="form-alert" role="alert">{erro}</div>:null}{carregando?<Carregando/>:null}{mensagem?<div className="success-notice">{mensagem}</div>:null}
     {admin?<section className="panel">{lista.length?<div className="table-scroll"><table><thead><tr><th>Descrição</th><th>Categoria</th><th>Data</th><th>Veículo</th><th>Socorrista</th><th>Situação</th><th>Aprovação</th><th>Valor</th><th>Comprovante</th><th/></tr></thead><tbody>
-      {lista.map(d=><tr key={d.id}><td><strong>{d.descricao}</strong><small>{d.criadoPor}</small></td><td>{d.categoria}</td><td>{data(d.data)}</td><td>{d.veiculo||'—'}</td><td>{d.motorista||'—'}</td><td><StatusBadge status={d.status}/></td><td>{d.aprovada?<span className="approved">Aprovada</span>:<button className="table-action" onClick={()=>void aprovar(d.id)}>Aprovar</button>}</td><td className="negative"><strong>{moeda(d.valor)}</strong></td>
+      {lista.map(d=><tr key={d.id}><td><strong>{d.descricao}</strong><small>{d.criadoPor}</small></td><td>{d.categoria}</td><td>{data(d.data)}</td><td>{d.veiculo||'—'}</td><td>{d.motorista||'—'}{d.descontaComissao?<small>Desconta da comissão</small>:null}</td><td><StatusBadge status={d.status}/></td><td>{d.aprovada?<span className="approved">Aprovada</span>:<button className="table-action" onClick={()=>void aprovar(d.id)}>Aprovar</button>}</td><td className="negative"><strong>{moeda(d.valor)}</strong></td>
         <td>{d.comprovanteNomeOriginal?<span className="comprovante-anexado"><button className="table-action" onClick={()=>void abrir(d)}>Ver</button><button className="table-action table-action-danger" onClick={()=>void remover(d)}>Remover</button></span>
           :<label className="table-action file-action">Anexar comprovante<input type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" onChange={e=>{const arquivo=e.target.files?.[0];if(arquivo)void anexar(d,arquivo);e.target.value=''}}/></label>}</td>
         <td><span className="acoes-da-linha">{d.aprovada&&d.status!=='PAGO'&&d.status!=='REJEITADO'?<button className="table-action" onClick={()=>void pagar(d.id)}>Registrar pagamento</button>:null}
-          <button className="table-action botao-lixeira" title={`Excluir ${d.descricao}`} aria-label={`Excluir despesa ${d.descricao}`} onClick={()=>setExcluindo(d)}>
+          {/* A comissao nasce e se recalcula sozinha a partir da OP: apagar a
+              linha nao adianta, ela voltaria no proximo recalculo. */}
+          {d.protocolo?.startsWith('COMISSAO-')?<small>Automática</small>:<button className="table-action botao-lixeira" title={`Excluir ${d.descricao}`} aria-label={`Excluir despesa ${d.descricao}`} onClick={()=>setExcluindo(d)}>
             <IconeLixeira/>
-          </button></span></td></tr>)}
+          </button>}</span></td></tr>)}
       </tbody></table></div>:<Vazio titulo="Nenhuma despesa" descricao="Registre custos ou aguarde lançamentos dos socorristas."/>}</section>
-      :<section className="employee-callout"><span className="eyebrow">Perfil socorrista</span><h2>Registre os custos assim que acontecerem.</h2><p>Seus lançamentos serão conferidos pelo administrador antes de entrarem no financeiro.</p><button className="button button-primary" onClick={()=>setForm(true)}>Registrar agora</button></section>}
+      :<section className="employee-callout"><span className="eyebrow">Perfil socorrista</span><h2>Registre os custos assim que acontecerem.</h2><p>Seus lançamentos serão conferidos pelo administrador antes de entrarem no financeiro.</p><button className="button button-primary" onClick={abrirForm}>Registrar agora</button></section>}
     {admin?<section className="panel" aria-label="Despesas fixas"><header className="panel-title"><div><h2>Despesas fixas</h2><p>O que cai todo mês: aluguel, seguro, parcela. Cadastre uma vez e lance o mês quando quiser.</p></div>
       <div className="heading-actions"><Campo rotulo="Mês"><input aria-label="Mês do lançamento" type="month" value={mes} onChange={e=>setMes(e.target.value)}/></Campo>
         <button className="button button-primary" disabled={lancando||!fixas.some(f=>f.ativo)} onClick={()=>void lancarFixas()}>{lancando?'Lançando…':'Lançar as fixas do mês'}</button></div></header>
@@ -115,20 +124,31 @@ export default function DespesasPage(){
         <CampoNumero rotulo="Dia do vencimento" name="diaVencimento" decimais={0} min={1} max={31} required/>
         <Selecao rotulo="Veículo da despesa fixa" name="veiculoId" vazio="Sem veículo" opcoes={veiculos.map(x=>({valor:x.id,texto:x.identificacao}))}/>
         <button className="button button-ghost">Adicionar</button></form></section>:null}
-    {form?<Modal etiqueta="Comprovante operacional" titulo="Registrar despesa" largo aoFechar={()=>setForm(false)}>
-      <form onSubmit={salvar} className="form-grid three-columns"><label className="field field-wide"><span>Descrição</span><input name="descricao" required autoCapitalize="sentences" autoComplete="off"/></label>
-        <Selecao rotulo="Categoria" name="categoriaId" required opcoes={categorias.map(x=>({valor:x.id,texto:x.nome}))}/>
+    {form?<Modal etiqueta="Saída" titulo="Registrar despesa" largo aoFechar={()=>setForm(false)}>
+      {/* O essencial primeiro: quanto, no que, quando e de quem. O resto e raro e
+          fica em "Mais detalhes", fechado. */}
+      <form onSubmit={salvar} className="form-grid three-columns">
         <CampoValor rotulo="Valor" name="valor" required/>
-        <Selecao rotulo="Situação" name="status" opcoes={[{valor:'PAGO',texto:'Paga'},{valor:'PENDENTE',texto:'Pendente'}]}/>
+        <Selecao rotulo="Categoria" name="categoriaId" required opcoes={categorias.map(x=>({valor:x.id,texto:x.nome}))}/>
         <label className="field"><span>Data</span><input name="data" type="date" defaultValue={hoje()} required/></label>
-        <label className="field"><span>Vencimento</span><input name="vencimento" type="date"/></label><label className="field"><span>Data do pagamento</span><input name="dataPagamento" type="date"/></label>
-        <Selecao rotulo="Forma de pagamento" name="formaPagamento" vazio="Não informada" opcoes={FORMAS_PAGAMENTO}/>
-        <Selecao rotulo="Veículo" name="veiculoId" vazio="Não relacionado" opcoes={veiculos.map(x=>({valor:x.id,texto:x.identificacao}))}/>
-        <Selecao rotulo="Socorrista" name="motoristaId" vazio="Não relacionado" opcoes={motoristas.map(x=>({valor:x.id,texto:x.nome}))}/>
-        <label className="field"><span>Protocolo ou referência</span><input name="protocolo" autoCapitalize="characters" autoCorrect="off" spellCheck={false}/></label><label className="field two-span"><span>Comprovante (referência)</span><input name="comprovante" placeholder="Nome ou caminho do arquivo" autoCapitalize="sentences" autoComplete="off"/></label>
-        <label className="field field-wide"><span>Observações</span><textarea name="observacoes" rows={3}/></label>
+        <Selecao rotulo="Viatura" name="veiculoId" vazio="Nenhuma" opcoes={veiculos.map(x=>({valor:x.id,texto:x.identificacao}))}/>
+        <Selecao rotulo="Socorrista" name="motoristaId" vazio="Nenhum" onChange={e=>setSocorristaDoForm(e.target.value)} opcoes={motoristas.map(x=>({valor:x.id,texto:x.nome}))}/>
+        <label className="field"><span>Descrição</span><input name="descricao" placeholder="Opcional" autoCapitalize="sentences" autoComplete="off"/></label>
+        {admin&&socorristaDoForm
+          ?<label className="porto-divergence field-wide despesa-desconto"><input type="checkbox" name="descontaComissao" aria-label="Descontar da comissão"/><span>Descontar da comissão do socorrista — gasto pessoal que ele pediu para tirar do bolso dele.</span></label>
+          :null}
+        <details className="field-wide despesa-mais-detalhes">
+          <summary>Mais detalhes</summary>
+          <div className="form-grid three-columns">
+            {admin?<Selecao rotulo="Situação" name="status" opcoes={[{valor:'PAGO',texto:'Paga'},{valor:'PENDENTE',texto:'A pagar'}]}/>:null}
+            <Selecao rotulo="Forma de pagamento" name="formaPagamento" vazio="Não informada" opcoes={FORMAS_PAGAMENTO}/>
+            <label className="field"><span>Vencimento</span><input name="vencimento" type="date"/></label>
+            <label className="field"><span>Protocolo ou referência</span><input name="protocolo" autoCapitalize="characters" autoCorrect="off" spellCheck={false}/></label>
+            <label className="field two-span"><span>Observações</span><input name="observacoes" autoCapitalize="sentences" autoComplete="off"/></label>
+          </div>
+        </details>
         <AcoesModal aoCancelar={()=>setForm(false)}>
-          <button className="button button-primary">Enviar despesa</button>
+          <button className="button button-primary">Salvar despesa</button>
         </AcoesModal>
       </form>
     </Modal>:null}

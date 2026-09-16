@@ -75,10 +75,10 @@ export async function baixarRelatorioComissoes(calendarioPagamentoId: number): P
 
   const resumo = await resumirComissoes(calendarioPagamentoId)
   const linhas: (string | number)[][] = [
-    ['Socorrista', 'Serviços pagos', 'Produção', 'Comissão bruta', 'Alimentação', 'Líquido', 'Pago em'],
+    ['Socorrista', 'Serviços pagos', 'Produção', 'Comissão bruta', 'Descontos', 'Líquido', 'Lançada em'],
     ...resumo.map(r => [
       r.socorrista, r.quantidadeServicosPagos, moeda(r.producaoPaga),
-      moeda(r.comissaoBruta), moeda(r.alimentacaoAprovada), moeda(r.liquido),
+      moeda(r.comissaoBruta), moeda(r.descontos), moeda(r.liquido),
       r.pagamento?.dataPagamento ?? '',
     ]),
   ]

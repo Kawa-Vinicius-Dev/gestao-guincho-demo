@@ -28,7 +28,7 @@ export interface Receita {
 }
 export interface Despesa {
   id:number; descricao:string; categoria:string; valor:number; data:string; vencimento?:string;
-  dataPagamento?:string; formaPagamento?:string; veiculo?:string; motorista?:string; protocolo?:string;
+  dataPagamento?:string; formaPagamento?:string; veiculo?:string; motorista?:string; protocolo?:string; descontaComissao?:boolean;
   comprovante?:string; observacoes?:string; status:'PENDENTE'|'PAGO'|'ATRASADO'|'REJEITADO';
   aprovada:boolean; criadoPor:string; comprovanteNomeOriginal?:string; comprovanteTamanhoBytes?:number
 }
@@ -107,13 +107,13 @@ export interface CalendarioPorto { id:number; dataPagamento:string; competenciaI
 export interface AlimentacaoComissao { id:number; motoristaId:number; data:string; valor:number; situacao:string; aprovada:boolean; observacoes?:string }
 export interface ServicoComissao { id:number; numeroOs:string; especialidade?:string; dataAtendimento:string; numeroOp:string; valorServico:number; comissaoServico:number }
 export interface PagamentoComissao { id:number; motoristaId:number; calendarioPagamentoId?:number; ordemPagamentoId?:number; despesaId:number; valorPago:number; dataPagamento:string; formaPagamento?:string; observacoes?:string; pagoPor:string; criadoEm:string }
-export interface Comissao { calendarioPagamentoId?:number; ordemPagamentoId?:number; numeroOp?:string; periodoInicio?:string; periodoFim?:string; periodo:string; socorrista:string; motoristaId:number; quantidadeServicosPagos:number; producaoPaga:number; percentualComissao:number; comissaoBruta:number; alimentacaoAprovada:number; alimentacaoPendente:number; liquido:number; aguardandoOp:boolean; servicos:ServicoComissao[]; alimentacoes:AlimentacaoComissao[]; pagamento?:PagamentoComissao }
-export interface ResumoComissao { motoristaId:number; socorrista:string; quantidadeServicosPagos:number; producaoPaga:number; comissaoBruta:number; alimentacaoAprovada:number; liquido:number; pagamento?:PagamentoComissao }
+export interface Comissao { calendarioPagamentoId?:number; ordemPagamentoId?:number; numeroOp?:string; periodoInicio?:string; periodoFim?:string; periodo:string; socorrista:string; motoristaId:number; quantidadeServicosPagos:number; producaoPaga:number; percentualComissao:number; comissaoBruta:number; descontos:number; descontosPendentes:number; liquido:number; aguardandoOp:boolean; servicos:ServicoComissao[]; gastos:DespesaDoSocorrista[]; pagamento?:PagamentoComissao }
+export interface ResumoComissao { motoristaId:number; socorrista:string; quantidadeServicosPagos:number; producaoPaga:number; comissaoBruta:number; descontos:number; liquido:number; pagamento?:PagamentoComissao }
 export interface ServicoSocorrista { id:number; numeroOs:string; dataAtendimento?:string; especialidade?:string; viatura?:string; numeroOp?:string; valorServico:number; statusPagamento:'PAGO'|'PAGO_EM_OUTRO_PERIODO'|'AGUARDANDO_PAGAMENTO'; pagoNoPeriodo:boolean; comissaoGerada?:number }
 /**
- * Uma despesa lancada no nome do socorrista. `descontaDaComissao` e o que separa
- * as duas leituras: toda despesa ligada a ele aparece na tela dele, mas so a
- * alimentacao entra no fechamento — mostrar nao e cobrar.
+ * Um gasto lancado no nome do socorrista. `descontaDaComissao` e o que separa
+ * as duas leituras: todo gasto ligado a ele aparece na tela dele, mas so o que
+ * foi marcado para descontar sai da comissao — mostrar nao e cobrar.
  */
 export interface DespesaDoSocorrista { id:number; descricao:string; data:string; valor:number; categoria:string; veiculo?:string; situacao:Despesa['status']; aprovada:boolean; descontaDaComissao:boolean; observacoes?:string }
 export interface DetalheSocorrista { id:number; nome:string; ativo:boolean; telefone?:string; email?:string; qra?:string; veiculosUtilizados:string[]; totalServicosPrestados:number; comissao:Comissao; servicos:ServicoSocorrista[]; despesas:DespesaDoSocorrista[] }

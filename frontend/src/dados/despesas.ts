@@ -23,7 +23,7 @@ import { moduloNoSupabase } from './modo'
  */
 const COLUNAS = [
   'id', 'descricao', 'valor', 'data_lancamento', 'vencimento', 'data_pagamento',
-  'forma_pagamento', 'status', 'aprovada', 'protocolo', 'observacoes',
+  'forma_pagamento', 'status', 'aprovada', 'protocolo', 'observacoes', 'desconta_comissao',
   'comprovante_arquivo', 'comprovante_nome_original', 'comprovante_tamanho_bytes',
   'categorias(nome)', 'veiculos(identificacao)', 'motoristas(nome)', 'perfis!despesas_criado_por_fkey(nome)',
 ].join(',')
@@ -41,6 +41,7 @@ type LinhaDespesa = {
   aprovada: boolean
   protocolo: string | null
   observacoes: string | null
+  desconta_comissao?: boolean
   comprovante_arquivo: string | null
   comprovante_nome_original: string | null
   comprovante_tamanho_bytes: number | null
@@ -68,6 +69,7 @@ function paraModelo(linha: LinhaDespesa): Despesa {
     veiculo: um(linha.veiculos)?.identificacao,
     motorista: um(linha.motoristas)?.nome,
     protocolo: linha.protocolo ?? undefined,
+    descontaComissao: Boolean(linha.desconta_comissao),
     comprovante: linha.comprovante_arquivo ?? undefined,
     observacoes: linha.observacoes ?? undefined,
     status: linha.status,
@@ -99,6 +101,8 @@ export interface DadosDespesa {
    * unica que desconta da comissao.
    */
   natureza?: 'GERAL' | 'ALIMENTACAO_FUNCIONARIO'
+  /** Gasto pessoal do socorrista que sai da comissao dele. So vale com socorrista. */
+  descontaComissao?: boolean
 }
 
 /**
@@ -174,6 +178,7 @@ export async function criarDespesa(dados: DadosDespesa, jaAprovada = false): Pro
       protocolo: dados.protocolo || null,
       observacoes: dados.observacoes || null,
       natureza: dados.natureza ?? 'GERAL',
+      desconta_comissao: Boolean(dados.descontaComissao && dados.motoristaId),
       status: 'PENDENTE',
       aprovada: false,
       criado_por: await usuarioAtualId(),
@@ -279,6 +284,7 @@ async function lancarJaAprovada(dados: DadosDespesa): Promise<Despesa | null> {
     p_natureza: dados.natureza ?? 'GERAL',
     p_paga: dados.status === 'PAGO',
     p_data_pagamento: dados.dataPagamento || null,
+    p_desconta_comissao: Boolean(dados.descontaComissao && dados.motoristaId),
   })
   // So a ausencia da funcao volta para o caminho antigo. Recusa de permissao,
   // valor invalido e qualquer outro erro sobem como erro: sao respostas de
