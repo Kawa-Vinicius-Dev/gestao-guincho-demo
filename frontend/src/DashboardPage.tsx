@@ -11,7 +11,7 @@ import { data } from './utils/formatadores'
 /**
  * Visao geral: o painel principal do sistema.
  *
- * Segue a forma do painel Porto. O lucro operacional domina, receita e despesa
+ * Segue a forma do painel Porto. O lucro domina, receitas e despesas
  * ficam ao lado; a barra diz o que a operacao ainda deve; os graficos dizem quem
  * trouxe o dinheiro e para onde ele foi. Km so aparece quando ha km registrado.
  */
@@ -52,9 +52,9 @@ export default function DashboardPage(){
 
   return <div className="page-enter dashboard-tech painel-visao">
     <CabecalhoPagina
-      modulo="Central financeira"
+      modulo="Financeiro"
       titulo="Visão geral"
-      descricao="Quanto sobrou no período, quem trouxe o dinheiro e para onde ele foi."
+      descricao="Lucro, receitas e despesas do período."
       contexto={periodoValido
         ? <>Período selecionado: <strong>{data(inicio)}</strong> → <strong>{data(fim)}</strong></>
         : undefined}
@@ -108,9 +108,8 @@ export default function DashboardPage(){
       : null}
 
     <p className="calculation-note">
-      <strong>Como calculamos:</strong> lucro operacional = receita recebida − despesas aprovadas
-      e pagas. O serviço da Porto conta no período da OP que o pagou, e a comissão vira despesa
-      quando é paga.
+      <strong>Como calculamos:</strong> lucro = receitas − despesas pagas. Serviço da Porto
+      conta no período da OP; comissão vira despesa quando é paga.
     </p>
   </div>
 }

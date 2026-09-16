@@ -15,8 +15,9 @@ import { moeda, percentual } from '../utils/formatadores'
 const CENTAVO = 0.005
 
 /**
- * Lucro operacional em destaque: e a conta que o dono do guincho abre o sistema
- * para ver. Receita e despesa ficam ao lado, porque sao as duas parcelas dele.
+ * Lucro em destaque: e a conta que o dono do guincho abre o sistema para ver. Ao
+ * lado, as duas parcelas dele — receitas e despesas —, cada uma com uma barra na
+ * mesma escala: a distancia entre as duas e o lucro, sem precisar fazer a conta.
  * "A receber" so aparece quando existe: na Porto a OP chega paga e o painel do
  * dia nasce sem valor, entao ali ele seria sempre zero.
  */
@@ -24,43 +25,52 @@ export function ResultadoDoPeriodo({ dados, atualizando }: { dados: Dashboard; a
   const lucro = dados.saldoRealizado
   const margem = dados.receitaRecebida ? lucro / dados.receitaRecebida * 100 : null
   const negativo = lucro < 0
+  const escala = Math.max(dados.receitaRecebida, dados.despesasPagas, 1)
+  // Valor zero nao desenha barra; valor pequeno ganha um minimo visivel.
+  const largura = (v: number) => `${v > 0 ? Math.max(v / escala * 100, 1.5) : 0}%`
+  const servicos = dados.servicosDoPeriodo ?? 0
+
   return <div className={`destaque-corpo${atualizando ? ' atualizando' : ''}`}>
     <div className="destaque-numero">
-      <span>Lucro operacional</span>
+      <span>Lucro</span>
       <strong className={negativo ? 'destaque-negativo' : undefined}>{moeda(lucro)}</strong>
       <small>
         {margem !== null
           ? <><b className={negativo ? 'destaque-negativo' : undefined}>Margem de {percentual(margem)}</b> · </>
           : null}
-        receita recebida − despesas pagas
+        receitas − despesas
       </small>
     </div>
 
-    <dl className="destaque-contexto">
-      <div>
-        <dt><i className="marca-recebido"/>Receita recebida</dt>
-        <dd>{moeda(dados.receitaRecebida)}</dd>
-        {dados.servicosDoPeriodo
-          ? <small>{dados.servicosDoPeriodo} {dados.servicosDoPeriodo === 1 ? 'serviço' : 'serviços'} no período</small>
-          : null}
+    <div className="resultado-partes">
+      <div className="resultado-parte resultado-receitas">
+        <span className="resultado-parte-nome">Receitas</span>
+        <strong>{moeda(dados.receitaRecebida)}</strong>
+        <span className="resultado-trilho" aria-hidden="true">
+          <span style={{ width: largura(dados.receitaRecebida) }}/>
+        </span>
+        <small>{servicos ? `${servicos} ${servicos === 1 ? 'serviço' : 'serviços'}` : 'Nenhuma receita'}</small>
       </div>
-      <div>
-        <dt><i className="marca-despesa"/>Despesas pagas</dt>
-        <dd>{moeda(dados.despesasPagas)}</dd>
+      <div className="resultado-parte resultado-despesas">
+        <span className="resultado-parte-nome">Despesas</span>
+        <strong>{moeda(dados.despesasPagas)}</strong>
+        <span className="resultado-trilho" aria-hidden="true">
+          <span style={{ width: largura(dados.despesasPagas) }}/>
+        </span>
         <small>{dados.despesasPagas
           ? dados.receitaRecebida
-            ? `${percentual(dados.despesasPagas / dados.receitaRecebida * 100)} da receita`
-            : 'Aprovadas e quitadas'
-          : 'Nenhuma despesa paga'}</small>
+            ? `${percentual(dados.despesasPagas / dados.receitaRecebida * 100)} das receitas`
+            : 'Sem receita no período'
+          : 'Nenhuma despesa'}</small>
       </div>
       {dados.receitaPrevista > 0
-        ? <div>
-            <dt>A receber</dt>
-            <dd>{moeda(dados.receitaPrevista)}</dd>
+        ? <div className="resultado-a-receber">
+            <span>A receber</span>
+            <strong>{moeda(dados.receitaPrevista)}</strong>
             <small>{dados.totalAtrasado > 0 ? `${moeda(dados.totalAtrasado)} em atraso` : 'Nada em atraso'}</small>
           </div>
         : null}
-    </dl>
+    </div>
   </div>
 }
 
@@ -73,13 +83,13 @@ export function IndicadoresDaOperacao({ dados }: { dados: Dashboard }) {
   const pendentes = dados.servicosPendentes ?? 0
   const comissao = dados.comissaoAPagar ?? 0
   return <GradeIndicadores>
-    <Indicador rotulo="Serviços do período" valor={servicos}
+    <Indicador rotulo="Serviços" valor={servicos}
       apoio={pendentes
         ? `${pendentes} ${pendentes === 1 ? 'aguarda' : 'aguardam'} OP`
-        : servicos ? `${moeda(dados.producaoPaga ?? 0)} pagos pela Porto` : 'Nenhum serviço no período'}/>
-    <Indicador rotulo="Comissão a repassar" valor={moeda(comissao)}
+        : servicos ? `${moeda(dados.producaoPaga ?? 0)} pagos pela Porto` : 'Nenhum serviço'}/>
+    <Indicador rotulo="Comissão a pagar" valor={moeda(comissao)}
       tom={comissao > 0 ? 'atencao' : 'neutro'}
-      apoio={comissao > 0 ? 'Devida à equipe, ainda não paga' : 'Nenhuma comissão pendente'}/>
+      apoio={comissao > 0 ? 'Ainda não paga à equipe' : 'Nada a pagar'}/>
     {dados.despesasPrevistas > 0
       ? <Indicador rotulo="Despesas a pagar" valor={moeda(dados.despesasPrevistas)}
           tom="atencao" apoio="Aprovadas, ainda não pagas"/>
@@ -97,8 +107,8 @@ export function PainelDeGastos({ dados, inicio, fim }: { dados: Dashboard; inici
   return <section className="panel painel-gastos">
     <header className="panel-title">
       <div>
-        <span className="eyebrow">Para onde o dinheiro foi</span>
-        <h2>Composição e ritmo dos gastos</h2>
+        <span className="eyebrow">Despesas</span>
+        <h2>Para onde foi o dinheiro</h2>
         {maior
           ? <p>
               <strong>{maior.categoria}</strong> puxou {percentual(maior.participacao)} de tudo
@@ -106,12 +116,12 @@ export function PainelDeGastos({ dados, inicio, fim }: { dados: Dashboard; inici
             </p>
           : null}
       </div>
-      <Link to="/despesas">Abrir despesas</Link>
+      <Link to="/despesas">Ver despesas</Link>
     </header>
     {categorias.length
       ? <div className="gastos-leitura">
           <section aria-labelledby="titulo-composicao-gastos">
-            <h3 id="titulo-composicao-gastos">Composição por categoria</h3>
+            <h3 id="titulo-composicao-gastos">Por categoria</h3>
             <GastosPorCategoria total={dados.despesasPagas}
               linhas={categorias.map(c => ({
                 id: c.categoriaId, rotulo: c.categoria, valor: c.valor,
@@ -119,7 +129,7 @@ export function PainelDeGastos({ dados, inicio, fim }: { dados: Dashboard; inici
               }))}/>
           </section>
           <section aria-labelledby="titulo-trajetoria-gastos">
-            <h3 id="titulo-trajetoria-gastos">Trajetória no período</h3>
+            <h3 id="titulo-trajetoria-gastos">Ao longo do período</h3>
             <DespesaAcumulada pontos={dados.despesasAcumuladasPorDia ?? []}
               inicio={inicio} fim={fim}/>
           </section>
@@ -133,10 +143,10 @@ export function PainelDeKm({ dados }: { dados: Dashboard }) {
   return <section className="panel">
     <header className="panel-title">
       <div>
-        <span className="eyebrow">Deslocamento</span>
+        <span className="eyebrow">Km</span>
         <h2>Km rodado × km morto</h2>
       </div>
-      <Link to="/quilometragem">Abrir quilometragem</Link>
+      <Link to="/quilometragem">Ver km</Link>
     </header>
     <ProporcaoKm remunerado={dados.kmRemunerado} morto={dados.kmMorto}
       custoMorto={dados.custoKmMorto}/>
@@ -156,10 +166,10 @@ export function PainelFaturamentoPorSocorrista({ dados }: { dados: Dashboard }) 
   const semDono = (dados.producaoPaga ?? 0) - pessoas.reduce((soma, p) => soma + p.producao, 0)
   if (semDono > CENTAVO) linhas.push({ chave: 'sem', rotulo: 'Sem socorrista', valor: semDono, semVinculo: true })
 
-  return <Painel etiqueta="Por pessoa" titulo="Faturamento por socorrista"
-    aoLado={<Link to="/equipe">Abrir socorristas</Link>}>
-    <FaturamentoPorGrupo descricao="Faturamento por socorrista no período"
-      vazio="Nenhum serviço pago neste período." linhas={linhas}/>
+  return <Painel etiqueta="Receitas" titulo="Por socorrista"
+    aoLado={<Link to="/equipe">Ver socorristas</Link>}>
+    <FaturamentoPorGrupo descricao="Receitas por socorrista"
+      vazio="Nenhuma receita no período." linhas={linhas}/>
   </Painel>
 }
 
@@ -177,9 +187,9 @@ export function PainelFaturamentoPorViatura({ dados }: { dados: Dashboard }) {
   const semDono = dados.receitaRecebida - viaturas.reduce((soma, v) => soma + v.receitas, 0)
   if (semDono > CENTAVO) linhas.push({ chave: 'sem', rotulo: 'Sem viatura', valor: semDono, semVinculo: true })
 
-  return <Painel etiqueta="Por viatura" titulo="Faturamento por viatura"
-    aoLado={<Link to="/veiculos">Abrir veículos</Link>}>
-    <FaturamentoPorGrupo descricao="Faturamento por viatura no período"
-      vazio="Nenhuma receita neste período." linhas={linhas}/>
+  return <Painel etiqueta="Receitas" titulo="Por viatura"
+    aoLado={<Link to="/veiculos">Ver viaturas</Link>}>
+    <FaturamentoPorGrupo descricao="Receitas por viatura"
+      vazio="Nenhuma receita no período." linhas={linhas}/>
   </Painel>
 }

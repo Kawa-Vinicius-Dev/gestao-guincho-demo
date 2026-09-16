@@ -35,12 +35,14 @@ test('o lucro operacional abre a tela, com receita e despesa ao lado',async()=>{
   render(<MemoryRouter><DashboardPage/></MemoryRouter>)
 
   const resultado=await screen.findByRole('region',{name:/resultado do período/i})
-  expect(await within(resultado).findByText('Lucro operacional')).toBeInTheDocument()
+  expect(await within(resultado).findByText('Lucro')).toBeInTheDocument()
   expect(within(resultado).getByText('R$ 54.770,00')).toBeInTheDocument()
   expect(within(resultado).getByText(/Margem de 73,3%/)).toBeInTheDocument()
   expect(within(resultado).getByText('R$ 74.770,00')).toBeInTheDocument()
   expect(within(resultado).getByText('R$ 20.000,00')).toBeInTheDocument()
-  expect(within(resultado).getByText('26,7% da receita')).toBeInTheDocument()
+  expect(within(resultado).getByText('Receitas')).toBeInTheDocument()
+  expect(within(resultado).getByText('Despesas')).toBeInTheDocument()
+  expect(within(resultado).getByText('26,7% das receitas')).toBeInTheDocument()
 })
 
 // Na Porto a OP chega paga e o painel do dia nasce sem valor: "a receber" zerado
@@ -50,7 +52,7 @@ test('a receber só aparece quando existe',async()=>{
   render(<MemoryRouter><DashboardPage/></MemoryRouter>)
 
   const resultado=await screen.findByRole('region',{name:/resultado do período/i})
-  await within(resultado).findByText('Lucro operacional')
+  await within(resultado).findByText('Lucro')
   expect(within(resultado).queryByText('A receber')).not.toBeInTheDocument()
 })
 
@@ -66,9 +68,9 @@ test('a barra mostra serviços e a comissão que ainda é da equipe',async()=>{
   servidorDaVisao(dashboard())
   render(<MemoryRouter><DashboardPage/></MemoryRouter>)
 
-  expect(await screen.findByText('Serviços do período')).toBeInTheDocument()
+  expect(await screen.findByText('Serviços')).toBeInTheDocument()
   expect(screen.getByText('275')).toBeInTheDocument()
-  expect(screen.getByText('Comissão a repassar')).toBeInTheDocument()
+  expect(screen.getByText('Comissão a pagar')).toBeInTheDocument()
   expect(screen.getByText('R$ 14.166,28')).toBeInTheDocument()
   // Despesa a pagar zerada nao vira cartao.
   expect(screen.queryByText('Despesas a pagar')).not.toBeInTheDocument()
@@ -80,14 +82,14 @@ test('faturamento por socorrista e por viatura fecha com o total pago',async()=>
   servidorDaVisao(dashboard())
   render(<MemoryRouter><DashboardPage/></MemoryRouter>)
 
-  const pessoas=await screen.findByRole('list',{name:/faturamento por socorrista/i})
+  const pessoas=await screen.findByRole('list',{name:/receitas por socorrista/i})
   const linhas=within(pessoas).getAllByRole('listitem')
   expect(linhas).toHaveLength(5)
   expect(linhas[0]).toHaveTextContent('JEFERSON MARTINS DA SILVA')
   expect(linhas[4]).toHaveTextContent('Sem socorrista')
   expect(linhas[4]).toHaveTextContent(/R\$\s3\.938,62/)
 
-  const viaturas=screen.getByRole('list',{name:/faturamento por viatura/i})
+  const viaturas=screen.getByRole('list',{name:/receitas por viatura/i})
   expect(within(viaturas).getByText('Sem viatura')).toBeInTheDocument()
   expect(within(viaturas).getByText(/R\$\s74\.770,00/)).toBeInTheDocument()
 })
@@ -98,7 +100,7 @@ test('viatura com despesa mostra o custo ao lado do faturamento',async()=>{
   ]}))
   render(<MemoryRouter><DashboardPage/></MemoryRouter>)
 
-  const viaturas=await screen.findByRole('list',{name:/faturamento por viatura/i})
+  const viaturas=await screen.findByRole('list',{name:/receitas por viatura/i})
   expect(within(viaturas).getByText('L168')).toBeInTheDocument()
   expect(within(viaturas).getByText(/custo R\$\s1\.200,00/)).toBeInTheDocument()
   expect(within(viaturas).queryByText('Sem viatura')).not.toBeInTheDocument()
@@ -107,7 +109,7 @@ test('viatura com despesa mostra o custo ao lado do faturamento',async()=>{
 test('km só aparece quando há km registrado',async()=>{
   servidorDaVisao(dashboard())
   const {unmount}=render(<MemoryRouter><DashboardPage/></MemoryRouter>)
-  await screen.findByText('Serviços do período')
+  await screen.findByText('Serviços')
   expect(screen.queryByText(/km rodado × km morto/i)).not.toBeInTheDocument()
   unmount()
   // O mesmo periodo ficaria no cache de 60s; a segunda leitura precisa ir ao servidor.
@@ -125,8 +127,8 @@ test('sem resumo Porto duplicado e com a regra de período certa',async()=>{
   servidorDaVisao(dashboard())
   render(<MemoryRouter><DashboardPage/></MemoryRouter>)
 
-  await screen.findByText('Serviços do período')
+  await screen.findByText('Serviços')
   expect(screen.queryByText(/faturamento separado do caixa/i)).not.toBeInTheDocument()
-  expect(screen.getByText(/conta no período da OP que o pagou/)).toBeInTheDocument()
+  expect(screen.getByText(/conta no período da OP/)).toBeInTheDocument()
   expect(screen.queryByText(/vem do recebimento/)).not.toBeInTheDocument()
 })
