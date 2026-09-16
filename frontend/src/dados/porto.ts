@@ -1,6 +1,7 @@
 import { ApiError, api } from '../api/http'
 import type {
   AcertoPendenciaOsPorto, ConfirmacaoPorto, DashboardAltoNivelPorto, DashboardPorto, DetalheOpPorto,
+  OpDestaquePorto,
   JustificativaPorto, OrdemPagamentoPorto, OrdemServicoPorto, PendenciaOsPorto, PendenciaPorto,
   PreviaPorto, ResumoOpsPorto,
 } from '../types/modelos'
@@ -51,6 +52,19 @@ function opParaModelo(l: LinhaOp): OrdemPagamentoPorto {
     periodoInicio: (l.periodo_inicio as string) ?? undefined,
     periodoFim: (l.periodo_fim as string) ?? undefined,
     periodoFinanceiro: (l.periodo_financeiro as string) ?? undefined,
+  }
+}
+
+/** A OP em destaque do painel e a mesma linha da view, com o `vencida` calculado na RPC. */
+function opDestaqueParaModelo(l: LinhaOp): OpDestaquePorto {
+  const op = opParaModelo(l)
+  return {
+    id: op.id, numero: op.numero, valorTotal: op.valorTotal, valorRecebido: op.valorRecebido,
+    periodoInicio: op.periodoInicio, periodoFim: op.periodoFim,
+    dataPagamentoProgramada: op.dataPagamentoProgramada, dataRecebimento: op.dataRecebimento,
+    situacaoFinanceira: l.situacao_financeira as string, statusConciliacao: op.statusConciliacao,
+    quantidadeOrdensServico: op.quantidadeOrdensServico, divergencia: op.divergencia,
+    vencida: Boolean(l.vencida),
   }
 }
 
@@ -158,12 +172,15 @@ export async function obterDashboardPorto(params?: URLSearchParams): Promise<Das
 export async function obterDashboardAltoNivelPorto(
   inicio: string, fim: string, grao: 'DIA' | 'SEMANA' | 'MES' = 'DIA',
 ): Promise<DashboardAltoNivelPorto> {
-  return ou(
+  const bruto = ou(
     await supabase().rpc('porto_dashboard_alto_nivel', {
       p_inicio: inicio, p_fim: fim, p_grao: grao,
     }),
     'Não foi possível carregar o painel da Porto.',
-  ) as DashboardAltoNivelPorto
+  ) as Omit<DashboardAltoNivelPorto, 'opsDestaque'> & { opsDestaque: LinhaOp[] }
+  // As OPs em destaque vem da view com o nome das colunas (valor_total,
+  // periodo_fim...). Sem traduzir, a tabela do painel lia campos que nao existem.
+  return { ...bruto, opsDestaque: bruto.opsDestaque.map(opDestaqueParaModelo) }
 }
 
 export async function detalharOrdemPagamentoPorto(id: number): Promise<DetalheOpPorto> {

@@ -36,7 +36,7 @@ test('login chama o backend real, armazena apenas o token retornado e redirecion
   render(<App />)
   await entrar('  ADMIN@FLUXOGESTAO.LOCAL  ', 'Admin@123')
 
-  expect(await screen.findByRole('heading', { name: /visão financeira/i })).toBeInTheDocument()
+  expect(await screen.findByRole('heading', { name: 'Visão geral', level: 1 })).toBeInTheDocument()
   expect(credenciais).toEqual({ email: 'admin@fluxogestao.local', senha: 'Admin@123' })
   expect(sessionStorage.getItem(TOKEN_KEY)).toBe('token-real-do-backend')
   expect(sessionStorage.getItem(TOKEN_KEY)).not.toBe('demo:admin')
@@ -86,7 +86,7 @@ test('atualização restaura a sessão e logout remove o token', async () => {
   }))
 
   render(<App />)
-  expect(await screen.findByRole('heading', { name: /visão financeira/i })).toBeInTheDocument()
+  expect(await screen.findByRole('heading', { name: 'Visão geral', level: 1 })).toBeInTheDocument()
   expect(tokenRestaurado).toBe('Bearer token-sessao-existente')
 
   // Sair passa por confirmacao desde que o botao da barra virou um clique

@@ -1,29 +1,27 @@
 import { useEffect,useState } from 'react'
 import { Link } from 'react-router-dom'
-import { dashboardEmCache, lerDashboard, type ResumoPortoDashboard } from './dados/dashboard'
-import { FaixaDeIndicadores, PainelDaProducao, PainelDeGastos, PainelDeKm,
-  PainelPorSocorrista, PainelPorVeiculo, ResumoPorto } from './dashboard/PaineisDoResultado'
-import type { Dashboard, RecebimentoForaDoPeriodo } from './types/modelos'
-import { data, moeda } from './utils/formatadores'
+import { Campo } from './components/Campos'
+import { CabecalhoPagina } from './components/ui/Pagina'
+import { dashboardEmCache, lerDashboard } from './dados/dashboard'
+import { IndicadoresDaOperacao, PainelDeGastos, PainelDeKm, PainelFaturamentoPorSocorrista,
+  PainelFaturamentoPorViatura, ResultadoDoPeriodo } from './dashboard/PaineisDoResultado'
+import type { Dashboard } from './types/modelos'
+import { data } from './utils/formatadores'
 
+/**
+ * Visao geral: o painel principal do sistema.
+ *
+ * Segue a forma do painel Porto. O lucro domina, receitas e despesas
+ * ficam ao lado; a barra diz o que a operacao ainda deve; os graficos dizem quem
+ * trouxe o dinheiro e para onde ele foi. Km so aparece quando ha km registrado.
+ */
 
-const meses=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez']
-const rotuloMes=(mes:string)=>{const [ano,numeroMes]=mes.split('-').map(Number);return `${meses[numeroMes-1]}/${String(ano).slice(-2)}`}
 /** Abre no mes corrente, que e o recorte mais pedido; a partir dai o periodo e livre. */
 function mesCorrente(){const d=new Date(),mes=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`
   return {inicio:`${mes}-01`,fim:`${mes}-${String(new Date(d.getFullYear(),d.getMonth()+1,0).getDate()).padStart(2,'0')}`}}
-/** "Março/26" quando o periodo e um mes inteiro; senao mostra as duas datas. */
-function rotuloPeriodo(inicio:string,fim:string){
-  if(!inicio||!fim)return ''
-  const [ai,mi,di]=inicio.split('-').map(Number),[af,mf,df]=fim.split('-').map(Number)
-  if(ai===af&&mi===mf&&di===1&&df===new Date(af,mf,0).getDate())return rotuloMes(`${ai}-${String(mi).padStart(2,'0')}`)
-  const br=(v:string)=>v.split('-').reverse().join('/')
-  return inicio===fim?br(inicio):`${br(inicio)} a ${br(fim)}`
-}
 
 export default function DashboardPage(){
   const [{inicio,fim},setPeriodo]=useState(mesCorrente)
-  const [porto,setPorto]=useState<ResumoPortoDashboard|null>(null)
   const [financeiro,setFinanceiro]=useState<Dashboard|null>(null)
   const [erro,setErro]=useState('')
   // Enquanto revalida, a tela fica de pe com os numeros de antes em vez de
@@ -36,52 +34,31 @@ export default function DashboardPage(){
 
   useEffect(()=>{
     if(!inicio||!fim||inicio>fim){
-      setFinanceiro(null);setPorto(null);setErro('');setAtualizando(false);return
+      setFinanceiro(null);setErro('');setAtualizando(false);return
     }
     let valeu=true
     const guardado=dashboardEmCache(inicio,fim)
-    if(guardado){setFinanceiro(guardado.financeiro);setPorto(guardado.porto);setAtualizando(true)}
-    else{setFinanceiro(null);setPorto(null)}
+    if(guardado){setFinanceiro(guardado.financeiro);setAtualizando(true)}
+    else setFinanceiro(null)
     setErro('')
     lerDashboard(inicio,fim)
-      .then(r=>{if(!valeu)return;setFinanceiro(r.financeiro);setPorto(r.porto)})
+      .then(r=>{if(valeu)setFinanceiro(r.financeiro)})
       .catch(e=>{if(valeu)setErro(e.message)})
       .finally(()=>{if(valeu)setAtualizando(false)})
     return()=>{valeu=false}
   },[inicio,fim])
 
-  const margem=financeiro?.receitaRecebida
-    ? financeiro.saldoRealizado/financeiro.receitaRecebida*100
-    : 0
+  const temKm=Boolean(financeiro&&(financeiro.kmRemunerado||financeiro.kmMorto))
 
-  return <div className={atualizando?'page-enter dashboard-tech atualizando':'page-enter dashboard-tech'}>
-    <header className="page-heading dashboard-heading">
-      <div>
-        <span className="eyebrow">Central financeira · {rotuloPeriodo(inicio,fim)}</span>
-        <h1>Visão financeira</h1>
-        <p>
-          Quanto entrou, quanto saiu e o lucro real da operação — sem misturar faturamento
-          com resultado.
-        </p>
-      </div>
-      <div className="heading-actions">
-        <label className="month-picker">
-          <span>De</span>
-          <input aria-label="Data inicial" type="date" value={inicio}
-            max={fim||undefined}
-            onChange={e=>setPeriodo(p=>({...p,inicio:e.target.value}))}/>
-        </label>
-        <label className="month-picker">
-          <span>Até</span>
-          <input aria-label="Data final" type="date" value={fim}
-            min={inicio||undefined}
-            onChange={e=>setPeriodo(p=>({...p,fim:e.target.value}))}/>
-        </label>
-        <Link className="button button-primary" to="/despesas?novo=1">+ Registrar despesa</Link>
-      </div>
-    </header>
-
-    <AvisoRecebimentoForaDoPeriodo itens={financeiro?.recebimentosForaDoPeriodo}/>
+  return <div className="page-enter dashboard-tech painel-visao">
+    <CabecalhoPagina
+      modulo="Financeiro"
+      titulo="Visão geral"
+      descricao="Lucro, receitas e despesas do período."
+      contexto={periodoValido
+        ? <>Período selecionado: <strong>{data(inicio)}</strong> → <strong>{data(fim)}</strong></>
+        : undefined}
+      acoes={<Link className="button button-primary" to="/despesas?novo=1">+ Registrar despesa</Link>}/>
 
     {avisoPeriodo
       ? <div className="form-alert" role="alert">{avisoPeriodo}</div>
@@ -91,61 +68,48 @@ export default function DashboardPage(){
         </div>
       : null}
 
+    <section className="panel destaque" aria-label="Resultado do período">
+      <form className="destaque-periodo destaque-periodo-datas" onSubmit={e=>e.preventDefault()}>
+        <Campo rotulo="De">
+          <input aria-label="Data inicial" type="date" value={inicio} max={fim||undefined}
+            onChange={e=>setPeriodo(p=>({...p,inicio:e.target.value}))}/>
+        </Campo>
+        <Campo rotulo="Até">
+          <input aria-label="Data final" type="date" value={fim} min={inicio||undefined}
+            onChange={e=>setPeriodo(p=>({...p,fim:e.target.value}))}/>
+        </Campo>
+      </form>
+
+      {periodoValido&&financeiro
+        ? <ResultadoDoPeriodo dados={financeiro} atualizando={atualizando}/>
+        : periodoValido
+        ? <div className="loading-card" role="status">
+            {erro?'Não foi possível carregar os indicadores deste período.':'Carregando indicadores financeiros oficiais…'}
+          </div>
+        : null}
+    </section>
+
     {periodoValido&&financeiro
       ? <>
-          {/* Leitura de dez segundos primeiro; o resto explica de onde ela saiu. */}
-          <FaixaDeIndicadores dados={financeiro} margem={margem}/>
+          <IndicadoresDaOperacao dados={financeiro}/>
 
-          {/* Duas perguntas que andam juntas: no que o dinheiro foi, e quanto do
-              rodado nao foi pago. Lado a lado enquanto couber. */}
-          <div className="grade-painel grade-8-4">
-            <PainelDeGastos dados={financeiro} inicio={inicio} fim={fim}/>
-            <PainelDeKm dados={financeiro}/>
+          {temKm
+            ? <div className="grade-painel grade-8-4">
+                <PainelDeGastos dados={financeiro} inicio={inicio} fim={fim}/>
+                <PainelDeKm dados={financeiro}/>
+              </div>
+            : <PainelDeGastos dados={financeiro} inicio={inicio} fim={fim}/>}
+
+          <div className="painel-faturamento">
+            <PainelFaturamentoPorSocorrista dados={financeiro}/>
+            <PainelFaturamentoPorViatura dados={financeiro}/>
           </div>
-
-          {/* Desempenho, o pedido do cliente: viatura e pessoa, mesma forma,
-              lado a lado para comparar sem rolar de um para o outro. */}
-          <div className="grade-painel grade-6-6">
-            <PainelPorVeiculo dados={financeiro}/>
-            <PainelPorSocorrista dados={financeiro}/>
-          </div>
-
-          <PainelDaProducao dados={financeiro}/>
         </>
-      : !periodoValido
-        ? null
-        : erro
-        ? <div className="loading-card" role="status">Não foi possível carregar os indicadores deste período.</div>
-        : <div className="loading-card" role="status">Carregando indicadores financeiros oficiais…</div>}
-
-    {porto ? <ResumoPorto porto={porto}/> : null}
+      : null}
 
     <p className="calculation-note">
-      <strong>Como calculamos:</strong> lucro operacional = receitas recebidas − despesas
-      aprovadas e pagas. A data financeira da OP vem do recebimento, não da data do atendimento.
+      <strong>Como calculamos:</strong> lucro = receitas − despesas pagas. Serviço da Porto
+      conta no período da OP; comissão vira despesa quando é paga.
     </p>
-  </div>
-}
-
-/**
- * A Porto fecha a OP e paga semanas depois: o servico e de julho, o dinheiro
- * entra em agosto. Quem olha o mes do servico via receita zero e concluia que a
- * importacao tinha falhado — aconteceu tres vezes na operacao. Em vez de apenas
- * nao mostrar o valor, a tela diz onde ele esta.
- */
-function AvisoRecebimentoForaDoPeriodo({ itens }: { itens?: RecebimentoForaDoPeriodo[] }) {
-  if (!itens?.length) return null
-  const total = itens.reduce((soma, item) => soma + item.valor, 0)
-  const servicos = itens.reduce((soma, item) => soma + item.servicos, 0)
-  // Nome proprio: o card de carregamento tambem e um status, e sem distinguir
-  // os dois o leitor de tela anuncia "status" duas vezes sem dizer qual.
-  return <div className="success-notice" role="status" aria-label="Recebimento fora do período">
-    <strong>{moeda(total)}</strong> de {servicos} {servicos === 1 ? 'serviço prestado' : 'serviços prestados'}
-    {' '}neste período {itens.length === 1 ? 'entra' : 'entram'} em{' '}
-    {itens.map((item, indice) => <span key={item.dataPagamento}>
-      {indice > 0 ? (indice === itens.length - 1 ? ' e ' : ', ') : ''}
-      <strong>{data(item.dataPagamento)}</strong>
-    </span>)}
-    {' '}— fora da janela que você está vendo. Ajuste o período para conferir o recebimento.
   </div>
 }

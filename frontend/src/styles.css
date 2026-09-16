@@ -102,8 +102,7 @@ button,input,select,textarea{font:inherit}button{color:inherit}a{color:inherit}:
 .modal{margin:auto;max-height:calc(100dvh - 64px);overflow-y:auto}
 .modal-financial{width:min(900px,100%)}
 .porto-view-switch{display:flex;gap:6px;margin-bottom:18px}.porto-view-switch button{border:1px solid var(--line);background:var(--superficie);border-radius:9px;padding:9px 16px;font-weight:700;color:var(--muted);cursor:pointer}.porto-view-switch button.active{background:var(--navy-900);border-color:var(--navy-900);color:#fff}
-.porto-finance-summary{border:1px solid #cfe0f4;background:linear-gradient(135deg,#f7fbff,#fff);border-radius:16px;padding:22px;margin:22px 0}.porto-finance-summary header{display:flex;align-items:center;justify-content:space-between}.porto-finance-summary h2{margin:4px 0 0}.porto-finance-summary>div{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:18px}.porto-finance-summary>div span{display:flex;flex-direction:column;gap:4px;padding:14px;background:var(--superficie);border-radius:12px}.porto-finance-summary strong{font-size:1.35rem;color:var(--navy-900)}.porto-finance-summary p{margin:14px 0 0;color:var(--muted);font-size:.9rem}.porto-composition-upload{display:flex;align-items:end;gap:12px;margin:18px 0}.porto-history{border-top:1px solid var(--line);margin-top:20px;padding-top:16px}.porto-history p{color:var(--muted)}
-@media(max-width:760px){.porto-finance-summary>div{grid-template-columns:1fr}}
+.porto-composition-upload{display:flex;align-items:end;gap:12px;margin:18px 0}.porto-history{border-top:1px solid var(--line);margin-top:20px;padding-top:16px}.porto-history p{color:var(--muted)}
 
 .porto-confirm-sticky{position:sticky;top:12px;z-index:15;margin:14px 0;padding:14px;border:1px solid #cfe0f4;border-radius:12px;background:rgba(255,255,255,.97);box-shadow:0 10px 28px rgba(9,36,66,.12);backdrop-filter:blur(8px)}
 .porto-confirm-totals{display:flex;gap:14px;margin-right:auto}.porto-confirm-totals span{display:flex;flex-direction:column;color:var(--muted);font-size:9px}.porto-confirm-totals strong{color:var(--ink);font:600 18px 'Barlow Condensed',sans-serif}.porto-preview-table tbody tr{content-visibility:auto;contain-intrinsic-size:0 48px}
@@ -1246,18 +1245,19 @@ tbody tr{transition:background-color .14s ease}
 .panel-title h2{margin:var(--espaco-1) 0 0;font:600 25px 'Barlow Condensed',sans-serif}
 .panel-respiro>.panel-title,.panel-liso>.panel-title{margin-bottom:var(--espaco-3)}
 
-.grade-indicadores{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:var(--espaco-2);margin-bottom:var(--espaco-3)}
-.indicador{padding:var(--espaco-3) var(--espaco-4);border:1px solid var(--line);border-top:3px solid var(--line);border-radius:10px;background:var(--superficie);transition:transform .16s ease,box-shadow .16s ease}
-.indicador:hover{transform:translateY(-2px);box-shadow:0 12px 26px rgba(7,20,38,.07)}
+.grade-indicadores{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:1px;margin-bottom:var(--espaco-3);overflow:hidden;border:1px solid var(--line);border-radius:12px;background:var(--linha-suave);box-shadow:0 1px 2px rgba(7,20,38,.04)}
+.indicador{position:relative;padding:var(--espaco-3) var(--espaco-4);background:var(--superficie);transition:background .16s ease}
+.indicador:hover{background:var(--superficie-2)}
 .indicador span,.indicador strong,.indicador small{display:block}
-.indicador>span{color:var(--muted);font-size:var(--t-rotulo);text-transform:uppercase;letter-spacing:.08em}
-.indicador strong{margin:var(--espaco-2) 0 var(--espaco-1);font:600 var(--t-numero)/1 'Barlow Condensed',sans-serif;font-variant-numeric:tabular-nums}
+.indicador>span{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:var(--t-apoio);font-weight:500}
+.indicador>span:before{content:'';width:6px;height:6px;border-radius:50%;background:var(--line)}
+.indicador strong{margin:var(--espaco-2) 0 6px;color:var(--ink);font:600 30px/1 'Barlow Condensed',sans-serif;font-variant-numeric:tabular-nums}
 .indicador small{color:#8a99a9;font-size:var(--t-apoio);line-height:1.45}
-.indicador-alerta{border-top-color:var(--red);background:#fffafb}
+.indicador-alerta>span:before{background:var(--red)}
 .indicador-alerta strong{color:var(--red)}
-.indicador-atencao{border-top-color:#e0a530;background:#fffdf7}
+.indicador-atencao>span:before{background:#e0a530}
 .indicador-atencao strong{color:#8a6410}
-.indicador-positivo{border-top-color:var(--green)}
+.indicador-positivo>span:before{background:var(--green)}
 .indicador-positivo strong{color:var(--green)}
 
 .etiqueta{display:inline-block;padding:5px 10px;border-radius:6px;font-size:var(--t-rotulo);font-weight:600;letter-spacing:.02em}
@@ -1271,7 +1271,7 @@ tbody tr{transition:background-color .14s ease}
    fila de trabalho, evolucao em grafico, detalhe em tabela. Cor semantica so
    quando ha o que resolver - zero divergencia e boa noticia, nao alarme.
    Os espacos saem da escala (--e1..--e5); nenhum valor solto aqui. */
-.painel-porto>section,.painel-porto>div{margin-bottom:var(--espaco-3)}
+.painel-porto>section,.painel-porto>div,.painel-visao>section,.painel-visao>div{margin-bottom:var(--espaco-3)}
 .painel-filtros .ledger-filters{display:grid;grid-template-columns:minmax(240px,1.4fr) repeat(2,minmax(150px,.8fr)) auto;align-items:end;gap:var(--espaco-2)}
 
 /* Os tres numeros que respondem "quanto entrou". Unico bloco escuro da tela. */
@@ -1289,17 +1289,16 @@ tbody tr{transition:background-color .14s ease}
 .painel-progresso i{display:block;height:100%;border-radius:99px;background:#2fbf8f;transition:width .4s cubic-bezier(.22,1,.36,1)}
 
 /* "Precisa de atencao": fila de trabalho, nao lista de erros. */
-.painel-atencao ul{margin:0;padding:0;list-style:none;display:grid;gap:var(--espaco-2)}
-.painel-atencao li{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:var(--espaco-3);padding:var(--espaco-3) var(--espaco-3);border:1px solid var(--linha-suave);border-radius:10px;background:var(--superficie-2);transition:border-color .16s ease,background .16s ease,transform .16s ease}
-.painel-atencao li:hover{border-color:var(--blue-100);background:var(--blue-50);transform:translateX(2px)}
-.painel-atencao li strong{display:block;font-size:var(--t-corpo)}
-.painel-atencao li small{display:block;margin-top:5px;color:var(--muted);font-size:var(--t-apoio)}
-.painel-atencao-marca{width:9px;height:9px;border-radius:50%;background:#e0a530;box-shadow:0 0 0 4px rgba(224,165,48,.16)}
-.painel-atencao li.grave .painel-atencao-marca{background:var(--red);box-shadow:0 0 0 4px rgba(196,50,76,.14)}
-.painel-tudo-em-dia{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:var(--espaco-1) var(--espaco-3);margin:0;padding:var(--espaco-4);border:1px solid #bee8da;border-radius:10px;background:var(--ok-fundo)}
-.painel-tudo-em-dia>span{grid-row:1/3;display:grid;place-items:center;width:38px;height:38px;border-radius:50%;color:#fff;background:var(--green);font-size:16px}
-.painel-tudo-em-dia strong{color:#086546;font-size:14px}
-.painel-tudo-em-dia small{color:#3f7d69;font-size:var(--t-apoio)}
+.painel-atencao ul{margin:0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--espaco-2)}
+.painel-atencao li{position:relative;display:grid;grid-template-columns:1fr auto;align-items:center;gap:var(--espaco-2);padding:var(--espaco-2) var(--espaco-3) var(--espaco-2) calc(var(--espaco-3) + 4px);overflow:hidden;border:1px solid var(--line);border-radius:10px;background:var(--superficie);transition:border-color .16s ease,box-shadow .16s ease}
+.painel-atencao li:before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:#e0a530}
+.painel-atencao li.grave:before{background:var(--red)}
+.painel-atencao li:hover{border-color:#c9d6e3;box-shadow:0 6px 18px rgba(7,20,38,.06)}
+.painel-atencao li strong{display:block;color:var(--ink);font-size:var(--t-corpo);font-weight:600}
+.painel-atencao li small{display:block;margin-top:4px;color:var(--muted);font-size:var(--t-apoio)}
+.painel-atencao li .table-action{border:0;background:none;padding:6px 0 6px 10px;color:var(--blue-600);font-size:var(--t-apoio);font-weight:600;white-space:nowrap;text-decoration:none}
+.painel-atencao li .table-action:after{content:' →';transition:margin .16s ease}
+.painel-atencao li:hover .table-action:after{margin-left:3px}
 
 /* Grafico: barra para producao, linha para dinheiro. */
 .segmented{display:inline-flex;padding:3px;border:1px solid var(--line);border-radius:9px;background:var(--superficie-2)}
@@ -1330,20 +1329,6 @@ tbody tr{transition:background-color .14s ease}
 .legend-recebido{background:var(--green)}
 .legend-programado{background:#9db4cc}
 
-.painel-inferior{display:grid;grid-template-columns:1.25fr .75fr;gap:var(--espaco-3)}
-.pagamentos-trilho{display:flex;height:14px;overflow:hidden;border-radius:99px;background:var(--linha-suave)}
-.pagamentos-trilho span{transition:width .4s cubic-bezier(.22,1,.36,1)}
-.fatia-recebido{background:var(--green)}
-.fatia-aguardando{background:var(--blue-500)}
-.fatia-vencido{background:var(--red)}
-.pagamentos-proporcao dl{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--espaco-2) var(--espaco-4);margin:var(--espaco-4) 0 0}
-.pagamentos-proporcao dl>div{display:flex;align-items:baseline;justify-content:space-between;gap:var(--espaco-2);padding-bottom:var(--espaco-2);border-bottom:1px solid var(--linha-suave)}
-.pagamentos-proporcao dt{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:var(--t-apoio)}
-.pagamentos-proporcao dt i{width:9px;height:9px;border-radius:3px}
-.pagamentos-proporcao dd{margin:0;font:600 19px 'Barlow Condensed',sans-serif;font-variant-numeric:tabular-nums}
-.painel-insights ul{margin:0;padding:0;list-style:none;display:grid;gap:var(--espaco-2)}
-.painel-insights li{position:relative;padding-left:var(--espaco-3);color:#40536a;font-size:var(--t-corpo);line-height:1.6}
-.painel-insights li:before{content:'';position:absolute;left:0;top:8px;width:6px;height:6px;border-radius:2px;background:var(--blue-500)}
 
 .painel-ops-titulo>a{color:var(--blue-600);font-size:var(--t-apoio);font-weight:600;text-decoration:none}
 .painel-ops-titulo>a:hover{text-decoration:underline}
@@ -1354,16 +1339,110 @@ tbody tr{transition:background-color .14s ease}
 
 @media(max-width:1180px){
   .painel-financeiro{grid-template-columns:1fr}
-  .painel-inferior{grid-template-columns:1fr}
   .painel-filtros .ledger-filters{grid-template-columns:1fr 1fr}
 }
 @media(max-width:620px){
   .painel-filtros .ledger-filters{grid-template-columns:1fr}
   .painel-atencao li{grid-template-columns:auto 1fr;row-gap:var(--espaco-2)}
   .painel-atencao li>a{grid-column:2}
-  .pagamentos-proporcao dl{grid-template-columns:1fr}
   .producao-tooltip{left:50%!important}
 }
+
+/* ---------------------------------------------------------------- destaque
+   Referencia escolhida pelo Kawa: Stripe. Um numero domina, o contexto fica ao
+   lado em tipo menor, a curva logo abaixo, e o periodo e controle do proprio
+   bloco. Branco, linha fina, grade quase invisivel. A cor aparece so nas duas
+   linhas do grafico e no que ainda falta receber. */
+.destaque{margin-bottom:var(--espaco-3);padding:0;overflow:visible}
+.destaque-periodo{display:grid;grid-template-columns:minmax(240px,1.3fr) repeat(2,minmax(140px,.7fr)) auto;align-items:end;gap:var(--espaco-2);padding:var(--espaco-3) var(--espaco-4);border-bottom:1px solid var(--linha-suave)}
+.destaque-periodo .field>span{margin-bottom:6px;color:var(--muted);font-size:var(--t-rotulo);font-weight:600;text-transform:uppercase;letter-spacing:.07em}
+
+.destaque-corpo{display:grid;grid-template-columns:minmax(300px,1fr) minmax(0,1.4fr);gap:var(--espaco-4) calc(var(--espaco-4) * 1.5);padding:calc(var(--espaco-4) * 1.2) var(--espaco-4) var(--espaco-4);transition:opacity .2s ease}
+.destaque-corpo.atualizando{opacity:.55}
+
+.destaque-numero span,.destaque-numero strong,.destaque-numero small{display:block}
+.destaque-numero>span{color:var(--muted);font-size:var(--t-corpo);font-weight:500}
+.destaque-numero strong{margin:var(--espaco-1) 0 var(--espaco-2);color:var(--navy-900);font:600 clamp(44px,4.6vw,64px)/1 'Barlow Condensed',sans-serif;letter-spacing:-.018em;font-variant-numeric:tabular-nums}
+.destaque-numero small{color:var(--muted);font-size:var(--t-apoio);line-height:1.5}
+.destaque-numero small b{color:var(--green);font-weight:600}
+
+.destaque-contexto{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-self:end;gap:var(--espaco-3);margin:0}
+.destaque-contexto>div{padding-left:var(--espaco-2);border-left:1px solid var(--line)}
+.destaque-contexto dt{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:var(--t-apoio)}
+.destaque-contexto dd{margin:6px 0 4px;color:var(--ink);font:600 24px/1.1 'Barlow Condensed',sans-serif;font-variant-numeric:tabular-nums}
+.destaque-contexto small{color:#8a99a9;font-size:var(--t-rotulo);line-height:1.4}
+.destaque-falta{color:var(--blue-600)!important}
+
+.destaque-grafico{grid-column:1/-1;padding-top:var(--espaco-3);border-top:1px solid var(--linha-suave)}
+.destaque-grafico>header{display:flex;align-items:center;justify-content:space-between;gap:var(--espaco-2);margin-bottom:var(--espaco-2)}
+.destaque-legenda{display:flex;flex-wrap:wrap;gap:var(--espaco-3);color:var(--muted);font-size:var(--t-apoio)}
+.destaque-legenda>span{display:flex;align-items:center;gap:7px}
+.marca-produzido,.marca-recebido{display:inline-block;width:14px;height:3px;border-radius:2px}
+.marca-produzido{background:var(--blue-500)}
+.marca-recebido{background:var(--green)}
+
+.acumulado-chart{position:relative}
+.acumulado-plot{position:relative;height:230px}
+.acumulado-plot svg{display:block;width:100%;height:100%;overflow:visible}
+.acumulado-base{stroke:var(--line);stroke-width:1;vector-effect:non-scaling-stroke}
+.acumulado-faixa{fill:rgba(46,144,250,.08)}
+.acumulado-linha-produzido{fill:none;stroke:var(--blue-500);stroke-width:2;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.acumulado-linha-recebido{fill:none;stroke:var(--green);stroke-width:2.25;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.acumulado-alvo{fill:transparent;cursor:crosshair}
+.acumulado-guia{stroke:var(--navy-800);stroke-width:1;opacity:.18;vector-effect:non-scaling-stroke}
+.acumulado-ponto-produzido,.acumulado-ponto-recebido{fill:#fff;stroke-width:2;vector-effect:non-scaling-stroke}
+.acumulado-ponto-produzido{stroke:var(--blue-500)}
+.acumulado-ponto-recebido{stroke:var(--green)}
+.acumulado-eixo{display:flex;justify-content:space-between;margin-top:var(--espaco-1);color:var(--muted);font:500 var(--t-rotulo) 'IBM Plex Mono',monospace}
+.acumulado-tooltip{position:absolute;top:-6px;transform:translateX(-50%);min-width:220px;padding:var(--espaco-2) var(--espaco-3);border:1px solid var(--line);border-radius:10px;background:var(--superficie);box-shadow:0 14px 34px rgba(7,20,38,.12);pointer-events:none}
+.acumulado-tooltip strong{display:block;margin-bottom:var(--espaco-1);color:var(--ink);font-size:var(--t-apoio);font-weight:600}
+.acumulado-tooltip span{display:flex;align-items:center;gap:7px;margin-top:6px;color:var(--muted);font-size:var(--t-apoio)}
+.acumulado-tooltip b{margin-left:auto;padding-left:var(--espaco-2);color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+.acumulado-tooltip-falta{margin-top:var(--espaco-1)!important;padding-top:var(--espaco-1);border-top:1px solid var(--linha-suave)}
+.acumulado-tooltip-falta b{color:var(--blue-600)}
+
+@media(max-width:1180px){
+  .destaque-corpo{grid-template-columns:1fr}
+  .destaque-periodo{grid-template-columns:1fr 1fr}
+}
+@media(max-width:620px){
+  .destaque-periodo{grid-template-columns:1fr;padding:var(--espaco-2)}
+  .destaque-corpo{padding:var(--espaco-3) var(--espaco-2)}
+  .destaque-contexto{grid-template-columns:1fr}
+  .destaque-grafico>header{flex-direction:column;align-items:flex-start}
+}
+
+@media(max-width:1100px){
+  .grade-indicadores{grid-auto-flow:row;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .painel-atencao ul{grid-template-columns:1fr}
+}
+@media(max-width:560px){
+  .grade-indicadores{grid-auto-flow:row;grid-template-columns:1fr}
+}
+
+/* Contexto do destaque com duas linhas de apoio (servicos e ticket medio). */
+.destaque-contexto small{display:block}
+.destaque-contexto small+small{margin-top:2px}
+
+/* Pendencia de vinculo no topo do painel Porto: conta OS, nao dinheiro. */
+.destaque-pendente dd{color:#8a6410}
+.destaque-pendente a{display:inline-block;margin-top:6px;color:var(--blue-600);font-size:var(--t-apoio);font-weight:600;text-decoration:none}
+.destaque-pendente a:after{content:' \2192';transition:margin .16s ease}
+.destaque-pendente a:hover:after{margin-left:3px}
+
+/* Faturamento por socorrista e por viatura, lado a lado. */
+.painel-faturamento{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--espaco-3)}
+.faturamento-grupo{display:grid;gap:var(--espaco-2);margin:0;padding:0;list-style:none}
+.faturamento-grupo li{display:grid;grid-template-columns:minmax(0,190px) minmax(60px,1fr) 104px 74px;align-items:center;gap:var(--espaco-2)}
+.faturamento-grupo-rotulo{overflow:hidden;color:var(--ink);font-size:var(--t-apoio);font-weight:500;text-overflow:ellipsis;white-space:nowrap}
+.faturamento-grupo-trilho{position:relative;height:10px;overflow:hidden;border-radius:99px;background:var(--linha-suave)}
+.faturamento-grupo-trilho>span{position:absolute;top:0;bottom:0;left:0;border-radius:99px;background:var(--blue-500);transition:width .4s cubic-bezier(.22,1,.36,1)}
+.faturamento-grupo strong{color:var(--ink);font:600 17px/1 'Barlow Condensed',sans-serif;font-variant-numeric:tabular-nums;text-align:right}
+.faturamento-grupo small{color:var(--muted);font-size:var(--t-rotulo);text-align:right}
+.faturamento-grupo .sem-vinculo .faturamento-grupo-rotulo{color:#8a6410}
+.faturamento-grupo .sem-vinculo .faturamento-grupo-trilho>span{background:#e0a530}
+@media(max-width:1180px){.painel-faturamento{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){.faturamento-grupo-trilho>span{transition:none}}
 
 /* ===========================================================================
    Confirmacao de saida
@@ -1403,3 +1482,32 @@ tbody tr{transition:background-color .14s ease}
   .confirmar-saida .modal-actions{flex-direction:column-reverse}
   .confirmar-saida .modal-actions .button{width:100%}
 }
+
+/* Visao geral: periodo so com datas, lucro negativo e marca da despesa. */
+.destaque-periodo-datas{grid-template-columns:repeat(2,minmax(160px,220px))}
+.destaque-numero strong.destaque-negativo,.destaque-numero small b.destaque-negativo{color:var(--red)}
+.marca-despesa{display:inline-block;width:14px;height:3px;border-radius:2px;background:var(--red)}
+/* Na Visao geral, os paineis seguem a forma do painel Porto: cabecalho sem linha
+   e o mesmo respiro. As regras antigas de .dashboard-tech davam padding duplo. */
+.painel-visao .panel.panel-respiro>.panel-title{padding:0;border-bottom:0}
+.painel-visao .panel.painel-gastos>.panel-title{padding:var(--espaco-4) var(--espaco-4) var(--espaco-3);border-bottom:0}
+.painel-visao .painel-gastos .grafico-vazio{padding:var(--espaco-2) var(--espaco-4) var(--espaco-4);text-align:left}
+.painel-visao .painel-gastos .gastos-leitura>section{padding:var(--espaco-3) var(--espaco-4) var(--espaco-4)}
+
+/* Visao geral: receitas e despesas lado a lado com o lucro, cada uma com uma
+   barra na mesma escala. A distancia entre as duas barras e o lucro. */
+.resultado-partes{display:grid;align-content:center;gap:var(--espaco-3);padding-left:var(--espaco-4);border-left:1px solid var(--linha-suave)}
+.resultado-parte{display:grid;grid-template-columns:auto 1fr;align-items:baseline;gap:6px var(--espaco-2)}
+.resultado-parte-nome{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:var(--t-corpo);font-weight:500}
+.resultado-parte-nome:before{content:'';width:8px;height:8px;border-radius:2px;background:var(--green)}
+.resultado-despesas .resultado-parte-nome:before{background:var(--red)}
+.resultado-parte>strong{justify-self:end;color:var(--ink);font:600 30px/1 'Barlow Condensed',sans-serif;font-variant-numeric:tabular-nums}
+.resultado-trilho{grid-column:1/-1;position:relative;height:8px;overflow:hidden;border-radius:99px;background:var(--linha-suave)}
+.resultado-trilho>span{position:absolute;top:0;bottom:0;left:0;border-radius:99px;background:var(--green);transition:width .4s cubic-bezier(.22,1,.36,1)}
+.resultado-despesas .resultado-trilho>span{background:var(--red)}
+.resultado-parte>small{grid-column:1/-1;color:var(--muted);font-size:var(--t-apoio)}
+.resultado-a-receber{display:flex;align-items:baseline;gap:var(--espaco-2);padding-top:var(--espaco-2);border-top:1px solid var(--linha-suave);color:var(--muted);font-size:var(--t-apoio)}
+.resultado-a-receber strong{color:var(--ink);font:600 18px/1 'Barlow Condensed',sans-serif;font-variant-numeric:tabular-nums}
+.resultado-a-receber small{margin-left:auto;font-size:var(--t-apoio)}
+@media(max-width:1180px){.resultado-partes{padding-left:0;border-left:0}}
+@media(prefers-reduced-motion:reduce){.resultado-trilho>span{transition:none}}

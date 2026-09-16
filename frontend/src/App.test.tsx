@@ -24,8 +24,8 @@ test('administrador começa com a base vazia e cria o primeiro lançamento', asy
   await user.type(screen.getByLabelText(/senha/i), 'Admin@123')
   await user.click(screen.getByRole('button', { name: /entrar no sistema/i }))
 
-  expect(await screen.findByRole('heading', { name: /visão financeira/i })).toBeInTheDocument()
-  const fluxo = await screen.findByRole('region', { name: /indicadores do período/i })
+  expect(await screen.findByRole('heading', { name: 'Visão geral', level: 1 })).toBeInTheDocument()
+  const fluxo = await screen.findByRole('region', { name: /resultado do período/i })
   expect(within(fluxo).getByText('R$ 780,00')).toBeInTheDocument()
   expect(within(fluxo).getByText('R$ 200,00')).toBeInTheDocument()
   expect(within(fluxo).getByText('R$ 580,00')).toBeInTheDocument()
@@ -46,8 +46,8 @@ test('administrador começa com a base vazia e cria o primeiro lançamento', asy
   expect(screen.getByText('Serviço particular de teste')).toBeInTheDocument()
 
   await user.click(screen.getByRole('link', { name: /visão geral/i }))
-  expect(await screen.findByRole('heading', { name: /visão financeira/i })).toBeInTheDocument()
-  expect(await screen.findByRole('region', { name: /indicadores do período/i })).toBeInTheDocument()
+  expect(await screen.findByRole('heading', { name: 'Visão geral', level: 1 })).toBeInTheDocument()
+  expect(await screen.findByRole('region', { name: /resultado do período/i })).toBeInTheDocument()
 })
 
 test('socorrista vê apenas os lançamentos operacionais permitidos', async () => {
@@ -77,7 +77,7 @@ test('mede a transição entre rotas no navegador', async () => {
     await user.clear(screen.getByLabelText(/senha/i))
     await user.type(screen.getByLabelText(/senha/i), 'Admin@123')
     await user.click(screen.getByRole('button', { name: /entrar no sistema/i }))
-    await screen.findByRole('heading', { name: /visão financeira/i })
+    await screen.findByRole('heading', { name: 'Visão geral', level: 1 })
     medida.mockClear()
     marcacao.mockClear()
     const link = screen.getByRole('link', { name: /^extrato$/i })
