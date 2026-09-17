@@ -34,6 +34,7 @@ export type Modulo =
   | 'despesasFixas'
   | 'porto'
   | 'usuarios'
+  | 'turnos'
 
 const configurados = new Set(
   (import.meta.env.VITE_SUPABASE_MODULOS ?? '')
@@ -64,7 +65,7 @@ export function modulosLigados(): Modulo[] {
   const todos: Modulo[] = [
     'auth', 'veiculos', 'motoristas', 'categorias', 'contratantes', 'despesas', 'receitas',
     'dashboard', 'comissoes', 'favoritos', 'quilometragem', 'despesasFixas',
-    'porto', 'usuarios',
+    'porto', 'usuarios', 'turnos',
   ]
   if (!autenticacaoNoSupabase()) return []
   return todos.filter(m => m === 'auth' || moduloNoSupabase(m))

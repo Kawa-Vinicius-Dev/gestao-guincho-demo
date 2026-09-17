@@ -13,6 +13,8 @@ const Creditos=lazy(()=>import('./financeiro/CreditosPage'))
 const Lancamentos=lazy(()=>import('./financeiro/LancamentosPage'))
 const Despesas=lazy(()=>import('./financeiro/DespesasPage'))
 const Quilometragem=lazy(()=>import('./frota/QuilometragemPage'))
+const Turno=lazy(()=>import('./socorrista/TurnoPage'))
+const Aprovacoes=lazy(()=>import('./aprovacoes/AprovacoesPage'))
 const Frotas=lazy(()=>import('./frota/FrotasPage'))
 const Dre=lazy(()=>import('./financeiro/DrePage'))
 const Equipe=lazy(()=>import('./equipe/EquipePage'))
@@ -76,6 +78,7 @@ export default function App(){
     <Route element={<RotaProtegida/>}>
       <Route path="/trocar-senha" element={<TrocarSenha/>}/>
       <Route element={<Layout/>}>
+      <Route path="/turno" element={<Turno/>}/>
       <Route path="/despesas" element={<Despesas/>}/>
       <Route path="/quilometragem" element={<Quilometragem/>}/>
       <Route path="/minha-comissao" element={<MinhaComissao/>}/>
@@ -92,6 +95,7 @@ export default function App(){
         <Route path="/equipe" element={<Equipe/>}/>
         <Route path="/equipe/:id" element={<EquipeDetalhe/>}/>
         <Route path="/comissoes" element={<Comissoes/>}/>
+        <Route path="/aprovacoes" element={<Aprovacoes/>}/>
         <Route path="/porto/importacoes" element={<PortoImportacoes/>}/>
         <Route path="/porto/diario" element={<PortoDiario/>}/>
         <Route path="/porto/dashboard" element={<PortoDashboard/>}/>

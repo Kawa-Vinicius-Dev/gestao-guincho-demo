@@ -60,8 +60,11 @@ test('socorrista vê apenas os lançamentos operacionais permitidos', async () =
   await user.type(screen.getByLabelText(/senha/i), 'Demo@123')
   await user.click(screen.getByRole('button', { name: /entrar no sistema/i }))
 
-  expect(await screen.findByRole('heading', { name: /despesas/i })).toBeInTheDocument()
+  // O socorrista entra direto no turno do dia; o menu dele continua sem as
+  // telas de dinheiro da empresa.
+  expect(await screen.findByRole('link', { name: /turno do dia/i })).toBeInTheDocument()
   expect(screen.queryByRole('link', { name: /DRE mensal/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('link', { name: /aprovações/i })).not.toBeInTheDocument()
   expect(screen.getByRole('link', { name: /km rodado e morto/i })).toBeInTheDocument()
 })
 

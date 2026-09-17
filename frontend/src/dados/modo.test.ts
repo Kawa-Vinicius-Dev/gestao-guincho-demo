@@ -28,7 +28,7 @@ test('"tudo" liga todos os modulos', async () => {
   const { moduloNoSupabase, modulosLigados } = await carregar('tudo')
   expect(moduloNoSupabase('despesasFixas')).toBe(true)
   expect(moduloNoSupabase('usuarios')).toBe(true)
-  expect(modulosLigados()).toHaveLength(14)
+  expect(modulosLigados()).toHaveLength(15)
 })
 
 test('modulo nao listado continua no backend antigo', async () => {

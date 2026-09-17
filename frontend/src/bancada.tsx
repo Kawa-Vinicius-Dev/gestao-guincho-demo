@@ -70,6 +70,48 @@ const ops = [
     periodo_inicio: '2026-03-30', periodo_fim: '2026-04-29' },
 ]
 
+
+// Turno do socorrista e fila de aprovacoes: a tabela nasceu vazia, entao aqui o
+// exemplo e montado a mao, no formato exato que as RPCs devolvem.
+const turnoDoDia = {
+  socorrista: { id: 1, nome: 'JEFERSON MARTINS DA SILVA', qra: 'JM-12' },
+  hoje: '2026-09-17',
+  turnoAberto: null,
+  turnosDevolvidos: [],
+  ultimosTurnos: [
+    { id: 3, data: '2026-09-16', veiculo: 'L168', situacao: 'APROVADO', kmRodado: 182 },
+    { id: 2, data: '2026-09-15', veiculo: 'L168', situacao: 'AGUARDANDO_APROVACAO', kmRodado: 147 },
+    { id: 1, data: '2026-09-12', veiculo: 'L204', situacao: 'DEVOLVIDO', kmRodado: 96 },
+  ],
+  viaturas: [
+    { id: 2, identificacao: 'L168', ultimoHodometro: 148320 },
+    { id: 3, identificacao: 'L204', ultimoHodometro: 92750 },
+  ],
+  veiculoSugerido: 2,
+}
+
+const filaAprovacoes = {
+  itens: [
+    { tipo: 'TURNO', id: 2, data: '2026-09-16', socorristaId: 1,
+      socorrista: 'JEFERSON MARTINS DA SILVA', qra: 'JM-12', veiculoId: 2, veiculo: 'L168',
+      hodometroInicial: 148138, hodometroFinal: 148320, kmRodado: 182, custoPorKm: 1.85,
+      fotoAbertura: null, fotoFechamento: 'turnos/2/fechamento-1.jpg',
+      observacoes: 'Rodei ate Itapecerica no fim do turno.', osNoDia: 7 },
+    { tipo: 'TURNO', id: 4, data: '2026-09-16', socorristaId: 4,
+      socorrista: 'NATANAEL JOSE DE FREITAS NETO', qra: 'NT-08', veiculoId: 3, veiculo: 'L204',
+      hodometroInicial: 92604, hodometroFinal: 92750, kmRodado: 146, custoPorKm: 1.62,
+      fotoAbertura: null, fotoFechamento: 'turnos/4/fechamento-1.jpg', osNoDia: 4 },
+    { tipo: 'DESPESA', id: 51, data: '2026-09-16', socorristaId: 1,
+      socorrista: 'JEFERSON MARTINS DA SILVA', qra: 'JM-12', descricao: 'Almoco em servico',
+      valor: 38.5, categoria: 'Alimentação', veiculo: 'L168',
+      comprovante: 'despesas/51/nota.jpg', descontaDaComissao: true },
+  ],
+  turnosNaoFechados: [
+    { id: 5, data: '2026-09-15', socorristaId: 2, socorrista: 'QEBSON RAMOS DA SILVA',
+      veiculo: 'L311', hodometroInicial: 71220, diasEmAberto: 2 },
+  ],
+}
+
 /** Responde as chamadas do Supabase com o exemplo acima, sem rede. */
 const original = window.fetch
 window.fetch = (async (entrada: RequestInfo | URL, init?: RequestInit) => {
@@ -77,6 +119,8 @@ window.fetch = (async (entrada: RequestInfo | URL, init?: RequestInit) => {
   const responder = (corpo: unknown) =>
     new Response(JSON.stringify(corpo), { headers: { 'Content-Type': 'application/json' } })
 
+  if (url.includes('meu_turno_do_dia')) return responder(turnoDoDia)
+  if (url.includes('fila_de_aprovacoes')) return responder(filaAprovacoes)
   if (url.includes('porto_dashboard_alto_nivel')) return responder(painel)
   if (url.includes('dashboard_resumo')) return responder(visaoGeral)
   if (url.includes('porto_ops_conciliadas')) return responder(ops)
@@ -116,13 +160,18 @@ const visaoGeral = {
   },
 }
 
-const daVisao = new URLSearchParams(location.search).get('tela') === 'visao'
+const tela = new URLSearchParams(location.search).get('tela')
+const daVisao = tela === 'visao'
 // A Visao geral abre no periodo da OP real, para os graficos terem o que mostrar.
 if (daVisao) sessionStorage.setItem('filtro:periodo', JSON.stringify({ inicio: '2026-03-30', fim: '2026-04-29', op: '1' }))
 
-const Pagina = daVisao
-  ? (await import('./DashboardPage')).default
-  : (await import('./porto/PortoDashboardPage')).default
+const Pagina = tela === 'turno'
+  ? (await import('./socorrista/TurnoPage')).default
+  : tela === 'aprovacoes'
+    ? (await import('./aprovacoes/AprovacoesPage')).default
+    : daVisao
+      ? (await import('./DashboardPage')).default
+      : (await import('./porto/PortoDashboardPage')).default
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
