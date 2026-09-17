@@ -114,7 +114,9 @@ const dataCurta=(valor:string)=>{
 /** Linha em degraus: o gasto sobe no dia consolidado pelo resumo, sem inventar movimento entre datas. */
 export function DespesaAcumulada({pontos,inicio,fim}:{pontos:PontoDespesaAcumulada[];inicio:string;fim:string}){
   if(!pontos.length)return <Vazio texto="A trajetória aparece quando houver despesas pagas."/>
-  const largura=640,altura=196,margemX=12,topo=12,base=164
+  // Espaco a esquerda para a escala: sem valor ao lado, as linhas de grade so
+  // enfeitam — quem olha nao sabe se o degrau foi de cem ou de dez mil reais.
+  const largura=640,altura=214,margemEsq=64,margemDir=14,topo=14,base=172
   const primeiro=diaUtc(inicio),ultimo=diaUtc(fim)
   if(!Number.isFinite(primeiro)||!Number.isFinite(ultimo)||ultimo<primeiro){
     return <Vazio texto="Informe um período válido para ver a trajetória."/>
@@ -131,13 +133,16 @@ export function DespesaAcumulada({pontos,inicio,fim}:{pontos:PontoDespesaAcumula
   const total=Math.max(ordenados.at(-1)?.acumulado??0,1)
   const x=(data:string)=>{
     const posicao=Math.min(Math.max((diaUtc(data)-primeiro)/intervalo,0),1)
-    return margemX+posicao*(largura-margemX*2)
+    return margemEsq+posicao*(largura-margemEsq-margemDir)
   }
   const y=(valor:number)=>topo+(1-valor/total)*(base-topo)
-  let caminho=`M ${margemX} ${base}`
+  let caminho=`M ${margemEsq} ${base}`
   for(const ponto of ordenados)caminho+=` H ${x(ponto.data)} V ${y(ponto.acumulado)}`
-  caminho+=` H ${largura-margemX}`
-  const area=`${caminho} V ${base} H ${margemX} Z`
+  caminho+=` H ${largura-margemDir}`
+  const area=`${caminho} V ${base} H ${margemEsq} Z`
+  // Tres marcas, nao cinco: a escala e para dar ordem de grandeza ao degrau, e
+  // cinco linhas mudas pesavam mais do que informavam.
+  const marcas=[0,.5,1].map(fatia=>({fatia,valor:total*(1-fatia),altura:topo+(base-topo)*fatia}))
   // Os degraus que mais pesaram, com a origem: um salto sem nome nao explica nada.
   const maiores=[...ordenados].sort((a,b)=>b.valorDia-a.valorDia).slice(0,3)
   const origem=(ponto:PontoDespesaAcumulada)=>{
@@ -153,9 +158,13 @@ export function DespesaAcumulada({pontos,inicio,fim}:{pontos:PontoDespesaAcumula
     </div>
     <svg viewBox={`0 0 ${largura} ${altura}`} role="img"
       aria-label={`Despesas acumuladas entre ${dataCurta(inicio)} e ${dataCurta(fim)}. ${descricao}`}>
-      {[0,.25,.5,.75,1].map(fatia=>
-        <line key={fatia} className="trajetoria-grade" x1={margemX} x2={largura-margemX}
-          y1={topo+(base-topo)*fatia} y2={topo+(base-topo)*fatia}/>)}
+      {marcas.map(marca=><g key={marca.fatia}>
+        <line className="trajetoria-grade" x1={margemEsq} x2={largura-margemDir}
+          y1={marca.altura} y2={marca.altura}/>
+        <text className="trajetoria-escala" x={margemEsq-10} y={marca.altura+4} textAnchor="end">
+          {marca.valor>0?moedaCurta(marca.valor):'0'}
+        </text>
+      </g>)}
       <path className="trajetoria-area" d={area}/>
       <path className="trajetoria-linha" d={caminho}/>
       {ordenados.length<=45?ordenados.map(ponto=><circle key={ponto.data}
