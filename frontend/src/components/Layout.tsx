@@ -8,6 +8,7 @@ import { ConfirmarSaida } from './ConfirmarSaida'
 const itens = [
   ['/', 'Visão geral', true, 'financeiro'],
   ['/lancamentos', 'Extrato', true, 'financeiro'],
+  ['/creditos', 'Créditos', true, 'financeiro'],
   ['/contas-receber', 'Contas a receber', true, 'financeiro'],
   ['/dre', 'DRE mensal', true, 'financeiro'],
   ['/despesas', 'Registrar despesas', false, 'operacao'],
@@ -37,6 +38,7 @@ const grupos = { financeiro: 'Financeiro', operacao: 'Operação', equipe: 'Equi
 const icones: Record<string,string> = {
   '/':'M3 3h7v7H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 14h7v7H3z',
   '/lancamentos':'M4 8h12M12 4l4 4-4 4M20 16H8M12 12l-4 4 4 4',
+  '/creditos':'M12 5v14M5 12h14M4 4h16v16H4z',
   '/contas-receber':'M12 3v9M9 9l3 3 3-3M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3',
   '/dre':'M4 4v16h16M8 16v-5M12 16V7M16 16v-3',
   '/despesas':'M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h4',

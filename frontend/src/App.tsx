@@ -9,6 +9,7 @@ import { removerDadosDemoLegados } from './legacyStorage'
 const Login=lazy(()=>import('./auth/LoginPage'))
 const Dashboard=lazy(()=>import('./DashboardPage'))
 const Contas=lazy(()=>import('./financeiro/ContasReceberPage'))
+const Creditos=lazy(()=>import('./financeiro/CreditosPage'))
 const Lancamentos=lazy(()=>import('./financeiro/LancamentosPage'))
 const Despesas=lazy(()=>import('./financeiro/DespesasPage'))
 const Quilometragem=lazy(()=>import('./frota/QuilometragemPage'))
@@ -81,6 +82,7 @@ export default function App(){
         <Route index element={<Dashboard/>}/>
         <Route path="/lancamentos" element={<Lancamentos/>}/>
         <Route path="/contas-receber" element={<Contas/>}/>
+        <Route path="/creditos" element={<Creditos/>}/>
         <Route path="/receitas" element={<Navigate to="/lancamentos" replace/>}/>
         <Route path="/fluxo-caixa" element={<Navigate to="/lancamentos" replace/>}/>
         <Route path="/dre" element={<Dre/>}/>

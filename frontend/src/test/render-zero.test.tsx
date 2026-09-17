@@ -102,6 +102,7 @@ test.each([
   ['Visão geral (dashboard)', '/'],
   ['Veículos', '/veiculos'],
   ['DRE', '/dre'],
+  ['Créditos', '/creditos'],
   ['Socorristas', '/equipe'],
   ['Contas a receber', '/contas-receber'],
   ['Lançamentos', '/lancamentos'],
