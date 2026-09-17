@@ -1649,3 +1649,6 @@ tbody tr{transition:background-color .14s ease}
 .indicador-link{display:flex;flex-direction:column;text-decoration:none;color:inherit;transition:border-color .15s,transform .15s}
 .indicador-link:hover{border-color:var(--blue-600);transform:translateY(-1px)}
 .indicador-link:focus-visible{outline:2px solid var(--blue-600);outline-offset:2px}
+
+/* Ficha do socorrista na lista: o que ele rodou e ainda espera a OP. */
+.team-previsto{margin:0 0 10px;color:var(--muted);font-size:12px;line-height:1.5}

@@ -1,5 +1,9 @@
 import { useEffect,useState,type FormEvent } from 'react'
-import { criarAcessoSocorrista } from '../dados/usuarios'
+import { criarAcessoSocorrista, definirAcessoAtivo, listarUsuarios, redefinirSenha } from '../dados/usuarios'
+import { listarComissaoPrevista, type ComissaoPrevista } from '../dados/comissoes'
+import { SeletorPeriodo } from '../components/SeletorPeriodo'
+import { usePeriodoGlobal } from '../utils/periodoGlobal'
+import { moeda } from '../utils/formatadores'
 import { Link } from 'react-router-dom'
 import { listarVeiculos } from '../dados/veiculos'
 import { alternarAtivoMotorista, atualizarMotorista, criarMotorista, excluirMotorista, listarMotoristas } from '../dados/motoristas'
@@ -7,7 +11,7 @@ import { ConfirmarExclusao } from '../components/ConfirmarExclusao'
 import { ConfirmarAcao, type PedidoConfirmacao } from '../components/ConfirmarAcao'
 import { CampoDocumento, CampoTelefone } from '../components/CamposMascarados'
 import { Carregando,ErroPagina,Vazio } from '../components/EstadoPagina'
-import type { Motorista,SenhaRedefinida,Veiculo } from '../types/modelos'
+import type { Motorista,SenhaRedefinida,Usuario,Veiculo } from '../types/modelos'
 import { Selecao } from '../components/Campos'
 import { Modal } from '../components/Modal'
 import { ehAuxiliar } from '../utils/auxiliar'
@@ -19,9 +23,20 @@ export default function EquipePage(){
   const [pedido,setPedido]=useState<PedidoConfirmacao|null>(null)
   const [editando,setEditando]=useState<Motorista|null>(null),[excluindo,setExcluindo]=useState<Motorista|null>(null)
   const [dandoAcesso,setDandoAcesso]=useState<Motorista|null>(null),[acesso,setAcesso]=useState<SenhaRedefinida|null>(null)
+  // A conta de acesso mora em `perfis`; o cadastro do socorrista so guarda o id dela.
+  const [contas,setContas]=useState<Usuario[]>([])
+  const [periodo,setPeriodo]=usePeriodoGlobal()
+  const [previstas,setPrevistas]=useState<ComissaoPrevista[]>([])
+  const contaDe=(m:Motorista)=>contas.find(c=>c.id===String(m.usuarioId))
+  const previstaDe=(m:Motorista)=>previstas.find(p=>p.motoristaId===m.id)
   const carregar=()=>{setCarregando(true);setErro('');listarMotoristas().then(setMotoristas).catch(e=>setErro(e.message)).finally(()=>setCarregando(false))}
   useEffect(carregar,[])
   useEffect(()=>{listarVeiculos().then(setVeiculos).catch(()=>setVeiculos([]))},[])
+  const carregarContas=()=>{listarUsuarios().then(setContas).catch(()=>setContas([]))}
+  useEffect(carregarContas,[])
+  // Producao da competencia: o que cada um rodou e ainda espera a OP.
+  useEffect(()=>{if(!periodo.inicio||!periodo.fim)return
+    listarComissaoPrevista(periodo.inicio,periodo.fim).then(setPrevistas).catch(()=>setPrevistas([]))},[periodo.inicio,periodo.fim])
 
   function abrirCadastro(){setEditando(null);setErro('');setModal(true)}
   function abrirEdicao(motorista:Motorista){setEditando(motorista);setErro('');setModal(true)}
@@ -46,6 +61,28 @@ export default function EquipePage(){
       setDandoAcesso(null);carregar()
     }catch(e){setErro((e as Error).message)}finally{setSalvando(false)}
   }
+  // Senha nova aparece uma vez so, como na criacao: o dono repassa e o socorrista troca.
+  function pedirNovaSenha(motorista:Motorista){
+    const conta=contaDe(motorista);if(!conta)return
+    setPedido({titulo:`Redefinir a senha de ${motorista.nome}?`,
+      efeito:<>A senha atual deixa de funcionar na hora. O sistema gera uma provisória para você repassar, e <strong>{motorista.nome}</strong> troca no próximo acesso.</>,
+      resumo:[['Socorrista',motorista.nome],['E-mail',conta.email]],
+      textoConfirmar:'Redefinir senha',perigo:true,
+      aoConfirmar:async()=>{setAcesso(await redefinirSenha(conta));carregarContas()}})
+  }
+  // Bloquear tira a entrada sem apagar o cadastro: comissao e historico continuam.
+  function pedirBloqueio(motorista:Motorista){
+    const conta=contaDe(motorista);if(!conta)return
+    setPedido(conta.ativo
+      ?{titulo:`Bloquear o acesso de ${motorista.nome}?`,
+        efeito:<><strong>{motorista.nome}</strong> deixa de entrar no sistema. O cadastro, as comissões e o histórico continuam, e o acesso volta quando você liberar.</>,
+        resumo:[['Socorrista',motorista.nome],['E-mail',conta.email]],textoConfirmar:'Bloquear acesso',perigo:true,
+        aoConfirmar:async()=>{await definirAcessoAtivo(String(conta.id),false);carregarContas()}}
+      :{titulo:`Liberar o acesso de ${motorista.nome}?`,
+        efeito:<><strong>{motorista.nome}</strong> volta a entrar no sistema com a senha que já tinha.</>,
+        resumo:[['Socorrista',motorista.nome],['E-mail',conta.email]],textoConfirmar:'Liberar acesso',
+        aoConfirmar:async()=>{await definirAcessoAtivo(String(conta.id),true);carregarContas()}})
+  }
   // desativar nao apaga: o socorrista sai dos vinculos novos e o historico dele continua de pe
   async function alternarAtivo(motorista:Motorista){
     setErro('')
@@ -60,16 +97,30 @@ export default function EquipePage(){
   return <div className="page-enter">
     <header className="page-heading"><div><span className="eyebrow">Operação e identificação</span><h1>Socorristas</h1><p>Cadastros vinculados às OS Porto, com acesso ao histórico e à composição oficial de comissão.</p></div><button className="button button-primary" onClick={abrirCadastro}>+ Cadastrar socorrista</button></header>
     {erro?<div className="form-alert" role="alert">{erro}</div>:null}
+    <section className="panel painel-filtros"><form className="ledger-filters" onSubmit={e=>e.preventDefault()}>
+      <SeletorPeriodo periodo={periodo} aoMudar={setPeriodo}/>
+    </form></section>
     {motoristas.length?<section className="team-grid" aria-label="Socorristas cadastrados">{motoristas.map(motorista=><article className="panel team-card team-card-real" key={motorista.id}>
       <header><span className="team-avatar">{motorista.nome.split(' ').map(parte=>parte[0]).slice(0,2).join('')}</span><span><strong>{motorista.nome}</strong><small>{ehAuxiliar(motorista.nome)?'Recebe as OS que chegam sem socorrista':<>{motorista.qra||'QRA não informado'}{motorista.veiculo?` · ${motorista.veiculo}`:' · sem viatura'}</>}</small></span><span className={`staff-status ${motorista.ativo?'staff-disponivel':'staff-folga'}`}>{motorista.ativo?'Ativo':'Inativo'}</span></header>
-      <div className="team-contact"><span>Telefone<strong>{motorista.telefone||(ehAuxiliar(motorista.nome)?'—':'Não informado')}</strong></span><span>Usuário<strong>{motorista.usuarioId?'Vinculado':'Não vinculado'}</strong></span></div>
+      <div className="team-contact"><span>Telefone<strong>{motorista.telefone||(ehAuxiliar(motorista.nome)?'—':'Não informado')}</strong></span>
+        <span>Acesso<strong>{(()=>{const c=contaDe(motorista)
+          if(!motorista.usuarioId)return 'Sem acesso'
+          if(!c)return 'Vinculado'
+          if(!c.ativo)return 'Bloqueado'
+          return c.senhaProvisoria?'Senha provisória':'Ativo'})()}</strong><small>{contaDe(motorista)?.email??''}</small></span></div>
+      {/* O que ele rodou na competencia e ainda espera a OP: producao antes do pagamento. */}
+      {previstaDe(motorista)?<p className="team-previsto">{previstaDe(motorista)!.servicos} {previstaDe(motorista)!.servicos===1?'serviço aguardando OP':'serviços aguardando OP'} · {moeda(previstaDe(motorista)!.valorPrevisto)} previstos{previstaDe(motorista)!.semValor?` · ${previstaDe(motorista)!.semValor} sem valor`:''}</p>:null}
       <div className="team-card-actions"><Link className="button button-ghost team-detail-action" to={`/equipe/${motorista.id}`}>Ver detalhes</Link>
         <button className="table-action" onClick={()=>abrirEdicao(motorista)}>Editar</button>
         <button className={motorista.ativo?'table-action table-action-danger':'table-action'} onClick={()=>setPedido(motorista.ativo
             ?{titulo:'Desativar socorrista?',efeito:<><strong>{motorista.nome}</strong> sai das listas de escolha e não recebe OS novas pelo QRA. Serviços, comissões e despesas já lançados continuam.</>,resumo:[['Socorrista',motorista.nome],['QRA',motorista.qra||'—']],textoConfirmar:'Desativar',perigo:true,aoConfirmar:()=>alternarAtivo(motorista)}
             :{titulo:'Reativar socorrista?',efeito:<><strong>{motorista.nome}</strong> volta às listas de escolha e passa a receber OS pelo QRA.</>,resumo:[['Socorrista',motorista.nome],['QRA',motorista.qra||'—']],textoConfirmar:'Reativar',aoConfirmar:()=>alternarAtivo(motorista)})}>{motorista.ativo?'Desativar':'Reativar'}</button>
           {ehAuxiliar(motorista.nome)?null:<button className="table-action table-action-danger" onClick={()=>setExcluindo(motorista)}>Excluir</button>}
-        {!motorista.usuarioId&&motorista.ativo&&!ehAuxiliar(motorista.nome)?<button className="table-action" onClick={()=>{setErro('');setDandoAcesso(motorista)}}>Criar acesso</button>:null}</div>
+        {!motorista.usuarioId&&motorista.ativo&&!ehAuxiliar(motorista.nome)?<button className="table-action" onClick={()=>{setErro('');setDandoAcesso(motorista)}}>Criar acesso</button>:null}
+        {motorista.usuarioId&&contaDe(motorista)?<>
+          <button className="table-action" onClick={()=>pedirNovaSenha(motorista)}>Redefinir senha</button>
+          <button className={contaDe(motorista)!.ativo?'table-action table-action-danger':'table-action'} onClick={()=>pedirBloqueio(motorista)}>{contaDe(motorista)!.ativo?'Bloquear acesso':'Liberar acesso'}</button>
+        </>:null}</div>
     </article>)}</section>:<Vazio titulo="Nenhum socorrista cadastrado" descricao="Cadastre o primeiro socorrista para vinculá-lo às ordens de serviço."/>}
 
     {modal?<Modal etiqueta="Equipe" titulo={editando?'Editar socorrista':'Novo socorrista'}

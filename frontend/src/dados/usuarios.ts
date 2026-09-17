@@ -64,6 +64,21 @@ export async function redefinirSenha(usuario: Usuario): Promise<SenhaRedefinida>
   return admin<SenhaRedefinida>({ acao: 'redefinir', perfilId: usuario.id })
 }
 
+/**
+ * Liga ou desliga o acesso de uma conta sem apagar nada.
+ *
+ * Socorrista que saiu de ferias, foi afastado ou deixou a empresa perde a
+ * entrada, mas o cadastro, as comissoes e o historico dele continuam de pe — e
+ * o acesso volta com um clique quando ele voltar.
+ */
+export async function definirAcessoAtivo(perfilId: string, ativo: boolean): Promise<void> {
+  ou(
+    await supabase().from('perfis').update({ ativo }).eq('id', perfilId),
+    ativo ? 'Não foi possível reativar o acesso.' : 'Não foi possível bloquear o acesso.',
+  )
+  invalidarCadastro('motoristas')
+}
+
 /** Dar acesso cria a conta e a liga ao cadastro do socorrista, no mesmo passo. */
 export async function criarAcessoSocorrista(
   motoristaId: number, email: string,
