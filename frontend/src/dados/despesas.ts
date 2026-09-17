@@ -122,11 +122,14 @@ export interface DadosDespesa {
  */
 export const TETO_DA_LISTA = 300
 
-export async function listarDespesas(): Promise<Despesa[]> {
+/** Com periodo, traz as despesas dele: um ano de comissoes passa do teto da lista. */
+export async function listarDespesas(periodo?: { inicio: string; fim: string }): Promise<Despesa[]> {
   if (!moduloNoSupabase('despesas')) return api<Despesa[]>('/api/despesas')
 
+  let consulta = supabase().from('despesas').select(COLUNAS)
+  if (periodo) consulta = consulta.gte('data_lancamento', periodo.inicio).lte('data_lancamento', periodo.fim)
   const linhas = ou(
-    await supabase().from('despesas').select(COLUNAS)
+    await consulta
       .order('data_lancamento', { ascending: false })
       .order('id', { ascending: false })
       .limit(TETO_DA_LISTA),
