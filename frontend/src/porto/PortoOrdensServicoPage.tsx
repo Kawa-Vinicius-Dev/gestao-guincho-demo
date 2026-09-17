@@ -3,11 +3,12 @@ import { Link } from 'react-router-dom'
 import { useAoVivo } from '../dados/aoVivo'
 import { baixarRelatorio, type Relatorio } from '../dados/exportar'
 import { listarMotoristas } from '../dados/motoristas'
-import { corrigirOs, listarOs, listarTodasAsOs, TAMANHO_DA_PAGINA, type FiltroOs, type LinhaOs, type PaginaOs, type SituacaoOs } from '../dados/porto/listaOs'
+import { corrigirOs, definirViaturaEmLote, listarOs, listarTodasAsOs, TAMANHO_DA_PAGINA, type FiltroOs, type LinhaOs, type PaginaOs, type SituacaoOs } from '../dados/porto/listaOs'
 import { listarVeiculos } from '../dados/veiculos'
 import { Campo, Selecao } from '../components/Campos'
 import { Carregando } from '../components/EstadoPagina'
 import { Modal } from '../components/Modal'
+import { ConfirmarAcao, type PedidoConfirmacao } from '../components/ConfirmarAcao'
 import { SeletorPeriodo } from '../components/SeletorPeriodo'
 import { CabecalhoPagina, GradeIndicadores, Indicador, Painel } from '../components/ui/Pagina'
 import type { Motorista, Veiculo } from '../types/modelos'
@@ -37,6 +38,9 @@ export default function PortoOrdensServicoPage() {
   const [motoristaId, setMotoristaId] = useState(0)
   const [sigla, setSigla] = useState('')
   const [situacao, setSituacao] = useState<SituacaoOs>('')
+  const [semViatura, setSemViatura] = useState(false)
+  const [emLote, setEmLote] = useState(false)
+  const [pedido, setPedido] = useState<PedidoConfirmacao | null>(null)
   const [pagina, setPagina] = useState(0)
   const [dados, setDados] = useState<PaginaOs | null>(null)
   const [motoristas, setMotoristas] = useState<Motorista[]>([])
@@ -57,8 +61,8 @@ export default function PortoOrdensServicoPage() {
 
   const filtro: FiltroOs = useMemo(() => ({
     inicio: periodo.inicio, fim: periodo.fim, numeroOs: numeroOsAdiado, numeroOp: numeroOpAdiado,
-    especialidade: especialidadeAdiada, motoristaId, sigla, situacao,
-  }), [periodo.inicio, periodo.fim, numeroOsAdiado, numeroOpAdiado, especialidadeAdiada, motoristaId, sigla, situacao])
+    especialidade: especialidadeAdiada, motoristaId, sigla, situacao, semViatura,
+  }), [periodo.inicio, periodo.fim, numeroOsAdiado, numeroOpAdiado, especialidadeAdiada, motoristaId, sigla, situacao, semViatura])
 
   // Filtro novo volta para a primeira pagina.
   useEffect(() => { setPagina(0) }, [filtro])
@@ -80,11 +84,11 @@ export default function PortoOrdensServicoPage() {
   }, [])
 
   const paginas = dados ? Math.max(1, Math.ceil(dados.total / TAMANHO_DA_PAGINA)) : 1
-  const temFiltro = Boolean(numeroOs || numeroOp || especialidade || motoristaId || sigla || situacao)
+  const temFiltro = Boolean(numeroOs || numeroOp || especialidade || motoristaId || sigla || situacao || semViatura)
   const veiculoPorSigla = useMemo(() => new Map(veiculos.map(v => [siglaDe(v), v])), [veiculos])
 
   function limparFiltros() {
-    setNumeroOs(''); setNumeroOp(''); setEspecialidade(''); setMotoristaId(0); setSigla(''); setSituacao('')
+    setNumeroOs(''); setNumeroOp(''); setEspecialidade(''); setMotoristaId(0); setSigla(''); setSituacao(''); setSemViatura(false)
   }
 
   async function exportar(formato: 'excel' | 'pdf') {
@@ -118,6 +122,36 @@ export default function PortoOrdensServicoPage() {
     finally { setExportando('') }
   }
 
+  // Viatura em lote: escolhe a viatura, confirma com a quantidade, aplica.
+  function pedirViaturaEmLote(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    if (!dados) return
+    const f = new FormData(e.currentTarget)
+    const nova = String(f.get('sigla') || '')
+    const soSem = f.get('soSemViatura') === 'on'
+    const afetadas = soSem ? dados.semViatura : dados.total
+    const quem = motoristas.find(m => m.id === motoristaId)?.nome
+    setEmLote(false)
+    setPedido({
+      titulo: `Definir a viatura ${nova}?`,
+      efeito: <><strong>{afetadas}</strong> {afetadas === 1 ? 'ordem de serviço fica' : 'ordens de serviço ficam'} com a viatura <strong>{nova}</strong> e {afetadas === 1 ? 'entra' : 'entram'} no faturamento dela.{soSem ? ' As que já têm viatura não mudam.' : ' Inclusive as que já tinham outra viatura.'}</>,
+      resumo: [
+        ['Período', `${data(filtro.inicio)} a ${data(filtro.fim)}`],
+        ...(quem ? [['Socorrista', quem] as [string, string]] : []),
+        ['Ordens de serviço', String(afetadas)],
+        ['Viatura', nova],
+      ],
+      avisos: [!soSem && dados.total > dados.semViatura ? `${dados.total - dados.semViatura} OS que já têm viatura serão trocadas.` : null],
+      textoConfirmar: 'Definir viatura',
+      perigo: !soSem,
+      aoConfirmar: async () => {
+        const total = await definirViaturaEmLote(filtro, nova, soSem)
+        setMensagem(`Viatura ${nova} definida em ${total} ${total === 1 ? 'ordem de serviço' : 'ordens de serviço'}.`)
+        setVersao(v => v + 1)
+      },
+    })
+  }
+
   async function salvarCorrecao(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
     if (!corrigindo) return
@@ -143,6 +177,7 @@ export default function PortoOrdensServicoPage() {
       descricao="Todas as OS do período. Corrija socorrista e viatura na linha; valor e OP vêm da Porto."
       contexto={<>Período: <strong>{data(periodo.inicio)}</strong> → <strong>{data(periodo.fim)}</strong></>}
       acoes={<>
+        <button className="button button-ghost" disabled={!dados?.total} onClick={() => setEmLote(true)}>Definir viatura das OS filtradas</button>
         <button className="button button-ghost" disabled={exportando !== '' || !dados?.total} onClick={() => void exportar('pdf')}>
           {exportando === 'pdf' ? 'Gerando PDF…' : 'Exportar PDF'}
         </button>
@@ -165,6 +200,7 @@ export default function PortoOrdensServicoPage() {
           opcoes={veiculos.map(v => ({ valor: siglaDe(v), texto: v.identificacao }))}/>
         <Campo rotulo="Especialidade"><input value={especialidade} onChange={e => setEspecialidade(e.target.value)} autoComplete="off"/></Campo>
         <Selecao rotulo="Situação" vazio="Todas" value={situacao} onChange={e => setSituacao(e.target.value as SituacaoOs)} opcoes={SITUACOES}/>
+        <label className="check-field"><input type="checkbox" checked={semViatura} onChange={e => setSemViatura(e.target.checked)}/><span>Só sem viatura</span></label>
         {temFiltro ? <button type="button" className="button button-ghost" onClick={limparFiltros}>Limpar filtros</button> : null}
       </form>
     </Painel>
@@ -173,6 +209,8 @@ export default function PortoOrdensServicoPage() {
       <Indicador rotulo="Ordens de serviço" valor={dados ? dados.total.toLocaleString('pt-BR') : '—'}
         apoio={temFiltro ? 'Com os filtros aplicados' : 'Todas do período'}/>
       <Indicador rotulo="Valor" valor={dados ? moeda(dados.valorTotal) : '—'} apoio="Soma das OS da lista"/>
+      <Indicador rotulo="Sem viatura" valor={dados ? dados.semViatura.toLocaleString('pt-BR') : '—'}
+        apoio={dados?.semViatura ? 'Pendentes de viatura' : 'Todas com viatura'}/>
       <Indicador rotulo="Comissão" valor={dados ? moeda(dados.comissaoTotal) : '—'} apoio="20% das OS já pagas numa OP"/>
     </GradeIndicadores>
 
@@ -226,5 +264,14 @@ export default function PortoOrdensServicoPage() {
         </div>
       </form>
     </Modal> : null}
+    {emLote && dados ? <Modal etiqueta={`${dados.total} OS no filtro`} titulo="Definir viatura das OS filtradas" aoFechar={() => setEmLote(false)}>
+      <form onSubmit={pedirViaturaEmLote} className="form-grid">
+        <p className="empty-inline">Vale para as OS da lista atual: período e filtros aplicados. Filtre por socorrista e dia para acertar a viatura de quem rodou nela.</p>
+        <Selecao rotulo="Viatura" name="sigla" required vazio="Selecione" opcoes={veiculos.filter(v => v.ativo).map(v => ({ valor: siglaDe(v), texto: v.identificacao }))}/>
+        <label className="check-field"><input type="checkbox" name="soSemViatura" defaultChecked/><span>Só as que estão sem viatura ({dados.semViatura})</span></label>
+        <div className="modal-actions"><button type="button" className="button button-ghost" onClick={() => setEmLote(false)}>Cancelar</button><button className="button button-primary">Continuar</button></div>
+      </form>
+    </Modal> : null}
+    {pedido ? <ConfirmarAcao {...pedido} aoFechar={() => setPedido(null)}/> : null}
   </div>
 }

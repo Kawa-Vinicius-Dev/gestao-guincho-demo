@@ -18,6 +18,8 @@ export interface FiltroOs {
   sigla?: string
   especialidade?: string
   situacao?: SituacaoOs
+  /** So as OS que ainda estao sem viatura. */
+  semViatura?: boolean
 }
 
 export interface LinhaOs {
@@ -38,6 +40,8 @@ export interface LinhaOs {
 
 export interface PaginaOs {
   total: number
+  /** Quantas OS do filtro estao sem viatura. */
+  semViatura: number
   valorTotal: number
   comissaoTotal: number
   itens: LinhaOs[]
@@ -58,11 +62,13 @@ export async function listarOs(filtro: FiltroOs, pagina = 0, tamanho = TAMANHO_D
       p_situacao: filtro.situacao || null,
       p_limite: tamanho,
       p_deslocamento: pagina * tamanho,
+      p_sem_viatura: Boolean(filtro.semViatura),
     }),
     'Não foi possível carregar as ordens de serviço.',
   ) as PaginaOs
   return {
     total: Number(bruto.total),
+    semViatura: Number(bruto.semViatura ?? 0),
     valorTotal: Number(bruto.valorTotal),
     comissaoTotal: Number(bruto.comissaoTotal),
     itens: bruto.itens.map(i => ({
@@ -96,4 +102,28 @@ export async function corrigirOs(id: number, correcao: { motoristaId?: number; s
     }),
     'Não foi possível corrigir a ordem de serviço.',
   )
+}
+
+/**
+ * Aplica a viatura as OS do filtro de uma vez. Por padrao so as que estao sem
+ * viatura: a sigla que veio do painel diario nao e trocada sem pedir.
+ */
+export async function definirViaturaEmLote(filtro: FiltroOs, sigla: string, soSemViatura = true): Promise<number> {
+  invalidarCacheFinanceiro()
+  return ou(
+    await supabase().rpc('porto_definir_viatura_em_lote', {
+      p_nova_sigla: sigla,
+      p_inicio: filtro.inicio,
+      p_fim: filtro.fim,
+      p_numero_os: filtro.numeroOs || null,
+      p_numero_op: filtro.numeroOp || null,
+      p_motorista_id: filtro.motoristaId || null,
+      p_sigla: filtro.sigla || null,
+      p_especialidade: filtro.especialidade || null,
+      p_situacao: filtro.situacao || null,
+      p_sem_viatura: Boolean(filtro.semViatura),
+      p_so_sem_viatura: soSemViatura,
+    }),
+    'Não foi possível definir a viatura das ordens de serviço.',
+  ) as number
 }
