@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 
 /**
  * Peças de tela reutilizáveis.
@@ -72,14 +73,21 @@ type IndicadorProps = {
   /** Uma linha de apoio: o valor em dinheiro por trás da contagem, por exemplo. */
   apoio?: ReactNode
   tom?: TomIndicador
+  /** Quando existe, o card inteiro vira link para a lista que ele resume. */
+  link?: string
 }
 
-export function Indicador({ rotulo, valor, apoio, tom = 'neutro' }: IndicadorProps) {
-  return <article className={`indicador indicador-${tom}`}>
+export function Indicador({ rotulo, valor, apoio, tom = 'neutro', link }: IndicadorProps) {
+  const corpo = <>
     <span>{rotulo}</span>
     <strong>{valor}</strong>
     {apoio ? <small>{apoio}</small> : null}
-  </article>
+  </>
+  // Card que representa um conjunto de linhas abre esse conjunto: quem ve "12 sem
+  // valor" quer saber quais sao, e o caminho ate a lista filtrada era manual.
+  return link
+    ? <Link className={`indicador indicador-${tom} indicador-link`} to={link}>{corpo}</Link>
+    : <article className={`indicador indicador-${tom}`}>{corpo}</article>
 }
 
 /** Grade de indicadores: uma só medida de coluna para todas as telas. */

@@ -264,3 +264,43 @@ test('a OP escolhida continua escolhida ao voltar para a tela', async () => {
   expect(screen.getByDisplayValue('2026-04-29')).toBeInTheDocument()
   expect(await screen.findByLabelText('Período')).toHaveValue('7')
 })
+
+// A conciliacao com a OP e o que o painel nao mostrava: servico feito sem valor,
+// valor informado a mao, OS que ficou para a proxima OP e valor divergente.
+test('cards de conciliação contam, somam e abrem a lista filtrada', async () => {
+  servidorDoPainel(painel({
+    conciliacao: {
+      semValor: 12, comValorManual: 3, valorManual: 540,
+      aguardandoProximaOp: 5, valorAguardandoProximaOp: 900,
+      divergentes: 2, valorDivergencia: 31, valorPrevisto: 76210,
+    },
+  }))
+  const Painel = await abrirPainel()
+
+  render(<MemoryRouter><Painel/></MemoryRouter>)
+
+  expect(await screen.findByText('Serviços sem valor')).toBeInTheDocument()
+  expect(screen.getByText('Aguardando a análise da Porto')).toBeInTheDocument()
+  expect(screen.getByText(/R\$\s540,00 previstos, sem comissão/)).toBeInTheDocument()
+  expect(screen.getByText(/R\$\s900,00 projetados desta competência/)).toBeInTheDocument()
+  expect(screen.getByText(/R\$\s31,00 entre o informado e a OP/)).toBeInTheDocument()
+
+  // O card leva para a lista daquela situação, olhando pela competência.
+  const semValor = screen.getByText('Serviços sem valor').closest('a')
+  expect(semValor).toHaveAttribute('href', '/porto/ordens-servico?situacao=AGUARDANDO_ANALISE&competencia=1')
+  expect(screen.getByText('Valor divergente').closest('a'))
+    .toHaveAttribute('href', '/porto/ordens-servico?situacao=DIVERGENTE&competencia=1')
+})
+
+test('faturamento por socorrista conta o serviço sem valor', async () => {
+  servidorDoPainel(painel({
+    faturamentoPorSocorrista: [
+      { chave: '1', rotulo: 'JEFERSON MARTINS DA SILVA', valor: 2385, quantidade: 49, semVinculo: false, semValor: 7 },
+    ],
+  }))
+  const Painel = await abrirPainel()
+
+  render(<MemoryRouter><Painel/></MemoryRouter>)
+
+  expect(await screen.findByText('49 serviços · 7 sem valor')).toBeInTheDocument()
+})

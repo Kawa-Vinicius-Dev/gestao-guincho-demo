@@ -2,8 +2,16 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { baixarRelatorioPorto, obterDashboardAltoNivelPorto } from '../dados/porto'
 import type {
-  DashboardAltoNivelPorto, OpDestaquePorto, PendenciasVinculoPorto,
+  DashboardAltoNivelPorto, LinhaFaturamentoPorto, OpDestaquePorto, PendenciasVinculoPorto,
 } from '../types/modelos'
+
+/**
+ * Lista de OS filtrada pela situacao, dentro da competencia do painel.
+ *
+ * O painel fala em competencia — o que vai ser pago nesta janela —, entao a
+ * lista que ele abre tem de olhar pelo mesmo lado, e nao pela data do servico.
+ */
+const listaDeOs = (situacao: string) => `/porto/ordens-servico?situacao=${situacao}&competencia=1`
 import { data, moeda, percentual } from '../utils/formatadores'
 import { Carregando } from '../components/EstadoPagina'
 import { EvolucaoAcumulada, FaturamentoPorGrupo } from '../components/Graficos'
@@ -65,6 +73,15 @@ function detalheDoVinculo(p: PendenciasVinculoPorto) {
   ].filter(Boolean).join(' · ')
 }
 
+/**
+ * Barra do faturamento: a quantidade inclui o servico sem valor, que foi feito
+ * do mesmo jeito. Quando ha algum, o detalhe diz quantos ainda nao tem preco.
+ */
+function detalhar(l: LinhaFaturamentoPorto) {
+  const servicos = `${l.quantidade} ${l.quantidade === 1 ? 'serviço' : 'serviços'}`
+  return { ...l, detalhe: l.semValor ? `${servicos} · ${l.semValor} sem valor` : servicos }
+}
+
 /** Um cartao so fica colorido quando ha o que resolver: zero e uma boa noticia. */
 const tom = (valor: number, cor: 'alerta' | 'atencao') => (valor > 0 ? cor : 'neutro')
 
@@ -110,6 +127,7 @@ export default function PortoDashboardPage() {
   // Atencao e so o que pede providencia. Servico aguardando OP e a espera normal
   // pela Porto: ja aparece como "a receber" no topo e nao pede acao de ninguem.
   const divergencias = dados?.quantidadeComDivergencia ?? 0
+  const conciliacao = dados?.conciliacao
   const ticketMedio = dados && dados.quantidadeTotalServicos > 0
     ? dados.valorTotalRealizado / dados.quantidadeTotalServicos
     : null
@@ -213,6 +231,25 @@ export default function PortoDashboardPage() {
           apoio={dados.quantidadeComDivergencia ? moeda(dados.valorTotalDivergencias) : 'Composição confere'}/>
       </GradeIndicadores>
 
+      {/* Conciliacao com a OP: o servico existe e conta na quantidade mesmo sem
+          valor; o card diz quanto falta fechar e abre a lista. */}
+      {conciliacao ? <GradeIndicadores>
+        <Indicador rotulo="Serviços sem valor" valor={conciliacao.semValor}
+          tom={tom(conciliacao.semValor, 'atencao')} link={listaDeOs('AGUARDANDO_ANALISE')}
+          apoio={conciliacao.semValor ? 'Aguardando a análise da Porto' : 'Todos com valor'}/>
+        <Indicador rotulo="Com valor informado" valor={conciliacao.comValorManual}
+          link={listaDeOs('VALOR_MANUAL')}
+          apoio={conciliacao.comValorManual ? `${moeda(conciliacao.valorManual)} previstos, sem comissão` : 'Nenhum valor informado à mão'}/>
+        <Indicador rotulo="Aguardando próxima OP" valor={conciliacao.aguardandoProximaOp}
+          tom={tom(conciliacao.aguardandoProximaOp, 'atencao')} link={listaDeOs('AGUARDANDO_PROXIMA_OP')}
+          apoio={conciliacao.aguardandoProximaOp
+            ? `${moeda(conciliacao.valorAguardandoProximaOp)} projetados desta competência`
+            : 'Nada ficou para trás'}/>
+        <Indicador rotulo="Valor divergente" valor={conciliacao.divergentes}
+          tom={tom(conciliacao.divergentes, 'alerta')} link={listaDeOs('DIVERGENTE')}
+          apoio={conciliacao.divergentes ? `${moeda(conciliacao.valorDivergencia)} entre o informado e a OP` : 'OP bateu com o informado'}/>
+      </GradeIndicadores> : null}
+
       {divergencias
         ? <Painel className="painel-atencao" etiqueta="Ação" titulo="Precisa de atenção">
             <ul>
@@ -231,12 +268,12 @@ export default function PortoDashboardPage() {
         <Painel etiqueta="Por pessoa" titulo="Faturamento por socorrista">
           <FaturamentoPorGrupo descricao="Faturamento por socorrista no período"
             vazio="Nenhum serviço neste período."
-            linhas={dados.faturamentoPorSocorrista.map(l => l.semVinculo ? l : { ...l, link: `/equipe/${l.chave}` })}/>
+            linhas={dados.faturamentoPorSocorrista.map(l => ({ ...detalhar(l), ...(l.semVinculo ? {} : { link: `/equipe/${l.chave}` }) }))}/>
         </Painel>
         <Painel etiqueta="Por viatura" titulo="Faturamento por viatura">
           <FaturamentoPorGrupo descricao="Faturamento por viatura no período"
             vazio="Nenhum serviço neste período."
-            linhas={dados.faturamentoPorViatura.map(l => l.semVinculo ? l : { ...l, link: `/veiculos?sigla=${encodeURIComponent(l.chave)}` })}/>
+            linhas={dados.faturamentoPorViatura.map(l => ({ ...detalhar(l), ...(l.semVinculo ? {} : { link: `/veiculos?sigla=${encodeURIComponent(l.chave)}` }) }))}/>
         </Painel>
       </div>
 
