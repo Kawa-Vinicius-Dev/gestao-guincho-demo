@@ -94,3 +94,31 @@ test('socorrista desativado não é oferecido para corrigir a OS', async () => {
   expect(within(campo).getByRole('option', { name: /anderson/i })).toBeInTheDocument()
   expect(within(campo).queryByRole('option', { name: /quem saiu/i })).not.toBeInTheDocument()
 })
+// A OP nunca traz a viatura: quem conhece a operacao filtra e aplica em lote, com confirmacao.
+test('define a viatura das OS filtradas em lote, só depois de confirmar', async () => {
+  let lote: Record<string, unknown> | null = null
+  servidorBase()
+  servidor.use(
+    http.post(`${SUPA}/rest/v1/rpc/porto_listar_os`, () =>
+      HttpResponse.json({ total: 12, semViatura: 12, valorTotal: 2400, comissaoTotal: 480, itens: [{ ...OS, viatura: null }] })),
+    http.post(`${SUPA}/rest/v1/rpc/porto_definir_viatura_em_lote`, async ({ request }) => {
+      lote = await request.json() as Record<string, unknown>
+      return HttpResponse.json(12)
+    }),
+  )
+  const user = userEvent.setup()
+  await abrir()
+
+  await user.click(await screen.findByLabelText(/só sem viatura/i))
+  await user.click(await screen.findByRole('button', { name: /definir viatura das os filtradas/i }))
+  const janela = screen.getByRole('dialog')
+  await user.selectOptions(within(janela).getByLabelText(/^viatura$/i), 'L25')
+  await user.click(within(janela).getByRole('button', { name: /continuar/i }))
+
+  expect(await screen.findByText(/definir a viatura L25\?/i)).toBeInTheDocument()
+  expect(lote).toBeNull()
+  await user.click(screen.getByRole('button', { name: /^definir viatura$/i }))
+
+  await vi.waitFor(() => expect(lote).toMatchObject({ p_nova_sigla: 'L25', p_sem_viatura: true, p_so_sem_viatura: true }))
+  expect(await screen.findByText(/viatura L25 definida em 12 ordens de serviço/i)).toBeInTheDocument()
+})
