@@ -27,13 +27,15 @@ afterEach(() => vi.unstubAllEnvs())
 const OS = {
   id: 7, numero: '01/4312215-26', dataAtendimento: '2026-06-30', especialidade: 'GUINCHO', viatura: 'AUXILIAR',
   valorTotal: 181, motoristaId: 10, motorista: 'AUXILIAR', ordemPagamentoId: 13, numeroOp: '06416626', comissao: 36.2,
+  situacao: 'CONCILIADA', competenciaInicio: '2026-06-16', competenciaFim: '2026-06-30', valorPrevisto: 181,
 }
 
 function servidorBase(aoListar: (corpo: Record<string, unknown>) => void = () => {}) {
   servidor.use(
     http.post(`${SUPA}/rest/v1/rpc/porto_listar_os`, async ({ request }) => {
       aoListar(await request.json() as Record<string, unknown>)
-      return HttpResponse.json({ total: 1, valorTotal: 181, comissaoTotal: 36.2, itens: [OS] })
+      return HttpResponse.json({ total: 1, valorTotal: 181, valorPrevisto: 181, semValor: 0, divergentes: 0,
+        semViatura: 0, comissaoTotal: 36.2, itens: [OS] })
     }),
     http.get(`${SUPA}/rest/v1/motoristas`, () => HttpResponse.json([
       { id: 9, nome: 'ANDERSON JORGE RIBEIRO', ativo: true }, { id: 10, nome: 'AUXILIAR', ativo: true },
@@ -100,7 +102,8 @@ test('define a viatura das OS filtradas em lote, só depois de confirmar', async
   servidorBase()
   servidor.use(
     http.post(`${SUPA}/rest/v1/rpc/porto_listar_os`, () =>
-      HttpResponse.json({ total: 12, semViatura: 12, valorTotal: 2400, comissaoTotal: 480, itens: [{ ...OS, viatura: null }] })),
+      HttpResponse.json({ total: 12, semViatura: 12, valorTotal: 2400, valorPrevisto: 2400, semValor: 0, divergentes: 0,
+        comissaoTotal: 480, itens: [{ ...OS, viatura: null }] })),
     http.post(`${SUPA}/rest/v1/rpc/porto_definir_viatura_em_lote`, async ({ request }) => {
       lote = await request.json() as Record<string, unknown>
       return HttpResponse.json(12)
@@ -132,4 +135,62 @@ test('abre filtrada pela OS do link, procurando fora do período', async () => {
   expect(corpo.p_numero_os).toBe('01/2937402-26')
   expect(corpo.p_inicio).toBe('2026-03-30')
   expect(screen.getByText(/procura em todo o histórico/i)).toBeInTheDocument()
+})
+
+test('filtra por competência em vez da data do serviço', async () => {
+  const pedidos: Record<string, unknown>[] = []
+  servidorBase(corpo => pedidos.push(corpo))
+  const user = userEvent.setup()
+  await abrir()
+
+  await screen.findByText('01/4312215-26')
+  expect(pedidos[0]).toMatchObject({ p_por_competencia: false })
+  await user.click(screen.getByLabelText(/filtrar por competência/i))
+
+  await vi.waitFor(() => expect(pedidos.at(-1)).toMatchObject({ p_por_competencia: true }))
+})
+
+test('informa o valor da Porto numa OS sem OP, depois de confirmar', async () => {
+  let informado: Record<string, unknown> | null = null
+  servidorBase()
+  servidor.use(
+    http.post(`${SUPA}/rest/v1/rpc/porto_listar_os`, () => HttpResponse.json({
+      total: 1, semViatura: 0, valorTotal: 0, valorPrevisto: 0, semValor: 1, divergentes: 0, comissaoTotal: 0,
+      itens: [{ ...OS, ordemPagamentoId: null, numeroOp: null, comissao: null, valorTotal: 0, valorPrevisto: null,
+        situacao: 'AGUARDANDO_ANALISE' }],
+    })),
+    http.post(`${SUPA}/rest/v1/rpc/porto_informar_valor_manual`, async ({ request }) => {
+      informado = await request.json() as Record<string, unknown>
+      return new HttpResponse(null, { status: 204 })
+    }),
+  )
+  const user = userEvent.setup()
+  await abrir()
+
+  await user.click(await screen.findByRole('button', { name: /informar valor da os 01\/4312215-26/i }))
+  const janela = screen.getByRole('dialog')
+  await user.type(within(janela).getByLabelText(/valor do serviço/i), '18100')
+  await user.click(within(janela).getByRole('button', { name: /continuar/i }))
+
+  // Valor informado nao gera comissao: a confirmacao diz isso antes de gravar.
+  expect(await screen.findByText(/informar r\$\s*181,00 na os/i)).toBeInTheDocument()
+  expect(screen.getByText(/não gera comissão/i)).toBeInTheDocument()
+  expect(informado).toBeNull()
+  await user.click(screen.getByRole('button', { name: /^informar valor$/i }))
+
+  await vi.waitFor(() => expect(informado).toEqual({ p_os_id: 7, p_valor: 181 }))
+})
+
+test('OS paga pela OP mostra o valor informado e a diferença', async () => {
+  servidorBase()
+  servidor.use(http.post(`${SUPA}/rest/v1/rpc/porto_listar_os`, () => HttpResponse.json({
+    total: 1, semViatura: 0, valorTotal: 181, valorPrevisto: 181, semValor: 0, divergentes: 1, comissaoTotal: 36.2,
+    itens: [{ ...OS, situacao: 'DIVERGENTE', valorManual: 150, divergencia: 31 }],
+  })))
+  await abrir()
+
+  expect(await screen.findByText(/valor divergente/i)).toBeInTheDocument()
+  expect(screen.getByText(/informado r\$\s*150,00 · \+r\$\s*31,00/i)).toBeInTheDocument()
+  // Quem ja esta numa OP nao tem valor para informar a mao.
+  expect(screen.queryByRole('button', { name: /informar valor da os/i })).not.toBeInTheDocument()
 })
