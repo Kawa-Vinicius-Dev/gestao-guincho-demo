@@ -385,3 +385,35 @@ test('importação colada que falha ao confirmar mantém o texto', async () => {
   expect(await screen.findByText(/instabilidade momentânea/i)).toBeInTheDocument()
   expect(screen.getByLabelText(/conteúdo copiado da porto/i)).toHaveValue('OP-FALHA-1\t100.00')
 })
+// Escolher o dono de uma OS (uma ou todas) decide de quem e a comissao: pede confirmacao antes.
+test('escolher socorrista para as OS sem dono pede confirmação antes de aplicar', async () => {
+  servidor.use(
+    http.get('/api/motoristas', () => HttpResponse.json([{ id: 7, nome: 'SOCORRISTA SETE', qra: '777', ativo: true }])),
+    http.post('/api/porto/importacoes/previa', () => HttpResponse.json({
+      id: 87, nomeArquivo: 'orfas.csv', tipo: 'PREVISAO_RECEBER', status: 'AGUARDANDO_CONFERENCIA', totalLinhas: 2,
+      requerOrdemPagamento: false, erros: [],
+      linhas: [
+        { hashRegistro: 'o1', acao: 'IMPORTAR', dados: { numero_op: 'OP-ORFA-1', valor_total: '100.00' } },
+        { hashRegistro: 'o2', acao: 'IMPORTAR', dados: { numero_op: 'OP-ORFA-2', valor_total: '100.00' } },
+      ],
+      orfas: [{ hashRegistro: 'o1', numeroOs: 'OS-ORFA-1' }, { hashRegistro: 'o2', numeroOs: 'OS-ORFA-2' }],
+    }, { status: 201 })),
+  )
+  const user = userEvent.setup()
+  render(<PortoImportacoesPage />)
+  await user.upload(screen.getByLabelText(/arquivo csv/i), new File(['csv'], 'orfas.csv', { type: 'text/csv' }))
+  await user.click(screen.getByRole('button', { name: /analisar csv/i }))
+  expect(await screen.findByText(/2 ordens de serviço vieram sem socorrista/i)).toBeInTheDocument()
+
+  await user.selectOptions(screen.getByLabelText(/aplicar o mesmo socorrista a todas/i), '7')
+  const janela = await screen.findByRole('dialog', { name: /aplicar socorrista sete a todas/i })
+  expect(within(janela).getAllByText('2').length).toBeGreaterThan(0)
+  // Voltar nao aplica nada.
+  await user.click(within(janela).getByRole('button', { name: /voltar/i }))
+  expect(screen.getByText(/2 ordens de serviço vieram sem socorrista/i)).toBeInTheDocument()
+
+  await user.selectOptions(screen.getByLabelText(/socorrista da os OS-ORFA-1/i), '7')
+  expect(await screen.findByRole('dialog', { name: /atribuir a os a socorrista sete/i })).toBeInTheDocument()
+  await confirmarNaJanela()
+  expect(await screen.findByText(/1 ordem de serviço veio sem socorrista/i)).toBeInTheDocument()
+})
