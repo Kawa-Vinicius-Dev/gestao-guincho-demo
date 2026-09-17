@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { SeletorPeriodo } from '../components/SeletorPeriodo'
 import { usePeriodoGlobal } from '../utils/periodoGlobal'
 import { lerIndicadores } from '../dados/dashboard'
+import { listarOs } from '../dados/porto/listaOs'
 import { lerExtrato } from '../dados/extrato'
 import { atualizarVeiculo, criarVeiculo, excluirVeiculo, listarVeiculos } from '../dados/veiculos'
 import { ConfirmarExclusao } from '../components/ConfirmarExclusao'
@@ -25,11 +26,22 @@ export default function FrotasPage(){
   const [editando,setEditando]=useState<Veiculo|null>(null),[salvando,setSalvando]=useState(false)
   // Primeira carga mostra o esqueleto; trocar de competencia mantem a tela.
   const [carregando,setCarregando]=useState(true)
+  // O que esta viatura rodou nesta competencia e a Porto ainda nao pagou.
+  const veiculoDaSigla=veiculos.find(v=>v.id===selecionado)
+  const [aguardando,setAguardando]=useState<{total:number;previsto:number;semValor:number}|null>(null)
+  useEffect(()=>{const sigla=(veiculoDaSigla?.siglaPorto||veiculoDaSigla?.identificacao||'').toUpperCase()
+    if(!sigla||!periodo.inicio||!periodo.fim){setAguardando(null);return}
+    let valeu=true
+    listarOs({inicio:periodo.inicio,fim:periodo.fim,sigla,situacao:'AGUARDANDO',porCompetencia:true},0,1)
+      .then(p=>{if(valeu)setAguardando({total:p.total,previsto:p.valorPrevisto,semValor:p.semValor})})
+      .catch(()=>{if(valeu)setAguardando(null)})
+    return()=>{valeu=false}},[veiculoDaSigla,periodo.inicio,periodo.fim])
+
   const carregar=useCallback(async()=>{const {inicio,fim}=periodo;if(!inicio||!fim||inicio>fim)return;try{const [v,d,l]=await Promise.all([listarVeiculos(),lerIndicadores(inicio,fim),lerExtrato(inicio,fim)]);setVeiculos(v);setFinanceiro(d);setLancamentos(l);setSelecionado(atual=>{const p=pedido.current;pedido.current={id:0,sigla:''}
       const escolhido=v.find(x=>x.id===p.id||(p.sigla&&[x.siglaPorto,x.identificacao].some(s=>s?.toUpperCase()===p.sigla)))
       return escolhido?escolhido.id:v.some(x=>x.id===atual)?atual:(v[0]?.id??0)})}catch(e){setErro((e as Error).message)}},[periodo])
   useEffect(()=>{void carregar().finally(()=>setCarregando(false))},[carregar])
-  const veiculo=veiculos.find(v=>v.id===selecionado)
+  const veiculo=veiculoDaSigla
   const resultado=financeiro?.resultadoPorVeiculo.find(r=>r.veiculoId===selecionado)
   const receitas=resultado?.receitas??0,despesas=resultado?.despesas??0,lucro=resultado?.resultado??0,margem=receitas?lucro/receitas*100:0
   const historico=useMemo(()=>lancamentos.filter(l=>l.veiculoId===selecionado),[lancamentos,selecionado])
@@ -52,7 +64,7 @@ export default function FrotasPage(){
       {veiculo?<div className="fleet-detail"><article className="vehicle-hero"><div><span className="eyebrow">{ehAuxiliar(veiculo.identificacao)?'Viatura auxiliar':veiculo.placa??'Placa pendente'}</span><h2>{veiculo.identificacao} · {ehAuxiliar(veiculo.identificacao)?'Recebe as OS que chegam sem viatura':veiculo.modelo||'Modelo não informado'}</h2><p>Custo operacional informado: {moeda(veiculo.custoPorKm)} por km.</p>
         <p>{veiculo.siglaPorto?<>Aparece como <strong>{veiculo.siglaPorto}</strong> no painel da Porto.</>:<>Sem sigla da Porto — serviços desta viatura não se vinculam sozinhos.</>}</p></div>
       <div><span className={`vehicle-status ${veiculo.ativo?'status-saudavel':'status-monitorar'}`}>{veiculo.ativo?'Ativo':'Inativo'}</span><button className="table-action" onClick={()=>{setEditando(veiculo);setModal(true)}}>Editar</button>{ehAuxiliar(veiculo.identificacao)?null:<button className="table-action table-action-danger" onClick={()=>setExcluindo(veiculo)}>Excluir</button>}</div></article>
-        <div className="vehicle-metrics"><article><span>Receita recebida</span><strong>{moeda(receitas)}</strong><small>Vínculo financeiro real</small></article><article><span>Despesas pagas</span><strong>{moeda(despesas)}</strong><small>Custos aprovados</small></article><article className="focus"><span>Resultado</span><strong>{moeda(lucro)}</strong><small>{margem.toFixed(1)}% de margem</small></article><article><span>Km morto</span><strong>{numero(resultado?.kmMorto??0)} km</strong><small>{moeda(resultado?.custoKmMorto??0)} improdutivos</small></article></div>
+        <div className="vehicle-metrics"><article><span>Receita recebida</span><strong>{moeda(receitas)}</strong><small>Vínculo financeiro real</small></article><article><span>Despesas pagas</span><strong>{moeda(despesas)}</strong><small>Custos aprovados</small></article><article className="focus"><span>Resultado</span><strong>{moeda(lucro)}</strong><small>{margem.toFixed(1)}% de margem</small></article>{aguardando&&aguardando.total?<article><span>Aguardando OP</span><strong>{aguardando.total}</strong><small><Link to={`/porto/ordens-servico?situacao=AGUARDANDO&competencia=1&sigla=${encodeURIComponent((veiculo?.siglaPorto||veiculo?.identificacao||'').toUpperCase())}`}>{moeda(aguardando.previsto)} previstos{aguardando.semValor?` · ${aguardando.semValor} sem valor`:''}</Link></small></article>:null}<article><span>Km morto</span><strong>{numero(resultado?.kmMorto??0)} km</strong><small>{moeda(resultado?.custoKmMorto??0)} improdutivos</small></article></div>
         <article className="panel vehicle-history"><header className="panel-title"><div><span className="eyebrow">Auditoria individual</span><h2>Histórico financeiro</h2></div></header>{historico.length?<div className="table-scroll"><table><thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th>Situação</th><th>Valor</th></tr></thead><tbody>{historico.map(item=><tr key={item.id}><td>{data(item.data)}</td><td><strong>{item.descricao}</strong></td><td>{item.categoria}</td><td>{item.realizado?'Realizado':'Previsto'}</td><td className={item.tipo==='RECEITA'?'positive':'negative'}>{item.tipo==='RECEITA'?'+':'−'} {moeda(item.valor)}</td></tr>)}</tbody></table></div>:<p className="empty-inline">Nenhum movimento vinculado ao veículo nesta competência.</p>}</article>
       </div>:null}</section>:<Vazio titulo="Nenhum veículo" descricao="Cadastre o primeiro veículo para acompanhar seus resultados reais."/>}
     </>}

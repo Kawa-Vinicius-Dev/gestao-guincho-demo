@@ -50,13 +50,13 @@ async function colar(user: ReturnType<typeof userEvent.setup>, texto: string) {
   await user.click(screen.getByRole('button', { name: /analisar diário/i }))
 }
 
-test('colagem de mais de 15 dias é recusada antes de virar prévia', async () => {
+test('colagem de mais de uma quinzena é recusada antes de virar prévia', async () => {
   const user = userEvent.setup()
   render(<PortoDiarioPage />)
 
   await colar(user, [registro('5673329', '01/09/2026'), registro('5677129', '20/09/2026')].join('\n'))
 
-  expect(await screen.findByRole('alert')).toHaveTextContent(/no máximo 15 dias/i)
+  expect(await screen.findByRole('alert')).toHaveTextContent(/no máximo 16 dias/i)
   expect(criarPrevia).not.toHaveBeenCalled()
 })
 

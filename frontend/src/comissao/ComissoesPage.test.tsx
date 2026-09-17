@@ -166,3 +166,47 @@ test('o detalhe lista todos os gastos e diz quais descontam', async () => {
   const outraOp = within(dialogo).getByText('Pedágio pessoal').closest('tr')!
   expect(within(outraOp).getByText('Em outra OP do período')).toBeInTheDocument()
 })
+
+// Comissao so se paga com a OP, mas quem rodou a quinzena quer saber o que vem:
+// a prevista mostra isso sem se misturar com a confirmada.
+test('comissão prevista da competência aparece separada da confirmada', async () => {
+  let corpo: Record<string, unknown> = {}
+  servidor.use(
+    listaDeOps(),
+    http.post(`${URL_SUPABASE}/rest/v1/rpc/resumo_comissoes_ops`, () => HttpResponse.json([])),
+    http.post(`${URL_SUPABASE}/rest/v1/rpc/porto_comissao_prevista`, async ({ request }) => {
+      corpo = await request.json() as Record<string, unknown>
+      return HttpResponse.json([
+        { motorista_id: 4, socorrista: 'Ana Motorista', servicos: 9, sem_valor: 4,
+          valor_previsto: 1200, comissao_prevista: 240 },
+      ])
+    }),
+  )
+  const ComissoesPage = await abrirPagina(() => import('./ComissoesPage'))
+
+  render(<ComissoesPage/>)
+
+  const titulo = await screen.findByRole('heading', { name: 'Comissão prevista' })
+  const tabela = titulo.closest('section')!
+  expect(within(tabela).getByText('R$ 240,00')).toBeInTheDocument()
+  expect(within(tabela).getByText(/não entra em despesas/i)).toBeInTheDocument()
+  // Prevista sai do período, não das OPs: o que não tem OP não está em nenhuma delas.
+  expect(corpo).toEqual(expect.objectContaining({ p_motorista_id: null }))
+})
+
+test('socorrista vê o previsto da competência antes da OP chegar', async () => {
+  servidor.use(
+    listaDeOps(),
+    http.post(`${URL_SUPABASE}/rest/v1/rpc/comissao_das_ops`, () => HttpResponse.json(detalhe)),
+    http.post(`${URL_SUPABASE}/rest/v1/rpc/porto_comissao_prevista`, () => HttpResponse.json([
+      { motorista_id: 4, socorrista: 'Ana Motorista', servicos: 3, sem_valor: 1,
+        valor_previsto: 500, comissao_prevista: 100 },
+    ])),
+  )
+  const MinhaComissaoPage = await abrirPagina(() => import('./MinhaComissaoPage'))
+
+  render(<MinhaComissaoPage/>)
+
+  expect(await screen.findByText(/previsto nesta competência: r\$\s*100,00/i)).toBeInTheDocument()
+  expect(screen.getByText(/o valor final é o da op/i)).toBeInTheDocument()
+})

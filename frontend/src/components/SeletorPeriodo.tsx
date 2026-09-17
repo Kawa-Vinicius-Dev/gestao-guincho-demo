@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { listarPeriodosDeOp } from '../dados/porto'
-import { globalDoPeriodoPorto, type PeriodoGlobal } from '../utils/periodoGlobal'
+import { globalDoPeriodoPorto, intervaloDoMes, type PeriodoGlobal } from '../utils/periodoGlobal'
 import { agruparPorPeriodo, rotuloPeriodo, type PeriodoPorto } from '../utils/periodos'
 import { Campo, Selecao } from './Campos'
 
@@ -11,8 +11,26 @@ import { Campo, Selecao } from './Campos'
  * "Periodo personalizado". A lista de quinzenas e conveniencia: se nao carregar,
  * as datas continuam valendo.
  */
+/** Os doze meses ate o corrente, do mais recente para tras. */
+function mesesRecentes(): { valor: string; texto: string }[] {
+  const hoje = new Date()
+  return Array.from({ length: 12 }, (_, i) => {
+    const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1)
+    const valor = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    const texto = d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+    return { valor, texto: texto.charAt(0).toUpperCase() + texto.slice(1) }
+  })
+}
+
 export function SeletorPeriodo({ periodo, aoMudar }: { periodo: PeriodoGlobal; aoMudar: (novo: PeriodoGlobal) => void }) {
   const [periodos, setPeriodos] = useState<PeriodoPorto[]>([])
+  const meses = mesesRecentes()
+  // Mes fechado: as competencias do mes juntas, para a leitura mensal que Kawa
+  // pediu. So aparece marcado quando as datas sao exatamente as do mes.
+  const mesEscolhido = meses.find(m => {
+    const { inicio, fim } = intervaloDoMes(m.valor)
+    return periodo.inicio === inicio && periodo.fim === fim
+  })?.valor ?? ''
   useEffect(() => {
     listarPeriodosDeOp().then(ops => setPeriodos(agruparPorPeriodo(ops))).catch(() => setPeriodos([]))
   }, [])
@@ -26,6 +44,9 @@ export function SeletorPeriodo({ periodo, aoMudar }: { periodo: PeriodoGlobal; a
         aoMudar((novo && globalDoPeriodoPorto(novo)) || { ...periodo, op: '' })
       }}
       opcoes={periodos.map(p => ({ valor: p.id, texto: rotuloPeriodo(p) }))}/>
+    <Selecao rotulo="Mês" vazio="Sem mês fechado" value={mesEscolhido}
+      onChange={e => { if (e.target.value) aoMudar({ ...intervaloDoMes(e.target.value), op: '' }) }}
+      opcoes={meses}/>
     <Campo rotulo="De">
       <input aria-label="Data inicial" type="date" value={periodo.inicio} max={periodo.fim || undefined}
         onChange={e => aoMudar({ ...periodo, op: '', inicio: e.target.value })}/>
