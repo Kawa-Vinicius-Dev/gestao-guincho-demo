@@ -9,9 +9,9 @@ export default function PortoRelatoriosPage() {
   const [dia, setDia] = useState(hojeIso())
 
   /** O fechamento do dia da operacao: o que a equipe atendeu naquela data. */
-  async function baixarDoDia() {
-    setErro(''); setBaixando('diario')
-    try { await baixarRelatorioDiarioPorto(dia) }
+  async function baixarDoDia(formato: 'excel' | 'pdf') {
+    setErro(''); setBaixando('diario-' + formato)
+    try { await baixarRelatorioDiarioPorto(dia, formato) }
     catch (e) { setErro((e as Error).message) } finally { setBaixando('') }
   }
 
@@ -40,15 +40,17 @@ export default function PortoRelatoriosPage() {
           <Campo rotulo="Dia">
             <input type="date" value={dia} onChange={e => setDia(e.target.value)} max={hojeIso()}/>
           </Campo>
-          <button className="button button-primary" disabled={baixando !== '' || !dia}
-            onClick={() => void baixarDoDia()}>
-            {baixando === 'diario' ? 'Gerando CSV…' : 'Baixar CSV do dia'}
+          <button className="button button-ghost" disabled={baixando !== '' || !dia} onClick={() => void baixarDoDia('pdf')}>
+            {baixando === 'diario-pdf' ? 'Gerando PDF…' : 'Baixar PDF do dia'}
+          </button>
+          <button className="button button-primary" disabled={baixando !== '' || !dia} onClick={() => void baixarDoDia('excel')}>
+            {baixando === 'diario-excel' ? 'Gerando Excel…' : 'Baixar Excel do dia'}
           </button>
         </div>
       </article>
       <article>
-        <h2>Relatório consolidado</h2>
-        <p>OPs, serviços, conciliação, pendências e agrupamentos.</p>
+        <h2>Ordens de pagamento</h2>
+        <p>Todas as OPs com período, serviços, valor e conciliação.</p>
         <div className="heading-actions">
           <button className="button button-ghost" disabled={baixando !== ''} onClick={() => void baixar('pdf')}>
             {baixando === 'pdf' ? 'Gerando PDF…' : 'Baixar PDF'}

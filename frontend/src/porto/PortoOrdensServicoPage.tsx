@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { useAoVivo } from '../dados/aoVivo'
-import { baixarExcel, baixarPdf, type Relatorio } from '../dados/exportar'
+import { baixarRelatorio, type Relatorio } from '../dados/exportar'
 import { listarMotoristas } from '../dados/motoristas'
 import { corrigirOs, listarOs, listarTodasAsOs, TAMANHO_DA_PAGINA, type FiltroOs, type LinhaOs, type PaginaOs, type SituacaoOs } from '../dados/porto/listaOs'
 import { listarVeiculos } from '../dados/veiculos'
@@ -99,6 +99,7 @@ export default function PortoOrdensServicoPage() {
           ['Valor total', moeda(todas.valorTotal)],
           ['Comissão (OS pagas)', moeda(todas.comissaoTotal)],
         ],
+        secoes: [{
         colunas: [
           { titulo: 'OS', largura: 16 }, { titulo: 'Atendimento', tipo: 'data', largura: 13 },
           { titulo: 'Especialidade', largura: 20 }, { titulo: 'Socorrista', largura: 32 },
@@ -108,10 +109,11 @@ export default function PortoOrdensServicoPage() {
         linhas: todas.itens.map(os => [os.numero, os.dataAtendimento, os.especialidade, os.motorista,
           os.viatura, os.numeroOp ?? 'Aguardando OP', os.valorTotal, os.comissao]),
         totais: ['Total', null, null, null, null, null, todas.valorTotal, todas.comissaoTotal],
+        vazio: 'Nenhuma OS com esses filtros.',
+        }],
         nomeArquivo: `ordens-de-servico-${filtro.inicio}-a-${filtro.fim}`,
       }
-      if (formato === 'excel') await baixarExcel(relatorio)
-      else await baixarPdf(relatorio)
+      await baixarRelatorio(relatorio, formato)
     } catch (e) { setErro((e as Error).message) }
     finally { setExportando('') }
   }

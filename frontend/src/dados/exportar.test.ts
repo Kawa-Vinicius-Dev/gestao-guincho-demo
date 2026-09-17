@@ -6,9 +6,11 @@ const RELATORIO: Relatorio = {
   titulo: 'Ordens de serviço',
   subtitulo: 'Período: 23/06/2026 a 14/07/2026',
   resumo: [['Valor total', 'R$ 385,50']],
-  colunas: [{ titulo: 'OS' }, { titulo: 'Atendimento', tipo: 'data' }, { titulo: 'Valor', tipo: 'moeda' }],
-  linhas: [['01/4312215-26', '2026-06-30', 181], ['01/4363017-26', '2026-07-02', 204.5]],
-  totais: ['Total', null, 385.5],
+  secoes: [{
+    colunas: [{ titulo: 'OS' }, { titulo: 'Atendimento', tipo: 'data' }, { titulo: 'Valor', tipo: 'moeda' }],
+    linhas: [['01/4312215-26', '2026-06-30', 181], ['01/4363017-26', '2026-07-02', 204.5]],
+    totais: ['Total', null, 385.5],
+  }],
   nomeArquivo: 'teste',
 }
 

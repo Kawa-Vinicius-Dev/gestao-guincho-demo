@@ -3,13 +3,11 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { servidor } from '../../test/servidor'
 
 /**
- * O fechamento do dia da operação. O que importa checar aqui é a honestidade do
- * número: o painel diário não traz preço, então serviço sem valor não pode sair
- * como R$ 0,00 — zero é uma afirmação, e a afirmação certa é "ainda não sei".
+ * O fechamento do dia da operacao. O que importa checar aqui e a honestidade do
+ * numero: o painel diario nao traz preco, entao servico sem valor nao pode sair
+ * como R$ 0,00 — zero e uma afirmacao, e a afirmacao certa e "ainda nao sei".
  */
 const SUPA = 'https://projeto-teste.supabase.co'
-
-let csv = ''
 
 async function carregar() {
   vi.resetModules()
@@ -18,42 +16,23 @@ async function carregar() {
   vi.stubEnv('VITE_SUPABASE_MODULOS', 'tudo')
   const { esquecerCliente } = await import('../cliente')
   esquecerCliente()
-  return import('../porto')
+  return import('./relatorios')
 }
 
-beforeEach(() => {
-  csv = ''
-  sessionStorage.clear()
-  // O arquivo nao chega a existir no teste: o que interessa e o texto que iria
-  // para dentro dele. O Blob do jsdom nao tem `text()`, entao o conteudo e
-  // capturado na criacao.
-  const BlobOriginal = globalThis.Blob
-  class BlobEspiao extends BlobOriginal {
-    constructor(partes: BlobPart[], opcoes?: BlobPropertyBag) {
-      super(partes, opcoes)
-      csv = partes.map(String).join('')
-    }
-  }
-  globalThis.Blob = BlobEspiao as unknown as typeof Blob
-  Object.defineProperty(URL, 'createObjectURL', {
-    configurable: true, value: vi.fn(() => 'blob:teste'),
-  })
-  Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: vi.fn() })
-  HTMLAnchorElement.prototype.click = vi.fn()
-})
+beforeEach(() => sessionStorage.clear())
 afterEach(() => vi.unstubAllEnvs())
 
 const servicos = [
   { id: 1, numero: '5673329/26', valor_total: 205, especialidade: 'SOCORRO',
-    sigla_viatura: 'L168', socorrista: 'LUIZ FELIPE DA SILVA', qra: '622786',
+    sigla_viatura: 'V01', socorrista: 'SOCORRISTA UM', qra: '000001',
     data_atendimento: '2026-09-14', data_hora_atendimento: '2026-09-14T06:34:00-03:00',
     seguradora: 'PORTO SEGURO', status_operacional: 'NORMAL', status_financeiro: 'RECEBIDO',
-    ciclos_atraso: 0, motoristas: { nome: 'Luiz Felipe da Silva' } },
+    ciclos_atraso: 0, motoristas: { nome: 'Socorrista Um' } },
   { id: 2, numero: '5673528/26', valor_total: 0, especialidade: 'SOCORRO',
-    sigla_viatura: 'L25', socorrista: 'QEBSON RAMOS DA SILVA', qra: '609690',
+    sigla_viatura: 'V02', socorrista: 'SOCORRISTA DOIS', qra: '000002',
     data_atendimento: '2026-09-14', data_hora_atendimento: '2026-09-14T06:57:00-03:00',
-    seguradora: 'AZUL SEGUROS', status_operacional: 'NORMAL', status_financeiro: 'AGUARDANDO_OP',
-    ciclos_atraso: 0, motoristas: { nome: 'Qebson Ramos da Silva' } },
+    seguradora: 'PORTO SEGURO', status_operacional: 'NORMAL', status_financeiro: 'AGUARDANDO_OP',
+    ciclos_atraso: 0, motoristas: { nome: 'Socorrista Dois' } },
   { id: 3, numero: '5677129/26', valor_total: 0, especialidade: 'SOCORRO',
     sigla_viatura: null, socorrista: null, qra: null,
     data_atendimento: '2026-09-14', data_hora_atendimento: '2026-09-14T09:02:00-03:00',
@@ -63,28 +42,27 @@ const servicos = [
 
 test('o relatório do dia separa o que tem preço do que ainda não tem', async () => {
   servidor.use(http.get(`${SUPA}/rest/v1/ordens_servico_porto`, () => HttpResponse.json(servicos)))
-  const { baixarRelatorioDiarioPorto } = await carregar()
+  const { relatorioDiarioPorto } = await carregar()
 
-  await baixarRelatorioDiarioPorto('2026-09-14')
-  expect(csv).not.toBe('')
+  const relatorio = await relatorioDiarioPorto('2026-09-14')
 
-  expect(csv).toContain('Serviços prestados em 14/09/2026')
+  expect(relatorio.titulo).toBe('Serviços prestados em 14/09/2026')
   // O cancelado nao conta como servico prestado, mas fica registrado no resumo.
-  expect(csv).toContain('Serviços;2')
-  expect(csv).toContain('Cancelados;1')
-  expect(csv).toContain('a precificar')
-  expect(csv).not.toContain('R$ 0,00')
+  expect(relatorio.resumo).toContainEqual(['Serviços', '2'])
+  expect(relatorio.resumo).toContainEqual(['Cancelados', '1'])
+  const linhas = relatorio.secoes[0].linhas
+  expect(linhas).toHaveLength(2)
+  expect(linhas[1].at(-1)).toBe('a precificar')
 })
 
 test('soma por socorrista e por especialidade, na ordem do que produziu mais', async () => {
   servidor.use(http.get(`${SUPA}/rest/v1/ordens_servico_porto`, () => HttpResponse.json(servicos)))
-  const { baixarRelatorioDiarioPorto } = await carregar()
+  const { relatorioDiarioPorto } = await carregar()
 
-  await baixarRelatorioDiarioPorto('2026-09-14')
-  expect(csv).not.toBe('')
+  const relatorio = await relatorioDiarioPorto('2026-09-14')
 
-  expect(csv).toContain('Por socorrista')
-  expect(csv).toContain('Luiz Felipe da Silva;1;R$ 205,00')
-  expect(csv).toContain('Por especialidade')
-  expect(csv).toContain('SOCORRO;2;R$ 205,00')
+  const porSocorrista = relatorio.secoes.find(s => s.titulo === 'Por socorrista')!
+  expect(porSocorrista.linhas[0]).toEqual(['Socorrista Um', 1, 205])
+  const porEspecialidade = relatorio.secoes.find(s => s.titulo === 'Por especialidade')!
+  expect(porEspecialidade.linhas[0]).toEqual(['SOCORRO', 2, 205])
 })
