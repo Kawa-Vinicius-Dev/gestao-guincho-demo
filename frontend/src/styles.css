@@ -1586,3 +1586,30 @@ tbody tr{transition:background-color .14s ease}
 .simple-list li{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(96px,auto);
   align-items:center;gap:var(--espaco-2)}
 .simple-list li>:last-child{justify-self:end}
+
+/* ===========================================================================
+   Barras de rolagem
+   ---------------------------------------------------------------------------
+   A barra do sistema operacional é cinza-claro com trilho branco. Sobre um
+   painel escuro ela vira uma faixa branca no meio da tela — foi o que apareceu
+   na lista de Categorias no tema escuro, e é o tipo de detalhe que denuncia que
+   o tema escuro veio depois.
+
+   As cores saem dos tokens, então a barra nasce certa nos dois temas: o polegar
+   é a mesma linha que separa as linhas da lista, e escurece no hover. O trilho
+   fica transparente para herdar o fundo do painel em que a barra aparece, seja
+   ele qual for.
+
+   Duas sintaxes porque são dois padrões: `scrollbar-width`/`scrollbar-color` é o
+   do CSS, que o Firefox segue; `::-webkit-scrollbar` é o do Chrome e do Safari.
+   O Chrome recente entende os dois, e aplicar os dois não conflita — o
+   ::-webkit-scrollbar ganha onde existe.
+   =========================================================================== */
+.app-shell *{scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+.app-shell ::-webkit-scrollbar{width:9px;height:9px}
+.app-shell ::-webkit-scrollbar-track{background:transparent}
+.app-shell ::-webkit-scrollbar-thumb{
+  border:2px solid transparent;border-radius:99px;background-clip:content-box;background-color:var(--line)}
+.app-shell ::-webkit-scrollbar-thumb:hover{background-color:var(--muted)}
+/* O canto onde as duas barras se encontram numa tabela que rola nos dois eixos. */
+.app-shell ::-webkit-scrollbar-corner{background:transparent}
