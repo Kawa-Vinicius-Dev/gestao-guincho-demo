@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useAoVivo } from '../dados/aoVivo'
 import { baixarRelatorio, type Relatorio } from '../dados/exportar'
 import { listarMotoristas } from '../dados/motoristas'
 import { corrigirOs, definirViaturaEmLote, listarOs, listarTodasAsOs, TAMANHO_DA_PAGINA, type FiltroOs, type LinhaOs, type PaginaOs, type SituacaoOs } from '../dados/porto/listaOs'
 import { listarVeiculos } from '../dados/veiculos'
+import { INICIO_DO_HISTORICO } from '../dados/porto/diario'
 import { Campo, Selecao } from '../components/Campos'
 import { Carregando } from '../components/EstadoPagina'
 import { Modal } from '../components/Modal'
@@ -32,7 +33,10 @@ const siglaDe = (v: Veiculo) => (v.siglaPorto || v.identificacao).toUpperCase()
 
 export default function PortoOrdensServicoPage() {
   const [periodo, setPeriodo] = usePeriodoGlobal()
-  const [numeroOs, setNumeroOs] = useState('')
+  // Aviso de importacao e card de dashboard linkam uma OS especifica: ela abre
+  // aqui filtrada, mesmo que seja de outro periodo.
+  const [busca] = useSearchParams()
+  const [numeroOs, setNumeroOs] = useState(() => busca.get('os') ?? '')
   const [numeroOp, setNumeroOp] = useState('')
   const [especialidade, setEspecialidade] = useState('')
   const [motoristaId, setMotoristaId] = useState(0)
@@ -59,10 +63,16 @@ export default function PortoOrdensServicoPage() {
   const numeroOpAdiado = useValorAdiado(numeroOp)
   const especialidadeAdiada = useValorAdiado(especialidade)
 
+  // Procurar por numero de OS vale para todo o historico: o numero ja aponta
+  // uma OS so, e nao adianta encontrar "nada" porque ela e de outra quinzena.
+  const buscandoNumero = Boolean(numeroOsAdiado.trim())
+  const hoje = new Date().toISOString().slice(0, 10)
   const filtro: FiltroOs = useMemo(() => ({
-    inicio: periodo.inicio, fim: periodo.fim, numeroOs: numeroOsAdiado, numeroOp: numeroOpAdiado,
+    inicio: buscandoNumero ? INICIO_DO_HISTORICO : periodo.inicio,
+    fim: buscandoNumero ? (hoje > periodo.fim ? hoje : periodo.fim) : periodo.fim,
+    numeroOs: numeroOsAdiado, numeroOp: numeroOpAdiado,
     especialidade: especialidadeAdiada, motoristaId, sigla, situacao, semViatura,
-  }), [periodo.inicio, periodo.fim, numeroOsAdiado, numeroOpAdiado, especialidadeAdiada, motoristaId, sigla, situacao, semViatura])
+  }), [buscandoNumero, hoje, periodo.inicio, periodo.fim, numeroOsAdiado, numeroOpAdiado, especialidadeAdiada, motoristaId, sigla, situacao, semViatura])
 
   // Filtro novo volta para a primeira pagina.
   useEffect(() => { setPagina(0) }, [filtro])
@@ -192,7 +202,7 @@ export default function PortoOrdensServicoPage() {
     <Painel className="painel-filtros">
       <form className="ledger-filters" onSubmit={e => e.preventDefault()}>
         <SeletorPeriodo periodo={periodo} aoMudar={setPeriodo}/>
-        <Campo rotulo="Número da OS"><input value={numeroOs} onChange={e => setNumeroOs(e.target.value)} autoCorrect="off" spellCheck={false} autoComplete="off"/></Campo>
+        <Campo rotulo="Número da OS" ajuda={buscandoNumero ? "Busca por número procura em todo o histórico." : undefined}><input value={numeroOs} onChange={e => setNumeroOs(e.target.value)} autoCorrect="off" spellCheck={false} autoComplete="off"/></Campo>
         <Campo rotulo="Número da OP"><input value={numeroOp} onChange={e => setNumeroOp(e.target.value)} inputMode="numeric" autoComplete="off"/></Campo>
         <Selecao rotulo="Socorrista" vazio="Todos" value={motoristaId || ''} onChange={e => setMotoristaId(Number(e.target.value))}
           opcoes={motoristas.map(m => ({ valor: m.id, texto: m.nome }))}/>

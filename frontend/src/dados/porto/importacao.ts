@@ -503,6 +503,8 @@ export async function confirmarImportacaoPorto(
     periodo?: string; dataPagamento?: string
     osSemSocorrista: { id: number; numero: string }[]
     viaturasNovas?: string[]
+    naoEncontradas?: { id: number; numero: string; dataAtendimento?: string; socorrista?: string; viatura?: string; valorManual?: number }[]
+    divergentes?: { id: number; numero: string; valorManual: number; valorOp: number; diferenca: number }[]
   }
 
   // A importacao cria receita: o dashboard em cache ficou velho.
@@ -526,6 +528,14 @@ export async function confirmarImportacaoPorto(
     osSemSocorrista: (resposta.osSemSocorrista ?? []).map(os => os.numero),
     // Sigla que chegou no arquivo e ainda nao existia vira viatura sozinha.
     viaturasNovas: resposta.viaturasNovas ?? [],
+    // Conciliacao do periodo: o que o Diario tinha e a OP nao trouxe, e o que a
+    // OP pagou diferente do valor informado a mao.
+    naoEncontradas: (resposta.naoEncontradas ?? []).map(os => ({
+      ...os, valorManual: os.valorManual === undefined || os.valorManual === null ? undefined : Number(os.valorManual),
+    })),
+    divergentes: (resposta.divergentes ?? []).map(os => ({
+      ...os, valorManual: Number(os.valorManual), valorOp: Number(os.valorOp), diferenca: Number(os.diferenca),
+    })),
   }
 }
 

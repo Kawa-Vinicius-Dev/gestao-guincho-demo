@@ -7,7 +7,7 @@ import { servidor } from '../test/servidor'
 
 const SUPA = 'https://projeto-teste.supabase.co'
 
-async function abrir() {
+async function abrir(rota = '/porto/ordens-servico') {
   vi.resetModules()
   vi.stubEnv('VITE_SUPABASE_URL', SUPA)
   vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'chave-anon-de-teste')
@@ -15,7 +15,7 @@ async function abrir() {
   const { esquecerCliente } = await import('../dados/cliente')
   esquecerCliente()
   const { default: Pagina } = await import('./PortoOrdensServicoPage')
-  render(<MemoryRouter><Pagina/></MemoryRouter>)
+  render(<MemoryRouter initialEntries={[rota]}><Pagina/></MemoryRouter>)
 }
 
 beforeEach(() => {
@@ -121,4 +121,15 @@ test('define a viatura das OS filtradas em lote, só depois de confirmar', async
 
   await vi.waitFor(() => expect(lote).toMatchObject({ p_nova_sigla: 'L25', p_sem_viatura: true, p_so_sem_viatura: true }))
   expect(await screen.findByText(/viatura L25 definida em 12 ordens de serviço/i)).toBeInTheDocument()
+})
+test('abre filtrada pela OS do link, procurando fora do período', async () => {
+  let corpo: Record<string, unknown> = {}
+  servidorBase(c => { corpo = c })
+  await abrir('/porto/ordens-servico?os=01%2F2937402-26')
+
+  expect(await screen.findByDisplayValue('01/2937402-26')).toBeInTheDocument()
+  // Busca por numero vale para todo o historico: a OS do aviso pode ser de outra quinzena.
+  expect(corpo.p_numero_os).toBe('01/2937402-26')
+  expect(corpo.p_inicio).toBe('2026-03-30')
+  expect(screen.getByText(/procura em todo o histórico/i)).toBeInTheDocument()
 })

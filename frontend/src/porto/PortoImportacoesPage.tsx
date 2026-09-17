@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { avaliarImportacaoPorto, cancelarImportacaoPorto, confirmarImportacaoPorto, criarPreviaConteudoPorto, criarPreviaPorto } from '../dados/porto'
 import { listarMotoristas } from '../dados/motoristas'
-import type { Motorista, PreviaPorto } from '../types/modelos'
+import type { Motorista, OsDivergentePorto, OsNaoEncontradaPorto, PreviaPorto } from '../types/modelos'
 import { moeda } from '../utils/formatadores'
 import { Campo, Selecao } from '../components/Campos'
 import { MOTIVOS_COMPOSICAO } from './ops/opcoes'
@@ -24,11 +25,57 @@ function NumerosDeOs({numeros}:{numeros:string[]}){
   </ul>
 }
 
+/** Atalho para a OS na tela de Ordens de servico, ja filtrada nela. */
+const linkDaOs=(numero:string)=>`/porto/ordens-servico?os=${encodeURIComponent(numero)}`
+
+/**
+ * O que a OP nao trouxe.
+ *
+ * A Porto paga a mesma quinzena em mais de uma OP, entao a OS que faltou aqui
+ * nao sumiu: ela espera a proxima OP, com a data do servico intacta. O aviso
+ * existe para isso ser uma decisao consciente, e nao uma descoberta tardia.
+ */
+function AvisoNaoEncontradas({itens}:{itens:OsNaoEncontradaPorto[]}){
+  return <div className="porto-aviso-auxiliar" role="status">
+    <strong>{itens.length} {itens.length===1?'serviço do Diário não veio':'serviços do Diário não vieram'} nesta OP.</strong>{' '}
+    {itens.length===1?'Ele fica':'Eles ficam'} aguardando a próxima OP do período — nada foi excluído e a data do serviço não muda.
+    <div className="table-scroll"><table>
+      <thead><tr><th>OS</th><th>Atendimento</th><th>Socorrista</th><th>Viatura</th><th>Valor informado</th></tr></thead>
+      <tbody>{itens.map(os=><tr key={os.id}>
+        <td><Link to={linkDaOs(os.numero)}><strong>{os.numero}</strong></Link></td>
+        <td>{dataBr(os.dataAtendimento)||'—'}</td>
+        <td>{os.socorrista||'—'}</td>
+        <td>{os.viatura||'—'}</td>
+        <td>{os.valorManual===undefined?'—':moeda(os.valorManual)}</td>
+      </tr>)}</tbody>
+    </table></div>
+  </div>
+}
+
+/** OS paga num valor diferente do que foi informado a mao: a OP prevalece. */
+function AvisoDivergentes({itens}:{itens:OsDivergentePorto[]}){
+  return <div className="porto-aviso-auxiliar" role="status">
+    <strong>{itens.length} {itens.length===1?'serviço veio':'serviços vieram'} com valor diferente do informado.</strong>{' '}
+    O valor da OP é o oficial e já está gravado; o que você informou antes fica guardado para conferência.
+    <div className="table-scroll"><table>
+      <thead><tr><th>OS</th><th>Valor informado</th><th>Valor da OP</th><th>Diferença</th></tr></thead>
+      <tbody>{itens.map(os=><tr key={os.id}>
+        <td><Link to={linkDaOs(os.numero)}><strong>{os.numero}</strong></Link></td>
+        <td>{moeda(os.valorManual)}</td>
+        <td>{moeda(os.valorOp)}</td>
+        <td>{moeda(os.diferenca)}</td>
+      </tr>)}</tbody>
+    </table></div>
+  </div>
+}
+
 export default function PortoImportacoesPage(){
   const [arquivo,setArquivo]=useState<File|null>(null),[previa,setPrevia]=useState<PreviaPorto|null>(null)
   const [modo,setModo]=useState<'arquivo'|'colagem'>('arquivo'),[conteudo,setConteudo]=useState('')
   const [motoristas,setMotoristas]=useState<Motorista[]>([]),[numeroOp,setNumeroOp]=useState('')
   const [semSocorrista,setSemSocorrista]=useState<string[]>([])
+  const [naoEncontradas,setNaoEncontradas]=useState<OsNaoEncontradaPorto[]>([])
+  const [divergentes,setDivergentes]=useState<OsDivergentePorto[]>([])
   const [mensagem,setMensagem]=useState(''),[erro,setErro]=useState(''),[carregando,setCarregando]=useState(false),[etapa,setEtapa]=useState(''),[validando,setValidando]=useState(false),[inputKey,setInputKey]=useState(0)
   const [chaveValidada,setChaveValidada]=useState('')
   const [confirmarDivergencias,setConfirmarDivergencias]=useState(false),[confirmarReassociacoes,setConfirmarReassociacoes]=useState(false)
@@ -100,7 +147,7 @@ export default function PortoImportacoesPage(){
     return()=>{window.clearTimeout(temporizador);controller.abort()}
   },[chaveAvaliacao,chaveValidada,numeroNormalizado,previaId])
 
-  function limparAvisos(){setMensagem('');setErro('');setSemSocorrista([])}
+  function limparAvisos(){setMensagem('');setErro('');setSemSocorrista([]);setNaoEncontradas([]);setDivergentes([])}
   function limparConfirmacoes(){setConfirmarDivergencias(false);setConfirmarReassociacoes(false);setMotivoDivergencia('');setJustificativaDivergencia('')}
   async function analisar(){
     if(modo==='arquivo'&&!arquivo||modo==='colagem'&&!conteudo.trim())return
@@ -108,7 +155,7 @@ export default function PortoImportacoesPage(){
     try{setPrevia(modo==='arquivo'?await criarPreviaPorto(arquivo as File):await criarPreviaConteudoPorto(conteudo))}catch(e){setErro((e as Error).message)}finally{setEtapa('');setCarregando(false)}
   }
   function alterarNumero(valor:string){setNumeroOp(valor);setChaveValidada('');limparConfirmacoes()}
-  async function confirmar(){setSemSocorrista([])
+  async function confirmar(){setSemSocorrista([]);setNaoEncontradas([]);setDivergentes([])
     if(confirmacaoEmCurso.current||!previa||previa.requerOrdemPagamento&&(!numeroNormalizado||chaveValidada!==chaveAvaliacao))return
     confirmacaoEmCurso.current=true
     setCarregando(true);setEtapa('Confirmando importação…');setErro('');setFalhaAoConfirmar(false)
@@ -119,6 +166,9 @@ export default function PortoImportacoesPage(){
       const financeiro=r.tipo==='OS_VINCULADAS'||r.tipo==='SERVICOS_GERAIS'?` · ${r.receitasCriadas} ${r.receitasCriadas===1?'receita criada':'receitas criadas'} · ${r.receitasAtualizadas} ${r.receitasAtualizadas===1?'receita atualizada':'receitas atualizadas'} · ${moeda(r.valorTotalRecebido)} recebidos${r.quinzena?` · período ${r.quinzena}`:''}${r.dataPagamento?` · pagamento em ${dataBr(r.dataPagamento)}`:''}`:''
       setMensagem(`${r.importados} ${r.importados===1?'registro importado':'registros importados'}${r.ignorados?` · ${r.ignorados} ignorados por duplicidade`:''}${financeiro}${r.viaturasNovas?.length?` · ${r.viaturasNovas.length===1?'viatura nova cadastrada':'viaturas novas cadastradas'}: ${r.viaturasNovas.join(', ')}`:''}.`)
       setSemSocorrista(r.osSemSocorrista??[])
+      // Conciliacao do periodo: a OP e a fonte oficial, mas o Diario ja sabia o
+      // que aconteceu. O que nao casou vira aviso com lista, nao silencio.
+      setNaoEncontradas(r.naoEncontradas??[]);setDivergentes(r.divergentes??[])
       // Gravou: a tela fica pronta para a proxima importacao. O texto colado so sai
       // aqui; se a confirmacao falhar, ele continua para tentar de novo.
       setPrevia(null);setArquivo(null);setConteudo('');setNumeroOp('');setChaveValidada('');limparConfirmacoes();setInputKey(x=>x+1)
@@ -166,10 +216,14 @@ export default function PortoImportacoesPage(){
   const temDivergenciasDados=Boolean(analise&&previa?.linhas.some(l=>l.acao==='DIVERGENCIA'&&!numerosReassociados.has(l.dados.numero_os)))
   const temDivergenciaFinanceira=Boolean(analise?.existente&&analise.diferenca!==undefined&&Math.abs(analise.diferenca)>0.009)
   const temReassociacoes=Boolean(analise?.quantidadeReassociacoes)
+  // Valor da OP maior que a soma dos servicos do arquivo costuma ser credito.
+  const provavelCredito=(analise?.valorAtual??0)-(analise?.somaArquivo??0)
   const divergenciaConfirmada=(!temDivergenciaFinanceira&&!temDivergenciasDados)||(confirmarDivergencias&&(!temDivergenciaFinanceira||Boolean(motivoDivergencia&&justificativaDivergencia.trim())))
 
   return <div className="page-enter"><header className="page-heading"><div><span className="eyebrow">Módulo Porto</span><h1>Importar relatórios</h1><p>Cole serviços ou envie CSV/TXT, confira a prévia e confirme somente depois da validação.</p></div></header>
     {carregando?<span role="status">{etapa}</span>:null}{erro?<div className="form-alert" role="alert">{erro}{falhaAoConfirmar&&previa?<button type="button" onClick={()=>void confirmar()}>Tentar novamente</button>:null}</div>:null}{mensagem?<div className="success-notice">{mensagem}</div>:null}{semSocorrista.length?<div className="form-alert" role="alert"><strong>{semSocorrista.length} {semSocorrista.length===1?'ordem de serviço ficou':'ordens de serviço ficaram'} sem socorrista, por terem vindo sem QRA.</strong> Associe o socorrista na tela Ordens de serviço.<NumerosDeOs numeros={semSocorrista}/></div>:null}
+    {naoEncontradas.length?<AvisoNaoEncontradas itens={naoEncontradas}/>:null}
+    {divergentes.length?<AvisoDivergentes itens={divergentes}/>:null}
     <section className="panel porto-import-card"><div className="segmented porto-import-modes" role="group" aria-label="Forma de importação"><button className={modo==='arquivo'?'active':''} onClick={()=>{setModo('arquivo');setPrevia(null)}}>Enviar arquivo</button><button className={modo==='colagem'?'active':''} onClick={()=>{setModo('colagem');setPrevia(null)}}>Colar serviços da Porto</button></div>
       {modo==='arquivo'?<div className="porto-upload"><CampoArquivo rotulo="Arquivo CSV ou TXT" chave={inputKey} nome={arquivo?.name}
         accept=".csv,.txt,.tsv,text/csv,text/plain,text/tab-separated-values"
@@ -187,7 +241,7 @@ export default function PortoImportacoesPage(){
             {validando?<><i className="spinner" aria-hidden="true"/><span className="apenas-leitor">Validando número da OP e período…</span></>:null}
           </span>
           {analise&&!analise.existente?<div className="success-notice">A OP {analise.numero} será criada automaticamente.</div>:null}
-          {temDivergenciaFinanceira?<div className="form-alert"><strong>Divergência financeira encontrada.</strong><span> Valor atual da OP: {moeda(analise?.valorAtual??0)} · Soma do arquivo: {moeda(analise?.somaArquivo??0)} · Diferença encontrada: {moeda(analise?.diferenca??0)}</span><label className="porto-divergence"><input type="checkbox" aria-label="Confirmo a atualização do valor" checked={confirmarDivergencias} onChange={e=>setConfirmarDivergencias(e.target.checked)}/><span>Confirmo a atualização do valor da OP.</span></label><Selecao rotulo="Motivo da divergência" vazio="Selecione o motivo" value={motivoDivergencia}
+          {temDivergenciaFinanceira?<div className="form-alert"><strong>Divergência financeira encontrada.</strong><span> Valor atual da OP: {moeda(analise?.valorAtual??0)} · Soma do arquivo: {moeda(analise?.somaArquivo??0)} · Diferença encontrada: {moeda(analise?.diferenca??0)}</span>{provavelCredito>0.009?<p className="saida-texto">O Valor da OP no portal é serviços + créditos − descontos. Se a diferença de <strong>{moeda(provavelCredito)}</strong> for crédito, lance na aba <Link to="/creditos">Créditos</Link>: crédito é receita e não entra na comissão.</p>:null}<label className="porto-divergence"><input type="checkbox" aria-label="Confirmo a atualização do valor" checked={confirmarDivergencias} onChange={e=>setConfirmarDivergencias(e.target.checked)}/><span>Confirmo a atualização do valor da OP.</span></label><Selecao rotulo="Motivo da divergência" vazio="Selecione o motivo" value={motivoDivergencia}
             onChange={e=>setMotivoDivergencia(e.target.value)} opcoes={MOTIVOS_COMPOSICAO}/><Campo rotulo="Justificativa da divergência">
             <textarea value={justificativaDivergencia} onChange={e=>setJustificativaDivergencia(e.target.value)} rows={2}/>
           </Campo></div>:null}

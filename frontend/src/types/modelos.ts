@@ -82,7 +82,11 @@ export interface OsSemSocorristaPorto { hashRegistro:string; numeroOs:string; so
 export interface ReassociacaoOsPorto { numeroOs:string; opAtual:string; novaOp:string; valor:number }
 export interface AnaliseOrdemPagamentoPorto { numero:string; existente:boolean; valorAtual?:number; somaArquivo:number; diferenca?:number; quantidadeReassociacoes:number; valorReassociacoes:number; reassociacoes:ReassociacaoOsPorto[] }
 export interface PreviaPorto { id:number; nomeArquivo:string; tipo:TipoRelatorioPorto; status:string; totalLinhas:number; linhas:LinhaPreviaPorto[]; erros:string[]; requerOrdemPagamento:boolean; resumo?:ResumoPreviaPorto; analiseOrdemPagamento?:AnaliseOrdemPagamentoPorto; orfas?:OsSemSocorristaPorto[]; osSemSocorrista?:string[] }
-export interface ConfirmacaoPorto { importacaoId:number; tipo:TipoRelatorioPorto; importados:number; ignorados:number; novos?:number; atualizados?:number; receitasCriadas:number; receitasAtualizadas:number; valorTotalRecebido:number; quinzena?:string; dataPagamento?:string; erros:string[]; osSemSocorrista?:string[]; viaturasNovas?:string[] }
+/** OS do Diario que a OP nao trouxe: fica aguardando a proxima OP. */
+export interface OsNaoEncontradaPorto { id:number; numero:string; dataAtendimento?:string; socorrista?:string; viatura?:string; valorManual?:number }
+/** OS paga pela OP num valor diferente do que foi informado a mao. */
+export interface OsDivergentePorto { id:number; numero:string; valorManual:number; valorOp:number; diferenca:number }
+export interface ConfirmacaoPorto { importacaoId:number; tipo:TipoRelatorioPorto; importados:number; ignorados:number; novos?:number; atualizados?:number; receitasCriadas:number; receitasAtualizadas:number; valorTotalRecebido:number; quinzena?:string; dataPagamento?:string; erros:string[]; osSemSocorrista?:string[]; viaturasNovas?:string[]; naoEncontradas?:OsNaoEncontradaPorto[]; divergentes?:OsDivergentePorto[] }
 export type StatusConciliacaoPorto='SEM_COMPOSICAO'|'CONCILIADA'|'VALOR_ABAIXO'|'VALOR_ACIMA'|'RECEBIDA_COM_DIVERGENCIA'
 export type StatusOperacionalPorto='NORMAL'|'AGUARDANDO_LANCAMENTO'|'PROCESSADO'|'LIBERADO_APOS_ANALISE'|'PENDENTE_PORTO'|'DEVOLVIDO_FINALIZADO'|'CANCELADO'
 export type StatusFinanceiroPorto='AGUARDANDO_OP'|'PAGAMENTO_PROGRAMADO'|'A_CONFIRMAR'|'RECEBIDO'|'BLOQUEADO_PARA_PAGAMENTO'|'VALOR_DIVERGENTE'
