@@ -1,9 +1,10 @@
-import { act, render, screen, waitFor } from '@testing-library/react'
+import { act, within, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { expect, test, vi } from 'vitest'
 import PortoImportacoesPage from './PortoImportacoesPage'
 import { servidor } from '../test/servidor'
+import { confirmarNaJanela } from '../test/confirmar'
 
 test('mede a chamada de análise de importação', async () => {
   const medida = vi.spyOn(performance, 'measure')
@@ -49,9 +50,12 @@ test('ignora duplo clique enquanto confirma a importação', async () => {
   await user.click(screen.getByRole('button',{name:/analisar csv/i}))
   await screen.findByText('OP-DUPLO-1')
   const confirmar=screen.getByRole('button',{name:/confirmar importação/i})
+  confirmar.click()
+  const janela=await screen.findByRole('dialog')
+  const sim=within(janela).getByRole('button',{name:/sim, importar/i})
   await act(async()=>{
-    confirmar.click()
-    confirmar.click()
+    sim.click()
+    sim.click()
   })
   await screen.findByText(/1 registro importado/i)
   expect(confirmacoes).toBe(1)
@@ -71,7 +75,7 @@ test('expõe o progresso e mantém erro de confirmação acionável', async () =
   expect(screen.getByRole('status')).toHaveTextContent(/analisando arquivo/i)
   concluirAnalise(HttpResponse.json({id:83,nomeArquivo:'progresso.csv',tipo:'PREVISAO_RECEBER',status:'AGUARDANDO_CONFERENCIA',totalLinhas:1,requerOrdemPagamento:false,erros:[],linhas:[{hashRegistro:'progresso',dados:{numero_op:'OP-PROGRESSO'}}]},{status:201}))
   await screen.findByText('OP-PROGRESSO')
-  await user.click(screen.getByRole('button',{name:/confirmar importação/i}))
+  await user.click(screen.getByRole('button',{name:/confirmar importação/i}));await confirmarNaJanela()
   expect(screen.getByRole('status')).toHaveTextContent(/confirmando importação/i)
   concluirConfirmacao(HttpResponse.json({detalhe:'Falha temporária.'},{status:500}))
   expect(await screen.findByRole('alert')).toHaveTextContent('Falha temporária.')
@@ -111,7 +115,7 @@ test('envia CSV, exige OP para relatório de OS e confirma a prévia', async () 
     expect(await screen.findByText(/será criada automaticamente/i)).toBeInTheDocument()
   const acoes=screen.getByRole('contentinfo',{name:/ações da prévia/i}),tabela=screen.getByRole('table')
   expect(acoes.compareDocumentPosition(tabela)&Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-  await user.click(screen.getByRole('button',{name:/confirmar importação/i}))
+  await user.click(screen.getByRole('button',{name:/confirmar importação/i}));await confirmarNaJanela()
   expect(await screen.findByText(/1 registro importado/i)).toBeInTheDocument()
   expect(screen.getByText(/1 receita criada/i)).toBeInTheDocument()
   expect(screen.getByText(/R\$\s*700,00 recebidos/i)).toBeInTheDocument()
@@ -134,7 +138,7 @@ test('cancela uma prévia retomada e permite corrigir o arquivo', async()=>{
   expect(screen.getByText((_,element)=>element?.tagName==='SPAN'&&element.textContent==='2 OPs únicas')).toBeInTheDocument()
   expect(screen.getByText((_,element)=>element?.tagName==='SPAN'&&element.textContent==='1 registro atualizado')).toBeInTheDocument()
   expect(screen.getByText((_,element)=>element?.tagName==='SPAN'&&element.textContent==='0 erros')).toBeInTheDocument()
-  await user.click(screen.getByRole('button',{name:/cancelar prévia/i}))
+  await user.click(screen.getByRole('button',{name:/cancelar prévia/i}));await confirmarNaJanela()
   expect(await screen.findByText(/prévia cancelada/i)).toBeInTheDocument()
   expect(screen.queryByText('OP-21')).not.toBeInTheDocument()
 })
@@ -163,7 +167,7 @@ test('bloqueia erros e exige confirmação separada para divergência',async()=>
   expect(avaliacao).toBe(1)
   expect(screen.getByRole('button',{name:/confirmar importação/i})).toBeDisabled()
   await user.click(screen.getByLabelText(/confirmo a reassociação/i))
-  await user.click(screen.getByRole('button',{name:/confirmar importação/i}))
+  await user.click(screen.getByRole('button',{name:/confirmar importação/i}));await confirmarNaJanela()
   expect(await screen.findByText(/1 registro importado/i)).toBeInTheDocument()
   expect(confirmouReassociacao).toBe(true)
 })
@@ -181,7 +185,7 @@ test('mostra divergência financeira e exige autorização e justificativa',asyn
   expect(screen.getByText(/R\$\s*700,00/i)).toBeInTheDocument()
   expect(screen.getByText(/-R\$\s*50,00/i)).toBeInTheDocument()
   const botao=screen.getByRole('button',{name:/confirmar importação/i});expect(botao).toBeDisabled()
-  await user.click(screen.getByLabelText(/confirmo a atualização do valor/i));await user.selectOptions(screen.getByLabelText(/motivo da divergência/i),'DIVERGENCIA_VALOR');await user.type(screen.getByLabelText(/justificativa da divergência/i),'Valor conferido no arquivo pago.');await user.click(botao)
+  await user.click(screen.getByLabelText(/confirmo a atualização do valor/i));await user.selectOptions(screen.getByLabelText(/motivo da divergência/i),'DIVERGENCIA_VALOR');await user.type(screen.getByLabelText(/justificativa da divergência/i),'Valor conferido no arquivo pago.');await user.click(botao);await confirmarNaJanela()
   expect(await screen.findByText(/1 registro importado/i)).toBeInTheDocument()
   expect(confirmacao).toMatchObject({numeroOrdemPagamento:'06422281',confirmarDivergencias:true,motivoDivergencia:'DIVERGENCIA_VALOR',justificativaDivergencia:'Valor conferido no arquivo pago.'})
 })
@@ -221,7 +225,7 @@ test('cola serviços, mostra resumo da prévia e confirma somente depois da aná
   await user.tab()
     const botaoConfirmar=screen.getByRole('button',{name:/confirmar importação/i})
   await waitFor(()=>expect(botaoConfirmar).toBeEnabled())
-  await user.click(botaoConfirmar)
+  await user.click(botaoConfirmar);await confirmarNaJanela()
   expect(await screen.findByText(/2 registros importados/i)).toBeInTheDocument()
   expect(screen.getByText(/2 receitas criadas/i)).toBeInTheDocument()
   expect(screen.getByText(/R\$\s*300,75 recebidos/i)).toBeInTheDocument()
@@ -262,7 +266,7 @@ test('habilita e confirma automaticamente OP 06422281 com período e 244 OS exis
   await waitFor(()=>expect(botao).toBeEnabled())
   expect(avaliacao).toEqual({numeroOrdemPagamento:'06422281'})
   expect(avaliacao).not.toHaveProperty('ordemPagamentoId')
-  await user.click(botao)
+  await user.click(botao);await confirmarNaJanela()
   expect(await screen.findByText(/244 registros importados/i)).toBeInTheDocument()
   expect(confirmacao).toMatchObject({numeroOrdemPagamento:'06422281'})
   expect(confirmacao).not.toHaveProperty('ordemPagamentoId')
@@ -295,7 +299,7 @@ test('falha ao cancelar a prévia não oferece um botão que importa', async () 
   await user.click(screen.getByRole('button', { name: /analisar csv/i }))
   await screen.findByText('OP-CANCELA-1')
 
-  await user.click(screen.getByRole('button', { name: /cancelar prévia/i }))
+  await user.click(screen.getByRole('button', { name: /cancelar prévia/i }));await confirmarNaJanela()
 
   expect(await screen.findByText('Não foi possível cancelar agora.')).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /tentar novamente/i })).not.toBeInTheDocument()
@@ -322,7 +326,7 @@ test('falha ao confirmar oferece repetir a própria confirmação', async () => 
   await user.click(screen.getByRole('button', { name: /analisar csv/i }))
   await screen.findByText('OP-REPETE-1')
 
-  await user.click(screen.getByRole('button', { name: /confirmar importação/i }))
+  await user.click(screen.getByRole('button', { name: /confirmar importação/i }));await confirmarNaJanela()
   await user.click(await screen.findByRole('button', { name: /tentar novamente/i }))
 
   expect(await screen.findByText(/1 registro importado/i)).toBeInTheDocument()
@@ -343,7 +347,7 @@ test('o aviso da importacao anterior some ao cancelar a prévia seguinte',async(
 
   await user.upload(screen.getByLabelText(/arquivo csv/i),new File(['csv'],'a.csv',{type:'text/csv'}))
   await user.click(screen.getByRole('button',{name:/analisar csv/i}))
-  await user.click(await screen.findByRole('button',{name:/confirmar importação/i}))
+  await user.click(await screen.findByRole('button',{name:/confirmar importação/i}));await confirmarNaJanela()
   expect(await screen.findByText('5655840/26')).toBeInTheDocument()
 
   // Segunda prévia, cancelada: o alerta da primeira nao pode continuar na tela.
@@ -351,7 +355,7 @@ test('o aviso da importacao anterior some ao cancelar a prévia seguinte',async(
   await user.click(screen.getByRole('button',{name:/analisar csv/i}))
   expect(screen.queryByText('5655840/26')).not.toBeInTheDocument()
 
-  await user.click(await screen.findByRole('button',{name:/cancelar prévia/i}))
+  await user.click(await screen.findByRole('button',{name:/cancelar prévia/i}));await confirmarNaJanela()
   expect(await screen.findByText(/prévia cancelada/i)).toBeInTheDocument()
   expect(screen.queryByText('5655840/26')).not.toBeInTheDocument()
 })

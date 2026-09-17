@@ -6,6 +6,7 @@ import { moeda } from '../utils/formatadores'
 import { Campo, Selecao } from '../components/Campos'
 import { MOTIVOS_COMPOSICAO } from './ops/opcoes'
 import { CampoArquivo } from '../components/CampoArquivo'
+import { ConfirmarAcao, type PedidoConfirmacao } from '../components/ConfirmarAcao'
 
 const rotulos={PREVISAO_RECEBER:'Previsão a receber',OS_VINCULADAS:'OS vinculadas à OP',SERVICOS_DEVOLVIDOS:'Serviços devolvidos',SERVICOS_GERAIS:'Serviços gerais da Porto',SERVICOS_AGUARDANDO_LANCAMENTO:'Serviços aguardando lançamento',PAINEL_DIARIO:'Painel do dia (todas as seguradoras)'}
 const dataBr=(valor?:string)=>valor?new Date(`${valor}T12:00:00`).toLocaleDateString('pt-BR'):''
@@ -49,8 +50,19 @@ export default function PortoImportacoesPage(){
     setPrevia(atual=>atual?{...atual,linhas:atual.linhas.map(l=>l.hashRegistro===hashRegistro
       ?{...l,dados:{...l.dados,motorista_id:motoristaId}}:l)}:atual)
   }
+  // Uma escolha muda o dono (e a comissao) de varias OS de uma vez: pergunta antes.
   function aplicarSocorristaEmTodas(motoristaId:string){
     if(!motoristaId)return
+    const pessoa=motoristas.find(m=>String(m.id)===motoristaId)
+    setPedido({
+      titulo:`Aplicar ${pessoa?.nome??'este socorrista'} a todas?`,
+      efeito:<>As <strong>{orfas.length}</strong> {orfas.length===1?'OS que veio':'OS que vieram'} sem socorrista {orfas.length===1?'fica':'ficam'} com <strong>{pessoa?.nome}</strong>, e a comissão delas vai para essa pessoa quando a importação for confirmada.</>,
+      resumo:[['Socorrista',pessoa?.nome??''],['Ordens de serviço',String(orfas.length)]],
+      textoConfirmar:'Aplicar a todas',
+      aoConfirmar:()=>aplicarEmTodas(motoristaId),
+    })
+  }
+  function aplicarEmTodas(motoristaId:string){
     setPrevia(atual=>atual?{...atual,linhas:atual.linhas.map(l=>orfas.some(o=>o.hashRegistro===l.hashRegistro)
       ?{...l,dados:{...l.dados,motorista_id:motoristaId}}:l)}:atual)
   }
@@ -97,6 +109,33 @@ export default function PortoImportacoesPage(){
       setPrevia(null);setArquivo(null);setNumeroOp('');setChaveValidada('');limparConfirmacoes();setInputKey(x=>x+1)
     }catch(e){setErro((e as Error).message);setFalhaAoConfirmar(true)}finally{confirmacaoEmCurso.current=false;setEtapa('');setCarregando(false)}
   }
+  const [pedido,setPedido]=useState<PedidoConfirmacao|null>(null)
+  // Importar grava receita, comissao e OS: antes, a janela diz o que vai entrar.
+  function pedirConfirmacao(){
+    if(!previa)return
+    const novas=previa.linhas.filter(l=>l.acao==='IMPORTAR').length
+    const atualizadas=previa.linhas.filter(l=>l.acao==='ATUALIZAR'||l.acao==='DIVERGENCIA').length
+    const semDono=(previa.orfas??[]).filter(o=>!previa.linhas.some(l=>l.hashRegistro===o.hashRegistro&&l.dados.motorista_id)).length
+    const valor=previa.resumo?.valorTotal??analise?.somaArquivo??0
+    setPedido({
+      titulo:'Confirmar importação?',
+      efeito:previa.requerOrdemPagamento
+        ?<>As ordens de serviço entram pagas na <strong>OP {numeroNormalizado}</strong>, viram receita e a comissão dos socorristas é lançada em despesas.</>
+        :<>As ordens de serviço entram no sistema aguardando a OP da Porto.</>,
+      resumo:[
+        ...(previa.requerOrdemPagamento?[['OP',numeroNormalizado] as [string,string]]:[]),
+        ['OS novas',String(novas)],
+        ['OS atualizadas',String(atualizadas)],
+        ['Valor',moeda(valor)],
+      ],
+      avisos:[
+        semDono?<><strong>{semDono}</strong> {semDono===1?'OS vai':'OS vão'} para o socorrista <strong>Auxiliar</strong> e {semDono===1?'gera':'geram'} comissão para ele.</>:null,
+        temReassociacoes?'Há OS que mudam de OP.':null,
+      ],
+      textoConfirmar:'Sim, importar',
+      aoConfirmar:confirmar,
+    })
+  }
   async function cancelar(){
     if(!previa)return;setCarregando(true);limparAvisos();setFalhaAoConfirmar(false)
     try{await cancelarImportacaoPorto(previa.id);setMensagem('Prévia cancelada. Corrija e reenvie o arquivo quando estiver pronto.');setPrevia(null);setArquivo(null);setNumeroOp('');setChaveValidada('');limparConfirmacoes();setInputKey(x=>x+1)}catch(e){setErro((e as Error).message)}finally{setCarregando(false)}
@@ -139,8 +178,8 @@ export default function PortoImportacoesPage(){
           </Campo></div>:null}
           {temReassociacoes?<div className="form-alert"><strong>{analise?.quantidadeReassociacoes} {analise?.quantidadeReassociacoes===1?'OS será movida':'OS serão movidas'} · {moeda(analise?.valorReassociacoes??0)}</strong><div className="table-scroll"><table><thead><tr><th>OS</th><th>OP atual</th><th>Nova OP</th><th>Valor</th></tr></thead><tbody>{analise?.reassociacoes.map(item=><tr key={item.numeroOs}><td>{item.numeroOs}</td><td>{item.opAtual}</td><td>{item.novaOp}</td><td>{moeda(item.valor)}</td></tr>)}</tbody></table></div><label className="porto-divergence"><input type="checkbox" aria-label="Confirmo a reassociação" checked={confirmarReassociacoes} onChange={e=>setConfirmarReassociacoes(e.target.checked)}/><span>Confirmo a reassociação das OS indicadas.</span></label></div>:null}
           {temDivergenciasDados&&!temDivergenciaFinanceira?<label className="porto-divergence"><input type="checkbox" aria-label="Confirmo a atualização dos dados" checked={confirmarDivergencias} onChange={e=>setConfirmarDivergencias(e.target.checked)}/><span>Confirmo a atualização dos dados divergentes.</span></label>:null}
-          <button type="button" className="button button-ghost" disabled={carregando} onClick={cancelar}>Cancelar prévia</button>
-          <button className="button button-primary" disabled={carregando||validando||temErros||!divergenciaConfirmada||temReassociacoes&&!confirmarReassociacoes||previa.requerOrdemPagamento&&(!numeroNormalizado||!analise)||previa.linhas.length===0} onClick={confirmar}>Confirmar importação</button>
+          <button type="button" className="button button-ghost" disabled={carregando} onClick={()=>setPedido({titulo:'Cancelar a prévia?',efeito:'Nada deste arquivo é gravado. Para importar, será preciso enviar o arquivo de novo.',textoConfirmar:'Cancelar prévia',perigo:true,aoConfirmar:cancelar})}>Cancelar prévia</button>
+          <button className="button button-primary" disabled={carregando||validando||temErros||!divergenciaConfirmada||temReassociacoes&&!confirmarReassociacoes||previa.requerOrdemPagamento&&(!numeroNormalizado||!analise)||previa.linhas.length===0} onClick={pedirConfirmacao}>Confirmar importação</button>
         </footer>
         {orfas.length?<div className="porto-aviso-auxiliar" role="status"><strong>{orfas.length} {orfas.length===1?'ordem de serviço veio':'ordens de serviço vieram'} sem socorrista e {orfas.length===1?'vai':'vão'} para o Auxiliar.</strong> Se souber quem atendeu, escolha abaixo; se não, pode importar assim.
           <div className="porto-orfas-atalho"><Selecao rotulo="Aplicar o mesmo socorrista a todas" vazio="Escolha para aplicar a todas" value=""
@@ -156,5 +195,6 @@ export default function PortoImportacoesPage(){
         <div className="table-scroll porto-preview-table"><table><thead><tr><th>Ordem</th><th>Especialidade / Nome</th>{previa.tipo==='PAINEL_DIARIO'?<><th>Seguradora</th><th>Situação</th></>:<th>Valor</th>}<th>Data</th><th>Ação</th></tr></thead><tbody>{previa.linhas.map(l=><tr key={l.hashRegistro}><td><strong>{l.dados.numero_op||l.dados.numero_os}</strong></td><td>{l.dados.especialidade||l.dados.nome_codigo||'—'}</td>{previa.tipo==='PAINEL_DIARIO'?<><td>{l.dados.seguradora||'—'}</td><td>{l.dados.situacao_porto||l.dados.status_porto||'—'}</td></>:<td>{l.dados.valor_total}</td>}<td>{l.dados.data_pagamento||l.dados.data_atendimento}</td><td>{l.mensagem||l.acao}</td></tr>)}</tbody></table></div>
       </div>:null}
     </section>
+    {pedido?<ConfirmarAcao {...pedido} aoFechar={()=>setPedido(null)}/>:null}
   </div>
 }

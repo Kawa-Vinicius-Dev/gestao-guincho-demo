@@ -1623,3 +1623,7 @@ tbody tr{transition:background-color .14s ease}
 .porto-aviso-auxiliar strong{color:inherit}
 .porto-aviso-auxiliar .porto-orfas-atalho{margin:12px 0;max-width:420px}
 .porto-aviso-auxiliar .table-scroll{margin-top:8px;background:var(--superficie);border-radius:6px}
+
+/* Janela de confirmacao: pontos de atencao antes de confirmar. */
+.confirmar-avisos{margin:12px 0 0;padding:10px 12px 10px 28px;border-radius:7px;background:var(--aviso-fundo);color:var(--aviso-texto);font-size:13px;line-height:1.5}
+.confirmar-avisos li+li{margin-top:4px}

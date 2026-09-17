@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { expect, test } from 'vitest'
 import EquipePage from './EquipePage'
 import { servidor } from '../test/servidor'
+import { confirmarNaJanela } from '../test/confirmar'
 
 // a tela tem Link para o detalhe do socorrista, entao precisa de rota em volta
 const comRota = (elemento: React.ReactNode) => render(<MemoryRouter>{elemento}</MemoryRouter>)
@@ -44,7 +45,7 @@ test('desativa sem sumir com o socorrista da tela', async () => {
   const user = userEvent.setup()
   comRota(<EquipePage />)
 
-  await user.click(await screen.findByRole('button', { name: /desativar/i }))
+  await user.click(await screen.findByRole('button', { name: /desativar/i }));await confirmarNaJanela()
 
   expect(await screen.findByText('Inativo')).toBeInTheDocument()
   expect(screen.getByText('Anderson Ribeiro')).toBeInTheDocument()
@@ -57,7 +58,7 @@ test('erro do backend ao desativar aparece na tela', async () => {
   const user = userEvent.setup()
   comRota(<EquipePage />)
 
-  await user.click(await screen.findByRole('button', { name: /desativar/i }))
+  await user.click(await screen.findByRole('button', { name: /desativar/i }));await confirmarNaJanela()
 
   expect(await screen.findByText('Socorrista não encontrado.')).toBeInTheDocument()
 })

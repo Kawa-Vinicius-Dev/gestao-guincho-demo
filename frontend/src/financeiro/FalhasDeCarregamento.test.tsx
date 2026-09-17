@@ -4,6 +4,7 @@ import { http, HttpResponse } from 'msw'
 import { expect, test } from 'vitest'
 import App from '../App'
 import { servidor } from '../test/servidor'
+import { confirmarNaJanela } from '../test/confirmar'
 
 const TOKEN_KEY = 'fluxo-gestao:token:v1'
 
@@ -34,7 +35,7 @@ test('falha ao aprovar uma despesa aparece na tela', async () => {
   const user = userEvent.setup()
   abrir('/despesas')
 
-  await user.click(await screen.findByRole('button', { name: /aprovar/i }))
+  await user.click(await screen.findByRole('button', { name: /aprovar/i }));await confirmarNaJanela()
 
   expect(await screen.findByText('Despesa já aprovada.')).toBeInTheDocument()
 })
