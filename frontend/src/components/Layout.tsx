@@ -14,7 +14,7 @@ const itens = [
   ['/turno', 'Turno do dia', false, 'operacao'],
   ['/aprovacoes', 'Aprovações', true, 'operacao'],
   ['/despesas', 'Registrar despesas', false, 'operacao'],
-  ['/quilometragem', 'Km rodado e morto', false, 'operacao'],
+  ['/quilometragem', 'Km rodado e morto', true, 'operacao'],
   ['/veiculos', 'Veículos e custos', true, 'operacao'],
   ['/equipe', 'Socorristas', true, 'equipe'],
   ['/minha-comissao', 'Minha comissão', false, 'equipe'],

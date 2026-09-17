@@ -65,7 +65,10 @@ test('socorrista vê apenas os lançamentos operacionais permitidos', async () =
   expect(await screen.findByRole('link', { name: /turno do dia/i })).toBeInTheDocument()
   expect(screen.queryByRole('link', { name: /DRE mensal/i })).not.toBeInTheDocument()
   expect(screen.queryByRole('link', { name: /aprovações/i })).not.toBeInTheDocument()
-  expect(screen.getByRole('link', { name: /km rodado e morto/i })).toBeInTheDocument()
+  // O km oficial virou tela de administrador: o caminho do socorrista para o km
+  // e o turno, que ele aponta e o administrador confirma.
+  expect(screen.queryByRole('link', { name: /km rodado e morto/i })).not.toBeInTheDocument()
+  expect(screen.getByRole('link', { name: /registrar despesas/i })).toBeInTheDocument()
 })
 
 test('mede a transição entre rotas no navegador', async () => {
