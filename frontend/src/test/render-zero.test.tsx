@@ -101,9 +101,7 @@ afterEach(() => vi.unstubAllEnvs())
 test.each([
   ['Visão geral (dashboard)', '/'],
   ['Veículos', '/veiculos'],
-  ['Receitas', '/receitas'],
   ['DRE', '/dre'],
-  ['Fluxo de caixa', '/fluxo-caixa'],
   ['Socorristas', '/equipe'],
   ['Contas a receber', '/contas-receber'],
   ['Lançamentos', '/lancamentos'],

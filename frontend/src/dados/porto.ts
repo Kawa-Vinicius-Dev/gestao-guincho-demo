@@ -288,6 +288,8 @@ export async function listarOrdensServicoPorto(
   if (fim) q = q.lte(campo, fim)
   if (params?.get('semSocorrista') === 'true') q = q.is('motorista_id', null)
   if (params?.get('semQra') === 'true') q = q.is('qra', null)
+  // A receber: atendida, nao cancelada e ainda sem OP que a pague.
+  if (params?.get('aReceber') === 'true') q = q.is('ordem_pagamento_id', null).neq('status_operacional', 'CANCELADO')
   const numero = params?.get('numeroOs')
   if (numero) q = q.ilike('numero', `%${numero}%`)
 

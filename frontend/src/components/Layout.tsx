@@ -19,6 +19,7 @@ const itens = [
   ['/porto/dashboard', 'Dashboard Porto', true, 'porto'],
   ['/porto/importacoes', 'Importar relatórios', true, 'porto'],
   ['/porto/ordens-pagamento', 'Ordens de pagamento', true, 'porto'],
+  ['/porto/ordens-servico', 'Ordens de serviço', true, 'porto'],
   ['/porto/pendencias', 'Pendências do período', true, 'porto'],
   ['/configuracoes', 'Configurações', true, 'sistema'],
 ] as const

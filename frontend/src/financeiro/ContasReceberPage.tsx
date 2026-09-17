@@ -1,74 +1,88 @@
-import { useEffect, useState, type FormEvent } from 'react'
-import { criarConta, listarContas, receberConta } from '../dados/contas'
-import { listarContratantes } from '../dados/cadastros'
-import { listarVeiculos } from '../dados/veiculos'
-import { StatusBadge } from '../components/StatusBadge'
-import { Campo, Selecao } from '../components/Campos'
-import { Carregando, Vazio } from '../components/EstadoPagina'
-import type { ContaReceber, Contratante, Veiculo } from '../types/modelos'
-import { hojeIso, moeda } from '../utils/formatadores'
-import { CampoValor } from '../components/CampoValor'
-import { Modal } from '../components/Modal'
-import { useValorAdiado } from '../utils/useValorAdiado'
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { useAoVivo } from '../dados/aoVivo'
+import { listarOrdensServicoPorto } from '../dados/porto'
+import { Carregando } from '../components/EstadoPagina'
+import { SeletorPeriodo } from '../components/SeletorPeriodo'
+import { CabecalhoPagina, GradeIndicadores, Indicador, Painel } from '../components/ui/Pagina'
+import type { OrdemServicoPorto } from '../types/modelos'
+import { data, moeda } from '../utils/formatadores'
+import { usePeriodoGlobal } from '../utils/periodoGlobal'
 
-const hoje=hojeIso
-const proximoMes=()=>{const [ano,mes,dia]=hojeIso().split('-').map(Number);const d=new Date(ano,mes-1,dia);d.setMonth(d.getMonth()+1);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
-export default function ContasReceberPage(){
-  const [contas,setContas]=useState<ContaReceber[]>([]),[contratantes,setContratantes]=useState<Contratante[]>([])
-  const [veiculos,setVeiculos]=useState<Veiculo[]>([]),[status,setStatus]=useState(''),[pesquisa,setPesquisa]=useState('')
-  const [modal,setModal]=useState<'nova'|'receber'|null>(null),[selecionada,setSelecionada]=useState<ContaReceber|null>(null),[carregando,setCarregando]=useState(true)
-  const [erro,setErro]=useState(''),[versao,setVersao]=useState(0)
-  // Primeira carga mostra o esqueleto; as seguintes mantem a tabela na tela.
-  const [primeiraCarga,setPrimeiraCarga]=useState(true)
-  const buscaAdiada=useValorAdiado(pesquisa)
-  useEffect(()=>{
-    const controller=new AbortController();setCarregando(true)
-    listarContas({status,pesquisa:buscaAdiada,sinal:controller.signal})
-      .then(setContas).catch(e=>{if(e.name!=='AbortError')setErro(e.message)})
-      .finally(()=>{if(!controller.signal.aborted){setCarregando(false);setPrimeiraCarga(false)}})
-    return()=>controller.abort()
-  },[status,buscaAdiada,versao])
-  useEffect(()=>{Promise.all([listarContratantes(),listarVeiculos()]).then(([c,v])=>{setContratantes(c);setVeiculos(v)}).catch(e=>setErro((e as Error).message))},[])
-  async function salvar(event:FormEvent<HTMLFormElement>){
-    event.preventDefault();const f=new FormData(event.currentTarget)
-    const texto=(campo:string)=>String(f.get(campo)||'')||null
-    const body={contratanteId:Number(f.get('contratanteId')),protocolo:texto('protocolo'),descricao:String(f.get('descricao')),
-      valorPrevisto:Number(f.get('valorPrevisto')),dataCompetencia:String(f.get('dataCompetencia')),vencimento:String(f.get('vencimento')),
-      veiculoId:f.get('veiculoId')?Number(f.get('veiculoId')):null,observacoes:texto('observacoes'),origem:'MANUAL' as const}
-    try{await criarConta(body);setModal(null);setVersao(v=>v+1)}catch(e){setErro((e as Error).message)}
-  }
-  async function receber(event:FormEvent<HTMLFormElement>){
-    event.preventDefault();if(!selecionada)return;const f=new FormData(event.currentTarget)
-    try{await receberConta(selecionada.id,Number(f.get('valorRecebido')),String(f.get('dataRecebimento')));setModal(null);setVersao(v=>v+1)}catch(e){setErro((e as Error).message)}
-  }
+/**
+ * Contas a receber: o que a equipe ja atendeu e a Porto ainda nao pagou.
+ *
+ * Kawa: "contas a receber so se for o valor diario que for adicionado, porque as
+ * OS ainda nao foram pagas". A OP chega paga, entao nao ha nada a receber nela;
+ * o que falta receber sao os servicos que entraram pelo painel diario e ainda
+ * nao vieram numa OP. O painel vem sem valor: o valor so e conhecido quando a OP
+ * chega, e ai a OS sai desta lista e vira receita.
+ */
+export default function ContasReceberPage() {
+  const [periodo, setPeriodo] = usePeriodoGlobal()
+  const { inicio, fim } = periodo
+  const [itens, setItens] = useState<OrdemServicoPorto[]>([])
+  const [carregando, setCarregando] = useState(true)
+  const [erro, setErro] = useState('')
+  const [versao, setVersao] = useState(0)
+  // OP importada em outra aba: as OS pagas saem daqui sozinhas.
+  useAoVivo(() => setVersao(v => v + 1))
+
+  useEffect(() => {
+    if (!inicio || !fim || inicio > fim) return
+    let valeu = true
+    setCarregando(true); setErro('')
+    listarOrdensServicoPorto(new URLSearchParams({ dataInicio: inicio, dataFim: fim, aReceber: 'true' }))
+      .then(lista => { if (valeu) setItens(lista) })
+      .catch(e => { if (valeu) setErro((e as Error).message) })
+      .finally(() => { if (valeu) setCarregando(false) })
+    return () => { valeu = false }
+  }, [inicio, fim, versao])
+
+  const valorConhecido = itens.reduce((soma, os) => soma + os.valorTotal, 0)
+  const semValor = itens.filter(os => !os.valorTotal).length
+
   return <div className="page-enter">
-    <header className="page-heading"><div><span className="eyebrow">Financeiro</span><h1>Contas a receber</h1><p>Previsões, atrasos e recebimentos conciliados.</p></div>
-      <button className="button button-primary" onClick={()=>setModal('nova')}>Nova conta</button></header>
-    {erro?<div className="form-alert">{erro}</div>:null}
-    <section className="panel">
-      <div className="filters"><Campo rotulo="Pesquisar" className="search-field"><input type="search" inputMode="search" autoCorrect="off" autoCapitalize="none" value={pesquisa} onChange={e=>setPesquisa(e.target.value)} placeholder="Protocolo ou referência, contratante ou descrição"/></Campo>
-        <Selecao rotulo="Situação" className="filter-select" vazio="Todos" value={status} onChange={e=>setStatus(e.target.value)}
-          opcoes={[{valor:'PENDENTE',texto:'Pendente'},{valor:'ATRASADO',texto:'Atrasado'},{valor:'RECEBIDO',texto:'Recebido'},{valor:'CANCELADO',texto:'Cancelado'}]}/></div>
-      {carregando&&primeiraCarga?<Carregando/>:contas.length?<div className={carregando?'table-scroll atualizando':'table-scroll'}><table><thead><tr><th>Protocolo ou referência</th><th>Contratante</th><th>Vencimento</th><th>Situação</th><th>Previsto</th><th>Recebido</th><th/></tr></thead>
-        <tbody>{contas.map(c=><tr key={c.id}><td><strong>{c.protocolo||'Sem protocolo'}</strong><small>{c.descricao}</small></td><td>{c.contratante.nome}</td><td>{new Date(`${c.vencimento}T12:00:00`).toLocaleDateString('pt-BR')}</td><td><StatusBadge status={c.status}/></td><td>{moeda(c.valorPrevisto)}</td><td>{c.valorRecebido!=null?<><strong>{moeda(c.valorRecebido)}</strong>{c.diferenca?<small className="negative">Dif. {moeda(c.diferenca)}</small>:null}</>:'—'}</td><td>{c.status!=='RECEBIDO'&&c.status!=='CANCELADO'?<button className="table-action" onClick={()=>{setSelecionada(c);setModal('receber')}}>Registrar pagamento</button>:null}</td></tr>)}</tbody></table></div>
-        :<Vazio titulo="Nenhuma conta encontrada" descricao="Cadastre uma conta manualmente ou confirme uma importação da Porto Seguro."/>}
-    </section>
-    {modal?<Modal etiqueta="Contas a receber" titulo={modal==='nova'?'Nova conta':'Registrar recebimento'} aoFechar={()=>setModal(null)}>
-      {modal==='nova'?<form onSubmit={salvar} className="form-grid two-columns">
-        <Selecao rotulo="Contratante" name="contratanteId" required opcoes={contratantes.map(c=>({valor:c.id,texto:c.nome}))}/>
-        <label className="field"><span>Protocolo ou referência</span><input name="protocolo" autoCapitalize="characters" autoCorrect="off" spellCheck={false}/></label>
-        <label className="field field-wide"><span>Descrição</span><input name="descricao" required autoCapitalize="sentences" autoComplete="off"/></label>
-        <CampoValor rotulo="Valor previsto" name="valorPrevisto" required/>
-        <Selecao rotulo="Veículo" name="veiculoId" vazio="Não relacionado" opcoes={veiculos.map(v=>({valor:v.id,texto:v.identificacao}))}/>
-        <label className="field"><span>Competência</span><input name="dataCompetencia" type="date" defaultValue={hoje()} required/></label>
-        <label className="field"><span>Vencimento</span><input name="vencimento" type="date" defaultValue={proximoMes()} required/></label>
-        <label className="field field-wide"><span>Observações</span><textarea name="observacoes" rows={3}/></label>
-        <div className="modal-actions field-wide"><button type="button" className="button button-ghost" onClick={()=>setModal(null)}>Cancelar</button><button className="button button-primary">Salvar conta</button></div>
-      </form>:<form onSubmit={receber} className="form-grid"><p>Previsto: <strong>{moeda(selecionada?.valorPrevisto??0)}</strong></p>
-        <CampoValor rotulo="Valor recebido" name="valorRecebido" defaultValue={selecionada?.valorPrevisto} required/>
-        <label className="field"><span>Data do recebimento</span><input name="dataRecebimento" type="date" defaultValue={hoje()} required/></label>
-        <div className="modal-actions"><button type="button" className="button button-ghost" onClick={()=>setModal(null)}>Cancelar</button><button className="button button-primary">Confirmar recebimento</button></div>
-      </form>}
-    </Modal>:null}
+    <CabecalhoPagina
+      modulo="Financeiro"
+      titulo="Contas a receber"
+      descricao="Serviços atendidos que a Porto ainda não pagou. Saem daqui quando chegam numa OP."
+      contexto={<>Período: <strong>{data(inicio)}</strong> → <strong>{data(fim)}</strong></>}
+      acoes={<Link className="button button-ghost" to="/porto/importacoes">Importar OP</Link>}/>
+
+    {erro ? <div className="form-alert" role="alert">{erro}</div> : null}
+
+    <Painel className="painel-filtros">
+      <form className="ledger-filters" onSubmit={e => e.preventDefault()}>
+        <SeletorPeriodo periodo={periodo} aoMudar={setPeriodo}/>
+      </form>
+    </Painel>
+
+    <GradeIndicadores>
+      <Indicador rotulo="Aguardando OP" valor={itens.length}
+        apoio={itens.length ? 'Serviços do painel diário ainda não pagos' : 'Nada a receber no período'}/>
+      <Indicador rotulo="Valor já conhecido" valor={moeda(valorConhecido)}
+        apoio={semValor ? `${semValor} ${semValor === 1 ? 'serviço ainda sem valor' : 'serviços ainda sem valor'}: o valor chega com a OP` : 'Todos com valor'}/>
+    </GradeIndicadores>
+
+    {carregando ? <Carregando/> : null}
+
+    <Painel semRespiro>
+      {!carregando && !itens.length
+        ? <p className="empty-inline">Nenhum serviço aguardando pagamento neste período. Tudo o que foi atendido já veio numa OP.</p>
+        : <div className="table-scroll"><table>
+          <thead><tr>
+            <th>OS</th><th>Atendimento</th><th>Especialidade</th><th>Viatura</th><th>Socorrista</th><th>Valor</th>
+          </tr></thead>
+          <tbody>{itens.map(os => <tr key={os.id}>
+            <td><strong>{os.numero}</strong></td>
+            <td>{os.dataAtendimento ? data(os.dataAtendimento) : '—'}</td>
+            <td>{os.especialidade || '—'}</td>
+            <td>{os.viatura || '—'}</td>
+            <td>{os.motorista || os.socorrista || '—'}</td>
+            <td>{os.valorTotal ? moeda(os.valorTotal) : <small>Chega com a OP</small>}</td>
+          </tr>)}</tbody>
+        </table></div>}
+    </Painel>
   </div>
 }

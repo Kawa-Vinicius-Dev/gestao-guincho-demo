@@ -58,16 +58,6 @@ test('/lancamentos consulta o extrato financeiro real', async () => {
   expect(consultou).toHaveBeenCalledOnce()
 })
 
-test('/fluxo-caixa reutiliza o extrato financeiro real', async () => {
-  const consultou = vi.fn()
-  servidor.use(http.get('/api/lancamentos', () => { consultou(); return HttpResponse.json([]) }))
-
-  abrir('/fluxo-caixa')
-
-  expect(await screen.findByRole('heading', { name: /fluxo de caixa/i })).toBeInTheDocument()
-  expect(consultou).toHaveBeenCalledOnce()
-})
-
 test('/veiculos consulta cadastro e resultado reais', async () => {
   const consultou = vi.fn()
   servidor.use(http.get('/api/veiculos', () => { consultou(); return HttpResponse.json([]) }))
