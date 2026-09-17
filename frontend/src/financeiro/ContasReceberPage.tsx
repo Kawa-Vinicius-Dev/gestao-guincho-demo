@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAoVivo } from '../dados/aoVivo'
-import { listarOrdensServicoPorto } from '../dados/porto'
+import { listarTodasAsOs, type LinhaOs } from '../dados/porto/listaOs'
 import { Carregando } from '../components/EstadoPagina'
 import { SeletorPeriodo } from '../components/SeletorPeriodo'
 import { CabecalhoPagina, GradeIndicadores, Indicador, Painel } from '../components/ui/Pagina'
-import type { OrdemServicoPorto } from '../types/modelos'
 import { data, moeda } from '../utils/formatadores'
 import { usePeriodoGlobal } from '../utils/periodoGlobal'
 
@@ -21,7 +20,8 @@ import { usePeriodoGlobal } from '../utils/periodoGlobal'
 export default function ContasReceberPage() {
   const [periodo, setPeriodo] = usePeriodoGlobal()
   const { inicio, fim } = periodo
-  const [itens, setItens] = useState<OrdemServicoPorto[]>([])
+  const [itens, setItens] = useState<LinhaOs[]>([])
+  const [previsto, setPrevisto] = useState(0)
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState('')
   const [versao, setVersao] = useState(0)
@@ -32,15 +32,18 @@ export default function ContasReceberPage() {
     if (!inicio || !fim || inicio > fim) return
     let valeu = true
     setCarregando(true); setErro('')
-    listarOrdensServicoPorto(new URLSearchParams({ dataInicio: inicio, dataFim: fim, aReceber: 'true' }))
-      .then(lista => { if (valeu) setItens(lista) })
+    // Pela competencia, e nao pela data do servico: a OS que ficou para tras e
+    // cobrada na competencia seguinte, e e ali que ela precisa aparecer.
+    listarTodasAsOs({ inicio, fim, situacao: 'AGUARDANDO', porCompetencia: true })
+      .then(pagina => { if (valeu) { setItens(pagina.itens); setPrevisto(pagina.valorPrevisto) } })
       .catch(e => { if (valeu) setErro((e as Error).message) })
       .finally(() => { if (valeu) setCarregando(false) })
     return () => { valeu = false }
   }, [inicio, fim, versao])
 
-  const valorConhecido = itens.reduce((soma, os) => soma + os.valorTotal, 0)
-  const semValor = itens.filter(os => !os.valorTotal).length
+  const semValor = itens.filter(os => os.valorManual === undefined).length
+  const paraAProxima = itens.filter(os => os.situacao === 'AGUARDANDO_PROXIMA_OP').length
+  const lista = (situacao: string) => `/porto/ordens-servico?situacao=${situacao}&competencia=1`
 
   return <div className="page-enter">
     <CabecalhoPagina
@@ -59,10 +62,12 @@ export default function ContasReceberPage() {
     </Painel>
 
     <GradeIndicadores>
-      <Indicador rotulo="Aguardando OP" valor={itens.length}
-        apoio={itens.length ? 'Serviços do painel diário ainda não pagos' : 'Nada a receber no período'}/>
-      <Indicador rotulo="Valor já conhecido" valor={moeda(valorConhecido)}
-        apoio={semValor ? `${semValor} ${semValor === 1 ? 'serviço ainda sem valor' : 'serviços ainda sem valor'}: o valor chega com a OP` : 'Todos com valor'}/>
+      <Indicador rotulo="Aguardando OP" valor={itens.length} link={lista('AGUARDANDO')}
+        apoio={itens.length ? 'Serviços do Diário ainda não pagos' : 'Nada a receber no período'}/>
+      <Indicador rotulo="Valor previsto" valor={moeda(previsto)} link={lista('VALOR_MANUAL')}
+        apoio={semValor ? `${semValor} ${semValor === 1 ? 'serviço ainda sem valor' : 'serviços ainda sem valor'}: o valor chega com a OP` : 'Todos com valor informado'}/>
+      <Indicador rotulo="Aguardando próxima OP" valor={paraAProxima} link={lista('AGUARDANDO_PROXIMA_OP')}
+        apoio={paraAProxima ? 'Ficaram fora da OP da competência anterior' : 'Nada ficou para trás'}/>
     </GradeIndicadores>
 
     {carregando ? <Carregando/> : null}
@@ -72,15 +77,18 @@ export default function ContasReceberPage() {
         ? <p className="empty-inline">Nenhum serviço aguardando pagamento neste período. Tudo o que foi atendido já veio numa OP.</p>
         : <div className="table-scroll"><table>
           <thead><tr>
-            <th>OS</th><th>Atendimento</th><th>Especialidade</th><th>Viatura</th><th>Socorrista</th><th>Valor</th>
+            <th>OS</th><th>Atendimento</th><th>Especialidade</th><th>Viatura</th><th>Socorrista</th><th>Situação</th><th>Valor</th>
           </tr></thead>
           <tbody>{itens.map(os => <tr key={os.id}>
             <td><strong>{os.numero}</strong></td>
             <td>{os.dataAtendimento ? data(os.dataAtendimento) : '—'}</td>
             <td>{os.especialidade || '—'}</td>
             <td>{os.viatura || '—'}</td>
-            <td>{os.motorista || os.socorrista || '—'}</td>
-            <td>{os.valorTotal ? moeda(os.valorTotal) : <small>Chega com a OP</small>}</td>
+            <td>{os.motorista || os.socorristaNoArquivo || '—'}</td>
+            <td>{os.situacao === 'AGUARDANDO_PROXIMA_OP'
+              ? <small>Aguardando próxima OP</small>
+              : os.situacao === 'VALOR_MANUAL' ? <small>Valor informado</small> : <small>Sem valor</small>}</td>
+            <td>{os.valorManual !== undefined ? moeda(os.valorManual) : <small>Chega com a OP</small>}</td>
           </tr>)}</tbody>
         </table></div>}
     </Painel>
