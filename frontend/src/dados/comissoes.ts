@@ -47,6 +47,40 @@ export async function lerComissaoDaOp(
   ) as Comissao
 }
 
+/**
+ * Comissao prevista da competencia: 20% do que ainda nao entrou em OP.
+ *
+ * Nao e promessa de pagamento — e a leitura do que vem, com o valor informado a
+ * mao. Quem paga e a OP: quando ela chega, a mesma OS sai daqui e entra na
+ * comissao confirmada, que vira despesa.
+ */
+export interface ComissaoPrevista {
+  motoristaId: number
+  socorrista: string
+  servicos: number
+  /** Serviços da conta que ainda estão sem valor nenhum. */
+  semValor: number
+  valorPrevisto: number
+  comissaoPrevista: number
+}
+
+export async function listarComissaoPrevista(
+  inicio: string, fim: string, motoristaId?: number,
+): Promise<ComissaoPrevista[]> {
+  const linhas = ou(
+    await supabase().rpc('porto_comissao_prevista', {
+      p_inicio: inicio, p_fim: fim, p_motorista_id: motoristaId ?? null,
+    }),
+    'Não foi possível carregar a comissão prevista.',
+  ) as { motorista_id: number; socorrista: string; servicos: number; sem_valor: number
+         valor_previsto: number; comissao_prevista: number }[]
+  return (linhas ?? []).map(l => ({
+    motoristaId: l.motorista_id, socorrista: l.socorrista,
+    servicos: Number(l.servicos), semValor: Number(l.sem_valor),
+    valorPrevisto: Number(l.valor_previsto), comissaoPrevista: Number(l.comissao_prevista),
+  }))
+}
+
 export async function resumirComissoes(
   ordensPagamento: number[], motoristaId?: number,
 ): Promise<ResumoComissao[]> {

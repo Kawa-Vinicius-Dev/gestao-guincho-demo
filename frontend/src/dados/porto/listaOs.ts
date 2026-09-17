@@ -7,7 +7,16 @@ import { ou, supabase } from '../cliente'
  * consulta ignorava e cortava em 1000 linhas sem avisar.
  */
 
+/**
+ * Situacao financeira da OS.
+ *
+ * As duas primeiras sao o recorte grosso que a tela ja tinha; as cinco seguintes
+ * vem de `porto_os_situacao` e dizem em que pe esta a conciliacao com a OP.
+ */
 export type SituacaoOs = '' | 'PAGA' | 'AGUARDANDO'
+  | 'AGUARDANDO_ANALISE' | 'VALOR_MANUAL' | 'AGUARDANDO_PROXIMA_OP' | 'CONCILIADA' | 'DIVERGENTE'
+
+export type SituacaoDaOs = Exclude<SituacaoOs, '' | 'PAGA' | 'AGUARDANDO'>
 
 export interface FiltroOs {
   inicio: string
@@ -20,6 +29,8 @@ export interface FiltroOs {
   situacao?: SituacaoOs
   /** So as OS que ainda estao sem viatura. */
   semViatura?: boolean
+  /** Recorta o periodo pela competencia financeira, e nao pela data do servico. */
+  porCompetencia?: boolean
 }
 
 export interface LinhaOs {
@@ -36,6 +47,15 @@ export interface LinhaOs {
   numeroOp?: string
   /** So existe quando a OS ja foi paga numa OP. */
   comissao?: number
+  situacao: SituacaoDaOs
+  competenciaInicio?: string
+  competenciaFim?: string
+  /** Informado a mao antes da OP; continua guardado depois dela, para conferir. */
+  valorManual?: number
+  /** O da OP quando ela existe; senao, o manual. */
+  valorPrevisto?: number
+  /** Valor da OP menos o manual, quando os dois existem. */
+  divergencia?: number
 }
 
 export interface PaginaOs {
@@ -43,11 +63,31 @@ export interface PaginaOs {
   /** Quantas OS do filtro estao sem viatura. */
   semViatura: number
   valorTotal: number
+  /** Oficial da OP mais o informado a mao do que ainda nao foi pago. */
+  valorPrevisto: number
+  /** Quantas OS do filtro ainda nao tem valor nenhum. */
+  semValor: number
+  /** Quantas OS do filtro a OP pagou diferente do valor informado. */
+  divergentes: number
   comissaoTotal: number
   itens: LinhaOs[]
 }
 
 export const TAMANHO_DA_PAGINA = 100
+
+const numero = (v: unknown) => (v === null || v === undefined ? undefined : Number(v))
+
+/**
+ * Valor informado a mao para uma OS que ainda nao entrou em OP. Vale como
+ * previsto: nao gera comissao e e substituido pelo valor da OP quando ela chega.
+ */
+export async function informarValorManual(id: number, valor: number | null): Promise<void> {
+  invalidarCacheFinanceiro()
+  ou(
+    await supabase().rpc('porto_informar_valor_manual', { p_os_id: id, p_valor: valor }),
+    'Não foi possível informar o valor.',
+  )
+}
 
 export async function listarOs(filtro: FiltroOs, pagina = 0, tamanho = TAMANHO_DA_PAGINA): Promise<PaginaOs> {
   const bruto = ou(
@@ -63,6 +103,7 @@ export async function listarOs(filtro: FiltroOs, pagina = 0, tamanho = TAMANHO_D
       p_limite: tamanho,
       p_deslocamento: pagina * tamanho,
       p_sem_viatura: Boolean(filtro.semViatura),
+      p_por_competencia: Boolean(filtro.porCompetencia),
     }),
     'Não foi possível carregar as ordens de serviço.',
   ) as PaginaOs
@@ -70,11 +111,17 @@ export async function listarOs(filtro: FiltroOs, pagina = 0, tamanho = TAMANHO_D
     total: Number(bruto.total),
     semViatura: Number(bruto.semViatura ?? 0),
     valorTotal: Number(bruto.valorTotal),
+    valorPrevisto: Number(bruto.valorPrevisto ?? bruto.valorTotal),
+    semValor: Number(bruto.semValor ?? 0),
+    divergentes: Number(bruto.divergentes ?? 0),
     comissaoTotal: Number(bruto.comissaoTotal),
     itens: bruto.itens.map(i => ({
       ...i,
       valorTotal: Number(i.valorTotal),
-      comissao: i.comissao === null || i.comissao === undefined ? undefined : Number(i.comissao),
+      comissao: numero(i.comissao),
+      valorManual: numero(i.valorManual),
+      valorPrevisto: numero(i.valorPrevisto),
+      divergencia: numero(i.divergencia),
     })),
   }
 }
@@ -122,6 +169,7 @@ export async function definirViaturaEmLote(filtro: FiltroOs, sigla: string, soSe
       p_especialidade: filtro.especialidade || null,
       p_situacao: filtro.situacao || null,
       p_sem_viatura: Boolean(filtro.semViatura),
+      p_por_competencia: Boolean(filtro.porCompetencia),
       p_so_sem_viatura: soSemViatura,
     }),
     'Não foi possível definir a viatura das ordens de serviço.',

@@ -2,7 +2,7 @@ import { ehAuxiliar } from '../utils/auxiliar'
 import { useEffect,useState } from 'react'
 import { Link,useParams } from 'react-router-dom'
 import { Selecao } from '../components/Campos'
-import { listarPeriodosComissao, obterDetalheSocorrista } from '../dados/comissoes'
+import { listarComissaoPrevista, listarPeriodosComissao, obterDetalheSocorrista, type ComissaoPrevista } from '../dados/comissoes'
 import { Carregando,ErroPagina } from '../components/EstadoPagina'
 import type { DespesaDoSocorrista,DetalheSocorrista } from '../types/modelos'
 import { data,moeda } from '../utils/formatadores'
@@ -17,11 +17,15 @@ export default function EquipeDetalhePage(){
   const [periodos,setPeriodos]=useState<PeriodoPorto[]>([]),[detalhe,setDetalhe]=useState<DetalheSocorrista|null>(null)
   const [carregandoPeriodos,setCarregandoPeriodos]=useState(true),[carregandoDetalhe,setCarregandoDetalhe]=useState(false),[erro,setErro]=useState('')
   const [global,setGlobal]=usePeriodoGlobal()
+  const [prevista,setPrevista]=useState<ComissaoPrevista|null>(null)
   const periodoId=periodoPortoDoGlobal(periodos,global)?.id??''
   const setPeriodoId=(id:string)=>{const p=periodos.find(x=>x.id===id);const novo=p&&globalDoPeriodoPorto(p);if(novo)setGlobal(novo)}
   const ids=periodos.find(p=>p.id===periodoId)?.ids??[]
   useEffect(()=>{listarPeriodosComissao().then(lista=>{setPeriodos(lista)}).catch((e:Error)=>setErro(e.message)).finally(()=>setCarregandoPeriodos(false))},[])
   useEffect(()=>{if(!motoristaId||!ids.length)return;setCarregandoDetalhe(true);setErro('');obterDetalheSocorrista(motoristaId,ids).then(setDetalhe).catch(e=>setErro(e.message)).finally(()=>setCarregandoDetalhe(false))},[motoristaId,periodoId,periodos])
+  // O que ele rodou nesta competencia e ainda nao entrou em OP: previsto, sem comissao lancada.
+  useEffect(()=>{if(!motoristaId||!global.inicio||!global.fim)return
+    listarComissaoPrevista(global.inicio,global.fim,motoristaId).then(l=>setPrevista(l[0]??null)).catch(()=>setPrevista(null))},[motoristaId,global.inicio,global.fim])
   useAoVivo(()=>{if(motoristaId&&ids.length)obterDetalheSocorrista(motoristaId,ids).then(setDetalhe).catch(e=>setErro(e.message))})
   if(carregandoPeriodos)return <Carregando/>
   if(erro&&!detalhe)return <ErroPagina mensagem={erro}/>
@@ -41,6 +45,7 @@ export default function EquipeDetalhePage(){
         <div className="employee-vehicles"><span>Viaturas utilizadas no período</span><div>{detalhe.veiculosUtilizados.length?detalhe.veiculosUtilizados.map(viatura=><strong key={viatura}>{viatura}</strong>):<small>Nenhuma viatura identificada nas OS deste período.</small>}</div></div>
       </section>
 
+      {prevista?<div className="success-notice"><strong>Aguardando OP: {prevista.servicos} {prevista.servicos===1?'serviço':'serviços'} nesta competência</strong> — {moeda(prevista.valorPrevisto)} previstos, comissão prevista de {moeda(prevista.comissaoPrevista)}{prevista.semValor?`, com ${prevista.semValor} ainda sem valor`:''}. Só vira comissão quando a OP chegar.</div>:null}
       <section className="metric-grid employee-summary" aria-label="Resumo do período">
         <article className="metric"><span>Total de serviços prestados</span><strong>{detalhe.totalServicosPrestados}</strong><small>Inclui OS ainda não pagas</small></article>
         <article className="metric"><span>Serviços já pagos</span><strong>{detalhe.comissao.quantidadeServicosPagos}</strong><small>Somente OP efetivamente paga</small></article>

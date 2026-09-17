@@ -4,12 +4,15 @@ import { lerPainelDiarioPorto } from './painelDiario'
 /**
  * Diario Operacional: a colagem da consulta de servicos da Porto.
  *
- * A Porto entrega a consulta por dia; colar de uma vez um intervalo grande
- * costuma vir truncado pela propria tela de origem, e o erro so apareceria como
- * "dia sem servico" semanas depois, na conciliacao com a OP. Por isso o limite
- * combinado: no maximo 15 dias por colagem.
+ * Colar de uma vez um intervalo grande costuma vir truncado pela propria tela de
+ * origem, e o erro so apareceria como "dia sem servico" semanas depois, na
+ * conciliacao com a OP. Dai o limite.
+ *
+ * Sao 16 dias, e nao os 15 combinados de cabeca: a exportacao real que Kawa
+ * usa e a quinzena inteira, e a segunda quinzena de um mes de 31 dias vai de 16
+ * a 31 — 16 dias corridos. Um limite de 15 recusaria a colagem normal dele.
  */
-export const LIMITE_DE_DIAS = 15
+export const LIMITE_DE_DIAS = 16
 
 /** Primeiro dia com historico na Porto. */
 export const INICIO_DO_HISTORICO = '2026-03-30'

@@ -3,7 +3,7 @@ import { Carregando } from '../components/EstadoPagina'
 import { Selecao } from '../components/Campos'
 import { listarMotoristas } from '../dados/motoristas'
 import { baixarRelatorioComissoes } from '../dados/relatorios'
-import { lerComissaoDaOp, listarPeriodosComissao, resumirComissoes } from '../dados/comissoes'
+import { lerComissaoDaOp, listarComissaoPrevista, listarPeriodosComissao, resumirComissoes, type ComissaoPrevista } from '../dados/comissoes'
 import type { Comissao,Motorista,ResumoComissao } from '../types/modelos'
 import { data,moeda } from '../utils/formatadores'
 import { rotuloPeriodo, type PeriodoPorto } from '../utils/periodos'
@@ -21,11 +21,16 @@ import { useAoVivo } from '../dados/aoVivo'
 export default function ComissoesPage(){
   const [periodos,setPeriodos]=useState<PeriodoPorto[]>([]),[motoristas,setMotoristas]=useState<Motorista[]>([]),[motoristaId,setMotoristaId]=useState(0),[itens,setItens]=useState<ResumoComissao[]>([]),[detalhe,setDetalhe]=useState<Comissao|null>(null),[erro,setErro]=useState(''),[exportando,setExportando]=useState('')
   const [global,setGlobal]=usePeriodoGlobal()
+  const [prevista,setPrevista]=useState<ComissaoPrevista[]>([])
   const periodoId=periodoPortoDoGlobal(periodos,global)?.id??''
   const setPeriodoId=(id:string)=>{const p=periodos.find(x=>x.id===id);const novo=p&&globalDoPeriodoPorto(p);if(novo)setGlobal(novo)}
   const ids=periodos.find(p=>p.id===periodoId)?.ids??[]
   useEffect(()=>{Promise.all([listarPeriodosComissao(),listarMotoristas()]).then(([p,m])=>{setPeriodos(p);setMotoristas(m);if(!p.length)setCarregando(false)}).catch(e=>{setErro(e.message);setCarregando(false)})},[])
   const [carregando,setCarregando]=useState(true)
+  // Prevista sai do periodo, e nao das OPs: o que ainda nao tem OP e justamente
+  // o que nao esta em nenhuma delas.
+  useEffect(()=>{if(!global.inicio||!global.fim)return
+    listarComissaoPrevista(global.inicio,global.fim,motoristaId||undefined).then(setPrevista).catch(()=>setPrevista([]))},[global.inicio,global.fim,motoristaId])
   useEffect(()=>{if(!ids.length)return;setCarregando(true);resumirComissoes(ids,motoristaId||undefined).then(setItens).catch(e=>setErro(e.message)).finally(()=>setCarregando(false))},[periodoId,motoristaId,periodos])
   // OS que ganha dono ou gasto marcado muda a comissao na hora, detalhe aberto inclusive.
   useAoVivo(()=>{if(!ids.length)return
@@ -44,6 +49,9 @@ export default function ComissoesPage(){
       <Selecao rotulo="Socorrista" vazio="Todos" value={motoristaId||''} onChange={e=>setMotoristaId(Number(e.target.value))}
       opcoes={motoristas.map(m=>({valor:m.id,texto:m.nome}))}/></div>
       <div className="table-scroll"><table><thead><tr><th>Socorrista</th><th>Serviços pagos</th><th>Produção paga</th><th>Comissão 20%</th><th>Descontos</th><th>Líquido</th><th>Em despesas</th><th/></tr></thead><tbody>{itens.map(item=><tr key={item.motoristaId}><td><strong>{item.socorrista}</strong></td><td>{item.quantidadeServicosPagos}</td><td>{moeda(item.producaoPaga)}</td><td>{moeda(item.comissaoBruta)}</td><td>{moeda(item.descontos)}</td><td className={item.liquido<0?'negative':'positive'}><strong>{moeda(item.liquido)}</strong></td><td>{item.pagamento?`Lançada em ${data(item.pagamento.dataPagamento)}`:'Sem valor a lançar'}</td><td><button className="table-action" onClick={()=>void abrir(item.motoristaId)}>Detalhar</button></td></tr>)}</tbody></table></div></section>
+    {prevista.length?<section className="panel"><header className="panel-title"><div><span className="eyebrow">Ainda sem OP</span><h2>Comissão prevista</h2><p>20% do que já foi informado para os serviços desta competência que ainda não entraram numa OP. Não entra em despesas: só vira comissão quando a OP chegar.</p></div></header>
+      <div className="table-scroll"><table><thead><tr><th>Socorrista</th><th>Serviços</th><th>Sem valor</th><th>Valor previsto</th><th>Comissão prevista</th></tr></thead>
+      <tbody>{prevista.map(p=><tr key={p.motoristaId}><td><strong>{p.socorrista}</strong></td><td>{p.servicos}</td><td>{p.semValor||'—'}</td><td>{moeda(p.valorPrevisto)}</td><td>{moeda(p.comissaoPrevista)}</td></tr>)}</tbody></table></div></section>:null}
     {detalhe?<Modal etiqueta={detalhe.periodo} titulo={detalhe.socorrista} className="commission-detail" fecharAoClicarFora aoFechar={()=>setDetalhe(null)}><div className="porto-detail-summary"><span>Produção<strong>{moeda(detalhe.producaoPaga)}</strong></span><span>Comissão<strong>{moeda(detalhe.comissaoBruta)}</strong></span><span>Descontos<strong>{moeda(detalhe.descontos)}</strong></span><span>Líquido<strong>{moeda(detalhe.liquido)}</strong></span></div>
       {detalhe.pagamento
         ?<div className="success-notice"><strong>Lançada em despesas</strong> em {data(detalhe.pagamento.dataPagamento)}, no valor de {moeda(detalhe.pagamento.valorPago)}.</div>

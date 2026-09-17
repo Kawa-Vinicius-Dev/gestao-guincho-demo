@@ -82,7 +82,11 @@ export interface OsSemSocorristaPorto { hashRegistro:string; numeroOs:string; so
 export interface ReassociacaoOsPorto { numeroOs:string; opAtual:string; novaOp:string; valor:number }
 export interface AnaliseOrdemPagamentoPorto { numero:string; existente:boolean; valorAtual?:number; somaArquivo:number; diferenca?:number; quantidadeReassociacoes:number; valorReassociacoes:number; reassociacoes:ReassociacaoOsPorto[] }
 export interface PreviaPorto { id:number; nomeArquivo:string; tipo:TipoRelatorioPorto; status:string; totalLinhas:number; linhas:LinhaPreviaPorto[]; erros:string[]; requerOrdemPagamento:boolean; resumo?:ResumoPreviaPorto; analiseOrdemPagamento?:AnaliseOrdemPagamentoPorto; orfas?:OsSemSocorristaPorto[]; osSemSocorrista?:string[] }
-export interface ConfirmacaoPorto { importacaoId:number; tipo:TipoRelatorioPorto; importados:number; ignorados:number; novos?:number; atualizados?:number; receitasCriadas:number; receitasAtualizadas:number; valorTotalRecebido:number; quinzena?:string; dataPagamento?:string; erros:string[]; osSemSocorrista?:string[]; viaturasNovas?:string[] }
+/** OS do Diario que a OP nao trouxe: fica aguardando a proxima OP. */
+export interface OsNaoEncontradaPorto { id:number; numero:string; dataAtendimento?:string; socorrista?:string; viatura?:string; valorManual?:number }
+/** OS paga pela OP num valor diferente do que foi informado a mao. */
+export interface OsDivergentePorto { id:number; numero:string; valorManual:number; valorOp:number; diferenca:number }
+export interface ConfirmacaoPorto { importacaoId:number; tipo:TipoRelatorioPorto; importados:number; ignorados:number; novos?:number; atualizados?:number; receitasCriadas:number; receitasAtualizadas:number; valorTotalRecebido:number; quinzena?:string; dataPagamento?:string; erros:string[]; osSemSocorrista?:string[]; viaturasNovas?:string[]; naoEncontradas?:OsNaoEncontradaPorto[]; divergentes?:OsDivergentePorto[] }
 export type StatusConciliacaoPorto='SEM_COMPOSICAO'|'CONCILIADA'|'VALOR_ABAIXO'|'VALOR_ACIMA'|'RECEBIDA_COM_DIVERGENCIA'
 export type StatusOperacionalPorto='NORMAL'|'AGUARDANDO_LANCAMENTO'|'PROCESSADO'|'LIBERADO_APOS_ANALISE'|'PENDENTE_PORTO'|'DEVOLVIDO_FINALIZADO'|'CANCELADO'
 export type StatusFinanceiroPorto='AGUARDANDO_OP'|'PAGAMENTO_PROGRAMADO'|'A_CONFIRMAR'|'RECEBIDO'|'BLOQUEADO_PARA_PAGAMENTO'|'VALOR_DIVERGENTE'
@@ -97,9 +101,11 @@ export interface DashboardPorto extends ResumoOpsPorto { quantidadeTotalServicos
 export interface PontoSeriePorto { inicio:string; produzido:number; servicos:number; recebido:number; programado:number }
 export interface OpDestaquePorto { id:number; numero:string; valorTotal:number; valorRecebido?:number; periodoInicio?:string; periodoFim?:string; dataPagamentoProgramada?:string; dataRecebimento?:string; situacaoFinanceira:string; statusConciliacao:StatusConciliacaoPorto; quantidadeOrdensServico:number; divergencia:number; vencida:boolean }
 /** Uma barra do faturamento por socorrista ou por viatura. `semVinculo` e a linha das OS sem dono. */
-export interface LinhaFaturamentoPorto { chave:string; rotulo:string; valor:number; quantidade:number; semVinculo:boolean }
+export interface LinhaFaturamentoPorto { chave:string; rotulo:string; valor:number; quantidade:number; semVinculo:boolean; valorPrevisto?:number; semValor?:number }
+/** Em que pé está a conciliação da competência: o que ainda não fechou com a OP. */
+export interface ConciliacaoPorto { semValor:number; comValorManual:number; valorManual:number; aguardandoProximaOp:number; valorAguardandoProximaOp:number; divergentes:number; valorDivergencia:number; valorPrevisto:number }
 export interface PendenciasVinculoPorto { quantidade:number; semSocorrista:number; semViatura:number }
-export interface DashboardAltoNivelPorto extends DashboardPorto { grao:'DIA'|'SEMANA'|'MES'; serie:PontoSeriePorto[]; opsDestaque:OpDestaquePorto[]; faturamentoPorSocorrista:LinhaFaturamentoPorto[]; faturamentoPorViatura:LinhaFaturamentoPorto[]; pendenciasVinculo:PendenciasVinculoPorto }
+export interface DashboardAltoNivelPorto extends DashboardPorto { grao:'DIA'|'SEMANA'|'MES'; serie:PontoSeriePorto[]; opsDestaque:OpDestaquePorto[]; faturamentoPorSocorrista:LinhaFaturamentoPorto[]; faturamentoPorViatura:LinhaFaturamentoPorto[]; pendenciasVinculo:PendenciasVinculoPorto; conciliacao?:ConciliacaoPorto }
 export interface JustificativaPorto { id:number; motivo:string; observacao:string; valorDiferenca?:number; usuario:string; criadoEm:string }
 export interface HistoricoPorto { id:number; evento:string; descricao:string; usuario?:string; criadoEm:string }
 export interface DetalheOpPorto { ordemPagamento:OrdemPagamentoPorto; ordensServico:OrdemServicoPorto[]; justificativas:JustificativaPorto[]; historico?:HistoricoPorto[] }

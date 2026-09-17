@@ -16,7 +16,7 @@ import { Carregando } from '../components/EstadoPagina'
  * producao do socorrista e da viatura mesmo antes de ser pago.
  *
  * Duas coisas separam esta tela da de Importar relatorios: aqui so entra o
- * painel do dia (nunca uma OP), e a colagem e limitada a 15 dias, porque a tela
+ * painel do dia (nunca uma OP), e a colagem e limitada a uma quinzena, porque a tela
  * de origem trunca intervalos grandes sem avisar. O mapa embaixo mostra que dias
  * ja foram colados, para nenhum dia ficar de fora sem ninguem perceber.
  */
@@ -96,7 +96,7 @@ export default function PortoDiarioPage() {
       const colado = await diasColados(conteudo)
       if (colado.intervalo > LIMITE_DE_DIAS) {
         throw new Error(`A colagem cobre ${colado.intervalo} dias (${dataBr(colado.inicio)} a ${dataBr(colado.fim)}). `
-          + `Cole no máximo ${LIMITE_DE_DIAS} dias por vez: a consulta da Porto corta intervalos maiores sem avisar.`)
+          + `Cole no máximo ${LIMITE_DE_DIAS} dias por vez — uma quinzena: a consulta da Porto corta intervalos maiores sem avisar.`)
       }
       const lida = await criarPreviaConteudoPorto(conteudo)
       if (lida.tipo !== 'PAINEL_DIARIO') {
@@ -155,7 +155,7 @@ export default function PortoDiarioPage() {
 
   return <div className="page-enter">
     <CabecalhoPagina modulo="Módulo Porto" titulo="Diário Operacional"
-      descricao={`Cole a consulta de serviços da Porto, de até ${LIMITE_DE_DIAS} dias por vez. Os serviços entram sem valor; o valor vem na OP.`}/>
+      descricao={`Cole a consulta de serviços da Porto, uma quinzena por vez (até ${LIMITE_DE_DIAS} dias). Os serviços entram sem valor; o valor vem na OP.`}/>
 
     {carregando ? <span role="status">{etapa}</span> : null}
     {erro ? <div className="form-alert" role="alert">{erro}</div> : null}
