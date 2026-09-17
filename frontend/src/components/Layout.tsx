@@ -113,6 +113,13 @@ export function Layout() {
   const { usuario, logout } = useAuth()
   const { pathname } = useLocation()
   const [aberto,setAberto]=useState(false)
+  // Menu aberto no celular fecha no Esc, como o fundo escuro ja fecha no toque.
+  useEffect(()=>{
+    if(!aberto)return
+    const aoTeclar=(evento:KeyboardEvent)=>{if(evento.key==='Escape')setAberto(false)}
+    document.addEventListener('keydown',aoTeclar)
+    return()=>document.removeEventListener('keydown',aoTeclar)
+  },[aberto])
   const [saindo,setSaindo]=useState(false)
   const admin=usuario?.perfil==='ADMINISTRADOR'
 

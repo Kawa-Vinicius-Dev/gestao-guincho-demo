@@ -79,6 +79,10 @@ test('socorrista vê composição auditável, saldo negativo e registra alimenta
   expect(corpo).toEqual(expect.objectContaining({ p_valor: 35, p_data: '2026-04-20' }))
   // De quem e a alimentacao sai da sessao, nunca do formulario.
   expect(JSON.stringify(corpo)).not.toContain('motorista')
+  // Registrou: aviso de sucesso, sem erro, e o formulario limpo para o proximo gasto.
+  expect(await screen.findByText(/alimentação registrada/i)).toBeInTheDocument()
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  expect(screen.getByLabelText(/data da alimentação/i)).toHaveValue('')
 })
 
 test('administrador filtra resumo e abre o detalhamento que forma a comissão', async () => {

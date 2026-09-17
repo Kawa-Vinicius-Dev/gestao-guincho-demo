@@ -28,7 +28,7 @@ export function ConfirmarExclusao({ coisa, nome, aviso, resumo = [], aoConfirmar
     finally { setApagando(false) }
   }
 
-  return <Modal etiqueta="Ação irreversível" titulo={`Excluir ${coisa}?`} className="confirmar-exclusao"
+  return <Modal etiqueta="Ação irreversível" titulo={`Excluir ${coisa}?`} className="confirmar-exclusao" fecharAoClicarFora
     nomeAcessivel={`Excluir ${coisa} ${nome}`} aoFechar={() => { if (!apagando) aoFechar() }}>
     <p className="saida-texto">{aviso} Não dá para desfazer.</p>
     {resumo.length

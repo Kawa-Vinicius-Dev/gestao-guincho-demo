@@ -26,13 +26,43 @@ type Props = {
   acoes?: ReactNode
   largo?: boolean
   className?: string
+  /**
+   * Fecha ao clicar no fundo. So para janela sem nada digitado a perder:
+   * confirmacoes e detalhes de leitura. Formulario nunca.
+   */
+  fecharAoClicarFora?: boolean
   children: ReactNode
 }
 
+/**
+ * Janelas abertas, da mais antiga para a mais nova. O Esc fecha so a de cima:
+ * uma confirmacao aberta sobre um formulario nao leva o formulario junto.
+ */
+const pilha: symbol[] = []
+
 const FOCAVEIS = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])'
 
-export function Modal({ titulo, etiqueta, nomeAcessivel, aoFechar, acoes, largo, className, children }: Props) {
+export function Modal({ titulo, etiqueta, nomeAcessivel, aoFechar, acoes, largo, className, fecharAoClicarFora, children }: Props) {
   const caixa = useRef<HTMLElement>(null)
+  const fechar = useRef(aoFechar)
+  fechar.current = aoFechar
+
+  // Esc no documento, e nao so dentro da janela: depois de um clique no fundo o
+  // foco sai da janela, e o Esc parava de funcionar.
+  useEffect(() => {
+    const eu = Symbol('modal')
+    pilha.push(eu)
+    const aoTeclar = (evento: KeyboardEvent) => {
+      if (evento.key !== 'Escape' || pilha[pilha.length - 1] !== eu) return
+      evento.stopPropagation()
+      fechar.current()
+    }
+    document.addEventListener('keydown', aoTeclar)
+    return () => {
+      document.removeEventListener('keydown', aoTeclar)
+      pilha.splice(pilha.indexOf(eu), 1)
+    }
+  }, [])
 
   useEffect(() => {
     const anterior = document.activeElement
@@ -41,7 +71,6 @@ export function Modal({ titulo, etiqueta, nomeAcessivel, aoFechar, acoes, largo,
   }, [])
 
   function teclado(evento: React.KeyboardEvent) {
-    if (evento.key === 'Escape') { evento.stopPropagation(); aoFechar(); return }
     if (evento.key !== 'Tab') return
     const alvos = Array.from(caixa.current?.querySelectorAll<HTMLElement>(FOCAVEIS) ?? [])
       .filter(alvo => alvo.offsetParent !== null)
@@ -53,10 +82,12 @@ export function Modal({ titulo, etiqueta, nomeAcessivel, aoFechar, acoes, largo,
     else if (evento.shiftKey && document.activeElement === primeiro) { evento.preventDefault(); ultimo.focus() }
   }
 
-  // Clicar no fundo NAO fecha, de proposito. E facil errar o clique ao lado de um
-  // formulario de dez campos, e fechar ali perde tudo o que a pessoa digitou.
-  // Para sair: o botao ×, o Cancelar, ou o Esc — os tres sao deliberados.
-  return <div className="modal-backdrop">
+  // Clicar no fundo NAO fecha formulario, de proposito. E facil errar o clique ao
+  // lado de um formulario de dez campos, e fechar ali perde tudo o que a pessoa
+  // digitou. Para sair: o botao x, o Cancelar, ou o Esc. So janela sem dado a
+  // perder (fecharAoClicarFora) fecha no fundo; clique dentro dela nunca fecha.
+  return <div className="modal-backdrop"
+    onMouseDown={evento => { if (fecharAoClicarFora && evento.target === evento.currentTarget) aoFechar() }}>
     <section
       ref={caixa}
       className={['modal', largo ? 'modal-wide' : '', className ?? ''].filter(Boolean).join(' ')}

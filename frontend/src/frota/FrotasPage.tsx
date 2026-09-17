@@ -20,14 +20,14 @@ export default function FrotasPage(){
   // Clicar na viatura num painel abre esta tela ja nela: ?veiculo=id ou ?sigla=L168.
   const [busca]=useSearchParams()
   const pedido=useRef({id:Number(busca.get('veiculo'))||0,sigla:(busca.get('sigla')??'').toUpperCase()})
-  const [lancamentos,setLancamentos]=useState<LancamentoFinanceiro[]>([]),[selecionado,setSelecionado]=useState(0),[modal,setModal]=useState(false),[mensagem,setMensagem]=useState('')
+  const [lancamentos,setLancamentos]=useState<LancamentoFinanceiro[]>([]),[selecionado,setSelecionado]=useState(0),[modal,setModal]=useState(false),[mensagem,setMensagem]=useState(''),[erro,setErro]=useState('')
   const [excluindo,setExcluindo]=useState<Veiculo|null>(null)
   const [editando,setEditando]=useState<Veiculo|null>(null),[salvando,setSalvando]=useState(false)
   // Primeira carga mostra o esqueleto; trocar de competencia mantem a tela.
   const [carregando,setCarregando]=useState(true)
   const carregar=useCallback(async()=>{const {inicio,fim}=periodo;if(!inicio||!fim||inicio>fim)return;try{const [v,d,l]=await Promise.all([listarVeiculos(),lerIndicadores(inicio,fim),lerExtrato(inicio,fim)]);setVeiculos(v);setFinanceiro(d);setLancamentos(l);setSelecionado(atual=>{const p=pedido.current;pedido.current={id:0,sigla:''}
       const escolhido=v.find(x=>x.id===p.id||(p.sigla&&[x.siglaPorto,x.identificacao].some(s=>s?.toUpperCase()===p.sigla)))
-      return escolhido?escolhido.id:v.some(x=>x.id===atual)?atual:(v[0]?.id??0)})}catch(e){setMensagem((e as Error).message)}},[periodo])
+      return escolhido?escolhido.id:v.some(x=>x.id===atual)?atual:(v[0]?.id??0)})}catch(e){setErro((e as Error).message)}},[periodo])
   useEffect(()=>{void carregar().finally(()=>setCarregando(false))},[carregar])
   const veiculo=veiculos.find(v=>v.id===selecionado)
   const resultado=financeiro?.resultadoPorVeiculo.find(r=>r.veiculoId===selecionado)
@@ -36,16 +36,16 @@ export default function FrotasPage(){
   const gastoFrota=financeiro?.resultadoPorVeiculo.reduce((s,r)=>s+r.despesas,0)??0
   const margens=financeiro?.resultadoPorVeiculo.filter(r=>r.receitas>0).map(r=>r.resultado/r.receitas*100)??[]
 
-  async function salvar(e:FormEvent<HTMLFormElement>){e.preventDefault();const f=new FormData(e.currentTarget);setSalvando(true);setMensagem('')
+  async function salvar(e:FormEvent<HTMLFormElement>){e.preventDefault();const f=new FormData(e.currentTarget);setSalvando(true);setMensagem('');setErro('')
     const dados={identificacao:String(f.get('identificacao')),placa:String(f.get('placa')||'').trim()||null,modelo:String(f.get('modelo')||''),custoPorKm:Number(f.get('custoPorKm')),siglaPorto:String(f.get('siglaPorto')||'').trim()||null}
     try{
       if(editando)await atualizarVeiculo(editando.id,dados)
       else await criarVeiculo(dados)
       setModal(false);setEditando(null);setMensagem('Veículo salvo no cadastro real.');await carregar()
-    }catch(x){setMensagem((x as Error).message)}finally{setSalvando(false)}}
+    }catch(x){setErro((x as Error).message)}finally{setSalvando(false)}}
 
   return <div className="page-enter"><header className="page-heading"><div><span className="eyebrow">Ativos operacionais</span><h1>Veículos e custos</h1><p>Receitas, despesas e eficiência calculadas a partir dos vínculos reais do PostgreSQL.</p></div><div className="heading-actions"><div className="periodo-no-cabecalho"><SeletorPeriodo periodo={periodo} aoMudar={setPeriodo}/></div><button className="button button-primary" onClick={()=>setModal(true)}>+ Cadastrar veículo</button></div></header>
-    {mensagem?<div className="success-notice">{mensagem}</div>:null}
+    {erro&&!modal?<div className="form-alert" role="alert">{erro}</div>:null}{mensagem?<div className="success-notice">{mensagem}</div>:null}
     {carregando?<Carregando/>:<>
     <section className="fleet-summary"><div><span>Gasto total dos veículos</span><strong>{moeda(gastoFrota)}</strong><small>Despesas pagas vinculadas</small></div><div><span>Veículos disponíveis</span><strong>{veiculos.filter(v=>v.ativo).length}/{veiculos.length}</strong><small>Cadastro oficial</small></div><div><span>Melhor margem</span><strong>{Math.max(...margens,0).toFixed(1)}%</strong><small>Entre veículos com receita</small></div></section>
     {veiculos.length?<section className="fleet-layout"><aside className="fleet-list" aria-label="Lista de veículos">{veiculos.map(v=>{const r=financeiro?.resultadoPorVeiculo.find(item=>item.veiculoId===v.id),saldo=r?.resultado??0;return <button key={v.id} className={v.id===selecionado?'active':''} onClick={()=>setSelecionado(v.id)}><span className="vehicle-monogram">{v.identificacao}</span><span><strong>{v.modelo||v.identificacao}</strong><small>{ehAuxiliar(v.identificacao)?'Viatura auxiliar':v.placa??'Placa pendente'} · {v.ativo?'Ativo':'Inativo'}</small></span><span><strong className={saldo>=0?'positive':'negative'}>{moeda(saldo)}</strong><small>Resultado real</small></span></button>})}</aside>
@@ -56,7 +56,7 @@ export default function FrotasPage(){
         <article className="panel vehicle-history"><header className="panel-title"><div><span className="eyebrow">Auditoria individual</span><h2>Histórico financeiro</h2></div></header>{historico.length?<div className="table-scroll"><table><thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th>Situação</th><th>Valor</th></tr></thead><tbody>{historico.map(item=><tr key={item.id}><td>{data(item.data)}</td><td><strong>{item.descricao}</strong></td><td>{item.categoria}</td><td>{item.realizado?'Realizado':'Previsto'}</td><td className={item.tipo==='RECEITA'?'positive':'negative'}>{item.tipo==='RECEITA'?'+':'−'} {moeda(item.valor)}</td></tr>)}</tbody></table></div>:<p className="empty-inline">Nenhum movimento vinculado ao veículo nesta competência.</p>}</article>
       </div>:null}</section>:<Vazio titulo="Nenhum veículo" descricao="Cadastre o primeiro veículo para acompanhar seus resultados reais."/>}
     </>}
-    {modal?<Modal etiqueta="Cadastro oficial" titulo={editando?'Editar veículo':'Novo veículo'} aoFechar={()=>{setModal(false);setEditando(null)}}><form onSubmit={salvar} className="form-grid two-columns"><label className="field"><span>Identificador</span><input name="identificacao" defaultValue={editando?.identificacao??''} required autoCapitalize="characters" autoCorrect="off" spellCheck={false}/></label><CampoPlaca rotulo="Placa" name="placa" defaultValue={editando?.placa}/><label className="field field-wide"><span>Modelo</span><input name="modelo" defaultValue={editando?.modelo??''} autoCapitalize="words" autoComplete="off"/></label><CampoValor rotulo="Custo por km" name="custoPorKm" defaultValue={editando?.custoPorKm} exigirPositivo={false} required
+    {modal?<Modal etiqueta="Cadastro oficial" titulo={editando?'Editar veículo':'Novo veículo'} aoFechar={()=>{setModal(false);setEditando(null);setErro('')}}>{erro?<div className="form-alert" role="alert">{erro}</div>:null}<form onSubmit={salvar} className="form-grid two-columns"><label className="field"><span>Identificador</span><input name="identificacao" defaultValue={editando?.identificacao??''} required autoCapitalize="characters" autoCorrect="off" spellCheck={false}/></label><CampoPlaca rotulo="Placa" name="placa" defaultValue={editando?.placa}/><label className="field field-wide"><span>Modelo</span><input name="modelo" defaultValue={editando?.modelo??''} autoCapitalize="words" autoComplete="off"/></label><CampoValor rotulo="Custo por km" name="custoPorKm" defaultValue={editando?.custoPorKm} exigirPositivo={false} required
           ajuda="Quanto este veículo custa por quilômetro rodado. É o que transforma km morto em dinheiro no dashboard."/>
         <label className="field"><span>Sigla na Porto</span><input name="siglaPorto" defaultValue={editando?.siglaPorto??''} placeholder="Sigla da viatura" autoCapitalize="characters" autoCorrect="off" spellCheck={false}/><small>Como a Porto chama esta viatura no painel do dia. É o que liga o serviço importado a este veículo.</small></label>
         <div className="modal-actions field-wide"><button type="button" className="button button-ghost" onClick={()=>{setModal(false);setEditando(null)}}>Cancelar</button><button className="button button-primary" disabled={salvando}>{salvando?'Salvando…':'Salvar veículo'}</button></div></form></Modal>:null}
