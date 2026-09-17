@@ -1569,3 +1569,50 @@ tbody tr{transition:background-color .14s ease}
 /* Paginacao das listas longas (ordens de servico). */
 .paginacao{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px;border-top:1px solid var(--line, rgba(127,127,127,.2))}
 .paginacao span{font-size:13px;color:var(--muted, #64748b)}
+/* ===========================================================================
+   Listas de cadastro: as colunas param no mesmo lugar em toda linha
+   ---------------------------------------------------------------------------
+   A linha era um flex com `justify-content:space-between` e tres filhos: nome,
+   detalhe e acoes. Com isso o detalhe nao tem coluna — ele para onde o nome
+   deixar. Em Categorias, "Despesa" ficava um pouco mais a direita a cada nome
+   mais longo, e a lista inteira parecia torta.
+
+   Grade com as mesmas medidas em toda linha resolve: as duas primeiras colunas
+   dividem o espaco em partes iguais, entao comecam no mesmo x em todas as
+   linhas. A terceira tem minimo de 96px para o caso de os botoes mudarem de
+   texto entre uma linha e outra — "Desativar" e "Reativar", nas despesas fixas,
+   tem larguras diferentes e desalinhariam a coluna do meio.
+
+   Vale para as quatro listas que usam esta classe (contratantes, categorias,
+   acessos e despesas fixas): todas tem a mesma forma de tres filhos.
+   =========================================================================== */
+.simple-list li{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(96px,auto);
+  align-items:center;gap:var(--espaco-2)}
+.simple-list li>:last-child{justify-self:end}
+
+/* ===========================================================================
+   Barras de rolagem
+   ---------------------------------------------------------------------------
+   A barra do sistema operacional é cinza-claro com trilho branco. Sobre um
+   painel escuro ela vira uma faixa branca no meio da tela — foi o que apareceu
+   na lista de Categorias no tema escuro, e é o tipo de detalhe que denuncia que
+   o tema escuro veio depois.
+
+   As cores saem dos tokens, então a barra nasce certa nos dois temas: o polegar
+   é a mesma linha que separa as linhas da lista, e escurece no hover. O trilho
+   fica transparente para herdar o fundo do painel em que a barra aparece, seja
+   ele qual for.
+
+   Duas sintaxes porque são dois padrões: `scrollbar-width`/`scrollbar-color` é o
+   do CSS, que o Firefox segue; `::-webkit-scrollbar` é o do Chrome e do Safari.
+   O Chrome recente entende os dois, e aplicar os dois não conflita — o
+   ::-webkit-scrollbar ganha onde existe.
+   =========================================================================== */
+.app-shell *{scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+.app-shell ::-webkit-scrollbar{width:9px;height:9px}
+.app-shell ::-webkit-scrollbar-track{background:transparent}
+.app-shell ::-webkit-scrollbar-thumb{
+  border:2px solid transparent;border-radius:99px;background-clip:content-box;background-color:var(--line)}
+.app-shell ::-webkit-scrollbar-thumb:hover{background-color:var(--muted)}
+/* O canto onde as duas barras se encontram numa tabela que rola nos dois eixos. */
+.app-shell ::-webkit-scrollbar-corner{background:transparent}

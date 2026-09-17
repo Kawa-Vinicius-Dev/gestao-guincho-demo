@@ -18,7 +18,10 @@ import { createClient } from 'jsr:@supabase/supabase-js@2'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, content-type',
+  // O supabase-js manda apikey e x-client-info em toda chamada: sem liberar os
+  // dois, o navegador barra o POST na checagem de CORS e a tela so ve "Nao foi
+  // possivel concluir a operacao".
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
