@@ -98,11 +98,17 @@ function paraBanco(dados: DadosReceita) {
 /** Mesmo motivo do teto das despesas: a tela nao pagina e a tabela so cresce. */
 export const TETO_DA_LISTA = 300
 
-export async function listarReceitas(): Promise<Receita[]> {
+/**
+ * `apenasManuais` busca so o que foi lancado a mao (os creditos): com um ano de
+ * OS importadas, o teto da lista geral deixaria os creditos antigos de fora.
+ */
+export async function listarReceitas(filtro: { apenasManuais?: boolean } = {}): Promise<Receita[]> {
   if (!moduloNoSupabase('receitas')) return api<Receita[]>('/api/receitas')
 
+  let consulta = supabase().from('receitas').select(COLUNAS)
+  if (filtro.apenasManuais) consulta = consulta.eq('manual', true)
   const linhas = ou(
-    await supabase().from('receitas').select(COLUNAS)
+    await consulta
       .order('data_competencia', { ascending: false })
       .order('id', { ascending: false })
       .limit(TETO_DA_LISTA),

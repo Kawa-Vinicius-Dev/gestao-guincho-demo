@@ -1,6 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { alternarAtivoDespesaFixa, atualizarDespesaFixa, criarDespesaFixa, excluirDespesaFixa, lancarDespesasFixasDoMes, listarDespesasFixas } from '../dados/despesasFixas'
 import { ConfirmarExclusao } from '../components/ConfirmarExclusao'
+import { SeletorPeriodo } from '../components/SeletorPeriodo'
+import { usePeriodoGlobal } from '../utils/periodoGlobal'
 import { aprovarDespesa, atualizarDespesa, criarDespesa, excluirDespesa, listarDespesas, marcarDescontoComissao } from '../dados/despesas'
 import { abrirComprovante, anexarComprovante, removerComprovante } from '../dados/comprovantes'
 import { listarCategorias } from '../dados/cadastros'
@@ -38,14 +40,18 @@ export default function DespesasPage(){
   // Qual despesa esta na janela de confirmacao, e nao um booleano: a janela
   // precisa dizer qual e, com descricao e valor, senao confirmar e um chute.
   const [excluindo,setExcluindo]=useState<Despesa|null>(null),[apagando,setApagando]=useState(false)
-  const carregar=()=>admin?listarDespesas().then(setLista):Promise.resolve()
+  const [periodo,setPeriodo]=usePeriodoGlobal()
+  const periodoValido=Boolean(periodo.inicio&&periodo.fim&&periodo.inicio<=periodo.fim)
+  const carregar=()=>admin&&periodoValido?listarDespesas({inicio:periodo.inicio,fim:periodo.fim}).then(setLista):Promise.resolve()
   // Despesa lancada por outra pessoa, ou comissao recalculada, entra na lista sozinha.
   useAoVivo(()=>{carregar().catch(x=>setErro((x as Error).message))},admin)
   const [carregando,setCarregando]=useState(true)
-  useEffect(()=>{carregar().catch(x=>setErro((x as Error).message)).finally(()=>setCarregando(false))
+  useEffect(()=>{
     Promise.all([listarCategorias('DESPESA'),listarVeiculos(),listarMotoristas()])
       .then(([c,v,m])=>{setCategorias(c);setVeiculos(v);setMotoristas(m)}).catch(x=>setErro((x as Error).message))
     carregarFixas().catch(x=>setErro((x as Error).message))},[admin])
+  // Trocar o periodo traz as despesas dele.
+  useEffect(()=>{carregar().catch(x=>setErro((x as Error).message)).finally(()=>setCarregando(false))},[periodo.inicio,periodo.fim])
   async function salvar(e:FormEvent<HTMLFormElement>){e.preventDefault();const f=new FormData(e.currentTarget)
     const texto=(campo:string)=>String(f.get(campo)||'')||null
     const categoriaId=Number(f.get('categoriaId'))
@@ -127,6 +133,7 @@ export default function DespesasPage(){
     catch(x){setErro((x as Error).message)}finally{setApagando(false)}}
   return <div className="page-enter pagina-despesas"><header className="page-heading"><div><span className="eyebrow">Saídas</span><h1>Despesas</h1><p>Custos da operação vinculados a veículos, motoristas e protocolos.</p></div><button className="button button-primary" onClick={abrirForm}>Registrar despesa</button></header>
     {erro?<div className="form-alert" role="alert">{erro}</div>:null}{carregando?<Carregando/>:null}{mensagem?<div className="success-notice">{mensagem}</div>:null}
+    {admin?<section className="panel painel-filtros"><form className="ledger-filters" onSubmit={e=>e.preventDefault()}><SeletorPeriodo periodo={periodo} aoMudar={setPeriodo}/></form></section>:null}
     {admin?<section className="panel">{lista.length?<div className="table-scroll"><table><thead><tr><th>Descrição</th><th>Categoria</th><th>Data</th><th>Veículo</th><th>Socorrista</th><th>Situação</th><th>Aprovação</th><th>Valor</th><th>Comprovante</th><th/></tr></thead><tbody>
       {lista.map(d=><tr key={d.id}><td><strong>{d.descricao}</strong><small>{d.criadoPor}</small></td><td>{d.categoria}</td><td>{data(d.data)}</td><td>{d.veiculo||'—'}</td><td>{d.motorista||'—'}{d.motorista&&!d.protocolo?.startsWith('COMISSAO-')
           ?<label className="desconto-na-lista"><input type="checkbox" checked={Boolean(d.descontaComissao)} onChange={()=>void alternarDesconto(d)} aria-label={`Descontar ${d.descricao} da comissão de ${d.motorista}`}/><span>Desconta da comissão</span></label>

@@ -68,11 +68,14 @@ export interface DadosQuilometragem {
   confirmarExcesso?: boolean
 }
 
-export async function listarQuilometragens(): Promise<Quilometragem[]> {
+/** Com periodo, traz os registros dele: o teto da lista cortaria meses antigos. */
+export async function listarQuilometragens(periodo?: { inicio: string; fim: string }): Promise<Quilometragem[]> {
   if (!moduloNoSupabase('quilometragem')) return api<Quilometragem[]>('/api/quilometragens')
 
+  let consulta = supabase().from('quilometragens').select(COLUNAS)
+  if (periodo) consulta = consulta.gte('data_registro', periodo.inicio).lte('data_registro', periodo.fim)
   const linhas = ou(
-    await supabase().from('quilometragens').select(COLUNAS)
+    await consulta
       .order('data_registro', { ascending: false }).order('id', { ascending: false })
       .limit(300),
     'Não foi possível carregar a quilometragem.',

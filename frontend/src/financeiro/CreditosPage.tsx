@@ -42,7 +42,7 @@ export default function CreditosPage() {
   const [dataDoForm, setDataDoForm] = useState(hojeIso())
   const [salvando, setSalvando] = useState(false)
 
-  const carregar = () => listarReceitas()
+  const carregar = () => listarReceitas({ apenasManuais: true })
     .then(lista => setCreditos(lista.filter(r => r.manual && r.categoria === CATEGORIA)))
     .catch(e => setErro((e as Error).message))
   useEffect(() => { void carregar().finally(() => setCarregando(false)) }, [])

@@ -33,7 +33,7 @@ export default function QuilometragemPage() {
 
   async function carregar() {
     const [quilometragens, veiculosCadastrados, motoristasCadastrados] = await Promise.all([
-      listarQuilometragens(),
+      listarQuilometragens(periodo.inicio && periodo.fim && periodo.inicio <= periodo.fim ? { inicio: periodo.inicio, fim: periodo.fim } : undefined),
       listarVeiculos(),
       listarMotoristas(),
     ])
@@ -46,7 +46,7 @@ export default function QuilometragemPage() {
     void carregar()
       .catch(erro => setMensagem((erro as Error).message))
       .finally(() => setCarregando(false))
-  }, [])
+  }, [periodo.inicio, periodo.fim])
 
   const registrosDoMes = useMemo(() => registros
     .filter(item => item.data >= periodo.inicio && item.data <= periodo.fim)
