@@ -1375,7 +1375,14 @@ tbody tr{transition:background-color .14s ease}
 .marca-recebido{background:var(--green)}
 
 .acumulado-chart{position:relative}
-.acumulado-plot{position:relative;height:230px}
+/* A faixa a esquerda guarda a escala; o desenho comeca depois dela, e o eixo de
+   datas embaixo repete o mesmo recuo para as datas caírem sob a curva. */
+/* Altura acompanha a largura ate um teto: em 1920 o desenho tinha 1344 por 230
+   e a curva ficava rasa demais para se ler a inclinacao. */
+.acumulado-plot{--escala-largura:58px;position:relative;height:clamp(230px,18vw,300px);padding-left:var(--escala-largura)}
+.acumulado-escala{position:absolute;left:0;top:0;bottom:0;width:calc(var(--escala-largura) - 10px)}
+.acumulado-escala span{position:absolute;right:0;transform:translateY(-50%);color:var(--muted);font-size:11px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.acumulado-grade{stroke:var(--linha-suave);stroke-width:1;vector-effect:non-scaling-stroke}
 .acumulado-plot svg{display:block;width:100%;height:100%;overflow:visible}
 .acumulado-base{stroke:var(--line);stroke-width:1;vector-effect:non-scaling-stroke}
 .acumulado-faixa{fill:rgba(46,144,250,.08)}
@@ -1386,7 +1393,7 @@ tbody tr{transition:background-color .14s ease}
 .acumulado-ponto-produzido,.acumulado-ponto-recebido{fill:#fff;stroke-width:2;vector-effect:non-scaling-stroke}
 .acumulado-ponto-produzido{stroke:var(--blue-500)}
 .acumulado-ponto-recebido{stroke:var(--green)}
-.acumulado-eixo{display:flex;justify-content:space-between;margin-top:var(--espaco-1);color:var(--muted);font:500 var(--t-rotulo) 'IBM Plex Mono',monospace}
+.acumulado-eixo{display:flex;justify-content:space-between;margin-top:var(--espaco-1);padding-left:58px;color:var(--muted);font:500 var(--t-rotulo) 'IBM Plex Mono',monospace}
 .acumulado-tooltip{position:absolute;top:-6px;transform:translateX(-50%);min-width:220px;padding:var(--espaco-2) var(--espaco-3);border:1px solid var(--line);border-radius:10px;background:var(--superficie);box-shadow:0 14px 34px rgba(7,20,38,.12);pointer-events:none}
 .acumulado-tooltip strong{display:block;margin-bottom:var(--espaco-1);color:var(--ink);font-size:var(--t-apoio);font-weight:600}
 .acumulado-tooltip span{display:flex;align-items:center;gap:7px;margin-top:6px;color:var(--muted);font-size:var(--t-apoio)}

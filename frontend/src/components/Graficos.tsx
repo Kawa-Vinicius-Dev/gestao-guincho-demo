@@ -361,10 +361,25 @@ export function EvolucaoAcumulada({ pontos, rotulo }: {
   const ponto = ativo === null ? null : acumulado[ativo]
   const passo = (largura - lado * 2) / Math.max(acumulado.length - 1, 1)
 
+  // Escala em HTML, e nao em <text> dentro do SVG: o desenho e esticado de
+  // proposito para ocupar a largura do painel, e texto esticado fica deformado.
+  // As linhas de grade ficam no SVG, que sao horizontais e nao sofrem com isso.
+  const marcas = [1, .5, 0].map(fatia => ({
+    fatia, valor: teto * fatia, y: base - fatia * (base - topo),
+  }))
+  const emPorcento = (valorY: number) => `${(valorY / altura) * 100}%`
+
   return <div className="acumulado-chart">
     <div className="acumulado-plot" onMouseLeave={() => setAtivo(null)}>
+      <div className="acumulado-escala" aria-hidden="true">
+        {marcas.map(marca => <span key={marca.fatia} style={{ top: emPorcento(marca.y) }}>
+          {marca.valor > 0 ? moedaCurta(marca.valor) : '0'}
+        </span>)}
+      </div>
       <svg viewBox={`0 0 ${largura} ${altura}`} role="img" preserveAspectRatio="none"
         aria-label={`Produção acumulada ${moeda(produzido)} e recebido acumulado ${moeda(recebido)} no período.`}>
+        {marcas.map(marca => <line key={marca.fatia} className="acumulado-grade"
+          x1={lado} x2={largura - lado} y1={marca.y} y2={marca.y}/>)}
         <line className="acumulado-base" x1={lado} x2={largura - lado} y1={base} y2={base}/>
         <path className="acumulado-faixa" d={faixa}/>
         <path className="acumulado-linha-produzido" d={caminho('produzidoAcumulado')}/>
@@ -380,7 +395,8 @@ export function EvolucaoAcumulada({ pontos, rotulo }: {
       </svg>
 
       {ponto ? <div className="acumulado-tooltip"
-        style={{ left: `${Math.min(Math.max((x(ativo!) / largura) * 100, 14), 86)}%` }}>
+        style={{ left: `calc(var(--escala-largura) + (100% - var(--escala-largura)) * ${
+          Math.min(Math.max(x(ativo!) / largura, .14), .86)})` }}>
         <strong>Até {rotulo(ponto.inicio)}</strong>
         <span><i className="marca-produzido"/>Produzido<b>{moeda(ponto.produzidoAcumulado)}</b></span>
         <span><i className="marca-recebido"/>Recebido<b>{moeda(ponto.recebidoAcumulado)}</b></span>
