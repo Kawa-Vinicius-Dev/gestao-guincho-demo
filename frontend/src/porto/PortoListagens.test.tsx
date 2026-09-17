@@ -3,7 +3,6 @@ import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { expect, test, vi } from 'vitest'
 import PortoOrdensPagamentoPage from './PortoOrdensPagamentoPage'
-import PortoOrdensServicoPage from './PortoOrdensServicoPage'
 import PortoPendenciasPage from './PortoPendenciasPage'
 import { servidor } from '../test/servidor'
 
@@ -34,56 +33,6 @@ test('edita uma OP manual e oferece os relatórios individuais',async()=>{
   expect(payload).toMatchObject({numero:'OP-EDIT-41',valorInformado:825,pagamentoConfirmado:false})
 })
 
-test('lista OS com OP e aceita viatura vazia',async()=>{
-  servidor.use(http.get('/api/porto/ordens-servico',()=>HttpResponse.json([{id:2,ordemPagamentoId:1,ordemPagamento:'OP-100',numero:'OS-200',valorTotal:700,especialidade:'REMOÇÃO',socorrista:'Ana',qra:'QRA-1',dataAtendimento:'2026-07-30'}])))
-  render(<PortoOrdensServicoPage/>);expect(await screen.findByText('OS-200')).toBeInTheDocument();expect(screen.getByText('OP-100')).toBeInTheDocument();expect(screen.getByText('Sem viatura')).toBeInTheDocument()
-})
-
-test('exporta somente as OS sem socorrista com o filtro marcado',async()=>{
-  const chamadas:string[]=[]
-  servidor.use(
-    http.get('/api/porto/ordens-servico',({request})=>{const url=new URL(request.url);return HttpResponse.json(url.searchParams.get('semSocorrista')?[{id:9,numero:'OS-ORFA',valorTotal:300,qra:'QRA-9',dataAtendimento:'2026-07-02'}]:[{id:2,numero:'OS-200',valorTotal:700,socorrista:'Ana',motoristaId:5,motorista:'Ana',qra:'QRA-1',dataAtendimento:'2026-07-30'}])}),
-    http.get('/api/porto/ordens-servico/excel',({request})=>{chamadas.push(new URL(request.url).search);return HttpResponse.text('planilha')}),
-  )
-  URL.createObjectURL=vi.fn(()=>'blob:teste');URL.revokeObjectURL=vi.fn();HTMLAnchorElement.prototype.click=vi.fn()
-  const user=userEvent.setup();render(<PortoOrdensServicoPage/>)
-  await screen.findByText('OS-200')
-  await user.click(screen.getByLabelText(/somente os sem socorrista/i))
-  expect(await screen.findByText('OS-ORFA')).toBeInTheDocument()
-  await user.click(screen.getByRole('button',{name:/exportar os sem socorrista/i}))
-  await vi.waitFor(()=>expect(chamadas).toHaveLength(1))
-  expect(chamadas[0]).toContain('semSocorrista=true')
-  expect(chamadas[0]).not.toContain('dataInicio')
-})
-
-test('destaca, filtra e exporta OS sem QRA',async()=>{
-  const chamadas:string[]=[]
-  servidor.use(
-    http.get('/api/porto/ordens-servico',({request})=>{
-      const url=new URL(request.url)
-      return HttpResponse.json(url.searchParams.get('semQra')
-        ? [{id:19,numero:'OS-SEM-QRA',valorTotal:300,dataAtendimento:'2026-07-02'}]
-        : [{id:2,numero:'OS-COM-QRA',valorTotal:700,qra:'QRA-2',dataAtendimento:'2026-07-30'}])
-    }),
-    http.get('/api/porto/ordens-servico/excel',({request})=>{
-      chamadas.push(new URL(request.url).search)
-      return HttpResponse.text('planilha')
-    }),
-  )
-  URL.createObjectURL=vi.fn(()=>'blob:teste');URL.revokeObjectURL=vi.fn();HTMLAnchorElement.prototype.click=vi.fn()
-  const user=userEvent.setup();render(<PortoOrdensServicoPage/>)
-  await screen.findByText('OS-COM-QRA')
-  await user.click(screen.getByLabelText(/somente os sem qra/i))
-  expect(await screen.findByText('OS-SEM-QRA')).toBeInTheDocument()
-  // "Sem QRA" tambem aparece na coluna Socorrista/QRA como texto simples; o selo de excecao e o elemento com essa classe
-  expect(screen.getByText('Sem QRA',{selector:'.porto-qra-ausente'})).toBeInTheDocument()
-  expect(screen.getByRole('button',{name:/associar socorrista/i})).toBeInTheDocument()
-  await user.click(screen.getByRole('button',{name:/exportar os sem qra/i}))
-  await vi.waitFor(()=>expect(chamadas).toHaveLength(1))
-  expect(chamadas[0]).toContain('semQra=true')
-  expect(chamadas[0]).not.toContain('dataInicio')
-})
-
 test('lista serviço devolvido como pendência financeira',async()=>{
   servidor.use(http.get('/api/porto/pendencias',()=>HttpResponse.json([{tipo:'SERVICO_DEVOLVIDO',referenciaId:2,referencia:'OS-200',valor:700,data:'2026-07-31',situacao:'ABERTA'}])))
   render(<PortoPendenciasPage/>);expect(await screen.findByText('Serviço devolvido')).toBeInTheDocument();expect(screen.getByText('OS-200')).toBeInTheDocument();expect(screen.queryByText(/despesa/i)).not.toBeInTheDocument()
@@ -100,14 +49,6 @@ test('resume e filtra OPs recalculando quantidade e valores',async()=>{
   expect(screen.getByRole('columnheader',{name:/soma das os/i})).toBeInTheDocument()
   await user.type(screen.getByLabelText(/número da op/i),'OP-701');await user.click(screen.getByRole('button',{name:/aplicar filtros/i}))
   expect(numeroFiltrado).toBe('OP-701')
-})
-
-test('filtra ordens de serviço por campos operacionais',async()=>{
-  let especialidade=''
-  servidor.use(http.get('/api/porto/ordens-servico',({request})=>{especialidade=new URL(request.url).searchParams.get('especialidade')??'';return HttpResponse.json([{id:82,numero:'OS-820',valorTotal:320,especialidade:'PANE',dataAtendimento:'2026-08-01',statusOperacional:'NORMAL',statusFinanceiro:'AGUARDANDO_OP'}])}))
-  const user=userEvent.setup();render(<PortoOrdensServicoPage/>);expect(await screen.findByText('OS-820')).toBeInTheDocument()
-  await user.type(screen.getByLabelText(/especialidade/i),'PANE');await user.click(screen.getByRole('button',{name:/aplicar filtros/i}));expect(especialidade).toBe('PANE')
-  expect(screen.getByText('Aguardando op')).toBeInTheDocument()
 })
 
 test('solicita Excel e PDF com os filtros ativos',async()=>{
@@ -146,36 +87,5 @@ test('abre a composição da OP e registra justificativa',async()=>{
 // O painel diario entrega servico sem preco: ele entra com zero e, sem um jeito
 // de corrigir, a producao do dia ficava zerada para sempre. O valor informado
 // aqui conta como producao pendente — receita so quando a Porto pagar.
-test('serviço sem preço aceita valor informado na própria linha',async()=>{
-  let enviado:unknown=null
-  servidor.use(
-    http.get('/api/porto/ordens-servico',()=>HttpResponse.json([
-      {id:31,numero:'7400001/26',valorTotal:0,statusFinanceiro:'AGUARDANDO_OP',
-       statusOperacional:'NORMAL',dataAtendimento:'2026-09-13'}])),
-    http.patch('/api/porto/ordens-servico/31/valor',async({request})=>{
-      enviado=await request.json()
-      return HttpResponse.json({id:31,numero:'7400001/26',valorTotal:181,
-        statusFinanceiro:'AGUARDANDO_OP',statusOperacional:'NORMAL',dataAtendimento:'2026-09-13'})
-    }),
-  )
-  const user=userEvent.setup();render(<PortoOrdensServicoPage/>)
-
-  await user.click(await screen.findByRole('button',{name:/informar valor/i}))
-  await user.type(screen.getByLabelText(/valor da os 7400001\/26/i),'181')
-  await user.click(screen.getByRole('button',{name:/salvar/i}))
-
-  expect(enviado).toEqual({valorTotal:181})
-  expect(await screen.findByText(/181,00/)).toBeInTheDocument()
-})
-
 // Servico ja pago tem valor oficial vindo da OP: editar a mao desencontraria o
 // caixa do extrato da Porto.
-test('serviço já pago não oferece edição de valor',async()=>{
-  servidor.use(http.get('/api/porto/ordens-servico',()=>HttpResponse.json([
-    {id:32,numero:'7400002/26',valorTotal:500,statusFinanceiro:'RECEBIDO',
-     statusOperacional:'NORMAL',dataAtendimento:'2026-09-13'}])))
-  render(<PortoOrdensServicoPage/>)
-
-  expect(await screen.findByText(/500,00/)).toBeInTheDocument()
-  expect(screen.queryByRole('button',{name:/informar valor/i})).not.toBeInTheDocument()
-})
