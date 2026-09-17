@@ -5,17 +5,21 @@ import { listarPeriodosComissao, obterDetalheSocorrista } from '../dados/comisso
 import { Carregando,ErroPagina } from '../components/EstadoPagina'
 import type { DespesaDoSocorrista,DetalheSocorrista } from '../types/modelos'
 import { data,moeda } from '../utils/formatadores'
-import { periodoCorrente, rotuloPeriodo, type PeriodoPorto } from '../utils/periodos'
+import { rotuloPeriodo, type PeriodoPorto } from '../utils/periodos'
+import { globalDoPeriodoPorto, periodoPortoDoGlobal, usePeriodoGlobal } from '../utils/periodoGlobal'
 import { useAoVivo } from '../dados/aoVivo'
 
 const statusPagamento={PAGO:'Pago',PAGO_EM_OUTRO_PERIODO:'Pago em outro período',AGUARDANDO_PAGAMENTO:'Aguardando pagamento'} as const
 
 export default function EquipeDetalhePage(){
   const motoristaId=Number(useParams().id)
-  const [periodos,setPeriodos]=useState<PeriodoPorto[]>([]),[periodoId,setPeriodoId]=useState(''),[detalhe,setDetalhe]=useState<DetalheSocorrista|null>(null)
+  const [periodos,setPeriodos]=useState<PeriodoPorto[]>([]),[detalhe,setDetalhe]=useState<DetalheSocorrista|null>(null)
   const [carregandoPeriodos,setCarregandoPeriodos]=useState(true),[carregandoDetalhe,setCarregandoDetalhe]=useState(false),[erro,setErro]=useState('')
+  const [global,setGlobal]=usePeriodoGlobal()
+  const periodoId=periodoPortoDoGlobal(periodos,global)?.id??''
+  const setPeriodoId=(id:string)=>{const p=periodos.find(x=>x.id===id);const novo=p&&globalDoPeriodoPorto(p);if(novo)setGlobal(novo)}
   const ids=periodos.find(p=>p.id===periodoId)?.ids??[]
-  useEffect(()=>{listarPeriodosComissao().then(lista=>{setPeriodos(lista);const atual=periodoCorrente(lista);if(atual)setPeriodoId(atual.id)}).catch((e:Error)=>setErro(e.message)).finally(()=>setCarregandoPeriodos(false))},[])
+  useEffect(()=>{listarPeriodosComissao().then(lista=>{setPeriodos(lista)}).catch((e:Error)=>setErro(e.message)).finally(()=>setCarregandoPeriodos(false))},[])
   useEffect(()=>{if(!motoristaId||!ids.length)return;setCarregandoDetalhe(true);setErro('');obterDetalheSocorrista(motoristaId,ids).then(setDetalhe).catch(e=>setErro(e.message)).finally(()=>setCarregandoDetalhe(false))},[motoristaId,periodoId,periodos])
   useAoVivo(()=>{if(motoristaId&&ids.length)obterDetalheSocorrista(motoristaId,ids).then(setDetalhe).catch(e=>setErro(e.message))})
   if(carregandoPeriodos)return <Carregando/>

@@ -118,7 +118,7 @@ const visaoGeral = {
 
 const daVisao = new URLSearchParams(location.search).get('tela') === 'visao'
 // A Visao geral abre no periodo da OP real, para os graficos terem o que mostrar.
-if (daVisao) sessionStorage.setItem('filtro:visao-geral', JSON.stringify({ inicio: '2026-03-30', fim: '2026-04-29', op: '1' }))
+if (daVisao) sessionStorage.setItem('filtro:periodo', JSON.stringify({ inicio: '2026-03-30', fim: '2026-04-29', op: '1' }))
 
 const Pagina = daVisao
   ? (await import('./DashboardPage')).default

@@ -1,16 +1,14 @@
 import { useEffect,useRef,useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Campo, Selecao } from './components/Campos'
+import { SeletorPeriodo } from './components/SeletorPeriodo'
 import { CabecalhoPagina } from './components/ui/Pagina'
 import { useAoVivo } from './dados/aoVivo'
 import { dashboardEmCache, lerDashboard } from './dados/dashboard'
-import { listarPeriodosDeOp } from './dados/porto'
 import { IndicadoresDaOperacao, PainelDeGastos, PainelDeKm, PainelFaturamentoPorSocorrista,
   PainelFaturamentoPorViatura, ResultadoDoPeriodo } from './dashboard/PaineisDoResultado'
 import type { Dashboard } from './types/modelos'
 import { data } from './utils/formatadores'
-import { gravarFiltro, lerFiltro } from './utils/filtroLembrado'
-import { agruparPorPeriodo, rotuloPeriodo, type PeriodoPorto } from './utils/periodos'
+import { usePeriodoGlobal } from './utils/periodoGlobal'
 
 /**
  * Visao geral: o painel principal do sistema.
@@ -20,23 +18,11 @@ import { agruparPorPeriodo, rotuloPeriodo, type PeriodoPorto } from './utils/per
  * trouxe o dinheiro e para onde ele foi. Km so aparece quando ha km registrado.
  */
 
-/** Abre no mes corrente, que e o recorte mais pedido; a partir dai o periodo e livre. */
-function mesCorrente(){const d=new Date(),mes=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`
-  return {inicio:`${mes}-01`,fim:`${mes}-${String(new Date(d.getFullYear(),d.getMonth()+1,0).getDate()).padStart(2,'0')}`}}
-/**
- * O periodo escolhido sobrevive a ida e volta para outra tela.
- *
- * Quem abria um semestre aqui, ia registrar uma despesa e voltava, reencontrava
- * o mes corrente e refazia as duas datas a cada consulta — a tela remonta a cada
- * navegacao e o estado nascia do zero. O mes corrente continua sendo o padrao;
- * so a primeira visita da sessao e que o usa.
- */
-type Periodo={inicio:string,fim:string,op?:string}
-const periodoInicial=():Periodo=>lerFiltro<Periodo>('visao-geral',mesCorrente())
 
 export default function DashboardPage(){
-  const [{inicio,fim,op:opEscolhida=''},setPeriodo]=useState(periodoInicial)
-  const [periodos,setPeriodos]=useState<PeriodoPorto[]>([])
+  // O periodo e o do sistema inteiro: trocar aqui troca nas outras telas.
+  const [periodo,setPeriodo]=usePeriodoGlobal()
+  const {inicio,fim}=periodo
   const [financeiro,setFinanceiro]=useState<Dashboard|null>(null)
   const [erro,setErro]=useState('')
   // Enquanto revalida, a tela fica de pe com os numeros de antes em vez de
@@ -71,21 +57,6 @@ export default function DashboardPage(){
     return()=>{valeu=false}
   },[inicio,fim,versao])
 
-  // Grava fora dos handlers das datas: assim nenhum caminho novo de troca de
-  // periodo esquece de lembrar o que escolheu. Data pela metade nao vai para o
-  // armazenamento — voltar para uma tela com "de" vazio e pior do que voltar
-  // para o mes corrente.
-  useEffect(()=>{if(inicio&&fim)gravarFiltro('visao-geral',{inicio,fim,op:opEscolhida})},[inicio,fim,opEscolhida])
-
-  // Mesmo atalho do painel Porto: escolher a OP preenche as datas com o periodo
-  // dela; mexer numa data volta para "Periodo personalizado". A lista e
-  // conveniencia — se nao carregar, as datas continuam valendo.
-  useEffect(()=>{listarPeriodosDeOp().then(ops=>setPeriodos(agruparPorPeriodo(ops))).catch(()=>setPeriodos([]))},[])
-  function escolherOp(id:string){
-    const periodo=periodos.find(p=>p.id===id)
-    if(!periodo){setPeriodo(p=>({...p,op:''}));return}
-    setPeriodo({op:id,inicio:periodo.periodoInicio||inicio,fim:periodo.periodoFim||fim})
-  }
 
   const temKm=Boolean(financeiro&&(financeiro.kmRemunerado||financeiro.kmMorto))
 
@@ -109,17 +80,7 @@ export default function DashboardPage(){
 
     <section className="panel destaque" aria-label="Resultado do período">
       <form className="destaque-periodo destaque-periodo-sem-botao" onSubmit={e=>e.preventDefault()}>
-        <Selecao rotulo="Período" vazio="Período personalizado" value={opEscolhida}
-          onChange={e=>escolherOp(e.target.value)}
-          opcoes={periodos.map(p=>({valor:p.id,texto:rotuloPeriodo(p)}))}/>
-        <Campo rotulo="De">
-          <input aria-label="Data inicial" type="date" value={inicio} max={fim||undefined}
-            onChange={e=>setPeriodo(p=>({...p,op:'',inicio:e.target.value}))}/>
-        </Campo>
-        <Campo rotulo="Até">
-          <input aria-label="Data final" type="date" value={fim} min={inicio||undefined}
-            onChange={e=>setPeriodo(p=>({...p,op:'',fim:e.target.value}))}/>
-        </Campo>
+        <SeletorPeriodo periodo={periodo} aoMudar={setPeriodo}/>
       </form>
 
       {periodoValido&&financeiro

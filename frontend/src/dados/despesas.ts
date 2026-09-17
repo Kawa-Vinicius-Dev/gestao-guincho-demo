@@ -24,6 +24,7 @@ import { moduloNoSupabase } from './modo'
 const COLUNAS = [
   'id', 'descricao', 'valor', 'data_lancamento', 'vencimento', 'data_pagamento',
   'forma_pagamento', 'status', 'aprovada', 'protocolo', 'observacoes', 'desconta_comissao',
+  'categoria_id', 'veiculo_id', 'motorista_id',
   'comprovante_arquivo', 'comprovante_nome_original', 'comprovante_tamanho_bytes',
   'categorias(nome)', 'veiculos(identificacao)', 'motoristas(nome)', 'perfis!despesas_criado_por_fkey(nome)',
 ].join(',')
@@ -42,6 +43,9 @@ type LinhaDespesa = {
   protocolo: string | null
   observacoes: string | null
   desconta_comissao?: boolean
+  categoria_id?: number | null
+  veiculo_id?: number | null
+  motorista_id?: number | null
   comprovante_arquivo: string | null
   comprovante_nome_original: string | null
   comprovante_tamanho_bytes: number | null
@@ -61,6 +65,9 @@ function paraModelo(linha: LinhaDespesa): Despesa {
     id: linha.id,
     descricao: linha.descricao,
     categoria: um(linha.categorias)?.nome ?? '',
+    categoriaId: linha.categoria_id ?? undefined,
+    veiculoId: linha.veiculo_id ?? undefined,
+    motoristaId: linha.motorista_id ?? undefined,
     valor: Number(linha.valor),
     data: linha.data_lancamento,
     vencimento: linha.vencimento ?? undefined,
@@ -260,6 +267,34 @@ export async function pagarDespesa(
  * linha, e nao antes, porque o caminho contrario — arquivo apagado, exclusao
  * recusada — deixaria uma despesa apontando para um arquivo que nao existe.
  */
+/**
+ * Corrige uma despesa ja lancada. So o administrador: a policy de update exige.
+ * A comissao automatica nao passa por aqui — ela se recalcula a partir da OP.
+ * Despesa paga acompanha a data: o dashboard conta pela data do pagamento.
+ */
+export async function atualizarDespesa(despesa: Despesa, dados: DadosDespesa): Promise<void> {
+  invalidarCacheFinanceiro()
+  const atualizadas = ou(
+    await supabase().from('despesas').update({
+      descricao: dados.descricao,
+      categoria_id: dados.categoriaId,
+      valor: dados.valor,
+      data_lancamento: dados.data,
+      ...(despesa.status === 'PAGO' ? { data_pagamento: dados.data } : {}),
+      forma_pagamento: dados.formaPagamento ?? null,
+      veiculo_id: dados.veiculoId ?? null,
+      motorista_id: dados.motoristaId ?? null,
+      protocolo: dados.protocolo ?? null,
+      observacoes: dados.observacoes ?? null,
+      desconta_comissao: Boolean(dados.motoristaId && dados.descontaComissao),
+    }).eq('id', despesa.id).select('id'),
+    'Não foi possível salvar a despesa.',
+  ) as { id: number }[]
+  if (!atualizadas.length) {
+    throw new ApiError('Você não tem permissão para editar despesas.', 403)
+  }
+}
+
 export async function excluirDespesa(despesa: Despesa): Promise<void> {
   invalidarCacheFinanceiro()
   if (!moduloNoSupabase('despesas')) {

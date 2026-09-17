@@ -1,6 +1,7 @@
 import { api } from '../api/http'
 import type { Motorista } from '../types/modelos'
 import { comCacheCurto, invalidarCadastro } from './cacheCurto'
+import { excluirRegistro } from './cliente'
 import { ou, supabase } from './cliente'
 import { moduloNoSupabase } from './modo'
 
@@ -133,4 +134,10 @@ export async function alternarAtivoMotorista(motorista: Motorista): Promise<Moto
     'Não foi possível alterar a situação do socorrista.',
   ) as unknown as LinhaMotorista
   return paraModelo(linha)
+}
+
+/** Socorrista com OS ou comissao nao sai: o banco recusa e a tela sugere desativar. */
+export async function excluirMotorista(id: number): Promise<void> {
+  invalidarCadastro('motoristas')
+  await excluirRegistro('motoristas', id, 'Não foi possível excluir o socorrista.')
 }

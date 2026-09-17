@@ -38,11 +38,3 @@ test('falha ao aprovar uma despesa aparece na tela', async () => {
 
   expect(await screen.findByText('Despesa já aprovada.')).toBeInTheDocument()
 })
-
-test('falha ao carregar receitas aparece na tela', async () => {
-  servidor.use(http.get('/api/receitas', () => HttpResponse.json({ detalhe: 'Serviço indisponível.' }, { status: 503 })))
-
-  abrir('/receitas')
-
-  expect(await screen.findByText('Serviço indisponível.')).toBeInTheDocument()
-})

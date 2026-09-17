@@ -1560,3 +1560,8 @@ tbody tr{transition:background-color .14s ease}
 /* Nome do socorrista leva para a ficha dele. */
 .faturamento-grupo-link{text-decoration:none}
 .faturamento-grupo-link:hover,.faturamento-grupo-link:focus-visible{color:var(--blue-600);text-decoration:underline}
+
+/* Periodo global no cabecalho das telas: quinzena da Porto + De/Ate lado a lado. */
+.periodo-no-cabecalho{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px}
+.periodo-no-cabecalho .field{margin:0;min-width:150px}
+.periodo-no-cabecalho .field:first-child{min-width:260px}

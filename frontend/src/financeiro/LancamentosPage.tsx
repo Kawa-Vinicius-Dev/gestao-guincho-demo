@@ -1,3 +1,5 @@
+import { SeletorPeriodo } from '../components/SeletorPeriodo'
+import { usePeriodoGlobal } from '../utils/periodoGlobal'
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { criarReceita } from '../dados/receitas'
 import { lerExtrato } from '../dados/extrato'
@@ -24,14 +26,9 @@ const hoje = () => {
   const atual = new Date()
   return `${atual.getFullYear()}-${String(atual.getMonth()+1).padStart(2,'0')}-${String(atual.getDate()).padStart(2,'0')}`
 }
-const mesAtual = () => hoje().slice(0,7)
-const intervalo = (mes:string) => {
-  const [ano,numeroMes]=mes.split('-').map(Number)
-  return {inicio:`${mes}-01`,fim:`${mes}-${String(new Date(ano,numeroMes,0).getDate()).padStart(2,'0')}`}
-}
 
 export default function LancamentosPage() {
-  const [mes,setMes]=useState(mesAtual)
+  const [periodo,setPeriodo]=usePeriodoGlobal()
   const [lista,setLista]=useState<LancamentoFinanceiro[]>([])
   const [categorias,setCategorias]=useState<Categoria[]>([])
   const [veiculos,setVeiculos]=useState<Veiculo[]>([])
@@ -48,11 +45,12 @@ export default function LancamentosPage() {
   const [carregando,setCarregando]=useState(true)
 
   const carregar=useCallback(async()=>{
-    const {inicio,fim}=intervalo(mes)
+    const {inicio,fim}=periodo
+    if(!inicio||!fim||inicio>fim)return
     setCarregando(true)
     try{setLista(await lerExtrato(inicio,fim))}
     catch(e){setMensagem((e as Error).message)}finally{setCarregando(false)}
-  },[mes])
+  },[periodo])
 
   useEffect(()=>{void carregar()},[carregar])
   useEffect(()=>{
@@ -110,7 +108,7 @@ export default function LancamentosPage() {
       <div className="heading-total-with-action"><span><small>Saldo realizado filtrado</small><strong className={realizado>=0?'positive':'negative'}>{moeda(realizado)}</strong></span><button className="button button-primary" onClick={()=>setModal(true)}>+ Nova despesa</button></div></header>
     {mensagem?<div className="success-notice">{mensagem}</div>:null}
     <section className="panel"><div className="ledger-filters">
-      <Campo rotulo="Competência"><input type="month" value={mes} onChange={e=>setMes(e.target.value)}/></Campo>
+      <SeletorPeriodo periodo={periodo} aoMudar={setPeriodo}/>
       <Selecao rotulo="Tipo" vazio="Todos" value={tipoFiltro} onChange={e=>setTipoFiltro(e.target.value as ''|TipoLancamento)}
         opcoes={[{valor:'RECEITA',texto:'Receitas'},{valor:'DESPESA',texto:'Despesas'}]}/>
       <Selecao rotulo="Veículo" vazio="Todos" value={veiculoFiltro} onChange={e=>setVeiculoFiltro(e.target.value)}

@@ -1,7 +1,7 @@
 import { api } from '../api/http'
 import type { Categoria, Contratante } from '../types/modelos'
 import { comCacheCurto, invalidarCadastro } from './cacheCurto'
-import { ou, supabase } from './cliente'
+import { excluirRegistro, ou, supabase } from './cliente'
 import { moduloNoSupabase } from './modo'
 
 /**
@@ -78,4 +78,30 @@ export async function criarContratante(nome: string, documento?: string | null):
     'Não foi possível cadastrar o contratante.',
   ) as LinhaContratante
   return { id: linha.id, nome: linha.nome, documento: linha.documento ?? undefined, ativo: linha.ativo }
+}
+
+function esquecerCategorias() {
+  invalidarCadastro('categorias:RECEITA'); invalidarCadastro('categorias:DESPESA'); invalidarCadastro('categorias:todas')
+}
+
+export async function atualizarCategoria(id: number, nome: string): Promise<void> {
+  esquecerCategorias()
+  ou(await supabase().from('categorias').update({ nome }).eq('id', id).select('id').single(),
+    'Não foi possível salvar a categoria.')
+}
+
+export async function excluirCategoria(id: number): Promise<void> {
+  esquecerCategorias()
+  await excluirRegistro('categorias', id, 'Não foi possível excluir a categoria.')
+}
+
+export async function atualizarContratante(id: number, nome: string, documento?: string | null): Promise<void> {
+  invalidarCadastro('contratantes')
+  ou(await supabase().from('contratantes').update({ nome, documento: documento || null }).eq('id', id).select('id').single(),
+    'Não foi possível salvar o contratante.')
+}
+
+export async function excluirContratante(id: number): Promise<void> {
+  invalidarCadastro('contratantes')
+  await excluirRegistro('contratantes', id, 'Não foi possível excluir o contratante.')
 }

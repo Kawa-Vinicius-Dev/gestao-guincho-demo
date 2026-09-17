@@ -63,3 +63,10 @@ test('campos numericos pedem teclado numerico', () => {
   expect(screen.getByLabelText('Documento')).toHaveAttribute('inputmode', 'numeric')
   expect(screen.getByLabelText('Telefone')).toHaveAttribute('inputmode', 'tel')
 })
+
+// Socorrista pode ser cadastrado pelo RG: sem tamanho fixo, ele nao vira um CPF pela metade.
+test('documento do socorrista aceita RG sem pontuação de CPF', () => {
+  expect(formatarDocumento('3927526460', true)).toBe('3927526460')
+  expect(formatarDocumento('11391250443', true)).toBe('113.912.504-43')
+  expect(formatarDocumento('3927526460')).toBe('392.752.646-0')
+})
