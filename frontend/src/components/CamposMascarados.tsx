@@ -70,9 +70,15 @@ export function CampoTelefone({ rotulo, name, className, ajuda, required, defaul
   return <Campo rotulo={rotulo} className={className} ajuda={ajuda}>
     <input
       type="text" inputMode="tel" required={required}
-      placeholder={placeholder ?? '(85) 99999-8888'}
+      placeholder={placeholder ?? '(00) 00000-0000'}
       value={texto}
-      onChange={evento => setTexto(formatarTelefone(evento.target.value))}/>
+      onChange={evento => {
+        const novo = formatarTelefone(evento.target.value)
+        setTexto(novo)
+        // Sem DDD o numero nao serve para ligar: 10 digitos (fixo) ou 11 (celular).
+        const quantos = digitos(novo).length
+        evento.target.setCustomValidity(quantos === 0 || quantos >= 10 ? '' : 'Informe o telefone com DDD: (00) 00000-0000.')
+      }}/>
     <input type="hidden" name={name} value={digitos(texto)}/>
   </Campo>
 }
@@ -87,8 +93,10 @@ export function CampoPlaca({ rotulo, name, className, ajuda, required, defaultVa
   const [texto, setTexto] = useState((defaultValue ?? '').toUpperCase())
   return <Campo rotulo={rotulo} className={className} ajuda={ajuda}>
     <input
-      name={name} type="text" required={required} placeholder="ABC1D23"
-      autoCapitalize="characters" autoCorrect="off" spellCheck={false} maxLength={8}
+      name={name} type="text" required={required} placeholder="AAA0A00"
+      // Placa antiga (AAA0000) ou Mercosul (AAA0A00): sempre 7 caracteres.
+      pattern="[A-Z]{3}[0-9][A-Z0-9][0-9]{2}" title="Placa com 7 caracteres: AAA0000 ou AAA0A00."
+      autoCapitalize="characters" autoCorrect="off" spellCheck={false} maxLength={7}
       value={texto}
       onChange={evento => setTexto(evento.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}/>
   </Campo>

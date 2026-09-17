@@ -71,7 +71,7 @@ export default function EquipePage(){
         <label className="field field-wide"><span>Nome</span><input name="nome" defaultValue={editando?.nome} required autoCapitalize="words" autoComplete="off"/></label>
         <CampoTelefone rotulo="Telefone" name="telefone" defaultValue={editando?.telefone}/>
         <label className="field"><span>QRA</span><input name="qra" defaultValue={editando?.qra} autoCapitalize="characters" autoCorrect="off" spellCheck={false}/><small>Como aparece no relatório da Porto. É o que liga o serviço a este socorrista.</small></label>
-        <label className="field"><span>Códigos da Porto</span><input name="codigosPorto" defaultValue={editando?.codigosPorto?.join(', ')} autoCapitalize="characters" autoCorrect="off" spellCheck={false} placeholder="Ex.: 003TT0000176zMBYAY"/><small>Quando a OP traz um código no lugar do QRA. Separe mais de um por vírgula.</small></label>
+        <label className="field"><span>Códigos da Porto</span><input name="codigosPorto" defaultValue={editando?.codigosPorto?.join(', ')} autoCapitalize="characters" autoCorrect="off" spellCheck={false}/><small>Quando a OP traz um código no lugar do QRA. Separe mais de um por vírgula.</small></label>
         {/* Vinculo informativo: quem dirigiu o que e definido em cada OS, nao aqui. */}
         <Selecao rotulo="Viatura habitual" name="veiculoId" defaultValue={editando?.veiculoId??''} vazio="Sem viatura"
           ajuda="Só referência — a viatura de cada serviço vem da OS, não daqui."

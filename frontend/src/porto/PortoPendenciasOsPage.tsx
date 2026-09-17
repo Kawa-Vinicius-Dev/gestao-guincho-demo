@@ -155,7 +155,7 @@ export default function PortoPendenciasOsPage() {
                   opcoes={motoristas.map(m => ({ valor: m.id, texto: m.nome }))}/>
               : item.socorrista || '—'}</td>
             <td>{item.semViatura
-              ? <input aria-label={`Viatura da OS ${item.numeroOs}`} placeholder="Ex.: L168"
+              ? <input aria-label={`Viatura da OS ${item.numeroOs}`} placeholder="Sigla da viatura"
                   value={acertos[item.id]?.siglaViatura ?? ''}
                   onChange={e => anotar(item.id, 'siglaViatura', e.target.value.toUpperCase())}/>
               : item.siglaViatura}</td>
