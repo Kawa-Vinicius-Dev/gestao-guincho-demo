@@ -20,6 +20,7 @@ const EquipeDetalhe=lazy(()=>import('./equipe/EquipeDetalhePage'))
 const MinhaComissao=lazy(()=>import('./comissao/MinhaComissaoPage'))
 const Comissoes=lazy(()=>import('./comissao/ComissoesPage'))
 const PortoImportacoes=lazy(()=>import('./porto/PortoImportacoesPage'))
+const PortoDiario=lazy(()=>import('./porto/PortoDiarioPage'))
 const PortoDashboard=lazy(()=>import('./porto/PortoDashboardPage'))
 const PortoOps=lazy(()=>import('./porto/PortoOrdensPagamentoPage'))
 const PortoOss=lazy(()=>import('./porto/PortoOrdensServicoPage'))
@@ -92,6 +93,7 @@ export default function App(){
         <Route path="/equipe/:id" element={<EquipeDetalhe/>}/>
         <Route path="/comissoes" element={<Comissoes/>}/>
         <Route path="/porto/importacoes" element={<PortoImportacoes/>}/>
+        <Route path="/porto/diario" element={<PortoDiario/>}/>
         <Route path="/porto/dashboard" element={<PortoDashboard/>}/>
         <Route path="/porto/ordens-pagamento" element={<PortoOps/>}/>
         <Route path="/porto/ordens-servico" element={<PortoOss/>}/>
