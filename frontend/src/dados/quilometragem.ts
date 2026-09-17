@@ -1,6 +1,6 @@
 import { api } from '../api/http'
 import type { Quilometragem } from '../types/modelos'
-import { ou, supabase } from './cliente'
+import { excluirRegistro, ou, supabase } from './cliente'
 import { invalidarCacheFinanceiro } from './dashboard'
 import { moduloNoSupabase } from './modo'
 
@@ -39,6 +39,8 @@ function paraModelo(l: Linha): Quilometragem {
     id: l.id,
     data: l.data_registro,
     veiculo: um(l.veiculos)?.identificacao ?? '',
+    veiculoId: l.veiculo_id,
+    motoristaId: l.motorista_id ?? undefined,
     motorista: um(l.motoristas)?.nome,
     protocolo: l.protocolo ?? undefined,
     hodometroInicial: Number(l.hodometro_inicial),
@@ -108,4 +110,23 @@ export async function criarQuilometragem(dados: DadosQuilometragem): Promise<Qui
     'Não foi possível carregar a quilometragem registrada.',
   ) as unknown as Linha
   return paraModelo(linha)
+}
+
+/** Corrige um registro. km total, morto e custo sao recalculados pelo banco. */
+export async function atualizarQuilometragem(id: number, dados: DadosQuilometragem): Promise<void> {
+  invalidarCacheFinanceiro()
+  ou(
+    await supabase().from('quilometragens').update({
+      data_registro: dados.data, veiculo_id: dados.veiculoId, motorista_id: dados.motoristaId ?? null,
+      hodometro_inicial: dados.hodometroInicial, hodometro_final: dados.hodometroFinal,
+      km_remunerado: dados.quilometragemRemunerada, custo_por_km: dados.custoPorKm,
+      protocolo: dados.protocolo || null, observacoes: dados.observacoes || null,
+    }).eq('id', id).select('id').single(),
+    'Não foi possível salvar a quilometragem.',
+  )
+}
+
+export async function excluirQuilometragem(id: number): Promise<void> {
+  invalidarCacheFinanceiro()
+  await excluirRegistro('quilometragens', id, 'Não foi possível excluir a quilometragem.')
 }

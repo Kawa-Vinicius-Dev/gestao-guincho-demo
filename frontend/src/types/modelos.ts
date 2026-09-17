@@ -42,7 +42,7 @@ export interface LancamentoFinanceiro {
   data:string; status:string; realizado:boolean; veiculo?:string; veiculoId?:number; motorista?:string; origem:string; protocolo?:string
 }
 export interface Quilometragem {
-  id:number; data:string; veiculo:string; motorista?:string; protocolo?:string; hodometroInicial:number;
+  id:number; data:string; veiculo:string; veiculoId?:number; motorista?:string; motoristaId?:number; protocolo?:string; hodometroInicial:number;
   hodometroFinal:number; quilometragemTotal:number; quilometragemRemunerada:number; kmMorto:number;
   custoPorKm:number; custoKmMorto:number; observacoes?:string
 }

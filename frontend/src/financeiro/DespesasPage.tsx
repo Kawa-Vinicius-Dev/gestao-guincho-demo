@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { alternarAtivoDespesaFixa, criarDespesaFixa, lancarDespesasFixasDoMes, listarDespesasFixas } from '../dados/despesasFixas'
+import { alternarAtivoDespesaFixa, atualizarDespesaFixa, criarDespesaFixa, excluirDespesaFixa, lancarDespesasFixasDoMes, listarDespesasFixas } from '../dados/despesasFixas'
+import { ConfirmarExclusao } from '../components/ConfirmarExclusao'
 import { aprovarDespesa, atualizarDespesa, criarDespesa, excluirDespesa, listarDespesas, marcarDescontoComissao } from '../dados/despesas'
 import { abrirComprovante, anexarComprovante, removerComprovante } from '../dados/comprovantes'
 import { listarCategorias } from '../dados/cadastros'
@@ -30,6 +31,7 @@ export default function DespesasPage(){
   const [socorristaDoForm,setSocorristaDoForm]=useState('')
   // Despesa aberta para edicao; nulo e lancamento novo.
   const [editando,setEditando]=useState<Despesa|null>(null)
+  const [fixaEditando,setFixaEditando]=useState<DespesaRecorrente|null>(null),[fixaExcluindo,setFixaExcluindo]=useState<DespesaRecorrente|null>(null)
   const abrirForm=()=>{setEditando(null);setSocorristaDoForm('');setForm(true)}
   const abrirEdicao=(d:Despesa)=>{setEditando(d);setSocorristaDoForm(d.motoristaId?String(d.motoristaId):'');setForm(true)}
   const [fixas,setFixas]=useState<DespesaRecorrente[]>([]),[mes,setMes]=useState(mesAtual()),[lancando,setLancando]=useState(false)
@@ -84,6 +86,12 @@ export default function DespesasPage(){
     try{await criarDespesaFixa({descricao:String(f.get('descricao')),categoriaId:Number(f.get('categoriaId')),valor:Number(f.get('valor')),diaVencimento:Number(f.get('diaVencimento')),veiculoId:f.get('veiculoId')?Number(f.get('veiculoId')):null})
       formulario.reset();await carregarFixas()}catch(x){setErro((x as Error).message)}
   }
+  async function salvarEdicaoFixa(e:FormEvent<HTMLFormElement>){e.preventDefault();if(!fixaEditando)return;const f=new FormData(e.currentTarget)
+    setErro('')
+    try{await atualizarDespesaFixa(fixaEditando.id,{descricao:String(f.get('descricao')),categoriaId:Number(f.get('categoriaId')),valor:Number(f.get('valor')),diaVencimento:Number(f.get('diaVencimento')),veiculoId:f.get('veiculoId')?Number(f.get('veiculoId')):null})
+      setFixaEditando(null);setMensagem('Despesa fixa atualizada.');await carregarFixas()}
+    catch(x){setErro((x as Error).message)}
+  }
   async function alternarFixa(fixa:DespesaRecorrente){setErro('')
     try{await alternarAtivoDespesaFixa(fixa);await carregarFixas()}
     catch(x){setErro((x as Error).message)}
@@ -136,7 +144,7 @@ export default function DespesasPage(){
     {admin?<section className="panel" aria-label="Despesas fixas"><header className="panel-title"><div><h2>Despesas fixas</h2><p>O que cai todo mês: aluguel, seguro, parcela. Cadastre uma vez e lance o mês quando quiser.</p></div>
       <div className="heading-actions"><Campo rotulo="Mês"><input aria-label="Mês do lançamento" type="month" value={mes} onChange={e=>setMes(e.target.value)}/></Campo>
         <button className="button button-primary" disabled={lancando||!fixas.some(f=>f.ativo)} onClick={()=>void lancarFixas()}>{lancando?'Lançando…':'Lançar as fixas do mês'}</button></div></header>
-      {fixas.length?<ul className="simple-list">{fixas.map(f=><li key={f.id}><strong>{f.descricao}</strong><small>{f.categoria} · {moeda(f.valor)} · todo dia {f.diaVencimento}{f.veiculo?` · ${f.veiculo}`:''}{f.ativo?'':' · desativada'}</small><button className={f.ativo?'table-action table-action-danger':'table-action'} onClick={()=>void alternarFixa(f)}>{f.ativo?'Desativar':'Reativar'}</button></li>)}</ul>:<p className="empty-inline">Nenhuma despesa fixa cadastrada.</p>}
+      {fixas.length?<ul className="simple-list">{fixas.map(f=><li key={f.id}><strong>{f.descricao}</strong><small>{f.categoria} · {moeda(f.valor)} · todo dia {f.diaVencimento}{f.veiculo?` · ${f.veiculo}`:''}{f.ativo?'':' · desativada'}</small><span className="acoes-da-linha"><button className="table-action" onClick={()=>setFixaEditando(f)}>Editar</button><button className={f.ativo?'table-action table-action-danger':'table-action'} onClick={()=>void alternarFixa(f)}>{f.ativo?'Desativar':'Reativar'}</button><button className="table-action table-action-danger" onClick={()=>setFixaExcluindo(f)}>Excluir</button></span></li>)}</ul>:<p className="empty-inline">Nenhuma despesa fixa cadastrada.</p>}
       <form onSubmit={salvarFixa} className="inline-form">
         <Campo rotulo="Descrição da despesa fixa"><input name="descricao" placeholder="Ex.: Aluguel do pátio" required autoCapitalize="sentences" autoComplete="off"/></Campo>
         <Selecao rotulo="Categoria da despesa fixa" name="categoriaId" required opcoes={categorias.map(x=>({valor:x.id,texto:x.nome}))}/>
@@ -188,6 +196,21 @@ export default function DespesasPage(){
         <button type="button" className="button button-danger" disabled={apagando} onClick={()=>void excluir()}>{apagando?'Excluindo…':'Excluir despesa'}</button>
       </div>
     </Modal>:null}
+    {fixaEditando?<Modal etiqueta="Despesa fixa" titulo="Editar despesa fixa" aoFechar={()=>setFixaEditando(null)}>
+      <form onSubmit={salvarEdicaoFixa} className="form-grid two-columns">
+        <Campo rotulo="Descrição"><input name="descricao" defaultValue={fixaEditando.descricao} required autoCapitalize="sentences" autoComplete="off"/></Campo>
+        <Selecao rotulo="Categoria" name="categoriaId" required defaultValue={fixaEditando.categoriaId} opcoes={categorias.map(x=>({valor:x.id,texto:x.nome}))}/>
+        <CampoValor rotulo="Valor" name="valor" defaultValue={fixaEditando.valor} required/>
+        <CampoNumero rotulo="Dia do vencimento" name="diaVencimento" decimais={0} min={1} max={31} defaultValue={String(fixaEditando.diaVencimento)} required/>
+        <Selecao rotulo="Veículo" name="veiculoId" vazio="Sem veículo" defaultValue={fixaEditando.veiculoId??''} opcoes={veiculos.map(x=>({valor:x.id,texto:x.identificacao}))}/>
+        <AcoesModal aoCancelar={()=>setFixaEditando(null)}><button className="button button-primary">Salvar alterações</button></AcoesModal>
+      </form>
+    </Modal>:null}
+    {fixaExcluindo?<ConfirmarExclusao coisa="despesa fixa" nome={fixaExcluindo.descricao}
+      aviso="O molde sai da lista e não gera mais lançamentos. As despesas já lançadas a partir dele continuam."
+      resumo={[['Descrição',fixaExcluindo.descricao],['Valor',moeda(fixaExcluindo.valor)],['Todo dia',String(fixaExcluindo.diaVencimento)]]}
+      aoConfirmar={async()=>{await excluirDespesaFixa(fixaExcluindo.id);setMensagem('Despesa fixa excluída.');await carregarFixas()}}
+      aoFechar={()=>setFixaExcluindo(null)}/>:null}
   </div>
 }
 

@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { listarUsuarios, redefinirSenha } from '../dados/usuarios'
-import { criarCategoria, criarContratante, listarCategorias, listarContratantes } from '../dados/cadastros'
+import { atualizarCategoria, atualizarContratante, criarCategoria, criarContratante, excluirCategoria, excluirContratante, listarCategorias, listarContratantes } from '../dados/cadastros'
+import { ConfirmarExclusao } from '../components/ConfirmarExclusao'
 import { trocarSenha } from '../dados/sessao'
 import { baixarCopiaDosDados } from '../dados/backup'
 import { aplicarTema, temaAtual, type Tema } from '../tema'
@@ -13,6 +14,9 @@ import { Modal } from '../components/Modal'
 export default function ConfiguracoesPage(){
   const [categorias,setCategorias]=useState<Categoria[]>([]),[contratantes,setContratantes]=useState<Contratante[]>([]),[usuarios,setUsuarios]=useState<Usuario[]>([])
   const [tema,setTema]=useState<Tema>(temaAtual)
+  // Categoria ou contratante aberto para editar ou excluir.
+  const [editandoCadastro,setEditandoCadastro]=useState<{tipo:'categoria',item:Categoria}|{tipo:'contratante',item:Contratante}|null>(null)
+  const [excluindoCadastro,setExcluindoCadastro]=useState<{tipo:'categoria',item:Categoria}|{tipo:'contratante',item:Contratante}|null>(null)
   function trocarTema(novo:Tema){setTema(novo);aplicarTema(novo)}
   const [mensagem,setMensagem]=useState(''),[erro,setErro]=useState(''),[gerada,setGerada]=useState<SenhaRedefinida|null>(null),[copiada,setCopiada]=useState(false),[baixando,setBaixando]=useState(false)
   const carregar=()=>Promise.all([listarCategorias(),listarContratantes(),listarUsuarios()])
@@ -26,6 +30,14 @@ export default function ConfiguracoesPage(){
       if(alvo==='categorias')await criarCategoria(String(body.nome),body.tipo as 'RECEITA'|'DESPESA')
       else await criarContratante(String(body.nome),body.documento as string|null)
       formulario.reset();await carregar()
+    }catch(x){setErro((x as Error).message)}
+  }
+  async function salvarCadastro(e:FormEvent<HTMLFormElement>){e.preventDefault();if(!editandoCadastro)return;const f=new FormData(e.currentTarget)
+    setErro('');setMensagem('')
+    try{
+      if(editandoCadastro.tipo==='categoria')await atualizarCategoria(editandoCadastro.item.id,String(f.get('nome')))
+      else await atualizarContratante(editandoCadastro.item.id,String(f.get('nome')),String(f.get('documento')||'')||null)
+      setEditandoCadastro(null);setMensagem('Cadastro atualizado.');await carregar()
     }catch(x){setErro((x as Error).message)}
   }
   async function redefinir(usuario:Usuario){
@@ -50,12 +62,12 @@ export default function ConfiguracoesPage(){
   return <div className="page-enter"><header className="page-heading"><div><span className="eyebrow">Base financeira</span><h1>Configurações</h1><p>Contratantes, categorias e segurança da conta.</p></div></header>
     {erro?<div className="form-alert">{erro}</div>:null}{carregando?<Carregando/>:null}{mensagem?<div className="success-notice">{mensagem}</div>:null}<div className="settings-grid">
       <section className="panel settings-card"><header><h2>Aparência</h2><p>Vale só neste computador e neste navegador.</p></header><div className="segmented tema-escolha" role="group" aria-label="Tema visual"><button className={tema==='claro'?'active':''} aria-pressed={tema==='claro'} onClick={()=>trocarTema('claro')}>Claro</button><button className={tema==='escuro'?'active':''} aria-pressed={tema==='escuro'} onClick={()=>trocarTema('escuro')}>Escuro</button></div><p className="empty-inline">O sistema não segue o tema do computador: a cor só muda quando você escolhe aqui.</p></section>
-      <section className="panel settings-card"><header><h2>Contratantes</h2><p>Porto Seguro e demais clientes pagadores.</p></header><ul className="simple-list">{contratantes.map(c=><li key={c.id}><strong>{c.nome}</strong><small>{c.documento||'Sem documento'}</small></li>)}</ul>
+      <section className="panel settings-card"><header><h2>Contratantes</h2><p>Porto Seguro e demais clientes pagadores.</p></header><ul className="simple-list">{contratantes.map(c=><li key={c.id}><strong>{c.nome}</strong><small>{c.documento||'Sem documento'}</small><span className="acoes-da-linha"><button className="table-action" onClick={()=>setEditandoCadastro({tipo:'contratante',item:c})}>Editar</button><button className="table-action table-action-danger" onClick={()=>setExcluindoCadastro({tipo:'contratante',item:c})}>Excluir</button></span></li>)}</ul>
         <form onSubmit={e=>cadastrar(e,'contratantes')} className="inline-form">
           <Campo rotulo="Nome do contratante"><input name="nome" required autoCapitalize="words" autoComplete="off"/></Campo>
           <CampoDocumento rotulo="CNPJ ou CPF" name="documento"/>
           <button className="button button-ghost">Adicionar</button></form></section>
-      <section className="panel settings-card"><header><h2>Categorias</h2><p>Classifique para entender para onde o dinheiro vai.</p></header><ul className="simple-list">{categorias.map(c=><li key={c.id}><strong>{c.nome}</strong><small>{c.tipo}</small></li>)}</ul>
+      <section className="panel settings-card"><header><h2>Categorias</h2><p>Classifique para entender para onde o dinheiro vai.</p></header><ul className="simple-list">{categorias.map(c=><li key={c.id}><strong>{c.nome}</strong><small>{c.tipo==='RECEITA'?'Receita':'Despesa'}</small><span className="acoes-da-linha"><button className="table-action" onClick={()=>setEditandoCadastro({tipo:'categoria',item:c})}>Editar</button><button className="table-action table-action-danger" onClick={()=>setExcluindoCadastro({tipo:'categoria',item:c})}>Excluir</button></span></li>)}</ul>
         <form onSubmit={e=>cadastrar(e,'categorias')} className="inline-form">
           <Campo rotulo="Nome da categoria"><input name="nome" required autoCapitalize="words" autoComplete="off"/></Campo>
           <Selecao rotulo="Tipo da categoria" name="tipo" opcoes={[{valor:'DESPESA',texto:'Despesa'},{valor:'RECEITA',texto:'Receita'}]}/>
@@ -73,5 +85,17 @@ export default function ConfiguracoesPage(){
       {copiada?<div className="success-notice">Senha copiada.</div>:null}
       <div className="modal-actions"><button className="button button-ghost" onClick={()=>void copiar(gerada.senhaProvisoria)}>Copiar</button><button className="button button-primary" onClick={()=>setGerada(null)}>Já anotei</button></div>
     </Modal>:null}
+    {editandoCadastro?<Modal etiqueta="Cadastro" titulo={editandoCadastro.tipo==='categoria'?'Editar categoria':'Editar contratante'} aoFechar={()=>setEditandoCadastro(null)}>
+      <form onSubmit={salvarCadastro} className="form-grid">
+        <Campo rotulo="Nome"><input name="nome" defaultValue={editandoCadastro.item.nome} required autoCapitalize="words" autoComplete="off"/></Campo>
+        {editandoCadastro.tipo==='contratante'?<CampoDocumento rotulo="CNPJ ou CPF" name="documento" defaultValue={editandoCadastro.item.documento}/>:null}
+        <div className="modal-actions"><button type="button" className="button button-ghost" onClick={()=>setEditandoCadastro(null)}>Cancelar</button><button className="button button-primary">Salvar alterações</button></div>
+      </form>
+    </Modal>:null}
+    {excluindoCadastro?<ConfirmarExclusao coisa={excluindoCadastro.tipo} nome={excluindoCadastro.item.nome}
+      aviso={excluindoCadastro.tipo==='categoria'?'A categoria sai da lista. Se já tiver lançamento nela, o sistema não deixa excluir.':'O contratante sai da lista. Se já tiver receita ligada, o sistema não deixa excluir.'}
+      resumo={[['Nome',excluindoCadastro.item.nome]]}
+      aoConfirmar={async()=>{if(excluindoCadastro.tipo==='categoria')await excluirCategoria(excluindoCadastro.item.id);else await excluirContratante(excluindoCadastro.item.id);setMensagem('Cadastro excluído.');await carregar()}}
+      aoFechar={()=>setExcluindoCadastro(null)}/>:null}
   </div>
 }

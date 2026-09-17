@@ -4,7 +4,8 @@ import { SeletorPeriodo } from '../components/SeletorPeriodo'
 import { usePeriodoGlobal } from '../utils/periodoGlobal'
 import { lerIndicadores } from '../dados/dashboard'
 import { lerExtrato } from '../dados/extrato'
-import { atualizarVeiculo, criarVeiculo, listarVeiculos } from '../dados/veiculos'
+import { atualizarVeiculo, criarVeiculo, excluirVeiculo, listarVeiculos } from '../dados/veiculos'
+import { ConfirmarExclusao } from '../components/ConfirmarExclusao'
 import { Carregando, Vazio } from '../components/EstadoPagina'
 import type { Dashboard, LancamentoFinanceiro, Veiculo } from '../types/modelos'
 import { data, moeda, numero } from '../utils/formatadores'
@@ -19,6 +20,7 @@ export default function FrotasPage(){
   const [busca]=useSearchParams()
   const pedido=useRef({id:Number(busca.get('veiculo'))||0,sigla:(busca.get('sigla')??'').toUpperCase()})
   const [lancamentos,setLancamentos]=useState<LancamentoFinanceiro[]>([]),[selecionado,setSelecionado]=useState(0),[modal,setModal]=useState(false),[mensagem,setMensagem]=useState('')
+  const [excluindo,setExcluindo]=useState<Veiculo|null>(null)
   const [editando,setEditando]=useState<Veiculo|null>(null),[salvando,setSalvando]=useState(false)
   // Primeira carga mostra o esqueleto; trocar de competencia mantem a tela.
   const [carregando,setCarregando]=useState(true)
@@ -48,14 +50,19 @@ export default function FrotasPage(){
     {veiculos.length?<section className="fleet-layout"><aside className="fleet-list" aria-label="Lista de veículos">{veiculos.map(v=>{const r=financeiro?.resultadoPorVeiculo.find(item=>item.veiculoId===v.id),saldo=r?.resultado??0;return <button key={v.id} className={v.id===selecionado?'active':''} onClick={()=>setSelecionado(v.id)}><span className="vehicle-monogram">{v.identificacao}</span><span><strong>{v.modelo||v.identificacao}</strong><small>{v.placa??'Placa pendente'} · {v.ativo?'Ativo':'Inativo'}</small></span><span><strong className={saldo>=0?'positive':'negative'}>{moeda(saldo)}</strong><small>Resultado real</small></span></button>})}</aside>
       {veiculo?<div className="fleet-detail"><article className="vehicle-hero"><div><span className="eyebrow">{veiculo.placa??'Placa pendente'}</span><h2>{veiculo.identificacao} · {veiculo.modelo||'Modelo não informado'}</h2><p>Custo operacional informado: {moeda(veiculo.custoPorKm)} por km.</p>
         <p>{veiculo.siglaPorto?<>Aparece como <strong>{veiculo.siglaPorto}</strong> no painel da Porto.</>:<>Sem sigla da Porto — serviços desta viatura não se vinculam sozinhos.</>}</p></div>
-      <div><span className={`vehicle-status ${veiculo.ativo?'status-saudavel':'status-monitorar'}`}>{veiculo.ativo?'Ativo':'Inativo'}</span><button className="table-action" onClick={()=>{setEditando(veiculo);setModal(true)}}>Editar</button></div></article>
+      <div><span className={`vehicle-status ${veiculo.ativo?'status-saudavel':'status-monitorar'}`}>{veiculo.ativo?'Ativo':'Inativo'}</span><button className="table-action" onClick={()=>{setEditando(veiculo);setModal(true)}}>Editar</button><button className="table-action table-action-danger" onClick={()=>setExcluindo(veiculo)}>Excluir</button></div></article>
         <div className="vehicle-metrics"><article><span>Receita recebida</span><strong>{moeda(receitas)}</strong><small>Vínculo financeiro real</small></article><article><span>Despesas pagas</span><strong>{moeda(despesas)}</strong><small>Custos aprovados</small></article><article className="focus"><span>Resultado</span><strong>{moeda(lucro)}</strong><small>{margem.toFixed(1)}% de margem</small></article><article><span>Km morto</span><strong>{numero(resultado?.kmMorto??0)} km</strong><small>{moeda(resultado?.custoKmMorto??0)} improdutivos</small></article></div>
         <article className="panel vehicle-history"><header className="panel-title"><div><span className="eyebrow">Auditoria individual</span><h2>Histórico financeiro</h2></div></header>{historico.length?<div className="table-scroll"><table><thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th>Situação</th><th>Valor</th></tr></thead><tbody>{historico.map(item=><tr key={item.id}><td>{data(item.data)}</td><td><strong>{item.descricao}</strong></td><td>{item.categoria}</td><td>{item.realizado?'Realizado':'Previsto'}</td><td className={item.tipo==='RECEITA'?'positive':'negative'}>{item.tipo==='RECEITA'?'+':'−'} {moeda(item.valor)}</td></tr>)}</tbody></table></div>:<p className="empty-inline">Nenhum movimento vinculado ao veículo nesta competência.</p>}</article>
       </div>:null}</section>:<Vazio titulo="Nenhum veículo" descricao="Cadastre o primeiro veículo para acompanhar seus resultados reais."/>}
     </>}
-    {modal?<Modal etiqueta="Cadastro oficial" titulo="Novo veículo" aoFechar={()=>setModal(false)}><form onSubmit={salvar} className="form-grid two-columns"><label className="field"><span>Identificador</span><input name="identificacao" defaultValue={editando?.identificacao??''} required autoCapitalize="characters" autoCorrect="off" spellCheck={false}/></label><CampoPlaca rotulo="Placa" name="placa" defaultValue={editando?.placa}/><label className="field field-wide"><span>Modelo</span><input name="modelo" defaultValue={editando?.modelo??''} autoCapitalize="words" autoComplete="off"/></label><CampoValor rotulo="Custo por km" name="custoPorKm" defaultValue={editando?.custoPorKm} exigirPositivo={false} required
+    {modal?<Modal etiqueta="Cadastro oficial" titulo={editando?'Editar veículo':'Novo veículo'} aoFechar={()=>{setModal(false);setEditando(null)}}><form onSubmit={salvar} className="form-grid two-columns"><label className="field"><span>Identificador</span><input name="identificacao" defaultValue={editando?.identificacao??''} required autoCapitalize="characters" autoCorrect="off" spellCheck={false}/></label><CampoPlaca rotulo="Placa" name="placa" defaultValue={editando?.placa}/><label className="field field-wide"><span>Modelo</span><input name="modelo" defaultValue={editando?.modelo??''} autoCapitalize="words" autoComplete="off"/></label><CampoValor rotulo="Custo por km" name="custoPorKm" defaultValue={editando?.custoPorKm} exigirPositivo={false} required
           ajuda="Quanto este veículo custa por quilômetro rodado. É o que transforma km morto em dinheiro no dashboard."/>
         <label className="field"><span>Sigla na Porto</span><input name="siglaPorto" defaultValue={editando?.siglaPorto??''} placeholder="Sigla da viatura" autoCapitalize="characters" autoCorrect="off" spellCheck={false}/><small>Como a Porto chama esta viatura no painel do dia. É o que liga o serviço importado a este veículo.</small></label>
         <div className="modal-actions field-wide"><button type="button" className="button button-ghost" onClick={()=>{setModal(false);setEditando(null)}}>Cancelar</button><button className="button button-primary" disabled={salvando}>{salvando?'Salvando…':'Salvar veículo'}</button></div></form></Modal>:null}
+    {excluindo?<ConfirmarExclusao coisa="viatura" nome={excluindo.identificacao}
+      aviso="A viatura sai do cadastro. Se já tiver despesa, km ou receita ligada, o sistema não deixa excluir."
+      resumo={[['Viatura',excluindo.identificacao],['Placa',excluindo.placa??'Pendente']]}
+      aoConfirmar={async()=>{await excluirVeiculo(excluindo.id);setMensagem(`Viatura ${excluindo.identificacao} excluída.`);await carregar()}}
+      aoFechar={()=>setExcluindo(null)}/>:null}
   </div>
 }

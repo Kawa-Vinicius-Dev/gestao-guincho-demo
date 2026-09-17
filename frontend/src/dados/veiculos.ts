@@ -1,6 +1,7 @@
 import { api } from '../api/http'
 import type { Veiculo } from '../types/modelos'
 import { comCacheCurto, invalidarCadastro } from './cacheCurto'
+import { excluirRegistro } from './cliente'
 import { ou, supabase } from './cliente'
 import { moduloNoSupabase } from './modo'
 
@@ -104,4 +105,10 @@ export async function atualizarVeiculo(id: number, dados: DadosVeiculo): Promise
     'Não foi possível salvar o veículo.',
   ) as LinhaVeiculo
   return paraModelo(linha)
+}
+
+/** Viatura com despesa, km ou receita ligada nao sai: o banco recusa e a tela explica. */
+export async function excluirVeiculo(id: number): Promise<void> {
+  invalidarCadastro('veiculos')
+  await excluirRegistro('veiculos', id, 'Não foi possível excluir a viatura.')
 }

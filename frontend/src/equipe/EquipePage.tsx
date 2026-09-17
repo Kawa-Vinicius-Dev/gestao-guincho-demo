@@ -2,7 +2,8 @@ import { useEffect,useState,type FormEvent } from 'react'
 import { criarAcessoSocorrista } from '../dados/usuarios'
 import { Link } from 'react-router-dom'
 import { listarVeiculos } from '../dados/veiculos'
-import { alternarAtivoMotorista, atualizarMotorista, criarMotorista, listarMotoristas } from '../dados/motoristas'
+import { alternarAtivoMotorista, atualizarMotorista, criarMotorista, excluirMotorista, listarMotoristas } from '../dados/motoristas'
+import { ConfirmarExclusao } from '../components/ConfirmarExclusao'
 import { CampoDocumento, CampoTelefone } from '../components/CamposMascarados'
 import { Carregando,ErroPagina,Vazio } from '../components/EstadoPagina'
 import type { Motorista,SenhaRedefinida,Veiculo } from '../types/modelos'
@@ -13,7 +14,7 @@ export default function EquipePage(){
   const [motoristas,setMotoristas]=useState<Motorista[]>([])
   const [veiculos,setVeiculos]=useState<Veiculo[]>([])
   const [carregando,setCarregando]=useState(true),[modal,setModal]=useState(false),[salvando,setSalvando]=useState(false),[erro,setErro]=useState('')
-  const [editando,setEditando]=useState<Motorista|null>(null)
+  const [editando,setEditando]=useState<Motorista|null>(null),[excluindo,setExcluindo]=useState<Motorista|null>(null)
   const [dandoAcesso,setDandoAcesso]=useState<Motorista|null>(null),[acesso,setAcesso]=useState<SenhaRedefinida|null>(null)
   const carregar=()=>{setCarregando(true);setErro('');listarMotoristas().then(setMotoristas).catch(e=>setErro(e.message)).finally(()=>setCarregando(false))}
   useEffect(carregar,[])
@@ -62,6 +63,7 @@ export default function EquipePage(){
       <div className="team-card-actions"><Link className="button button-ghost team-detail-action" to={`/equipe/${motorista.id}`}>Ver detalhes</Link>
         <button className="table-action" onClick={()=>abrirEdicao(motorista)}>Editar</button>
         <button className={motorista.ativo?'table-action table-action-danger':'table-action'} onClick={()=>void alternarAtivo(motorista)}>{motorista.ativo?'Desativar':'Reativar'}</button>
+          <button className="table-action table-action-danger" onClick={()=>setExcluindo(motorista)}>Excluir</button>
         {!motorista.usuarioId&&motorista.ativo?<button className="table-action" onClick={()=>{setErro('');setDandoAcesso(motorista)}}>Criar acesso</button>:null}</div>
     </article>)}</section>:<Vazio titulo="Nenhum socorrista cadastrado" descricao="Cadastre o primeiro socorrista para vinculá-lo às ordens de serviço."/>}
 
@@ -93,5 +95,10 @@ export default function EquipePage(){
       <p className="senha-provisoria"><code>{acesso.senhaProvisoria}</code></p>
       <div className="modal-actions"><button className="button button-primary" onClick={()=>setAcesso(null)}>Já anotei</button></div>
     </Modal>:null}
+    {excluindo?<ConfirmarExclusao coisa="socorrista" nome={excluindo.nome}
+      aviso="O socorrista sai do cadastro. Quem já tem serviço ou comissão não pode ser excluído: nesse caso, use Desativar."
+      resumo={[['Nome',excluindo.nome],['QRA',excluindo.qra||'—']]}
+      aoConfirmar={async()=>{await excluirMotorista(excluindo.id);carregar()}}
+      aoFechar={()=>setExcluindo(null)}/>:null}
   </div>
 }
