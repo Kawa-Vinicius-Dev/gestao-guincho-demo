@@ -112,6 +112,46 @@ const filaAprovacoes = {
   ],
 }
 
+
+// Pendencias do periodo. As quatro primeiras sao linhas reais de
+// porto_pendencias_os('2026-08-27','2026-09-15'), copiadas do banco em
+// 17/09/2026; as duas ultimas sao as situacoes novas, que o banco ainda nao tem
+// porque nenhum Diario foi importado — sem elas nao da para ver o que mudou.
+const pendencias = [
+  { id: 704, numeroOs: '01/5364383-26', dataAtendimento: '2026-08-27', seguradora: null,
+    especialidade: 'GUINCHO', siglaViatura: null, socorrista: 'ANDERSON JORGE RIBEIRO',
+    motoristaId: 9, valorTotal: 181, numeroOp: '06438807', semValor: false,
+    semSocorrista: false, semViatura: true, situacao: 'CONCILIADA',
+    competenciaInicio: '2026-08-27', competenciaFim: '2026-09-15', apenasConferir: false },
+  { id: 705, numeroOs: '01/5364512-26', dataAtendimento: '2026-08-28', seguradora: null,
+    especialidade: 'GUINCHO', siglaViatura: null, socorrista: 'QEBSON RAMOS DA SILVA',
+    motoristaId: 2, valorTotal: 226.4, numeroOp: '06438807', semValor: false,
+    semSocorrista: false, semViatura: true, situacao: 'CONCILIADA',
+    competenciaInicio: '2026-08-27', competenciaFim: '2026-09-15', apenasConferir: false },
+  { id: 706, numeroOs: '01/5365001-26', dataAtendimento: '2026-08-29', seguradora: null,
+    especialidade: 'PANE SECA', siglaViatura: null, socorrista: null,
+    motoristaId: null, valorTotal: 0, numeroOp: null, semValor: true,
+    semSocorrista: true, semViatura: true, situacao: 'AGUARDANDO_ANALISE',
+    competenciaInicio: '2026-08-27', competenciaFim: '2026-09-15', apenasConferir: false },
+  { id: 707, numeroOs: '01/5365220-26', dataAtendimento: '2026-09-02', seguradora: null,
+    especialidade: 'GUINCHO', siglaViatura: null, socorrista: 'LUIZ FELIPE DA SILVA',
+    motoristaId: 6, valorTotal: 150, numeroOp: null, semValor: false,
+    semSocorrista: false, semViatura: true, situacao: 'VALOR_MANUAL', valorManual: 150,
+    competenciaInicio: '2026-08-27', competenciaFim: '2026-09-15', apenasConferir: false },
+  { id: 708, numeroOs: '01/5365780-26', dataAtendimento: '2026-09-04', seguradora: null,
+    especialidade: 'GUINCHO', siglaViatura: 'L168', socorrista: 'DJALMA BEZERRA DE MELO NETO',
+    motoristaId: 8, valorTotal: 240, numeroOp: null, semValor: false,
+    semSocorrista: false, semViatura: false, situacao: 'AGUARDANDO_PROXIMA_OP',
+    valorManual: 240, competenciaInicio: '2026-09-16', competenciaFim: '2026-09-30',
+    apenasConferir: true },
+  { id: 709, numeroOs: '01/5366002-26', dataAtendimento: '2026-09-05', seguradora: null,
+    especialidade: 'GUINCHO', siglaViatura: 'L204', socorrista: 'JEFERSON MARTINS DA SILVA',
+    motoristaId: 1, valorTotal: 310, numeroOp: '06438807', semValor: false,
+    semSocorrista: false, semViatura: false, situacao: 'DIVERGENTE', valorManual: 280,
+    divergencia: 30, competenciaInicio: '2026-08-27', competenciaFim: '2026-09-15',
+    apenasConferir: true },
+]
+
 /** Responde as chamadas do Supabase com o exemplo acima, sem rede. */
 const original = window.fetch
 window.fetch = (async (entrada: RequestInfo | URL, init?: RequestInit) => {
@@ -121,6 +161,7 @@ window.fetch = (async (entrada: RequestInfo | URL, init?: RequestInit) => {
 
   if (url.includes('meu_turno_do_dia')) return responder(turnoDoDia)
   if (url.includes('fila_de_aprovacoes')) return responder(filaAprovacoes)
+  if (url.includes('porto_pendencias_os')) return responder(pendencias)
   if (url.includes('porto_dashboard_alto_nivel')) return responder(painel)
   if (url.includes('dashboard_resumo')) return responder(visaoGeral)
   if (url.includes('porto_ops_conciliadas')) return responder(ops)
@@ -169,9 +210,11 @@ const Pagina = tela === 'turno'
   ? (await import('./socorrista/TurnoPage')).default
   : tela === 'aprovacoes'
     ? (await import('./aprovacoes/AprovacoesPage')).default
-    : daVisao
-      ? (await import('./DashboardPage')).default
-      : (await import('./porto/PortoDashboardPage')).default
+    : tela === 'pendencias'
+      ? (await import('./porto/PortoPendenciasOsPage')).default
+      : daVisao
+        ? (await import('./DashboardPage')).default
+        : (await import('./porto/PortoDashboardPage')).default
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
