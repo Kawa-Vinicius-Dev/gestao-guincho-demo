@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { expect, test, vi } from 'vitest'
 import PortoImportacoesPage from './PortoImportacoesPage'
+import { MemoryRouter } from 'react-router-dom'
 import { servidor } from '../test/servidor'
 import { confirmarNaJanela } from '../test/confirmar'
 
@@ -416,4 +417,64 @@ test('escolher socorrista para as OS sem dono pede confirmação antes de aplica
   expect(await screen.findByRole('dialog', { name: /atribuir a os a socorrista sete/i })).toBeInTheDocument()
   await confirmarNaJanela()
   expect(await screen.findByText(/1 ordem de serviço veio sem socorrista/i)).toBeInTheDocument()
+})
+test('depois de importar a OP, avisa o que não veio e o que veio com valor diferente', async () => {
+  servidor.use(
+    http.post('/api/porto/importacoes/previa', () => HttpResponse.json({
+      id: 91, nomeArquivo: 'op.csv', tipo: 'OS_VINCULADAS', status: 'AGUARDANDO_CONFERENCIA', totalLinhas: 1,
+      requerOrdemPagamento: true, erros: [], linhas: [{ hashRegistro: 'h91', acao: 'IMPORTAR', dados: { numero_os: 'OS-91', valor_total: '700.00' } }],
+    }, { status: 201 })),
+    http.post('/api/porto/importacoes/91/avaliar', () => HttpResponse.json({
+      id: 91, nomeArquivo: 'op.csv', tipo: 'OS_VINCULADAS', status: 'AGUARDANDO_CONFERENCIA', totalLinhas: 1,
+      requerOrdemPagamento: true, erros: [], linhas: [{ hashRegistro: 'h91', acao: 'IMPORTAR', dados: { numero_os: 'OS-91', valor_total: '700.00' } }],
+      analiseOrdemPagamento: { numero: '06438807', existente: false, somaArquivo: 700, quantidadeReassociacoes: 0, valorReassociacoes: 0, reassociacoes: [] },
+    })),
+    http.post('/api/porto/importacoes/91/confirmar', () => HttpResponse.json({
+      importacaoId: 91, tipo: 'OS_VINCULADAS', importados: 1, ignorados: 0, receitasCriadas: 1, receitasAtualizadas: 0,
+      valorTotalRecebido: 700, erros: [],
+      naoEncontradas: [{ id: 5, numero: '01/2937402-26', dataAtendimento: '2026-09-02', socorrista: 'QEBSON RAMOS', viatura: 'L25', valorManual: 120 }],
+      divergentes: [{ id: 6, numero: '02/5384426-26', valorManual: 100, valorOp: 125, diferenca: 25 }],
+    })),
+  )
+  const user = userEvent.setup()
+  render(<MemoryRouter><PortoImportacoesPage /></MemoryRouter>)
+  await user.upload(screen.getByLabelText(/arquivo csv/i), new File(['csv'], 'op.csv', { type: 'text/csv' }))
+  await user.click(screen.getByRole('button', { name: /analisar csv/i }))
+  await screen.findByText('OS-91')
+  await user.type(screen.getByLabelText(/número da op/i), '06438807')
+  await screen.findByText(/será criada automaticamente/i)
+  await user.click(screen.getByRole('button', { name: /confirmar importação/i }))
+  await confirmarNaJanela()
+
+  expect(await screen.findByText(/1 serviço do diário não veio nesta op/i)).toBeInTheDocument()
+  // A OS que faltou abre na tela de Ordens de servico, ja filtrada nela.
+  expect(screen.getByRole('link', { name: '01/2937402-26' }))
+    .toHaveAttribute('href', '/porto/ordens-servico?os=01%2F2937402-26')
+  expect(screen.getByText(/1 serviço veio com valor diferente do informado/i)).toBeInTheDocument()
+  expect(screen.getByRole('link', { name: '02/5384426-26' })).toBeInTheDocument()
+})
+
+test('diferença a mais no valor da OP é apontada como provável crédito', async () => {
+  servidor.use(
+    http.post('/api/porto/importacoes/previa', () => HttpResponse.json({
+      id: 92, nomeArquivo: 'op.csv', tipo: 'OS_VINCULADAS', status: 'AGUARDANDO_CONFERENCIA', totalLinhas: 1,
+      requerOrdemPagamento: true, erros: [], linhas: [{ hashRegistro: 'h92', acao: 'IMPORTAR', dados: { numero_os: 'OS-92', valor_total: '54800.20' } }],
+    }, { status: 201 })),
+    http.post('/api/porto/importacoes/92/avaliar', () => HttpResponse.json({
+      id: 92, nomeArquivo: 'op.csv', tipo: 'OS_VINCULADAS', status: 'AGUARDANDO_CONFERENCIA', totalLinhas: 1,
+      requerOrdemPagamento: true, erros: [], linhas: [{ hashRegistro: 'h92', acao: 'IMPORTAR', dados: { numero_os: 'OS-92', valor_total: '54800.20' } }],
+      analiseOrdemPagamento: { numero: '06416626', existente: true, valorAtual: 55268.53, somaArquivo: 54800.20,
+        diferenca: -468.33, quantidadeReassociacoes: 0, valorReassociacoes: 0, reassociacoes: [] },
+    })),
+  )
+  const user = userEvent.setup()
+  render(<MemoryRouter><PortoImportacoesPage /></MemoryRouter>)
+  await user.upload(screen.getByLabelText(/arquivo csv/i), new File(['csv'], 'op.csv', { type: 'text/csv' }))
+  await user.click(screen.getByRole('button', { name: /analisar csv/i }))
+  await screen.findByText('OS-92')
+  await user.type(screen.getByLabelText(/número da op/i), '06416626')
+
+  expect(await screen.findByText(/divergência financeira encontrada/i)).toBeInTheDocument()
+  expect(screen.getAllByText(/R\$\s*468,33/).length).toBeGreaterThan(0)
+  expect(screen.getByRole('link', { name: /créditos/i })).toHaveAttribute('href', '/creditos')
 })
