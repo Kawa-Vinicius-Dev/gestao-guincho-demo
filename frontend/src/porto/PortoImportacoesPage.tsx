@@ -46,7 +46,20 @@ export default function PortoImportacoesPage(){
    * nao depois numa lista de pendencias. So as orfas aparecem: as que o QRA
    * resolveu passam direto.
    */
+  // Escolher o dono de uma OS decide de quem e a comissao dela: pergunta antes.
   function escolherSocorrista(hashRegistro:string,motoristaId:string){
+    if(!motoristaId)return
+    const pessoa=motoristas.find(m=>String(m.id)===motoristaId)
+    const os=(previa?.orfas??[]).find(o=>o.hashRegistro===hashRegistro)
+    setPedido({
+      titulo:`Atribuir a OS a ${pessoa?.nome??'este socorrista'}?`,
+      efeito:<>A OS <strong>{os?.numeroOs}</strong> fica com <strong>{pessoa?.nome}</strong>, e a comissão dela vai para essa pessoa quando a importação for confirmada.</>,
+      resumo:[['Ordem de serviço',os?.numeroOs??''],['Socorrista',pessoa?.nome??''],...(os?.socorrista||os?.qra?[['Veio no arquivo',os.socorrista||os.qra||''] as [string,string]]:[])],
+      textoConfirmar:'Atribuir',
+      aoConfirmar:()=>atribuir(hashRegistro,motoristaId),
+    })
+  }
+  function atribuir(hashRegistro:string,motoristaId:string){
     setPrevia(atual=>atual?{...atual,linhas:atual.linhas.map(l=>l.hashRegistro===hashRegistro
       ?{...l,dados:{...l.dados,motorista_id:motoristaId}}:l)}:atual)
   }
