@@ -76,7 +76,7 @@ export default function EquipePage(){
         <Selecao rotulo="Viatura habitual" name="veiculoId" defaultValue={editando?.veiculoId??''} vazio="Sem viatura"
           ajuda="Só referência — a viatura de cada serviço vem da OS, não daqui."
           opcoes={veiculos.map(v=>({valor:v.id,texto:v.identificacao}))}/>
-        <CampoDocumento rotulo="Documento" name="documento" className="field-wide" defaultValue={editando?.documento}/>
+        <CampoDocumento rotulo="Documento" name="documento" className="field-wide" defaultValue={editando?.documento} aceitaRg ajuda="CPF, CNPJ ou RG. Só números."/>
         <div className="modal-actions field-wide"><button type="button" className="button button-ghost" onClick={fechar}>Cancelar</button><button className="button button-primary" disabled={salvando}>{salvando?'Salvando…':editando?'Salvar alterações':'Salvar socorrista'}</button></div>
       </form></Modal>:null}
 

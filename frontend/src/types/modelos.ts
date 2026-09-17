@@ -27,7 +27,7 @@ export interface Receita {
   contratanteId?:number; categoria?:string; categoriaId?:number; veiculo?:string; veiculoId?:number; contaReceberId?:number; observacoes?:string; manual:boolean
 }
 export interface Despesa {
-  id:number; descricao:string; categoria:string; valor:number; data:string; vencimento?:string;
+  id:number; descricao:string; categoria:string; categoriaId?:number; veiculoId?:number; motoristaId?:number; valor:number; data:string; vencimento?:string;
   dataPagamento?:string; formaPagamento?:string; veiculo?:string; motorista?:string; protocolo?:string; descontaComissao?:boolean;
   comprovante?:string; observacoes?:string; status:'PENDENTE'|'PAGO'|'ATRASADO'|'REJEITADO';
   aprovada:boolean; criadoPor:string; comprovanteNomeOriginal?:string; comprovanteTamanhoBytes?:number

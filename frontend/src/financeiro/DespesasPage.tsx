@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { alternarAtivoDespesaFixa, criarDespesaFixa, lancarDespesasFixasDoMes, listarDespesasFixas } from '../dados/despesasFixas'
-import { aprovarDespesa, criarDespesa, excluirDespesa, listarDespesas, marcarDescontoComissao, pagarDespesa } from '../dados/despesas'
+import { aprovarDespesa, atualizarDespesa, criarDespesa, excluirDespesa, listarDespesas, marcarDescontoComissao } from '../dados/despesas'
 import { abrirComprovante, anexarComprovante, removerComprovante } from '../dados/comprovantes'
 import { listarCategorias } from '../dados/cadastros'
 import { listarMotoristas } from '../dados/motoristas'
@@ -28,7 +28,10 @@ export default function DespesasPage(){
   // O socorrista escolhido decide se a marca de desconto aparece: sem ele nao ha
   // de quem descontar.
   const [socorristaDoForm,setSocorristaDoForm]=useState('')
-  const abrirForm=()=>{setSocorristaDoForm('');setForm(true)}
+  // Despesa aberta para edicao; nulo e lancamento novo.
+  const [editando,setEditando]=useState<Despesa|null>(null)
+  const abrirForm=()=>{setEditando(null);setSocorristaDoForm('');setForm(true)}
+  const abrirEdicao=(d:Despesa)=>{setEditando(d);setSocorristaDoForm(d.motoristaId?String(d.motoristaId):'');setForm(true)}
   const [fixas,setFixas]=useState<DespesaRecorrente[]>([]),[mes,setMes]=useState(mesAtual()),[lancando,setLancando]=useState(false)
   // Qual despesa esta na janela de confirmacao, e nao um booleano: a janela
   // precisa dizer qual e, com descricao e valor, senao confirmar e um chute.
@@ -56,6 +59,12 @@ export default function DespesasPage(){
     // Quem responde pelo caixa nao precisa aprovar o proprio lancamento: a
     // despesa do administrador ja nasce aprovada, e paga se ele disse que ja
     // pagou. A RPC confere o perfil, entao a bandeira so escolhe o caminho.
+    if(editando){
+      try{await atualizarDespesa(editando,body);setForm(false);setEditando(null)
+        setMensagem(`Despesa "${descricao}" atualizada. Os totais foram recalculados.`);await carregar()}
+      catch(x){setErro((x as Error).message)}
+      return
+    }
     try{const criada=await criarDespesa(body,admin);setForm(false)
       // A mensagem sai do que o banco devolveu, e nao do que a tela pediu:
       // quando a funcao de lancamento em um passo ainda nao foi aplicada, a
@@ -94,8 +103,6 @@ export default function DespesasPage(){
       await carregar()}
     catch(x){setErro((x as Error).message)}}
   async function aprovar(id:number){setErro('');try{await aprovarDespesa(id);await carregar()}catch(x){setErro((x as Error).message)}}
-  async function pagar(id:number){setErro('');setMensagem('')
-    try{await pagarDespesa(id,hoje(),'PIX');setMensagem('Pagamento registrado no caixa oficial.');await carregar()}catch(x){setErro((x as Error).message)}}
   async function anexar(despesa:Despesa,arquivo:File){setErro('')
     try{await anexarComprovante(despesa,arquivo);await carregar()}catch(x){setErro((x as Error).message)}}
   async function abrir(despesa:Despesa){setErro('')
@@ -118,12 +125,12 @@ export default function DespesasPage(){
           :null}</td><td><StatusBadge status={d.status}/></td><td>{d.aprovada?<span className="approved">Aprovada</span>:<button className="table-action" onClick={()=>void aprovar(d.id)}>Aprovar</button>}</td><td className="negative"><strong>{moeda(d.valor)}</strong></td>
         <td>{d.comprovanteNomeOriginal?<span className="comprovante-anexado"><button className="table-action" onClick={()=>void abrir(d)}>Ver</button><button className="table-action table-action-danger" onClick={()=>void remover(d)}>Remover</button></span>
           :<label className="table-action file-action">Anexar comprovante<input type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" onChange={e=>{const arquivo=e.target.files?.[0];if(arquivo)void anexar(d,arquivo);e.target.value=''}}/></label>}</td>
-        <td><span className="acoes-da-linha">{d.aprovada&&d.status!=='PAGO'&&d.status!=='REJEITADO'?<button className="table-action" onClick={()=>void pagar(d.id)}>Registrar pagamento</button>:null}
+        <td><span className="acoes-da-linha">
           {/* A comissao nasce e se recalcula sozinha a partir da OP: apagar a
               linha nao adianta, ela voltaria no proximo recalculo. */}
-          {d.protocolo?.startsWith('COMISSAO-')?<small>Automática</small>:<button className="table-action botao-lixeira" title={`Excluir ${d.descricao}`} aria-label={`Excluir despesa ${d.descricao}`} onClick={()=>setExcluindo(d)}>
+          {d.protocolo?.startsWith('COMISSAO-')?<small>Automática</small>:<><button className="table-action" onClick={()=>abrirEdicao(d)} aria-label={`Editar despesa ${d.descricao}`}>Editar</button><button className="table-action botao-lixeira" title={`Excluir ${d.descricao}`} aria-label={`Excluir despesa ${d.descricao}`} onClick={()=>setExcluindo(d)}>
             <IconeLixeira/>
-          </button>}</span></td></tr>)}
+          </button></>}</span></td></tr>)}
       </tbody></table></div>:<Vazio titulo="Nenhuma despesa" descricao="Registre custos ou aguarde lançamentos dos socorristas."/>}</section>
       :<section className="employee-callout"><span className="eyebrow">Perfil socorrista</span><h2>Registre os custos assim que acontecerem.</h2><p>Seus lançamentos serão conferidos pelo administrador antes de entrarem no financeiro.</p><button className="button button-primary" onClick={abrirForm}>Registrar agora</button></section>}
     {admin?<section className="panel" aria-label="Despesas fixas"><header className="panel-title"><div><h2>Despesas fixas</h2><p>O que cai todo mês: aluguel, seguro, parcela. Cadastre uma vez e lance o mês quando quiser.</p></div>
@@ -137,29 +144,29 @@ export default function DespesasPage(){
         <CampoNumero rotulo="Dia do vencimento" name="diaVencimento" decimais={0} min={1} max={31} required/>
         <Selecao rotulo="Veículo da despesa fixa" name="veiculoId" vazio="Sem veículo" opcoes={veiculos.map(x=>({valor:x.id,texto:x.identificacao}))}/>
         <button className="button button-ghost">Adicionar</button></form></section>:null}
-    {form?<Modal etiqueta="Saída" titulo="Registrar despesa" largo aoFechar={()=>setForm(false)}>
+    {form?<Modal etiqueta="Saída" titulo={editando?'Editar despesa':'Registrar despesa'} largo aoFechar={()=>{setForm(false);setEditando(null)}}>
       {/* O essencial primeiro: quanto, no que, quando e de quem. O resto e raro e
           fica em "Mais detalhes", fechado. */}
       <form onSubmit={salvar} className="form-grid three-columns">
-        <CampoValor rotulo="Valor" name="valor" required/>
-        <Selecao rotulo="Categoria" name="categoriaId" required opcoes={categorias.map(x=>({valor:x.id,texto:x.nome}))}/>
-        <label className="field"><span>Data</span><input name="data" type="date" defaultValue={hoje()} required/></label>
-        <Selecao rotulo="Viatura" name="veiculoId" vazio="Nenhuma" opcoes={veiculos.map(x=>({valor:x.id,texto:x.identificacao}))}/>
-        <Selecao rotulo="Socorrista" name="motoristaId" vazio="Nenhum" onChange={e=>setSocorristaDoForm(e.target.value)} opcoes={motoristas.map(x=>({valor:x.id,texto:x.nome}))}/>
-        <label className="field"><span>Descrição</span><input name="descricao" placeholder="Opcional" autoCapitalize="sentences" autoComplete="off"/></label>
+        <CampoValor rotulo="Valor" name="valor" defaultValue={editando?.valor} required/>
+        <Selecao rotulo="Categoria" name="categoriaId" defaultValue={editando?.categoriaId??''} required opcoes={categorias.map(x=>({valor:x.id,texto:x.nome}))}/>
+        <label className="field"><span>Data</span><input name="data" type="date" defaultValue={editando?.data??hoje()} required/></label>
+        <Selecao rotulo="Viatura" name="veiculoId" vazio="Nenhuma" defaultValue={editando?.veiculoId??''} opcoes={veiculos.map(x=>({valor:x.id,texto:x.identificacao}))}/>
+        <Selecao rotulo="Socorrista" name="motoristaId" vazio="Nenhum" defaultValue={editando?.motoristaId??''} onChange={e=>setSocorristaDoForm(e.target.value)} opcoes={motoristas.map(x=>({valor:x.id,texto:x.nome}))}/>
+        <label className="field"><span>Descrição</span><input name="descricao" placeholder="Opcional" defaultValue={editando?.descricao} autoCapitalize="sentences" autoComplete="off"/></label>
         {admin&&socorristaDoForm
-          ?<label className="porto-divergence field-wide despesa-desconto"><input type="checkbox" name="descontaComissao" aria-label="Descontar da comissão"/><span>Descontar da comissão do socorrista — gasto pessoal que ele pediu para tirar do bolso dele.</span></label>
+          ?<label className="porto-divergence field-wide despesa-desconto"><input type="checkbox" name="descontaComissao" defaultChecked={editando?.descontaComissao} aria-label="Descontar da comissão"/><span>Descontar da comissão do socorrista — gasto pessoal que ele pediu para tirar do bolso dele.</span></label>
           :null}
         <details className="field-wide despesa-mais-detalhes">
           <summary>Mais detalhes</summary>
           <div className="form-grid three-columns">
-            <Selecao rotulo="Forma de pagamento" name="formaPagamento" vazio="Não informada" opcoes={FORMAS_PAGAMENTO}/>
-            <label className="field"><span>Protocolo ou referência</span><input name="protocolo" autoCapitalize="characters" autoCorrect="off" spellCheck={false}/></label>
-            <label className="field two-span"><span>Observações</span><input name="observacoes" autoCapitalize="sentences" autoComplete="off"/></label>
+            <Selecao rotulo="Forma de pagamento" name="formaPagamento" vazio="Não informada" defaultValue={editando?.formaPagamento??''} opcoes={FORMAS_PAGAMENTO}/>
+            <label className="field"><span>Protocolo ou referência</span><input name="protocolo" defaultValue={editando?.protocolo} autoCapitalize="characters" autoCorrect="off" spellCheck={false}/></label>
+            <label className="field two-span"><span>Observações</span><input name="observacoes" defaultValue={editando?.observacoes} autoCapitalize="sentences" autoComplete="off"/></label>
           </div>
         </details>
-        <AcoesModal aoCancelar={()=>setForm(false)}>
-          <button className="button button-primary">Salvar despesa</button>
+        <AcoesModal aoCancelar={()=>{setForm(false);setEditando(null)}}>
+          <button className="button button-primary">{editando?'Salvar alterações':'Salvar despesa'}</button>
         </AcoesModal>
       </form>
     </Modal>:null}
