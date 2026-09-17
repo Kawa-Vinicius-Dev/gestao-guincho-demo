@@ -3,11 +3,12 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { useAoVivo } from '../dados/aoVivo'
 import { baixarRelatorio, type Relatorio } from '../dados/exportar'
 import { listarMotoristas } from '../dados/motoristas'
-import { corrigirOs, definirViaturaEmLote, listarOs, listarTodasAsOs, TAMANHO_DA_PAGINA, type FiltroOs, type LinhaOs, type PaginaOs, type SituacaoOs } from '../dados/porto/listaOs'
+import { corrigirOs, definirViaturaEmLote, informarValorManual, listarOs, listarTodasAsOs, TAMANHO_DA_PAGINA, type FiltroOs, type LinhaOs, type PaginaOs, type SituacaoDaOs, type SituacaoOs } from '../dados/porto/listaOs'
 import { listarVeiculos } from '../dados/veiculos'
 import { INICIO_DO_HISTORICO } from '../dados/porto/diario'
 import { Campo, Selecao } from '../components/Campos'
 import { Carregando } from '../components/EstadoPagina'
+import { CampoValor } from '../components/CampoValor'
 import { Modal } from '../components/Modal'
 import { ConfirmarAcao, type PedidoConfirmacao } from '../components/ConfirmarAcao'
 import { SeletorPeriodo } from '../components/SeletorPeriodo'
@@ -27,7 +28,24 @@ import { useValorAdiado } from '../utils/useValorAdiado'
 const SITUACOES = [
   { valor: 'PAGA', texto: 'Paga numa OP' },
   { valor: 'AGUARDANDO', texto: 'Aguardando OP' },
+  { valor: 'AGUARDANDO_ANALISE', texto: 'Sem valor' },
+  { valor: 'VALOR_MANUAL', texto: 'Com valor informado' },
+  { valor: 'AGUARDANDO_PROXIMA_OP', texto: 'Aguardando próxima OP' },
+  { valor: 'CONCILIADA', texto: 'Conciliada com a OP' },
+  { valor: 'DIVERGENTE', texto: 'Valor divergente' },
 ]
+
+/** Como cada situacao aparece na linha. */
+const ETIQUETAS: Record<SituacaoDaOs, { texto: string; classe: string }> = {
+  AGUARDANDO_ANALISE: { texto: 'Sem valor', classe: 'status-pendente' },
+  VALOR_MANUAL: { texto: 'Valor informado', classe: 'status-prevista' },
+  AGUARDANDO_PROXIMA_OP: { texto: 'Aguardando próxima OP', classe: 'status-pendente' },
+  CONCILIADA: { texto: 'Conciliada', classe: 'status-recebido' },
+  DIVERGENTE: { texto: 'Valor divergente', classe: 'status-erro_leitura' },
+}
+
+const competenciaDe = (os: LinhaOs) => (os.competenciaInicio && os.competenciaFim
+  ? `${data(os.competenciaInicio)} a ${data(os.competenciaFim)}` : '—')
 
 const siglaDe = (v: Veiculo) => (v.siglaPorto || v.identificacao).toUpperCase()
 
@@ -43,6 +61,8 @@ export default function PortoOrdensServicoPage() {
   const [sigla, setSigla] = useState('')
   const [situacao, setSituacao] = useState<SituacaoOs>('')
   const [semViatura, setSemViatura] = useState(false)
+  const [porCompetencia, setPorCompetencia] = useState(false)
+  const [informando, setInformando] = useState<LinhaOs | null>(null)
   const [emLote, setEmLote] = useState(false)
   const [pedido, setPedido] = useState<PedidoConfirmacao | null>(null)
   const [pagina, setPagina] = useState(0)
@@ -71,8 +91,8 @@ export default function PortoOrdensServicoPage() {
     inicio: buscandoNumero ? INICIO_DO_HISTORICO : periodo.inicio,
     fim: buscandoNumero ? (hoje > periodo.fim ? hoje : periodo.fim) : periodo.fim,
     numeroOs: numeroOsAdiado, numeroOp: numeroOpAdiado,
-    especialidade: especialidadeAdiada, motoristaId, sigla, situacao, semViatura,
-  }), [buscandoNumero, hoje, periodo.inicio, periodo.fim, numeroOsAdiado, numeroOpAdiado, especialidadeAdiada, motoristaId, sigla, situacao, semViatura])
+    especialidade: especialidadeAdiada, motoristaId, sigla, situacao, semViatura, porCompetencia,
+  }), [buscandoNumero, hoje, periodo.inicio, periodo.fim, numeroOsAdiado, numeroOpAdiado, especialidadeAdiada, motoristaId, sigla, situacao, semViatura, porCompetencia])
 
   // Filtro novo volta para a primeira pagina.
   useEffect(() => { setPagina(0) }, [filtro])
@@ -94,11 +114,11 @@ export default function PortoOrdensServicoPage() {
   }, [])
 
   const paginas = dados ? Math.max(1, Math.ceil(dados.total / TAMANHO_DA_PAGINA)) : 1
-  const temFiltro = Boolean(numeroOs || numeroOp || especialidade || motoristaId || sigla || situacao || semViatura)
+  const temFiltro = Boolean(numeroOs || numeroOp || especialidade || motoristaId || sigla || situacao || semViatura || porCompetencia)
   const veiculoPorSigla = useMemo(() => new Map(veiculos.map(v => [siglaDe(v), v])), [veiculos])
 
   function limparFiltros() {
-    setNumeroOs(''); setNumeroOp(''); setEspecialidade(''); setMotoristaId(0); setSigla(''); setSituacao(''); setSemViatura(false)
+    setNumeroOs(''); setNumeroOp(''); setEspecialidade(''); setMotoristaId(0); setSigla(''); setSituacao(''); setSemViatura(false); setPorCompetencia(false)
   }
 
   async function exportar(formato: 'excel' | 'pdf') {
@@ -162,6 +182,44 @@ export default function PortoOrdensServicoPage() {
     })
   }
 
+  /**
+   * Valor informado a mao.
+   *
+   * Kawa consegue consultar na Porto o valor de uma OS antes da OP sair. Esse
+   * valor entra como previsto — nao vira receita e nao gera comissao, porque
+   * quem paga e a OP. Por mexer em dinheiro na tela, pergunta antes.
+   */
+  function pedirValorManual(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    if (!informando) return
+    const os = informando
+    // O campo de dinheiro envia numero cru ("1480.90"); zero quer dizer apagar.
+    const bruto = Number(String(new FormData(e.currentTarget).get('valor') ?? '').trim())
+    const valor = Number.isFinite(bruto) && bruto > 0 ? bruto : null
+    setInformando(null)
+    setPedido({
+      titulo: valor === null ? `Apagar o valor informado da OS ${os.numero}?` : `Informar ${moeda(valor)} na OS ${os.numero}?`,
+      efeito: valor === null
+        ? <>A OS volta a ficar <strong>sem valor</strong>, aguardando a análise da Porto.</>
+        : <>O valor entra como <strong>previsto</strong>: aparece nos totais marcado como informado, <strong>não vira receita e não gera comissão</strong>. Quando a OP chegar, o valor dela substitui este e a diferença fica visível.</>,
+      resumo: [
+        ['Ordem de serviço', os.numero],
+        ['Atendimento', os.dataAtendimento ? data(os.dataAtendimento) : '—'],
+        ['Socorrista', os.motorista ?? '—'],
+        ['Valor', valor === null ? 'Nenhum' : moeda(valor)],
+      ],
+      textoConfirmar: valor === null ? 'Apagar valor' : 'Informar valor',
+      perigo: valor === null,
+      aoConfirmar: async () => {
+        await informarValorManual(os.id, valor)
+        setMensagem(valor === null
+          ? `Valor da OS ${os.numero} apagado.`
+          : `OS ${os.numero} com ${moeda(valor)} informado, aguardando a OP.`)
+        setVersao(v => v + 1)
+      },
+    })
+  }
+
   async function salvarCorrecao(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
     if (!corrigindo) return
@@ -211,6 +269,8 @@ export default function PortoOrdensServicoPage() {
         <Campo rotulo="Especialidade"><input value={especialidade} onChange={e => setEspecialidade(e.target.value)} autoComplete="off"/></Campo>
         <Selecao rotulo="Situação" vazio="Todas" value={situacao} onChange={e => setSituacao(e.target.value as SituacaoOs)} opcoes={SITUACOES}/>
         <label className="check-field"><input type="checkbox" checked={semViatura} onChange={e => setSemViatura(e.target.checked)}/><span>Só sem viatura</span></label>
+        {/* A data do servico nunca muda; a competencia e a da OP que vai pagar. */}
+        <label className="check-field"><input type="checkbox" checked={porCompetencia} onChange={e => setPorCompetencia(e.target.checked)}/><span>Filtrar por competência, não pela data do serviço</span></label>
         {temFiltro ? <button type="button" className="button button-ghost" onClick={limparFiltros}>Limpar filtros</button> : null}
       </form>
     </Painel>
@@ -218,9 +278,10 @@ export default function PortoOrdensServicoPage() {
     <GradeIndicadores>
       <Indicador rotulo="Ordens de serviço" valor={dados ? dados.total.toLocaleString('pt-BR') : '—'}
         apoio={temFiltro ? 'Com os filtros aplicados' : 'Todas do período'}/>
-      <Indicador rotulo="Valor" valor={dados ? moeda(dados.valorTotal) : '—'} apoio="Soma das OS da lista"/>
-      <Indicador rotulo="Sem viatura" valor={dados ? dados.semViatura.toLocaleString('pt-BR') : '—'}
-        apoio={dados?.semViatura ? 'Pendentes de viatura' : 'Todas com viatura'}/>
+      <Indicador rotulo="Valor previsto" valor={dados ? moeda(dados.valorPrevisto) : '—'}
+        apoio={dados && dados.valorPrevisto !== dados.valorTotal ? `${moeda(dados.valorTotal)} já pagos pela OP` : 'Oficial da OP mais o informado'}/>
+      <Indicador rotulo="Sem valor" valor={dados ? dados.semValor.toLocaleString('pt-BR') : '—'}
+        apoio={dados?.semValor ? 'Aguardando a análise da Porto' : 'Todas com valor'}/>
       <Indicador rotulo="Comissão" valor={dados ? moeda(dados.comissaoTotal) : '—'} apoio="20% das OS já pagas numa OP"/>
     </GradeIndicadores>
 
@@ -230,21 +291,34 @@ export default function PortoOrdensServicoPage() {
         ? <p className="empty-inline">{temFiltro ? 'Nenhuma OS com esses filtros neste período.' : 'Nenhuma OS neste período. Importe uma OP ou o painel diário.'}</p>
         : dados ? <div className="table-scroll"><table aria-label="Ordens de serviço">
           <thead><tr>
-            <th>OS</th><th>Atendimento</th><th>Especialidade</th><th>Socorrista</th><th>Viatura</th>
-            <th>OP</th><th>Valor</th><th>Comissão</th><th/>
+            <th>OS</th><th>Atendimento</th><th>Competência</th><th>Especialidade</th><th>Socorrista</th><th>Viatura</th>
+            <th>OP</th><th>Situação</th><th>Valor</th><th>Comissão</th><th/>
           </tr></thead>
           <tbody>{dados.itens.map(os => {
             const veiculo = os.viatura ? veiculoPorSigla.get(os.viatura.toUpperCase()) : undefined
             return <tr key={os.id}>
               <td><strong>{os.numero}</strong></td>
               <td>{os.dataAtendimento ? data(os.dataAtendimento) : '—'}</td>
+              <td><small>{competenciaDe(os)}</small></td>
               <td>{os.especialidade || '—'}</td>
               <td>{os.motoristaId ? <Link to={`/equipe/${os.motoristaId}`}>{os.motorista}</Link> : '—'}</td>
               <td>{veiculo ? <Link to={`/veiculos?veiculo=${veiculo.id}`}>{os.viatura}</Link> : os.viatura || '—'}</td>
               <td>{os.numeroOp ?? <small>Aguardando OP</small>}</td>
-              <td>{os.valorTotal ? moeda(os.valorTotal) : <small>Chega com a OP</small>}</td>
-              <td>{os.comissao !== undefined ? moeda(os.comissao) : '—'}</td>
-              <td><button className="table-action" onClick={() => setCorrigindo(os)} aria-label={`Corrigir OS ${os.numero}`}>Corrigir</button></td>
+              <td><span className={`vehicle-status ${ETIQUETAS[os.situacao].classe}`}>{ETIQUETAS[os.situacao].texto}</span></td>
+              {/* Com OP, o valor e o oficial; sem OP, o informado a mao, marcado como previsto. */}
+              <td>{os.ordemPagamentoId
+                ? <>{moeda(os.valorTotal)}
+                    {os.divergencia !== undefined
+                      ? <><br/><small>informado {moeda(os.valorManual ?? 0)} · {os.divergencia > 0 ? '+' : ''}{moeda(os.divergencia)}</small></>
+                      : null}</>
+                : os.valorManual !== undefined
+                  ? <>{moeda(os.valorManual)}<br/><small>informado, aguarda a OP</small></>
+                  : <small>Chega com a OP</small>}</td>
+              <td>{os.comissao !== undefined ? moeda(os.comissao) : <small>Só com a OP</small>}</td>
+              <td>
+                {os.ordemPagamentoId ? null : <button className="table-action" onClick={() => setInformando(os)} aria-label={`Informar valor da OS ${os.numero}`}>Informar valor</button>}
+                <button className="table-action" onClick={() => setCorrigindo(os)} aria-label={`Corrigir OS ${os.numero}`}>Corrigir</button>
+              </td>
             </tr>
           })}</tbody>
         </table></div> : null}
@@ -271,6 +345,17 @@ export default function PortoOrdensServicoPage() {
         <div className="modal-actions field-wide">
           <button type="button" className="button button-ghost" onClick={() => setCorrigindo(null)}>Cancelar</button>
           <button className="button button-primary" disabled={salvando}>{salvando ? 'Salvando…' : 'Salvar correção'}</button>
+        </div>
+      </form>
+    </Modal> : null}
+    {informando ? <Modal etiqueta={`OS ${informando.numero}`} titulo="Informar o valor da Porto" aoFechar={() => setInformando(null)}>
+      <form onSubmit={pedirValorManual} className="form-grid">
+        <p className="empty-inline">Use o valor que a Porto mostra para esta OS antes da OP sair. Ele conta como previsto e é substituído quando a OP chegar.</p>
+        <CampoValor rotulo="Valor do serviço" name="valor" defaultValue={informando.valorManual}
+          exigirPositivo={false} ajuda="Deixe zerado para apagar o valor informado."/>
+        <div className="modal-actions">
+          <button type="button" className="button button-ghost" onClick={() => setInformando(null)}>Cancelar</button>
+          <button className="button button-primary">Continuar</button>
         </div>
       </form>
     </Modal> : null}
