@@ -30,6 +30,7 @@ export default function QuilometragemPage() {
   const [editando, setEditando] = useState<Quilometragem | null>(null)
   const [excluindo, setExcluindo] = useState<Quilometragem | null>(null)
   const [mensagem, setMensagem] = useState('')
+  const [erro, setErro] = useState('')
 
   async function carregar() {
     const [quilometragens, veiculosCadastrados, motoristasCadastrados] = await Promise.all([
@@ -44,7 +45,7 @@ export default function QuilometragemPage() {
 
   useEffect(() => {
     void carregar()
-      .catch(erro => setMensagem((erro as Error).message))
+      .catch(falha => setErro((falha as Error).message))
       .finally(() => setCarregando(false))
   }, [periodo.inicio, periodo.fim])
 
@@ -67,6 +68,7 @@ export default function QuilometragemPage() {
   async function salvar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault()
     const form = new FormData(evento.currentTarget)
+    setErro('')
     try {
       const veiculoEscolhido=veiculos.find(v=>v.id===Number(form.get('veiculoId')))
       const dados = {
@@ -90,13 +92,14 @@ export default function QuilometragemPage() {
       setMensagem(editando ? 'Quilometragem atualizada.' : 'Quilometragem registrada na base oficial.')
       setEditando(null)
     } catch (erro) {
-      setMensagem((erro as Error).message)
+      setErro((erro as Error).message)
     }
   }
 
   return <div className="page-enter">
     <header className="page-heading"><div><span className="eyebrow">Eficiência operacional</span><h1>Km rodado e km morto</h1><p>Distâncias e custos registrados no banco oficial da operação.</p></div>
       <div className="heading-actions"><div className="periodo-no-cabecalho"><SeletorPeriodo periodo={periodo} aoMudar={setPeriodo}/></div><button className="button button-primary" onClick={() => { setEditando(null); setModal(true) }}>+ Registrar quilometragem</button></div></header>
+    {erro && !modal ? <div className="form-alert" role="alert">{erro}</div> : null}
     {mensagem ? <div className="success-notice">{mensagem}</div> : null}
 
     <section className="km-definitions">
@@ -123,7 +126,8 @@ export default function QuilometragemPage() {
       </tbody></table></div> : <Vazio titulo="Sem registros no período" descricao="Selecione outra competência ou registre a primeira quilometragem."/>}
     </section>
 
-    {modal ? <Modal etiqueta="Diário de bordo" titulo={editando ? 'Editar quilometragem' : 'Registrar quilometragem'} largo aoFechar={() => { setModal(false); setEditando(null) }}>
+    {modal ? <Modal etiqueta="Diário de bordo" titulo={editando ? 'Editar quilometragem' : 'Registrar quilometragem'} largo aoFechar={() => { setModal(false); setEditando(null); setErro('') }}>
+      {erro ? <div className="form-alert" role="alert">{erro}</div> : null}
       <form onSubmit={salvar} className="form-grid three-columns">
         <label className="field"><span>Data</span><input name="data" type="date" defaultValue={editando?.data ?? hojeLocal()} required/></label>
         <Selecao rotulo="Veículo" name="veiculoId" required vazio="Selecione" defaultValue={editando?.veiculoId ?? ''}

@@ -25,7 +25,7 @@ export default function EquipePage(){
 
   function abrirCadastro(){setEditando(null);setErro('');setModal(true)}
   function abrirEdicao(motorista:Motorista){setEditando(motorista);setErro('');setModal(true)}
-  function fechar(){setModal(false);setEditando(null)}
+  function fechar(){setModal(false);setEditando(null);setErro('')}
   async function salvar(evento:FormEvent<HTMLFormElement>){
     evento.preventDefault();const form=new FormData(evento.currentTarget);setSalvando(true);setErro('')
     const corpo={nome:String(form.get('nome')),telefone:String(form.get('telefone')||'')||null,documento:String(form.get('documento')||'')||null,qra:String(form.get('qra')||'')||null,veiculoId:Number(form.get('veiculoId'))||null,
@@ -74,6 +74,7 @@ export default function EquipePage(){
 
     {modal?<Modal etiqueta="Equipe" titulo={editando?'Editar socorrista':'Novo socorrista'}
       nomeAcessivel={editando?`Editar ${editando.nome}`:'Cadastrar socorrista'} aoFechar={fechar}>
+      {erro?<div className="form-alert" role="alert">{erro}</div>:null}
       <form onSubmit={salvar} className="form-grid two-columns" key={editando?.id??'novo'}>
         <label className="field field-wide"><span>Nome</span><input name="nome" defaultValue={editando?.nome} required autoCapitalize="words" autoComplete="off"/></label>
         <CampoTelefone rotulo="Telefone" name="telefone" defaultValue={editando?.telefone}/>
@@ -87,7 +88,7 @@ export default function EquipePage(){
         <div className="modal-actions field-wide"><button type="button" className="button button-ghost" onClick={fechar}>Cancelar</button><button className="button button-primary" disabled={salvando}>{salvando?'Salvando…':editando?'Salvar alterações':'Salvar socorrista'}</button></div>
       </form></Modal>:null}
 
-    {dandoAcesso?<Modal etiqueta={dandoAcesso.nome} titulo="Criar acesso" aoFechar={()=>setDandoAcesso(null)}>
+    {dandoAcesso?<Modal etiqueta={dandoAcesso.nome} titulo="Criar acesso" aoFechar={()=>{setDandoAcesso(null);setErro('')}}>
       <p>{dandoAcesso.nome} vai poder registrar as próprias despesas e ver a comissão dele. O sistema gera uma senha provisória para você repassar.</p>
       {/* O erro aparece aqui dentro: com a janela aberta, o aviso da pagina fica escondido atras dela. */}
       {erro?<div className="form-alert" role="alert">{erro}</div>:null}

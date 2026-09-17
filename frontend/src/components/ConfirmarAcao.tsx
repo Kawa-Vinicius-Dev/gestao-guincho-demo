@@ -33,7 +33,7 @@ export function ConfirmarAcao({
     finally { setExecutando(false) }
   }
 
-  return <Modal etiqueta="Confirmação" titulo={titulo} className="confirmar-exclusao"
+  return <Modal etiqueta="Confirmação" titulo={titulo} className="confirmar-exclusao" fecharAoClicarFora
     aoFechar={() => { if (!executando) aoFechar() }}>
     <p className="saida-texto">{efeito}</p>
     {resumo.length

@@ -106,7 +106,9 @@ export default function PortoImportacoesPage(){
       const financeiro=r.tipo==='OS_VINCULADAS'||r.tipo==='SERVICOS_GERAIS'?` · ${r.receitasCriadas} ${r.receitasCriadas===1?'receita criada':'receitas criadas'} · ${r.receitasAtualizadas} ${r.receitasAtualizadas===1?'receita atualizada':'receitas atualizadas'} · ${moeda(r.valorTotalRecebido)} recebidos${r.quinzena?` · período ${r.quinzena}`:''}${r.dataPagamento?` · pagamento em ${dataBr(r.dataPagamento)}`:''}`:''
       setMensagem(`${r.importados} ${r.importados===1?'registro importado':'registros importados'}${r.ignorados?` · ${r.ignorados} ignorados por duplicidade`:''}${financeiro}${r.viaturasNovas?.length?` · ${r.viaturasNovas.length===1?'viatura nova cadastrada':'viaturas novas cadastradas'}: ${r.viaturasNovas.join(', ')}`:''}.`)
       setSemSocorrista(r.osSemSocorrista??[])
-      setPrevia(null);setArquivo(null);setNumeroOp('');setChaveValidada('');limparConfirmacoes();setInputKey(x=>x+1)
+      // Gravou: a tela fica pronta para a proxima importacao. O texto colado so sai
+      // aqui; se a confirmacao falhar, ele continua para tentar de novo.
+      setPrevia(null);setArquivo(null);setConteudo('');setNumeroOp('');setChaveValidada('');limparConfirmacoes();setInputKey(x=>x+1)
     }catch(e){setErro((e as Error).message);setFalhaAoConfirmar(true)}finally{confirmacaoEmCurso.current=false;setEtapa('');setCarregando(false)}
   }
   const [pedido,setPedido]=useState<PedidoConfirmacao|null>(null)

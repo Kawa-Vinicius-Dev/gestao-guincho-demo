@@ -220,6 +220,8 @@ test('cola serviços, mostra resumo da prévia e confirma somente depois da aná
   expect(screen.getByText((_,element)=>element?.tagName==='SPAN'&&element.textContent==='2 registros novos')).toBeInTheDocument()
   expect(screen.getAllByText(/R\$\s*300,75/)).toHaveLength(2)
   expect(conteudoRecebido).toContain('OS 01/0000001-26')
+  // Enquanto a prévia espera confirmação, o texto colado continua lá.
+  expect(screen.getByLabelText(/conteúdo copiado da porto/i)).not.toHaveValue('')
   expect(screen.getByRole('button',{name:/confirmar importação/i})).toBeDisabled()
   await user.type(screen.getByLabelText(/número da op/i),'OP-GERAL-PAGA')
   await user.tab()
@@ -230,6 +232,8 @@ test('cola serviços, mostra resumo da prévia e confirma somente depois da aná
   expect(screen.getByText(/2 receitas criadas/i)).toBeInTheDocument()
   expect(screen.getByText(/R\$\s*300,75 recebidos/i)).toBeInTheDocument()
   expect(confirmacao).toMatchObject({numeroOrdemPagamento:'OP-GERAL-PAGA'})
+  // Gravou: o texto colado sai e a tela fica pronta para a proxima importacao.
+  expect(screen.getByLabelText(/conteúdo copiado da porto/i)).toHaveValue('')
 })
 
 test('habilita e confirma automaticamente OP 06422281 com período e 244 OS existentes',async()=>{
@@ -358,4 +362,26 @@ test('o aviso da importacao anterior some ao cancelar a prévia seguinte',async(
   await user.click(await screen.findByRole('button',{name:/cancelar prévia/i}));await confirmarNaJanela()
   expect(await screen.findByText(/prévia cancelada/i)).toBeInTheDocument()
   expect(screen.queryByText('5655840/26')).not.toBeInTheDocument()
+})
+
+// Se gravar falhar, nada do que foi colado se perde: da para tentar de novo.
+test('importação colada que falha ao confirmar mantém o texto', async () => {
+  servidor.use(
+    http.post('/api/porto/importacoes/previa-conteudo', () => HttpResponse.json({
+      id: 86, nomeArquivo: 'colagem.txt', tipo: 'PREVISAO_RECEBER', status: 'AGUARDANDO_CONFERENCIA', totalLinhas: 1,
+      requerOrdemPagamento: false, erros: [], linhas: [{ hashRegistro: 'falha-1', acao: 'IMPORTAR', dados: { numero_op: 'OP-FALHA-1', valor_total: '100.00' } }],
+    }, { status: 201 })),
+    http.post('/api/porto/importacoes/86/confirmar', () => HttpResponse.json({ detalhe: 'Instabilidade momentânea.' }, { status: 500 })),
+  )
+  const user = userEvent.setup()
+  render(<PortoImportacoesPage />)
+  await user.click(screen.getByRole('button', { name: /colar serviços da porto/i }))
+  await user.type(screen.getByLabelText(/conteúdo copiado da porto/i), 'OP-FALHA-1\t100.00')
+  await user.click(screen.getByRole('button', { name: /analisar conteúdo/i }))
+  await screen.findByText('OP-FALHA-1')
+
+  await user.click(screen.getByRole('button', { name: /confirmar importação/i })); await confirmarNaJanela()
+
+  expect(await screen.findByText(/instabilidade momentânea/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/conteúdo copiado da porto/i)).toHaveValue('OP-FALHA-1\t100.00')
 })
