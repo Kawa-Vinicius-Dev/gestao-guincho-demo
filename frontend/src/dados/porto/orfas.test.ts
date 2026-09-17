@@ -68,13 +68,22 @@ test('serviço cancelado não fica órfão nem trava a importação', async () =
   expect(previa.orfas).toEqual([])
 })
 
-test('confirmar é recusado enquanto houver OS sem socorrista', async () => {
+// Pedido do dono: OS sem socorrista vai para o Auxiliar (o banco faz isso), entao
+// a importacao nao trava mais esperando alguem escolher.
+test('OS sem socorrista não trava a importação: segue para o Auxiliar', async () => {
   servidorDePrevia()
+  let chamou = false
+  servidor.use(http.post(`${SUPA}/rest/v1/rpc/porto_confirmar_importacao`, () => {
+    chamou = true
+    return HttpResponse.json({ id: 55, tipo: 'PAINEL_DIARIO', importados: 2, ignorados: 0, novos: 2,
+      atualizados: 0, receitasCriadas: 0, valorTotal: 0, osSemSocorrista: [] })
+  }))
   const { criarPreviaConteudoPorto, confirmarImportacaoPorto } = await carregar()
   const previa = await criarPreviaConteudoPorto(COLADO)
 
-  await expect(confirmarImportacaoPorto(previa))
-    .rejects.toThrow(/sem socorrista/i)
+  await confirmarImportacaoPorto(previa)
+
+  expect(chamou).toBe(true)
 })
 
 test('com o socorrista escolhido na tela, a importação segue', async () => {

@@ -1,3 +1,4 @@
+import { ehAuxiliar } from '../utils/auxiliar'
 import { useEffect,useState } from 'react'
 import { Link,useParams } from 'react-router-dom'
 import { Selecao } from '../components/Campos'
@@ -35,8 +36,8 @@ export default function EquipeDetalhePage(){
     {detalhe?<>
       <section className="employee-identity panel" aria-label="Informações gerais do socorrista">
         <div className="employee-monogram">{detalhe.nome.split(' ').map(parte=>parte[0]).slice(0,2).join('')}</div>
-        <div className="employee-name"><span className={`staff-status ${detalhe.ativo?'staff-disponivel':'staff-folga'}`}>{detalhe.ativo?'Ativo':'Inativo'}</span><strong>{detalhe.nome}</strong><small>{detalhe.qra||'QRA não informado'}</small></div>
-        <dl><div><dt>Telefone</dt><dd>{detalhe.telefone||'Não informado'}</dd></div><div><dt>E-mail / usuário</dt><dd>{detalhe.email||'Não vinculado'}</dd></div></dl>
+        <div className="employee-name"><span className={`staff-status ${detalhe.ativo?'staff-disponivel':'staff-folga'}`}>{detalhe.ativo?'Ativo':'Inativo'}</span><strong>{detalhe.nome}</strong><small>{ehAuxiliar(detalhe.nome)?'Recebe as OS que chegam sem socorrista':detalhe.qra||'QRA não informado'}</small></div>
+        <dl><div><dt>Telefone</dt><dd>{detalhe.telefone||(ehAuxiliar(detalhe.nome)?'—':'Não informado')}</dd></div><div><dt>E-mail / usuário</dt><dd>{detalhe.email||'Não vinculado'}</dd></div></dl>
         <div className="employee-vehicles"><span>Viaturas utilizadas no período</span><div>{detalhe.veiculosUtilizados.length?detalhe.veiculosUtilizados.map(viatura=><strong key={viatura}>{viatura}</strong>):<small>Nenhuma viatura identificada nas OS deste período.</small>}</div></div>
       </section>
 
