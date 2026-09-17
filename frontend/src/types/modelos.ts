@@ -6,7 +6,7 @@ export type Perfil = 'ADMINISTRADOR' | 'FUNCIONARIO'
  */
 export interface Usuario { id: number | string; nome: string; email: string; perfil: Perfil; ativo?: boolean; senhaProvisoria?: boolean }
 export interface SenhaRedefinida { usuarioId: number | string; nome: string; email: string; senhaProvisoria: string }
-export interface Veiculo { id: number; identificacao: string; placa: string; modelo?: string; custoPorKm: number; siglaPorto?: string; ativo: boolean }
+export interface Veiculo { id: number; identificacao: string; placa?: string; modelo?: string; custoPorKm: number; siglaPorto?: string; ativo: boolean }
 export interface Contratante { id: number; nome: string; documento?: string; ativo: boolean }
 export interface Categoria { id: number; nome: string; tipo: 'RECEITA' | 'DESPESA'; ativo: boolean }
 /**
@@ -82,7 +82,7 @@ export interface OsSemSocorristaPorto { hashRegistro:string; numeroOs:string; so
 export interface ReassociacaoOsPorto { numeroOs:string; opAtual:string; novaOp:string; valor:number }
 export interface AnaliseOrdemPagamentoPorto { numero:string; existente:boolean; valorAtual?:number; somaArquivo:number; diferenca?:number; quantidadeReassociacoes:number; valorReassociacoes:number; reassociacoes:ReassociacaoOsPorto[] }
 export interface PreviaPorto { id:number; nomeArquivo:string; tipo:TipoRelatorioPorto; status:string; totalLinhas:number; linhas:LinhaPreviaPorto[]; erros:string[]; requerOrdemPagamento:boolean; resumo?:ResumoPreviaPorto; analiseOrdemPagamento?:AnaliseOrdemPagamentoPorto; orfas?:OsSemSocorristaPorto[]; osSemSocorrista?:string[] }
-export interface ConfirmacaoPorto { importacaoId:number; tipo:TipoRelatorioPorto; importados:number; ignorados:number; novos?:number; atualizados?:number; receitasCriadas:number; receitasAtualizadas:number; valorTotalRecebido:number; quinzena?:string; dataPagamento?:string; erros:string[]; osSemSocorrista?:string[] }
+export interface ConfirmacaoPorto { importacaoId:number; tipo:TipoRelatorioPorto; importados:number; ignorados:number; novos?:number; atualizados?:number; receitasCriadas:number; receitasAtualizadas:number; valorTotalRecebido:number; quinzena?:string; dataPagamento?:string; erros:string[]; osSemSocorrista?:string[]; viaturasNovas?:string[] }
 export type StatusConciliacaoPorto='SEM_COMPOSICAO'|'CONCILIADA'|'VALOR_ABAIXO'|'VALOR_ACIMA'|'RECEBIDA_COM_DIVERGENCIA'
 export type StatusOperacionalPorto='NORMAL'|'AGUARDANDO_LANCAMENTO'|'PROCESSADO'|'LIBERADO_APOS_ANALISE'|'PENDENTE_PORTO'|'DEVOLVIDO_FINALIZADO'|'CANCELADO'
 export type StatusFinanceiroPorto='AGUARDANDO_OP'|'PAGAMENTO_PROGRAMADO'|'A_CONFIRMAR'|'RECEBIDO'|'BLOQUEADO_PARA_PAGAMENTO'|'VALOR_DIVERGENTE'

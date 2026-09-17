@@ -92,7 +92,7 @@ export default function PortoImportacoesPage(){
         ?await confirmarImportacaoPorto(previa,{numeroOrdemPagamento:numeroNormalizado,confirmarDivergencias,confirmarReassociacoes,motivoDivergencia:motivoDivergencia||undefined,justificativaDivergencia:justificativaDivergencia.trim()||undefined})
         :await confirmarImportacaoPorto(previa,{confirmarDivergencias})
       const financeiro=r.tipo==='OS_VINCULADAS'||r.tipo==='SERVICOS_GERAIS'?` · ${r.receitasCriadas} ${r.receitasCriadas===1?'receita criada':'receitas criadas'} · ${r.receitasAtualizadas} ${r.receitasAtualizadas===1?'receita atualizada':'receitas atualizadas'} · ${moeda(r.valorTotalRecebido)} recebidos${r.quinzena?` · período ${r.quinzena}`:''}${r.dataPagamento?` · pagamento em ${dataBr(r.dataPagamento)}`:''}`:''
-      setMensagem(`${r.importados} ${r.importados===1?'registro importado':'registros importados'}${r.ignorados?` · ${r.ignorados} ignorados por duplicidade`:''}${financeiro}.`)
+      setMensagem(`${r.importados} ${r.importados===1?'registro importado':'registros importados'}${r.ignorados?` · ${r.ignorados} ignorados por duplicidade`:''}${financeiro}${r.viaturasNovas?.length?` · ${r.viaturasNovas.length===1?'viatura nova cadastrada':'viaturas novas cadastradas'}: ${r.viaturasNovas.join(', ')}`:''}.`)
       setSemSocorrista(r.osSemSocorrista??[])
       setPrevia(null);setArquivo(null);setNumeroOp('');setChaveValidada('');limparConfirmacoes();setInputKey(x=>x+1)
     }catch(e){setErro((e as Error).message);setFalhaAoConfirmar(true)}finally{confirmacaoEmCurso.current=false;setEtapa('');setCarregando(false)}

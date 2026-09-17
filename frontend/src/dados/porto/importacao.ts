@@ -469,6 +469,7 @@ export async function confirmarImportacaoPorto(
     atualizados: number; receitasCriadas: number; valorTotal: number
     periodo?: string; dataPagamento?: string
     osSemSocorrista: { id: number; numero: string }[]
+    viaturasNovas?: string[]
   }
 
   // A importacao cria receita: o dashboard em cache ficou velho.
@@ -490,6 +491,8 @@ export async function confirmarImportacaoPorto(
     dataPagamento: resposta.dataPagamento,
     erros: [],
     osSemSocorrista: (resposta.osSemSocorrista ?? []).map(os => os.numero),
+    // Sigla que chegou no arquivo e ainda nao existia vira viatura sozinha.
+    viaturasNovas: resposta.viaturasNovas ?? [],
   }
 }
 

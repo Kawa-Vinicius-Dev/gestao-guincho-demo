@@ -85,6 +85,7 @@ test('com o socorrista escolhido na tela, a importação segue', async () => {
     return HttpResponse.json({
       id: 55, tipo: 'PAINEL_DIARIO', importados: 2, ignorados: 0, novos: 2,
       atualizados: 0, receitasCriadas: 0, valorTotal: 0, osSemSocorrista: [],
+      viaturasNovas: ['L200'],
     })
   }))
   const { criarPreviaConteudoPorto, confirmarImportacaoPorto } = await carregar()
@@ -98,6 +99,8 @@ test('com o socorrista escolhido na tela, a importação segue', async () => {
   const resposta = await confirmarImportacaoPorto(resolvida)
 
   expect(resposta.importados).toBe(2)
+  // Sigla nova no diario vira viatura sozinha, e a tela conta quais foram.
+  expect(resposta.viaturasNovas).toEqual(['L200'])
   const linhas = enviado.p_linhas as Record<string, string>[]
   expect(linhas.every(l => l.motorista_id === '4')).toBe(true)
 })
