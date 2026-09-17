@@ -1565,3 +1565,24 @@ tbody tr{transition:background-color .14s ease}
 .periodo-no-cabecalho{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px}
 .periodo-no-cabecalho .field{margin:0;min-width:150px}
 .periodo-no-cabecalho .field:first-child{min-width:260px}
+
+/* ===========================================================================
+   Listas de cadastro: as colunas param no mesmo lugar em toda linha
+   ---------------------------------------------------------------------------
+   A linha era um flex com `justify-content:space-between` e tres filhos: nome,
+   detalhe e acoes. Com isso o detalhe nao tem coluna — ele para onde o nome
+   deixar. Em Categorias, "Despesa" ficava um pouco mais a direita a cada nome
+   mais longo, e a lista inteira parecia torta.
+
+   Grade com as mesmas medidas em toda linha resolve: as duas primeiras colunas
+   dividem o espaco em partes iguais, entao comecam no mesmo x em todas as
+   linhas. A terceira tem minimo de 96px para o caso de os botoes mudarem de
+   texto entre uma linha e outra — "Desativar" e "Reativar", nas despesas fixas,
+   tem larguras diferentes e desalinhariam a coluna do meio.
+
+   Vale para as quatro listas que usam esta classe (contratantes, categorias,
+   acessos e despesas fixas): todas tem a mesma forma de tres filhos.
+   =========================================================================== */
+.simple-list li{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(96px,auto);
+  align-items:center;gap:var(--espaco-2)}
+.simple-list li>:last-child{justify-self:end}
