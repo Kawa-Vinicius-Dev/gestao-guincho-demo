@@ -23,7 +23,8 @@ import { moduloNoSupabase } from './modo'
  */
 const COLUNAS = [
   'id', 'descricao', 'valor', 'data_lancamento', 'vencimento', 'data_pagamento',
-  'forma_pagamento', 'status', 'aprovada', 'protocolo', 'observacoes',
+  'forma_pagamento', 'status', 'aprovada', 'protocolo', 'observacoes', 'desconta_comissao',
+  'categoria_id', 'veiculo_id', 'motorista_id',
   'comprovante_arquivo', 'comprovante_nome_original', 'comprovante_tamanho_bytes',
   'categorias(nome)', 'veiculos(identificacao)', 'motoristas(nome)', 'perfis!despesas_criado_por_fkey(nome)',
 ].join(',')
@@ -41,6 +42,10 @@ type LinhaDespesa = {
   aprovada: boolean
   protocolo: string | null
   observacoes: string | null
+  desconta_comissao?: boolean
+  categoria_id?: number | null
+  veiculo_id?: number | null
+  motorista_id?: number | null
   comprovante_arquivo: string | null
   comprovante_nome_original: string | null
   comprovante_tamanho_bytes: number | null
@@ -60,6 +65,9 @@ function paraModelo(linha: LinhaDespesa): Despesa {
     id: linha.id,
     descricao: linha.descricao,
     categoria: um(linha.categorias)?.nome ?? '',
+    categoriaId: linha.categoria_id ?? undefined,
+    veiculoId: linha.veiculo_id ?? undefined,
+    motoristaId: linha.motorista_id ?? undefined,
     valor: Number(linha.valor),
     data: linha.data_lancamento,
     vencimento: linha.vencimento ?? undefined,
@@ -68,6 +76,7 @@ function paraModelo(linha: LinhaDespesa): Despesa {
     veiculo: um(linha.veiculos)?.identificacao,
     motorista: um(linha.motoristas)?.nome,
     protocolo: linha.protocolo ?? undefined,
+    descontaComissao: Boolean(linha.desconta_comissao),
     comprovante: linha.comprovante_arquivo ?? undefined,
     observacoes: linha.observacoes ?? undefined,
     status: linha.status,
@@ -99,6 +108,8 @@ export interface DadosDespesa {
    * unica que desconta da comissao.
    */
   natureza?: 'GERAL' | 'ALIMENTACAO_FUNCIONARIO'
+  /** Gasto pessoal do socorrista que sai da comissao dele. So vale com socorrista. */
+  descontaComissao?: boolean
 }
 
 /**
@@ -111,11 +122,14 @@ export interface DadosDespesa {
  */
 export const TETO_DA_LISTA = 300
 
-export async function listarDespesas(): Promise<Despesa[]> {
+/** Com periodo, traz as despesas dele: um ano de comissoes passa do teto da lista. */
+export async function listarDespesas(periodo?: { inicio: string; fim: string }): Promise<Despesa[]> {
   if (!moduloNoSupabase('despesas')) return api<Despesa[]>('/api/despesas')
 
+  let consulta = supabase().from('despesas').select(COLUNAS)
+  if (periodo) consulta = consulta.gte('data_lancamento', periodo.inicio).lte('data_lancamento', periodo.fim)
   const linhas = ou(
-    await supabase().from('despesas').select(COLUNAS)
+    await consulta
       .order('data_lancamento', { ascending: false })
       .order('id', { ascending: false })
       .limit(TETO_DA_LISTA),
@@ -174,6 +188,7 @@ export async function criarDespesa(dados: DadosDespesa, jaAprovada = false): Pro
       protocolo: dados.protocolo || null,
       observacoes: dados.observacoes || null,
       natureza: dados.natureza ?? 'GERAL',
+      desconta_comissao: Boolean(dados.descontaComissao && dados.motoristaId),
       status: 'PENDENTE',
       aprovada: false,
       criado_por: await usuarioAtualId(),
@@ -181,6 +196,27 @@ export async function criarDespesa(dados: DadosDespesa, jaAprovada = false): Pro
     'Não foi possível registrar a despesa.',
   ) as unknown as LinhaDespesa
   return paraModelo(linha)
+}
+
+/**
+ * Marca ou desmarca o gasto como pessoal do socorrista, que sai da comissao dele.
+ *
+ * Existe para a despesa ja lancada: a marca so aparecia no formulario de uma
+ * despesa nova, e o gasto lancado antes ficava sem como descontar. O banco
+ * recalcula a comissao sozinho quando a marca muda.
+ */
+export async function marcarDescontoComissao(id: number, desconta: boolean): Promise<void> {
+  invalidarCacheFinanceiro()
+  if (!moduloNoSupabase('despesas')) {
+    throw new ApiError('Marcar desconto só existe na versão que fala direto com o Supabase.', 501)
+  }
+  const alteradas = ou(
+    await supabase().from('despesas').update({ desconta_comissao: desconta }).eq('id', id).select('id'),
+    'Não foi possível alterar o desconto da comissão.',
+  ) as { id: number }[]
+  if (!alteradas.length) {
+    throw new ApiError('Você não tem permissão para alterar esta despesa.', 403)
+  }
 }
 
 export async function aprovarDespesa(id: number): Promise<void> {
@@ -234,6 +270,34 @@ export async function pagarDespesa(
  * linha, e nao antes, porque o caminho contrario — arquivo apagado, exclusao
  * recusada — deixaria uma despesa apontando para um arquivo que nao existe.
  */
+/**
+ * Corrige uma despesa ja lancada. So o administrador: a policy de update exige.
+ * A comissao automatica nao passa por aqui — ela se recalcula a partir da OP.
+ * Despesa paga acompanha a data: o dashboard conta pela data do pagamento.
+ */
+export async function atualizarDespesa(despesa: Despesa, dados: DadosDespesa): Promise<void> {
+  invalidarCacheFinanceiro()
+  const atualizadas = ou(
+    await supabase().from('despesas').update({
+      descricao: dados.descricao,
+      categoria_id: dados.categoriaId,
+      valor: dados.valor,
+      data_lancamento: dados.data,
+      ...(despesa.status === 'PAGO' ? { data_pagamento: dados.data } : {}),
+      forma_pagamento: dados.formaPagamento ?? null,
+      veiculo_id: dados.veiculoId ?? null,
+      motorista_id: dados.motoristaId ?? null,
+      protocolo: dados.protocolo ?? null,
+      observacoes: dados.observacoes ?? null,
+      desconta_comissao: Boolean(dados.motoristaId && dados.descontaComissao),
+    }).eq('id', despesa.id).select('id'),
+    'Não foi possível salvar a despesa.',
+  ) as { id: number }[]
+  if (!atualizadas.length) {
+    throw new ApiError('Você não tem permissão para editar despesas.', 403)
+  }
+}
+
 export async function excluirDespesa(despesa: Despesa): Promise<void> {
   invalidarCacheFinanceiro()
   if (!moduloNoSupabase('despesas')) {
@@ -279,6 +343,7 @@ async function lancarJaAprovada(dados: DadosDespesa): Promise<Despesa | null> {
     p_natureza: dados.natureza ?? 'GERAL',
     p_paga: dados.status === 'PAGO',
     p_data_pagamento: dados.dataPagamento || null,
+    p_desconta_comissao: Boolean(dados.descontaComissao && dados.motoristaId),
   })
   // So a ausencia da funcao volta para o caminho antigo. Recusa de permissao,
   // valor invalido e qualquer outro erro sobem como erro: sao respostas de

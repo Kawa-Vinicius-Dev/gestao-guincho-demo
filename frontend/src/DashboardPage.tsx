@@ -1,13 +1,14 @@
-import { useEffect,useState } from 'react'
+import { useEffect,useRef,useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Campo } from './components/Campos'
+import { SeletorPeriodo } from './components/SeletorPeriodo'
 import { CabecalhoPagina } from './components/ui/Pagina'
+import { useAoVivo } from './dados/aoVivo'
 import { dashboardEmCache, lerDashboard } from './dados/dashboard'
 import { IndicadoresDaOperacao, PainelDeGastos, PainelDeKm, PainelFaturamentoPorSocorrista,
   PainelFaturamentoPorViatura, ResultadoDoPeriodo } from './dashboard/PaineisDoResultado'
 import type { Dashboard } from './types/modelos'
 import { data } from './utils/formatadores'
-import { gravarFiltro, lerFiltro } from './utils/filtroLembrado'
+import { usePeriodoGlobal } from './utils/periodoGlobal'
 
 /**
  * Visao geral: o painel principal do sistema.
@@ -17,27 +18,21 @@ import { gravarFiltro, lerFiltro } from './utils/filtroLembrado'
  * trouxe o dinheiro e para onde ele foi. Km so aparece quando ha km registrado.
  */
 
-/** Abre no mes corrente, que e o recorte mais pedido; a partir dai o periodo e livre. */
-function mesCorrente(){const d=new Date(),mes=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`
-  return {inicio:`${mes}-01`,fim:`${mes}-${String(new Date(d.getFullYear(),d.getMonth()+1,0).getDate()).padStart(2,'0')}`}}
-/**
- * O periodo escolhido sobrevive a ida e volta para outra tela.
- *
- * Quem abria um semestre aqui, ia registrar uma despesa e voltava, reencontrava
- * o mes corrente e refazia as duas datas a cada consulta — a tela remonta a cada
- * navegacao e o estado nascia do zero. O mes corrente continua sendo o padrao;
- * so a primeira visita da sessao e que o usa.
- */
-type Periodo={inicio:string,fim:string}
-const periodoInicial=():Periodo=>lerFiltro<Periodo>('visao-geral',mesCorrente())
 
 export default function DashboardPage(){
-  const [{inicio,fim},setPeriodo]=useState(periodoInicial)
+  // O periodo e o do sistema inteiro: trocar aqui troca nas outras telas.
+  const [periodo,setPeriodo]=usePeriodoGlobal()
+  const {inicio,fim}=periodo
   const [financeiro,setFinanceiro]=useState<Dashboard|null>(null)
   const [erro,setErro]=useState('')
   // Enquanto revalida, a tela fica de pe com os numeros de antes em vez de
   // piscar o esqueleto a cada troca de periodo.
   const [atualizando,setAtualizando]=useState(false)
+  // Uma despesa, uma OP ou uma comissao mudou em qualquer lugar: a tela consulta
+  // de novo, mantendo os numeros de agora ate os novos chegarem.
+  const [versao,setVersao]=useState(0)
+  useAoVivo(()=>setVersao(v=>v+1))
+  const periodoCarregado=useRef('')
   const periodoValido=Boolean(inicio&&fim&&inicio<=fim)
   const avisoPeriodo=!inicio||!fim
     ? 'Informe a data inicial e a data final para consultar o período.'
@@ -49,7 +44,10 @@ export default function DashboardPage(){
     }
     let valeu=true
     const guardado=dashboardEmCache(inicio,fim)
+    const mesmoPeriodo=periodoCarregado.current===`${inicio}|${fim}`
+    periodoCarregado.current=`${inicio}|${fim}`
     if(guardado){setFinanceiro(guardado.financeiro);setAtualizando(true)}
+    else if(mesmoPeriodo)setAtualizando(true)
     else setFinanceiro(null)
     setErro('')
     lerDashboard(inicio,fim)
@@ -57,13 +55,8 @@ export default function DashboardPage(){
       .catch(e=>{if(valeu)setErro(e.message)})
       .finally(()=>{if(valeu)setAtualizando(false)})
     return()=>{valeu=false}
-  },[inicio,fim])
+  },[inicio,fim,versao])
 
-  // Grava fora dos handlers das datas: assim nenhum caminho novo de troca de
-  // periodo esquece de lembrar o que escolheu. Data pela metade nao vai para o
-  // armazenamento — voltar para uma tela com "de" vazio e pior do que voltar
-  // para o mes corrente.
-  useEffect(()=>{if(inicio&&fim)gravarFiltro('visao-geral',{inicio,fim})},[inicio,fim])
 
   const temKm=Boolean(financeiro&&(financeiro.kmRemunerado||financeiro.kmMorto))
 
@@ -86,15 +79,8 @@ export default function DashboardPage(){
       : null}
 
     <section className="panel destaque" aria-label="Resultado do período">
-      <form className="destaque-periodo destaque-periodo-datas" onSubmit={e=>e.preventDefault()}>
-        <Campo rotulo="De">
-          <input aria-label="Data inicial" type="date" value={inicio} max={fim||undefined}
-            onChange={e=>setPeriodo(p=>({...p,inicio:e.target.value}))}/>
-        </Campo>
-        <Campo rotulo="Até">
-          <input aria-label="Data final" type="date" value={fim} min={inicio||undefined}
-            onChange={e=>setPeriodo(p=>({...p,fim:e.target.value}))}/>
-        </Campo>
+      <form className="destaque-periodo destaque-periodo-sem-botao" onSubmit={e=>e.preventDefault()}>
+        <SeletorPeriodo periodo={periodo} aoMudar={setPeriodo}/>
       </form>
 
       {periodoValido&&financeiro

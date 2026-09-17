@@ -86,25 +86,39 @@ window.fetch = (async (entrada: RequestInfo | URL, init?: RequestInit) => {
 
 // Resposta real de dashboard_resumo('2026-04-01', '2026-04-30'), copiada do banco
 // em 16/09/2026: ainda nao ha despesa, km nem viatura nas OS.
+// Resposta real de dashboard_resumo('2026-03-30', '2026-04-29'), copiada do banco
+// em 16/09/2026, ja com a comissao automatica e a alimentacao lancada.
 const visaoGeral = {
   porto: { valorRecebido: 74770, valorProgramado: 74770, quantidadeTotalOps: 1, valorTotalPrevisto: 74770 },
   financeiro: {
-    kmMorto: 0, custoKmMorto: 0, kmRemunerado: 0, producaoPaga: 74770, despesasPagas: 0,
-    totalAtrasado: 0, comissaoAPagar: 14166.28, saldoProjetado: 74770, saldoRealizado: 74770,
+    kmMorto: 0, custoKmMorto: 0, kmRemunerado: 0, producaoPaga: 74770, despesasPagas: 14366.27,
+    totalAtrasado: 0, comissaoAPagar: 0, saldoProjetado: 60403.73, saldoRealizado: 60403.73,
     receitaPrevista: 0, receitaRecebida: 74770, producaoPendente: 0, despesasPrevistas: 0,
     servicosDoPeriodo: 275, servicosPendentes: 0, quilometragemTotal: 0, registrosImportados: 275,
-    resultadoPorVeiculo: [], despesasPorCategoria: [], comissaoSobreProducao: 14954,
+    resultadoPorVeiculo: [
+      { kmMorto: 0, veiculo: 'L168', despesas: 200, receitas: 0, resultado: -200, veiculoId: 2, custoKmMorto: 0 },
+    ],
+    despesasPorCategoria: [
+      { valor: 14166.27, categoria: 'Comissão de socorrista', categoriaId: 5, participacao: 98.61 },
+      { valor: 200, categoria: 'Alimentação', categoriaId: 4, participacao: 1.39 },
+    ],
+    comissaoSobreProducao: 14954,
     resultadoPorSocorrista: [
       { comissao: 3972.82, despesas: 0, producao: 19864.11, servicos: 85, custoTotal: 3972.82, socorrista: 'ANDERSON JORGE RIBEIRO', motoristaId: 9 },
       { comissao: 4770.62, despesas: 0, producao: 23853.12, servicos: 49, custoTotal: 4770.62, socorrista: 'JEFERSON MARTINS DA SILVA', motoristaId: 1 },
       { comissao: 1665.24, despesas: 0, producao: 8326.2, servicos: 50, custoTotal: 1665.24, socorrista: 'NATANAEL JOSE DE FREITAS NETO', motoristaId: 4 },
       { comissao: 3757.59, despesas: 0, producao: 18787.95, servicos: 75, custoTotal: 3757.59, socorrista: 'QEBSON RAMOS DA SILVA', motoristaId: 2 },
     ],
-    despesasAcumuladasPorDia: [],
+    despesasAcumuladasPorDia: [
+      { data: '2026-04-26', valorDia: 200, acumulado: 200, origens: [{ categoria: 'Alimentação', valor: 200 }] },
+      { data: '2026-04-29', valorDia: 14166.27, acumulado: 14366.27, origens: [{ categoria: 'Comissão de socorrista', valor: 14166.27 }] },
+    ],
   },
 }
 
 const daVisao = new URLSearchParams(location.search).get('tela') === 'visao'
+// A Visao geral abre no periodo da OP real, para os graficos terem o que mostrar.
+if (daVisao) sessionStorage.setItem('filtro:periodo', JSON.stringify({ inicio: '2026-03-30', fim: '2026-04-29', op: '1' }))
 
 const Pagina = daVisao
   ? (await import('./DashboardPage')).default

@@ -70,15 +70,15 @@ export async function baixarRelatorioCsv(
   baixarArquivoCsv(paraCsv(linhas), nomeArquivo)
 }
 
-export async function baixarRelatorioComissoes(calendarioPagamentoId: number): Promise<void> {
-  if (!moduloNoSupabase('comissoes')) return comissoesPeloRender(calendarioPagamentoId)
+export async function baixarRelatorioComissoes(ordensPagamento: number[]): Promise<void> {
+  if (!moduloNoSupabase('comissoes')) return comissoesPeloRender(ordensPagamento[0])
 
-  const resumo = await resumirComissoes(calendarioPagamentoId)
+  const resumo = await resumirComissoes(ordensPagamento)
   const linhas: (string | number)[][] = [
-    ['Socorrista', 'Serviços pagos', 'Produção', 'Comissão bruta', 'Alimentação', 'Líquido', 'Pago em'],
+    ['Socorrista', 'Serviços pagos', 'Produção', 'Comissão bruta', 'Descontos', 'Líquido', 'Lançada em'],
     ...resumo.map(r => [
       r.socorrista, r.quantidadeServicosPagos, moeda(r.producaoPaga),
-      moeda(r.comissaoBruta), moeda(r.alimentacaoAprovada), moeda(r.liquido),
+      moeda(r.comissaoBruta), moeda(r.descontos), moeda(r.liquido),
       r.pagamento?.dataPagamento ?? '',
     ]),
   ]

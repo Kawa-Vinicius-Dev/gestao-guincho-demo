@@ -1,10 +1,10 @@
 import type {
-  AlimentacaoComissao, Comissao, DetalheSocorrista,
-  PagamentoComissao, ResumoComissao,
+  AlimentacaoComissao, Comissao, DetalheSocorrista, ResumoComissao,
 } from '../types/modelos'
 import { invalidarCacheFinanceiro } from './cacheFinanceiro'
 import { ou, supabase } from './cliente'
 import { listarPeriodosDeOp } from './porto'
+import { agruparPorPeriodo, type PeriodoPorto } from '../utils/periodos'
 
 
 /**
@@ -17,7 +17,7 @@ import { listarPeriodosDeOp } from './porto'
  * proprio periodo da OP.
  *
  * Tudo por RPC, e nao consulta direta, por dois motivos. O calculo cruza as OS
- * da OP com as alimentacoes aprovadas do periodo, junta que nao cabe num
+ * da OP com os gastos marcados do periodo, junta que nao cabe num
  * `.select()` sem virar varias idas. E o socorrista precisa ver o numero da OP
  * que pagou cada servico dele, e OP e tabela de administrador: a funcao le por
  * ele e devolve so as linhas dele, em vez de abrir o caixa da Porto inteiro.
@@ -30,12 +30,17 @@ import { listarPeriodosDeOp } from './porto'
  */
 export { listarPeriodosDeOp as listarOpsComissao }
 
+/** Os periodos das telas de comissao: as OPs de cada quinzena juntas. */
+export async function listarPeriodosComissao(): Promise<PeriodoPorto[]> {
+  return agruparPorPeriodo(await listarPeriodosDeOp())
+}
+
 export async function lerComissaoDaOp(
-  ordemPagamentoId: number, motoristaId?: number,
+  ordensPagamento: number[], motoristaId?: number,
 ): Promise<Comissao> {
   return ou(
-    await supabase().rpc('comissao_da_op', {
-      p_op_id: ordemPagamentoId,
+    await supabase().rpc('comissao_das_ops', {
+      p_op_ids: ordensPagamento,
       p_motorista_id: motoristaId ?? null,
     }),
     'Não foi possível carregar a comissão.',
@@ -43,22 +48,22 @@ export async function lerComissaoDaOp(
 }
 
 export async function resumirComissoes(
-  ordemPagamentoId: number, motoristaId?: number,
+  ordensPagamento: number[], motoristaId?: number,
 ): Promise<ResumoComissao[]> {
   return ou(
-    await supabase().rpc('resumo_comissoes_op', {
-      p_op_id: ordemPagamentoId, p_motorista_id: motoristaId ?? null,
+    await supabase().rpc('resumo_comissoes_ops', {
+      p_op_ids: ordensPagamento, p_motorista_id: motoristaId ?? null,
     }),
     'Não foi possível carregar o resumo de comissões.',
   ) as ResumoComissao[]
 }
 
 export async function obterDetalheSocorrista(
-  motoristaId: number, ordemPagamentoId: number,
+  motoristaId: number, ordensPagamento: number[],
 ): Promise<DetalheSocorrista> {
   return ou(
-    await supabase().rpc('detalhe_socorrista_op', {
-      p_motorista_id: motoristaId, p_op_id: ordemPagamentoId,
+    await supabase().rpc('detalhe_socorrista_ops', {
+      p_motorista_id: motoristaId, p_op_ids: ordensPagamento,
     }),
     'Não foi possível carregar o socorrista.',
   ) as DetalheSocorrista
@@ -73,6 +78,7 @@ export async function registrarAlimentacao(
     }),
     'Não foi possível registrar a alimentação.',
   ) as Record<string, unknown>
+  invalidarCacheFinanceiro()
   return {
     id: d.id as number,
     motoristaId: d.motorista_id as number,
@@ -82,33 +88,4 @@ export async function registrarAlimentacao(
     aprovada: d.aprovada as boolean,
     observacoes: (d.observacoes as string) ?? undefined,
   }
-}
-
-export async function registrarPagamentoComissao(
-  motoristaId: number, ordemPagamentoId: number, dataPagamento: string,
-  formaPagamento?: string, observacoes?: string,
-): Promise<PagamentoComissao> {
-  const p = ou(
-    await supabase().rpc('pagar_comissao_op', {
-      p_motorista_id: motoristaId, p_op_id: ordemPagamentoId,
-      p_data_pagamento: dataPagamento, p_forma_pagamento: formaPagamento || null,
-      p_observacoes: observacoes || null,
-    }),
-    'Não foi possível registrar o pagamento.',
-  ) as Record<string, unknown>
-  const pagamento = {
-    id: p.id as number,
-    motoristaId: p.motorista_id as number,
-    ordemPagamentoId: p.ordem_pagamento_id as number,
-    despesaId: p.despesa_id as number,
-    valorPago: Number(p.valor_pago),
-    dataPagamento: p.data_pagamento as string,
-    formaPagamento: (p.forma_pagamento as string) ?? undefined,
-    observacoes: (p.observacoes as string) ?? undefined,
-    pagoPor: '',
-    criadoEm: p.criado_em as string,
-  }
-  // O repasse nasce como despesa paga: o resultado do periodo mudou.
-  invalidarCacheFinanceiro()
-  return pagamento
 }

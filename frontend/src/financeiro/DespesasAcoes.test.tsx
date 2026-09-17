@@ -1,9 +1,10 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
-import { expect, test } from 'vitest'
+import { expect, test, vi } from 'vitest'
 import App from '../App'
 import { servidor } from '../test/servidor'
+import { escolher } from '../test/dropdown'
 
 const TOKEN_KEY = 'fluxo-gestao:token:v1'
 
@@ -77,4 +78,60 @@ test('a lista mostra de quem é a despesa, e não só a viatura', async () => {
   const linhas = [...screen.getAllByRole('row')]
   const diesel2 = linhas.find(l => within(l).queryByText('Diesel'))!
   expect(within(diesel2).getByText('L168')).toBeInTheDocument()
+})
+
+// Kawa: registrar despesa estava demorado. O essencial basta: valor, categoria e
+// data. Sem descricao, o nome da categoria ja diz o que foi.
+test('despesa se registra só com valor e categoria', async () => {
+  let enviado: Record<string, unknown> = {}
+  servidor.use(http.post('/api/despesas', async ({ request }) => {
+    enviado = await request.json() as Record<string, unknown>
+    return HttpResponse.json({ ...diesel, id: 99, descricao: 'Combustível', status: 'PAGO' })
+  }))
+  abrir()
+  const user = userEvent.setup()
+
+  await user.click(await screen.findByRole('button', { name: /^registrar despesa$/i }))
+  const janela = screen.getByRole('dialog', { name: /registrar despesa/i })
+  await user.type(within(janela).getByLabelText(/^valor$/i), '12000')
+  await escolher(user, /^categoria$/i, 'Combustível', janela)
+  await user.click(within(janela).getByRole('button', { name: /salvar despesa/i }))
+
+  expect(enviado).toEqual(expect.objectContaining({ descricao: 'Combustível', valor: 120, categoriaId: 2 }))
+})
+
+// So existe de quem descontar quando ha socorrista: a marca aparece com ele.
+test('descontar da comissão só aparece com socorrista escolhido', async () => {
+  abrir()
+  const user = userEvent.setup()
+
+  await user.click(await screen.findByRole('button', { name: /^registrar despesa$/i }))
+  const janela = screen.getByRole('dialog', { name: /registrar despesa/i })
+  expect(within(janela).queryByLabelText(/descontar da comissão/i)).not.toBeInTheDocument()
+
+  await escolher(user, /^socorrista$/i, 'Anderson Ribeiro', janela)
+
+  expect(within(janela).getByLabelText(/descontar da comissão/i)).not.toBeChecked()
+})
+
+// A marca so existia no formulario de despesa nova: o almoco do Jeferson, lancado
+// antes, nao tinha como descontar. Agora marca direto na lista.
+test('despesa já lançada pode passar a descontar da comissão', async () => {
+  vi.stubEnv('VITE_SUPABASE_URL', 'https://projeto-teste.supabase.co')
+  vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'chave-anon-de-teste')
+  vi.stubEnv('VITE_SUPABASE_MODULOS', 'tudo')
+  vi.resetModules()
+  const { esquecerCliente } = await import('../dados/cliente')
+  esquecerCliente()
+  let enviado: Record<string, unknown> = {}
+  servidor.use(http.patch('https://projeto-teste.supabase.co/rest/v1/despesas', async ({ request }) => {
+    enviado = await request.json() as Record<string, unknown>
+    return HttpResponse.json([{ id: 6 }])
+  }))
+  const { marcarDescontoComissao } = await import('../dados/despesas')
+
+  await marcarDescontoComissao(6, true)
+
+  expect(enviado).toEqual({ desconta_comissao: true })
+  vi.unstubAllEnvs()
 })

@@ -1,6 +1,7 @@
 import { api } from '../api/http'
 import type { Veiculo } from '../types/modelos'
 import { comCacheCurto, invalidarCadastro } from './cacheCurto'
+import { excluirRegistro } from './cliente'
 import { ou, supabase } from './cliente'
 import { moduloNoSupabase } from './modo'
 
@@ -24,7 +25,7 @@ const COLUNAS = 'id,identificacao,placa,modelo,custo_por_km,sigla_porto,ativo'
 type LinhaVeiculo = {
   id: number
   identificacao: string
-  placa: string
+  placa: string | null
   modelo: string | null
   custo_por_km: number | string
   sigla_porto: string | null
@@ -40,7 +41,7 @@ function paraModelo(linha: LinhaVeiculo): Veiculo {
   return {
     id: linha.id,
     identificacao: linha.identificacao,
-    placa: linha.placa,
+    placa: linha.placa ?? undefined,
     modelo: linha.modelo ?? undefined,
     custoPorKm: Number(linha.custo_por_km),
     siglaPorto: linha.sigla_porto ?? undefined,
@@ -50,7 +51,8 @@ function paraModelo(linha: LinhaVeiculo): Veiculo {
 
 export interface DadosVeiculo {
   identificacao: string
-  placa: string
+  /** Viatura cadastrada pela importacao da Porto nasce sem placa. */
+  placa?: string | null
   modelo?: string | null
   custoPorKm: number
   siglaPorto?: string | null
@@ -59,7 +61,7 @@ export interface DadosVeiculo {
 function paraBanco(dados: DadosVeiculo) {
   return {
     identificacao: dados.identificacao,
-    placa: dados.placa,
+    placa: dados.placa?.trim() || null,
     modelo: dados.modelo || null,
     custo_por_km: dados.custoPorKm,
     sigla_porto: dados.siglaPorto || null,
@@ -103,4 +105,10 @@ export async function atualizarVeiculo(id: number, dados: DadosVeiculo): Promise
     'Não foi possível salvar o veículo.',
   ) as LinhaVeiculo
   return paraModelo(linha)
+}
+
+/** Viatura com despesa, km ou receita ligada nao sai: o banco recusa e a tela explica. */
+export async function excluirVeiculo(id: number): Promise<void> {
+  invalidarCadastro('veiculos')
+  await excluirRegistro('veiculos', id, 'Não foi possível excluir a viatura.')
 }

@@ -14,9 +14,15 @@ import { Campo } from './Campos'
 
 const digitos = (valor: string) => valor.replace(/\D/g, '')
 
-/** 12345678000190 -> 12.345.678/0001-90; 12345678901 -> 123.456.789-01 */
-export function formatarDocumento(valor: string) {
+/**
+ * 12345678000190 -> 12.345.678/0001-90; 12345678901 -> 123.456.789-01.
+ *
+ * Com `aceitaRg`, so ganha pontuacao o que tem o tamanho exato de CPF (11) ou
+ * CNPJ (14): RG nao tem tamanho fixo e aparecia como um CPF pela metade.
+ */
+export function formatarDocumento(valor: string, aceitaRg = false) {
   const d = digitos(valor).slice(0, 14)
+  if (aceitaRg && d.length !== 11 && d.length !== 14) return d
   if (d.length <= 11) {
     return d.replace(/^(\d{3})(\d)/, '$1.$2')
       .replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3')
@@ -38,6 +44,8 @@ export function formatarTelefone(valor: string) {
 }
 
 type MascaraProps = {
+  /** Documento de pessoa: aceita RG alem de CPF e CNPJ. */
+  aceitaRg?: boolean
   rotulo: string
   name: string
   className?: string
@@ -53,14 +61,14 @@ type MascaraProps = {
  * A tela mostra 12.345.678/0001-90; o backend recebe 12345678000190. Guardar o
  * formatado faria o mesmo documento existir de duas formas no banco.
  */
-export function CampoDocumento({ rotulo, name, className, ajuda, required, defaultValue, placeholder }: MascaraProps) {
-  const [texto, setTexto] = useState(formatarDocumento(defaultValue ?? ''))
+export function CampoDocumento({ rotulo, name, className, ajuda, required, defaultValue, placeholder, aceitaRg }: MascaraProps) {
+  const [texto, setTexto] = useState(formatarDocumento(defaultValue ?? '', aceitaRg))
   return <Campo rotulo={rotulo} className={className} ajuda={ajuda}>
     <input
       type="text" inputMode="numeric" required={required}
-      placeholder={placeholder ?? 'CNPJ ou CPF'}
+      placeholder={placeholder ?? (aceitaRg ? 'CPF, CNPJ ou RG' : 'CNPJ ou CPF')}
       value={texto}
-      onChange={evento => setTexto(formatarDocumento(evento.target.value))}/>
+      onChange={evento => setTexto(formatarDocumento(evento.target.value, aceitaRg))}/>
     <input type="hidden" name={name} value={digitos(texto)}/>
   </Campo>
 }
@@ -70,9 +78,15 @@ export function CampoTelefone({ rotulo, name, className, ajuda, required, defaul
   return <Campo rotulo={rotulo} className={className} ajuda={ajuda}>
     <input
       type="text" inputMode="tel" required={required}
-      placeholder={placeholder ?? '(85) 99999-8888'}
+      placeholder={placeholder ?? '(00) 00000-0000'}
       value={texto}
-      onChange={evento => setTexto(formatarTelefone(evento.target.value))}/>
+      onChange={evento => {
+        const novo = formatarTelefone(evento.target.value)
+        setTexto(novo)
+        // Sem DDD o numero nao serve para ligar: 10 digitos (fixo) ou 11 (celular).
+        const quantos = digitos(novo).length
+        evento.target.setCustomValidity(quantos === 0 || quantos >= 10 ? '' : 'Informe o telefone com DDD: (00) 00000-0000.')
+      }}/>
     <input type="hidden" name={name} value={digitos(texto)}/>
   </Campo>
 }
@@ -87,8 +101,10 @@ export function CampoPlaca({ rotulo, name, className, ajuda, required, defaultVa
   const [texto, setTexto] = useState((defaultValue ?? '').toUpperCase())
   return <Campo rotulo={rotulo} className={className} ajuda={ajuda}>
     <input
-      name={name} type="text" required={required} placeholder="ABC1D23"
-      autoCapitalize="characters" autoCorrect="off" spellCheck={false} maxLength={8}
+      name={name} type="text" required={required} placeholder="AAA0A00"
+      // Placa antiga (AAA0000) ou Mercosul (AAA0A00): sempre 7 caracteres.
+      pattern="[A-Z]{3}[0-9][A-Z0-9][0-9]{2}" title="Placa com 7 caracteres: AAA0000 ou AAA0A00."
+      autoCapitalize="characters" autoCorrect="off" spellCheck={false} maxLength={7}
       value={texto}
       onChange={evento => setTexto(evento.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}/>
   </Campo>

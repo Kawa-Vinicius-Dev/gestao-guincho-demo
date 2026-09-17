@@ -27,7 +27,7 @@ const ops=[
   {id:6,numero:'OP-JULHO',valor_total:200,situacao_financeira:'RECEBIDO',periodo_inicio:'2027-07-01',periodo_fim:'2027-07-31',quantidade_ordens_servico:1,valor_ordens_servico:200,divergencia:0,status_conciliacao:'CONCILIADA'},
   {id:7,numero:'OP-AGOSTO',valor_total:500,situacao_financeira:'RECEBIDO',periodo_inicio:'2027-08-01',periodo_fim:'2027-08-31',quantidade_ordens_servico:1,valor_ordens_servico:500,divergencia:0,status_conciliacao:'CONCILIADA'},
 ]
-const comissaoAtual={ordemPagamentoId:7,periodo:'01/08/2027 a 31/08/2027',socorrista:'Ana Motorista',motoristaId:4,quantidadeServicosPagos:1,producaoPaga:500,percentualComissao:.2,comissaoBruta:100,alimentacaoAprovada:30,alimentacaoPendente:12,liquido:70,aguardandoOp:false,servicos:[{id:1,numeroOs:'OS-PAGA',especialidade:'GUINCHO',dataAtendimento:'2027-06-15',numeroOp:'OP-77',valorServico:500,comissaoServico:100}],alimentacoes:[{id:9,motoristaId:4,data:'2027-08-21',valor:30,situacao:'PENDENTE',aprovada:true},{id:10,motoristaId:4,data:'2027-08-22',valor:12,situacao:'PENDENTE',aprovada:false}]}
+const comissaoAtual={ordemPagamentoId:7,periodo:'01/08/2027 a 31/08/2027',socorrista:'Ana Motorista',motoristaId:4,quantidadeServicosPagos:1,producaoPaga:500,percentualComissao:.2,comissaoBruta:100,descontos:30,descontosPendentes:12,liquido:70,aguardandoOp:false,servicos:[{id:1,numeroOs:'OS-PAGA',especialidade:'GUINCHO',dataAtendimento:'2027-06-15',numeroOp:'OP-77',valorServico:500,comissaoServico:100}],gastos:[{id:9,descricao:'Almoço',data:'2027-08-21',valor:30,categoria:'Alimentação',situacao:'PAGO',aprovada:true,descontaDaComissao:true},{id:10,descricao:'Lanche',data:'2027-08-22',valor:12,categoria:'Alimentação',situacao:'PENDENTE',aprovada:false,descontaDaComissao:true}]}
 const despesasDela=[
   {id:9,descricao:'Almoço',data:'2027-08-21',valor:30,categoria:'Alimentação',veiculo:null,situacao:'PAGO',aprovada:true,descontaDaComissao:true,observacoes:null},
   {id:21,descricao:'Pedágio da viagem',data:'2027-08-19',valor:18,categoria:'Pedágio',veiculo:'VTR-12',situacao:'PAGO',aprovada:true,descontaDaComissao:false,observacoes:null},
@@ -37,7 +37,7 @@ const detalheAtual={id:4,nome:'Ana Motorista',ativo:true,telefone:'(85) 99999-12
   {id:2,numeroOs:'OS-PENDENTE',dataAtendimento:'2027-08-20',especialidade:'REMOÇÃO',viatura:'VTR-12',numeroOp:null,valorServico:300,statusPagamento:'AGUARDANDO_PAGAMENTO',pagoNoPeriodo:false,comissaoGerada:null},
   {id:1,numeroOs:'OS-PAGA',dataAtendimento:'2027-06-15',especialidade:'GUINCHO',viatura:'VTR-07',numeroOp:'OP-77',valorServico:500,statusPagamento:'PAGO',pagoNoPeriodo:true,comissaoGerada:100},
 ]}
-const detalheAnterior={...detalheAtual,despesas:[],veiculosUtilizados:['VTR-99'],totalServicosPrestados:1,comissao:{...comissaoAtual,ordemPagamentoId:6,periodo:'01/07/2027 a 31/07/2027',quantidadeServicosPagos:0,producaoPaga:0,comissaoBruta:0,alimentacaoAprovada:0,alimentacaoPendente:0,liquido:0,aguardandoOp:true,servicos:[],alimentacoes:[]},servicos:[{id:3,numeroOs:'OS-ANTIGA',dataAtendimento:'2027-07-10',especialidade:'PANE',viatura:'VTR-99',numeroOp:null,valorServico:200,statusPagamento:'AGUARDANDO_PAGAMENTO',pagoNoPeriodo:false,comissaoGerada:null}]}
+const detalheAnterior={...detalheAtual,despesas:[],veiculosUtilizados:['VTR-99'],totalServicosPrestados:1,comissao:{...comissaoAtual,ordemPagamentoId:6,periodo:'01/07/2027 a 31/07/2027',quantidadeServicosPagos:0,producaoPaga:0,comissaoBruta:0,descontos:0,descontosPendentes:0,liquido:0,aguardandoOp:true,servicos:[],gastos:[]},servicos:[{id:3,numeroOs:'OS-ANTIGA',dataAtendimento:'2027-07-10',especialidade:'PANE',viatura:'VTR-99',numeroOp:null,valorServico:200,statusPagamento:'AGUARDANDO_PAGAMENTO',pagoNoPeriodo:false,comissaoGerada:null}]}
 
 beforeEach(()=>{localStorage.clear();sessionStorage.clear();window.history.replaceState({},'','/equipe')})
 afterEach(()=>vi.unstubAllEnvs())
@@ -50,9 +50,9 @@ function configurarAdmin(){
     http.get('/api/auth/me',()=>HttpResponse.json({id:1,nome:'Administrador',email:'admin@local.test',perfil:'ADMINISTRADOR'})),
     http.get('/api/motoristas',()=>{confirmarConsultaMotoristas();return HttpResponse.json([{id:4,nome:'Ana Motorista',telefone:'(85) 99999-1234',qra:'QRA-ANA',usuarioId:8,ativo:true}])}),
     http.get(`${URL_SUPABASE}/rest/v1/porto_ops_conciliadas`,()=>HttpResponse.json(ops)),
-    http.post(`${URL_SUPABASE}/rest/v1/rpc/detalhe_socorrista_op`,async({request})=>{
-      const corpo=await request.json() as {p_op_id:number}
-      return HttpResponse.json(corpo.p_op_id===6?detalheAnterior:detalheAtual)
+    http.post(`${URL_SUPABASE}/rest/v1/rpc/detalhe_socorrista_ops`,async({request})=>{
+      const corpo=await request.json() as {p_op_ids:number[]}
+      return HttpResponse.json(corpo.p_op_ids.includes(6)?detalheAnterior:detalheAtual)
     }),
   )
   return consultaMotoristas
@@ -87,10 +87,10 @@ test('administrador abre o socorrista pela Equipe e consulta composição oficia
   expect(screen.getByText('Comissão: aguardando pagamento')).toBeInTheDocument()
   expect(within(within(resumo).getByText('Produção paga').closest('article')!).getByText('R$ 500,00')).toBeInTheDocument()
   expect(within(within(resumo).getByText('Comissão 20%').closest('article')!).getByText('R$ 100,00')).toBeInTheDocument()
-  expect(within(within(resumo).getByText('Alimentação').closest('article')!).getByText('R$ 30,00')).toBeInTheDocument()
+  expect(within(within(resumo).getByText('Descontos').closest('article')!).getByText('R$ 30,00')).toBeInTheDocument()
   expect(within(within(resumo).getByText('Líquido').closest('article')!).getByText('R$ 70,00')).toBeInTheDocument()
 
-  await escolher(user, /ordem de pagamento/i, /OP-JULHO/)
+  await escolher(user, /^período$/i, /OP-JULHO/)
   expect(await screen.findByText('OS-ANTIGA')).toBeInTheDocument()
   expect(screen.getAllByText('VTR-99')).not.toHaveLength(0)
   expect(screen.queryByText('OS-PENDENTE')).not.toBeInTheDocument()
@@ -102,7 +102,7 @@ test('socorrista comum não acessa a ficha administrativa nem chama o endpoint d
   window.history.replaceState({},'','/equipe/4')
   servidor.use(
     http.get('/api/auth/me',()=>HttpResponse.json({id:2,nome:'Socorrista',email:'socorrista@local.test',perfil:'FUNCIONARIO'})),
-    http.post(`${URL_SUPABASE}/rest/v1/rpc/detalhe_socorrista_op`,()=>{chamadas+=1;return HttpResponse.json(detalheAtual)}),
+    http.post(`${URL_SUPABASE}/rest/v1/rpc/detalhe_socorrista_ops`,()=>{chamadas+=1;return HttpResponse.json(detalheAtual)}),
   )
   const App=await abrirApp()
 
@@ -114,8 +114,8 @@ test('socorrista comum não acessa a ficha administrativa nem chama o endpoint d
   expect(screen.queryByText('OS-PENDENTE')).not.toBeInTheDocument()
 })
 
-// O formulario de despesa pede o socorrista em qualquer categoria, mas so a
-// alimentacao entra no fechamento. As outras nao apareciam em lugar nenhum
+// O formulario de despesa pede o socorrista em qualquer categoria, mas so o
+// gasto marcado para descontar entra no fechamento. As outras nao apareciam em lugar nenhum
 // ligado a pessoa: o campo prometia um vinculo que nenhuma tela mostrava.
 test('as despesas no nome do socorrista que não descontam aparecem à parte',async()=>{
   const consultaMotoristas=configurarAdmin()
@@ -131,7 +131,7 @@ test('as despesas no nome do socorrista que não descontam aparecem à parte',as
   expect(within(painel).getByText('Peça do guincho')).toBeInTheDocument()
   expect(within(painel).getByText('Orçamento aprovado por telefone')).toBeInTheDocument()
   expect(within(painel).getByText('VTR-12')).toBeInTheDocument()
-  // R$ 18 + R$ 240. A alimentacao nao entra: ela desconta, e ja tem painel.
+  // R$ 18 + R$ 240. O almoco marcado nao entra: ele desconta, e ja tem painel.
   expect(within(painel).getByText('R$ 258,00')).toBeInTheDocument()
   expect(within(painel).queryByText('Almoço')).not.toBeInTheDocument()
 })
@@ -147,6 +147,6 @@ test('mostrar as outras despesas não mexe no líquido da comissão',async()=>{
   await user.click(within(cartao!).getByRole('link',{name:/ver detalhes/i}))
 
   const resumo=await screen.findByRole('region',{name:/resumo do período/i})
-  // Comissao 100 menos alimentacao 30. Os R$ 258 de pedagio e peca ficam fora.
+  // Comissao 100 menos o desconto de 30. Os R$ 258 de pedagio e peca ficam fora.
   expect(within(resumo).getByText('R$ 70,00')).toBeInTheDocument()
 })

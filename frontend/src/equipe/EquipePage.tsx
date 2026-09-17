@@ -2,18 +2,20 @@ import { useEffect,useState,type FormEvent } from 'react'
 import { criarAcessoSocorrista } from '../dados/usuarios'
 import { Link } from 'react-router-dom'
 import { listarVeiculos } from '../dados/veiculos'
-import { alternarAtivoMotorista, atualizarMotorista, criarMotorista, listarMotoristas } from '../dados/motoristas'
+import { alternarAtivoMotorista, atualizarMotorista, criarMotorista, excluirMotorista, listarMotoristas } from '../dados/motoristas'
+import { ConfirmarExclusao } from '../components/ConfirmarExclusao'
 import { CampoDocumento, CampoTelefone } from '../components/CamposMascarados'
 import { Carregando,ErroPagina,Vazio } from '../components/EstadoPagina'
 import type { Motorista,SenhaRedefinida,Veiculo } from '../types/modelos'
 import { Selecao } from '../components/Campos'
 import { Modal } from '../components/Modal'
+import { ehAuxiliar } from '../utils/auxiliar'
 
 export default function EquipePage(){
   const [motoristas,setMotoristas]=useState<Motorista[]>([])
   const [veiculos,setVeiculos]=useState<Veiculo[]>([])
   const [carregando,setCarregando]=useState(true),[modal,setModal]=useState(false),[salvando,setSalvando]=useState(false),[erro,setErro]=useState('')
-  const [editando,setEditando]=useState<Motorista|null>(null)
+  const [editando,setEditando]=useState<Motorista|null>(null),[excluindo,setExcluindo]=useState<Motorista|null>(null)
   const [dandoAcesso,setDandoAcesso]=useState<Motorista|null>(null),[acesso,setAcesso]=useState<SenhaRedefinida|null>(null)
   const carregar=()=>{setCarregando(true);setErro('');listarMotoristas().then(setMotoristas).catch(e=>setErro(e.message)).finally(()=>setCarregando(false))}
   useEffect(carregar,[])
@@ -24,7 +26,8 @@ export default function EquipePage(){
   function fechar(){setModal(false);setEditando(null)}
   async function salvar(evento:FormEvent<HTMLFormElement>){
     evento.preventDefault();const form=new FormData(evento.currentTarget);setSalvando(true);setErro('')
-    const corpo={nome:String(form.get('nome')),telefone:String(form.get('telefone')||'')||null,documento:String(form.get('documento')||'')||null,qra:String(form.get('qra')||'')||null,veiculoId:Number(form.get('veiculoId'))||null}
+    const corpo={nome:String(form.get('nome')),telefone:String(form.get('telefone')||'')||null,documento:String(form.get('documento')||'')||null,qra:String(form.get('qra')||'')||null,veiculoId:Number(form.get('veiculoId'))||null,
+      codigosPorto:String(form.get('codigosPorto')||'').split(/[\s,;]+/).map(c=>c.trim()).filter(Boolean)}
     try{
       const motorista=editando
         ?await atualizarMotorista(editando.id,corpo)
@@ -56,12 +59,13 @@ export default function EquipePage(){
     <header className="page-heading"><div><span className="eyebrow">Operação e identificação</span><h1>Socorristas</h1><p>Cadastros vinculados às OS Porto, com acesso ao histórico e à composição oficial de comissão.</p></div><button className="button button-primary" onClick={abrirCadastro}>+ Cadastrar socorrista</button></header>
     {erro?<div className="form-alert" role="alert">{erro}</div>:null}
     {motoristas.length?<section className="team-grid" aria-label="Socorristas cadastrados">{motoristas.map(motorista=><article className="panel team-card team-card-real" key={motorista.id}>
-      <header><span className="team-avatar">{motorista.nome.split(' ').map(parte=>parte[0]).slice(0,2).join('')}</span><span><strong>{motorista.nome}</strong><small>{motorista.qra||'QRA não informado'}{motorista.veiculo?` · ${motorista.veiculo}`:' · sem viatura'}</small></span><span className={`staff-status ${motorista.ativo?'staff-disponivel':'staff-folga'}`}>{motorista.ativo?'Ativo':'Inativo'}</span></header>
-      <div className="team-contact"><span>Telefone<strong>{motorista.telefone||'Não informado'}</strong></span><span>Usuário<strong>{motorista.usuarioId?'Vinculado':'Não vinculado'}</strong></span></div>
+      <header><span className="team-avatar">{motorista.nome.split(' ').map(parte=>parte[0]).slice(0,2).join('')}</span><span><strong>{motorista.nome}</strong><small>{ehAuxiliar(motorista.nome)?'Recebe as OS que chegam sem socorrista':<>{motorista.qra||'QRA não informado'}{motorista.veiculo?` · ${motorista.veiculo}`:' · sem viatura'}</>}</small></span><span className={`staff-status ${motorista.ativo?'staff-disponivel':'staff-folga'}`}>{motorista.ativo?'Ativo':'Inativo'}</span></header>
+      <div className="team-contact"><span>Telefone<strong>{motorista.telefone||(ehAuxiliar(motorista.nome)?'—':'Não informado')}</strong></span><span>Usuário<strong>{motorista.usuarioId?'Vinculado':'Não vinculado'}</strong></span></div>
       <div className="team-card-actions"><Link className="button button-ghost team-detail-action" to={`/equipe/${motorista.id}`}>Ver detalhes</Link>
         <button className="table-action" onClick={()=>abrirEdicao(motorista)}>Editar</button>
         <button className={motorista.ativo?'table-action table-action-danger':'table-action'} onClick={()=>void alternarAtivo(motorista)}>{motorista.ativo?'Desativar':'Reativar'}</button>
-        {!motorista.usuarioId&&motorista.ativo?<button className="table-action" onClick={()=>{setErro('');setDandoAcesso(motorista)}}>Criar acesso</button>:null}</div>
+          {ehAuxiliar(motorista.nome)?null:<button className="table-action table-action-danger" onClick={()=>setExcluindo(motorista)}>Excluir</button>}
+        {!motorista.usuarioId&&motorista.ativo&&!ehAuxiliar(motorista.nome)?<button className="table-action" onClick={()=>{setErro('');setDandoAcesso(motorista)}}>Criar acesso</button>:null}</div>
     </article>)}</section>:<Vazio titulo="Nenhum socorrista cadastrado" descricao="Cadastre o primeiro socorrista para vinculá-lo às ordens de serviço."/>}
 
     {modal?<Modal etiqueta="Equipe" titulo={editando?'Editar socorrista':'Novo socorrista'}
@@ -70,11 +74,12 @@ export default function EquipePage(){
         <label className="field field-wide"><span>Nome</span><input name="nome" defaultValue={editando?.nome} required autoCapitalize="words" autoComplete="off"/></label>
         <CampoTelefone rotulo="Telefone" name="telefone" defaultValue={editando?.telefone}/>
         <label className="field"><span>QRA</span><input name="qra" defaultValue={editando?.qra} autoCapitalize="characters" autoCorrect="off" spellCheck={false}/><small>Como aparece no relatório da Porto. É o que liga o serviço a este socorrista.</small></label>
+        <label className="field"><span>Códigos da Porto</span><input name="codigosPorto" defaultValue={editando?.codigosPorto?.join(', ')} autoCapitalize="characters" autoCorrect="off" spellCheck={false}/><small>Quando a OP traz um código no lugar do QRA. Separe mais de um por vírgula.</small></label>
         {/* Vinculo informativo: quem dirigiu o que e definido em cada OS, nao aqui. */}
         <Selecao rotulo="Viatura habitual" name="veiculoId" defaultValue={editando?.veiculoId??''} vazio="Sem viatura"
           ajuda="Só referência — a viatura de cada serviço vem da OS, não daqui."
           opcoes={veiculos.map(v=>({valor:v.id,texto:v.identificacao}))}/>
-        <CampoDocumento rotulo="Documento" name="documento" className="field-wide" defaultValue={editando?.documento}/>
+        <CampoDocumento rotulo="Documento" name="documento" className="field-wide" defaultValue={editando?.documento} aceitaRg ajuda="CPF, CNPJ ou RG. Só números."/>
         <div className="modal-actions field-wide"><button type="button" className="button button-ghost" onClick={fechar}>Cancelar</button><button className="button button-primary" disabled={salvando}>{salvando?'Salvando…':editando?'Salvar alterações':'Salvar socorrista'}</button></div>
       </form></Modal>:null}
 
@@ -91,5 +96,10 @@ export default function EquipePage(){
       <p className="senha-provisoria"><code>{acesso.senhaProvisoria}</code></p>
       <div className="modal-actions"><button className="button button-primary" onClick={()=>setAcesso(null)}>Já anotei</button></div>
     </Modal>:null}
+    {excluindo?<ConfirmarExclusao coisa="socorrista" nome={excluindo.nome}
+      aviso="O socorrista sai do cadastro. Quem já tem serviço ou comissão não pode ser excluído: nesse caso, use Desativar."
+      resumo={[['Nome',excluindo.nome],['QRA',excluindo.qra||'—']]}
+      aoConfirmar={async()=>{await excluirMotorista(excluindo.id);carregar()}}
+      aoFechar={()=>setExcluindo(null)}/>:null}
   </div>
 }

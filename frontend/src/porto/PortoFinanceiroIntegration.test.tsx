@@ -64,14 +64,17 @@ test('lucro negativo fica em vermelho',async()=>{
   expect(lucro).toHaveClass('destaque-negativo')
 })
 
-test('a barra mostra serviços e a comissão que ainda é da equipe',async()=>{
+// A comissao vira despesa paga sozinha quando a OP chega: "a pagar" nao existe.
+test('a barra mostra os serviços, sem comissão a pagar',async()=>{
   servidorDaVisao(dashboard())
   render(<MemoryRouter><DashboardPage/></MemoryRouter>)
 
   expect(await screen.findByText('Serviços')).toBeInTheDocument()
   expect(screen.getByText('275')).toBeInTheDocument()
-  expect(screen.getByText('Comissão a pagar')).toBeInTheDocument()
-  expect(screen.getByText('R$ 14.166,28')).toBeInTheDocument()
+  // Total das comissoes da equipe: soma dos quatro socorristas.
+  expect(screen.getByText('Comissões')).toBeInTheDocument()
+  expect(screen.getByText(/^R\$\s14\.166,27$/)).toBeInTheDocument()
+  expect(screen.queryByText(/comissão a pagar/i)).not.toBeInTheDocument()
   // Despesa a pagar zerada nao vira cartao.
   expect(screen.queryByText('Despesas a pagar')).not.toBeInTheDocument()
 })
@@ -86,8 +89,13 @@ test('faturamento por socorrista e por viatura fecha com o total pago',async()=>
   const linhas=within(pessoas).getAllByRole('listitem')
   expect(linhas).toHaveLength(5)
   expect(linhas[0]).toHaveTextContent('JEFERSON MARTINS DA SILVA')
+  // O valor da comissao de cada um aparece ao lado do faturamento.
+  expect(linhas[0]).toHaveTextContent(/comissão R\$\s4\.770,62/)
   expect(linhas[4]).toHaveTextContent('Sem socorrista')
   expect(linhas[4]).toHaveTextContent(/R\$\s3\.938,62/)
+  // Clicar no nome abre a ficha do socorrista; a linha sem dono nao tem para onde ir.
+  expect(within(linhas[0]).getByRole('link',{name:'JEFERSON MARTINS DA SILVA'})).toHaveAttribute('href','/equipe/1')
+  expect(within(linhas[4]).queryByRole('link')).not.toBeInTheDocument()
 
   const viaturas=screen.getByRole('list',{name:/receitas por viatura/i})
   expect(within(viaturas).getByText('Sem viatura')).toBeInTheDocument()

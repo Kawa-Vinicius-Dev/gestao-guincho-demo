@@ -92,7 +92,7 @@ export default function PortoImportacoesPage(){
         ?await confirmarImportacaoPorto(previa,{numeroOrdemPagamento:numeroNormalizado,confirmarDivergencias,confirmarReassociacoes,motivoDivergencia:motivoDivergencia||undefined,justificativaDivergencia:justificativaDivergencia.trim()||undefined})
         :await confirmarImportacaoPorto(previa,{confirmarDivergencias})
       const financeiro=r.tipo==='OS_VINCULADAS'||r.tipo==='SERVICOS_GERAIS'?` · ${r.receitasCriadas} ${r.receitasCriadas===1?'receita criada':'receitas criadas'} · ${r.receitasAtualizadas} ${r.receitasAtualizadas===1?'receita atualizada':'receitas atualizadas'} · ${moeda(r.valorTotalRecebido)} recebidos${r.quinzena?` · período ${r.quinzena}`:''}${r.dataPagamento?` · pagamento em ${dataBr(r.dataPagamento)}`:''}`:''
-      setMensagem(`${r.importados} ${r.importados===1?'registro importado':'registros importados'}${r.ignorados?` · ${r.ignorados} ignorados por duplicidade`:''}${financeiro}.`)
+      setMensagem(`${r.importados} ${r.importados===1?'registro importado':'registros importados'}${r.ignorados?` · ${r.ignorados} ignorados por duplicidade`:''}${financeiro}${r.viaturasNovas?.length?` · ${r.viaturasNovas.length===1?'viatura nova cadastrada':'viaturas novas cadastradas'}: ${r.viaturasNovas.join(', ')}`:''}.`)
       setSemSocorrista(r.osSemSocorrista??[])
       setPrevia(null);setArquivo(null);setNumeroOp('');setChaveValidada('');limparConfirmacoes();setInputKey(x=>x+1)
     }catch(e){setErro((e as Error).message);setFalhaAoConfirmar(true)}finally{confirmacaoEmCurso.current=false;setEtapa('');setCarregando(false)}
@@ -125,7 +125,7 @@ export default function PortoImportacoesPage(){
         {temErros?<div className="form-alert"><strong>Corrija e reenvie o arquivo.</strong> {previa.erros.join(' · ')}</div>:null}
         <footer className="porto-confirm porto-confirm-sticky" aria-label="Ações da prévia">
           <div className="porto-confirm-totals"><span><strong>{previa.totalLinhas}</strong> registros</span><span><strong>{moeda(previa.resumo?.valorTotal??0)}</strong> valor total</span></div>
-          {previa.requerOrdemPagamento?<label className="field"><span>Número da OP</span><input aria-label="Número da OP" inputMode="numeric" autoComplete="off" value={numeroOp} onChange={e=>alterarNumero(e.target.value)} required placeholder="Ex.: 06422281"/></label>:null}
+          {previa.requerOrdemPagamento?<label className="field"><span>Número da OP</span><input aria-label="Número da OP" inputMode="numeric" autoComplete="off" value={numeroOp} onChange={e=>alterarNumero(e.target.value)} required placeholder="00000000"/></label>:null}
 
           {/* aria-live sem role="status": anuncia igual, e nao disputa o papel
               com o indicador de etapa la em cima, que ja e um status. */}
@@ -140,9 +140,9 @@ export default function PortoImportacoesPage(){
           {temReassociacoes?<div className="form-alert"><strong>{analise?.quantidadeReassociacoes} {analise?.quantidadeReassociacoes===1?'OS será movida':'OS serão movidas'} · {moeda(analise?.valorReassociacoes??0)}</strong><div className="table-scroll"><table><thead><tr><th>OS</th><th>OP atual</th><th>Nova OP</th><th>Valor</th></tr></thead><tbody>{analise?.reassociacoes.map(item=><tr key={item.numeroOs}><td>{item.numeroOs}</td><td>{item.opAtual}</td><td>{item.novaOp}</td><td>{moeda(item.valor)}</td></tr>)}</tbody></table></div><label className="porto-divergence"><input type="checkbox" aria-label="Confirmo a reassociação" checked={confirmarReassociacoes} onChange={e=>setConfirmarReassociacoes(e.target.checked)}/><span>Confirmo a reassociação das OS indicadas.</span></label></div>:null}
           {temDivergenciasDados&&!temDivergenciaFinanceira?<label className="porto-divergence"><input type="checkbox" aria-label="Confirmo a atualização dos dados" checked={confirmarDivergencias} onChange={e=>setConfirmarDivergencias(e.target.checked)}/><span>Confirmo a atualização dos dados divergentes.</span></label>:null}
           <button type="button" className="button button-ghost" disabled={carregando} onClick={cancelar}>Cancelar prévia</button>
-          <button className="button button-primary" disabled={carregando||validando||temErros||!divergenciaConfirmada||temReassociacoes&&!confirmarReassociacoes||orfas.length>0||previa.requerOrdemPagamento&&(!numeroNormalizado||!analise)||previa.linhas.length===0} onClick={confirmar}>Confirmar importação</button>
+          <button className="button button-primary" disabled={carregando||validando||temErros||!divergenciaConfirmada||temReassociacoes&&!confirmarReassociacoes||previa.requerOrdemPagamento&&(!numeroNormalizado||!analise)||previa.linhas.length===0} onClick={confirmar}>Confirmar importação</button>
         </footer>
-        {orfas.length?<div className="form-alert" role="alert"><strong>{orfas.length} {orfas.length===1?'ordem de serviço está':'ordens de serviço estão'} sem socorrista.</strong> Sem socorrista não há comissão, e o serviço entraria no faturamento sem dono. Informe quem atendeu para liberar a importação.
+        {orfas.length?<div className="porto-divergence" role="status"><strong>{orfas.length} {orfas.length===1?'ordem de serviço veio':'ordens de serviço vieram'} sem socorrista e {orfas.length===1?'vai':'vão'} para o Auxiliar.</strong> Se souber quem atendeu, escolha abaixo; se não, pode importar assim.
           <div className="porto-orfas-atalho"><Selecao rotulo="Aplicar o mesmo socorrista a todas" vazio="Escolha para aplicar a todas" value=""
             onChange={e=>aplicarSocorristaEmTodas(e.target.value)}
             opcoes={motoristas.map(m=>({valor:m.id,texto:m.nome}))}/></div>

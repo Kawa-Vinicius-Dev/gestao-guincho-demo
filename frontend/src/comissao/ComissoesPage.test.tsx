@@ -35,11 +35,17 @@ const detalhe = {
   ordemPagamentoId: 7, numeroOp: '06389821', periodo: 'OP 06389821 · 30/03 a 29/04',
   socorrista: 'Ana Motorista', motoristaId: 4, quantidadeServicosPagos: 2,
   producaoPaga: 1000, percentualComissao: .2, comissaoBruta: 200,
-  alimentacaoAprovada: 250, alimentacaoPendente: 35, liquido: -50, aguardandoOp: false,
+  descontos: 250, descontosPendentes: 35, liquido: -50, aguardandoOp: false,
   servicos: [{ id: 1, numeroOs: 'OS-1', especialidade: 'GUINCHO', dataAtendimento: '2026-04-14',
     numeroOp: '06389821', valorServico: 1000, comissaoServico: 200 }],
-  alimentacoes: [{ id: 9, motoristaId: 4, data: '2026-04-10', valor: 250,
-    situacao: 'PAGO', aprovada: true }],
+  gastos: [
+    { id: 9, descricao: 'Compra pessoal no cartão', data: '2026-04-10', valor: 250,
+      categoria: 'Alimentação', situacao: 'PAGO', aprovada: true, descontaDaComissao: true },
+    { id: 11, descricao: 'Almoço da equipe', data: '2026-04-11', valor: 40,
+      categoria: 'Alimentação', situacao: 'PAGO', aprovada: true, descontaDaComissao: false },
+    { id: 12, descricao: 'Pedágio pessoal', data: '2026-04-12', valor: 15,
+      categoria: 'Pedágio', situacao: 'PAGO', aprovada: true, descontaDaComissao: false, descontaEmOutraOp: true },
+  ],
 }
 
 const listaDeOps = () =>
@@ -49,7 +55,7 @@ test('socorrista vê composição auditável, saldo negativo e registra alimenta
   let corpo: Record<string, unknown> = {}
   servidor.use(
     listaDeOps(),
-    http.post(`${URL_SUPABASE}/rest/v1/rpc/comissao_da_op`, () => HttpResponse.json(detalhe)),
+    http.post(`${URL_SUPABASE}/rest/v1/rpc/comissao_das_ops`, () => HttpResponse.json(detalhe)),
     http.post(`${URL_SUPABASE}/rest/v1/rpc/registrar_alimentacao`, async ({ request }) => {
       corpo = await request.json() as Record<string, unknown>
       return HttpResponse.json({ id: 10, motorista_id: 4, data_lancamento: '2026-04-20',
@@ -80,11 +86,11 @@ test('administrador filtra resumo e abre o detalhamento que forma a comissão', 
     listaDeOps(),
     http.get(`${URL_SUPABASE}/rest/v1/motoristas`, () =>
       HttpResponse.json([{ id: 4, nome: 'Ana Motorista', qra: 'ANA', ativo: true }])),
-    http.post(`${URL_SUPABASE}/rest/v1/rpc/resumo_comissoes_op`, () => HttpResponse.json([
+    http.post(`${URL_SUPABASE}/rest/v1/rpc/resumo_comissoes_ops`, () => HttpResponse.json([
       { motoristaId: 4, socorrista: 'Ana Motorista', quantidadeServicosPagos: 2,
-        producaoPaga: 1000, comissaoBruta: 200, alimentacaoAprovada: 250, liquido: -50 },
+        producaoPaga: 1000, comissaoBruta: 200, descontos: 250, liquido: -50 },
     ])),
-    http.post(`${URL_SUPABASE}/rest/v1/rpc/comissao_da_op`, () => HttpResponse.json(detalhe)),
+    http.post(`${URL_SUPABASE}/rest/v1/rpc/comissao_das_ops`, () => HttpResponse.json(detalhe)),
   )
   const ComissoesPage = await abrirPagina(() => import('./ComissoesPage'))
   const user = userEvent.setup()
@@ -98,33 +104,21 @@ test('administrador filtra resumo e abre o detalhamento que forma a comissão', 
   expect(await screen.findByRole('dialog')).toHaveTextContent('OS-1')
 })
 
-test('administrador registra o pagamento do líquido positivo uma única vez', async () => {
-  const positivo = { ...detalhe, alimentacaoAprovada: 30, liquido: 170 }
-  const pagamento = { id: 12, motorista_id: 4, ordem_pagamento_id: 7, despesa_id: 91,
-    valor_pago: 170, data_pagamento: '2026-04-29', forma_pagamento: 'PIX',
-    criado_em: '2026-04-29T12:00:00Z' }
-  let chamadas = 0
-
+// Kawa: "eu nao quero clicar para confirmar pagamento para depois aparecer no
+// dashboard". A comissao ja nasce em despesas; a tela so confere.
+test('comissão já lançada em despesas, sem botão de pagar', async () => {
+  const positivo = { ...detalhe, descontos: 30, liquido: 170,
+    pagamento: { id: 12, despesaId: 91, valorPago: 170, dataPagamento: '2026-04-29' } }
   servidor.use(
     listaDeOps(),
     http.get(`${URL_SUPABASE}/rest/v1/motoristas`, () =>
       HttpResponse.json([{ id: 4, nome: 'Ana Motorista', qra: 'ANA', ativo: true }])),
-    http.post(`${URL_SUPABASE}/rest/v1/rpc/resumo_comissoes_op`, () => HttpResponse.json([
+    http.post(`${URL_SUPABASE}/rest/v1/rpc/resumo_comissoes_ops`, () => HttpResponse.json([
       { motoristaId: 4, socorrista: 'Ana Motorista', quantidadeServicosPagos: 2,
-        producaoPaga: 1000, comissaoBruta: 200, alimentacaoAprovada: 30, liquido: 170,
-        pagamento: chamadas ? { id: 12, dataPagamento: '2026-04-29' } : undefined },
+        producaoPaga: 1000, comissaoBruta: 200, descontos: 30, liquido: 170,
+        pagamento: { id: 12, dataPagamento: '2026-04-29' } },
     ])),
-    http.post(`${URL_SUPABASE}/rest/v1/rpc/comissao_da_op`, () =>
-      HttpResponse.json(chamadas
-        ? { ...positivo, pagamento: { id: 12, despesaId: 91, valorPago: 170, dataPagamento: '2026-04-29' } }
-        : positivo)),
-    http.post(`${URL_SUPABASE}/rest/v1/rpc/pagar_comissao_op`, async ({ request }) => {
-      chamadas++
-      expect(await request.json()).toEqual(expect.objectContaining({
-        p_motorista_id: 4, p_op_id: 7, p_data_pagamento: '2026-04-29', p_forma_pagamento: 'PIX',
-      }))
-      return HttpResponse.json(pagamento)
-    }),
+    http.post(`${URL_SUPABASE}/rest/v1/rpc/comissao_das_ops`, () => HttpResponse.json(positivo)),
   )
   const ComissoesPage = await abrirPagina(() => import('./ComissoesPage'))
   const user = userEvent.setup()
@@ -132,16 +126,39 @@ test('administrador registra o pagamento do líquido positivo uma única vez', a
   render(<ComissoesPage/>)
 
   const linha = await screen.findByRole('row', { name: /ana motorista/i })
+  expect(within(linha).getByText('Lançada em 29/04/2026')).toBeInTheDocument()
   await user.click(within(linha).getByRole('button', { name: /detalhar/i }))
 
   const dialogo = await screen.findByRole('dialog')
-  await user.type(within(dialogo).getByLabelText(/data do pagamento/i), '2026-04-29')
-  await user.click(within(dialogo).getByRole('button', { name: /registrar pagamento/i }))
+  expect(dialogo).toHaveTextContent(/Lançada em despesas/)
+  expect(within(dialogo).queryByRole('button', { name: /registrar pagamento/i })).not.toBeInTheDocument()
+})
 
-  expect(await screen.findByText('Pagamento registrado no financeiro oficial.')).toBeInTheDocument()
-  // Pagar duas vezes o mesmo socorrista na mesma OP e o erro que o banco recusa;
-  // a tela nao deve nem oferecer o botao de novo.
-  expect(chamadas).toBe(1)
-  expect(within(screen.getByRole('dialog'))
-    .queryByRole('button', { name: /registrar pagamento/i })).not.toBeInTheDocument()
+// Todo gasto no nome dele aparece; so o marcado desconta.
+test('o detalhe lista todos os gastos e diz quais descontam', async () => {
+  servidor.use(
+    listaDeOps(),
+    http.get(`${URL_SUPABASE}/rest/v1/motoristas`, () =>
+      HttpResponse.json([{ id: 4, nome: 'Ana Motorista', qra: 'ANA', ativo: true }])),
+    http.post(`${URL_SUPABASE}/rest/v1/rpc/resumo_comissoes_ops`, () => HttpResponse.json([
+      { motoristaId: 4, socorrista: 'Ana Motorista', quantidadeServicosPagos: 2,
+        producaoPaga: 1000, comissaoBruta: 200, descontos: 250, liquido: -50 },
+    ])),
+    http.post(`${URL_SUPABASE}/rest/v1/rpc/comissao_das_ops`, () => HttpResponse.json(detalhe)),
+  )
+  const ComissoesPage = await abrirPagina(() => import('./ComissoesPage'))
+  const user = userEvent.setup()
+
+  render(<ComissoesPage/>)
+  const linha = await screen.findByRole('row', { name: /ana motorista/i })
+  await user.click(within(linha).getByRole('button', { name: /detalhar/i }))
+
+  const dialogo = await screen.findByRole('dialog')
+  const pessoal = within(dialogo).getByText('Compra pessoal no cartão').closest('tr')!
+  const equipe = within(dialogo).getByText('Almoço da equipe').closest('tr')!
+  expect(within(pessoal).getByText('Sim')).toBeInTheDocument()
+  expect(within(equipe).getByText('Não')).toBeInTheDocument()
+  // A Porto paga a mesma quinzena em mais de uma OP: o gasto desconta numa so.
+  const outraOp = within(dialogo).getByText('Pedágio pessoal').closest('tr')!
+  expect(within(outraOp).getByText('Em outra OP do período')).toBeInTheDocument()
 })

@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { criarQuilometragem, listarQuilometragens } from '../dados/quilometragem'
+import { SeletorPeriodo } from '../components/SeletorPeriodo'
+import { usePeriodoGlobal } from '../utils/periodoGlobal'
+import { atualizarQuilometragem, criarQuilometragem, excluirQuilometragem, listarQuilometragens } from '../dados/quilometragem'
+import { ConfirmarExclusao } from '../components/ConfirmarExclusao'
+import { useAuth } from '../auth/AuthContext'
 import { listarMotoristas } from '../dados/motoristas'
 import { listarVeiculos } from '../dados/veiculos'
 import { CampoNumero } from '../components/CamposMascarados'
@@ -8,11 +12,6 @@ import type { Motorista, Quilometragem, Veiculo } from '../types/modelos'
 import { data, moeda, numero } from '../utils/formatadores'
 import { Selecao } from '../components/Campos'
 import { Modal } from '../components/Modal'
-
-function mesAtual() {
-  const hoje = new Date()
-  return `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`
-}
 
 function hojeLocal() {
   const hoje = new Date()
@@ -25,13 +24,16 @@ export default function QuilometragemPage() {
   const [veiculos, setVeiculos] = useState<Veiculo[]>([])
   const [motoristas, setMotoristas] = useState<Motorista[]>([])
   const [carregando, setCarregando] = useState(true)
-  const [mes, setMes] = useState(mesAtual)
+  const [periodo, setPeriodo] = usePeriodoGlobal()
   const [modal, setModal] = useState(false)
+  const admin = useAuth().usuario?.perfil === 'ADMINISTRADOR'
+  const [editando, setEditando] = useState<Quilometragem | null>(null)
+  const [excluindo, setExcluindo] = useState<Quilometragem | null>(null)
   const [mensagem, setMensagem] = useState('')
 
   async function carregar() {
     const [quilometragens, veiculosCadastrados, motoristasCadastrados] = await Promise.all([
-      listarQuilometragens(),
+      listarQuilometragens(periodo.inicio && periodo.fim && periodo.inicio <= periodo.fim ? { inicio: periodo.inicio, fim: periodo.fim } : undefined),
       listarVeiculos(),
       listarMotoristas(),
     ])
@@ -44,11 +46,11 @@ export default function QuilometragemPage() {
     void carregar()
       .catch(erro => setMensagem((erro as Error).message))
       .finally(() => setCarregando(false))
-  }, [])
+  }, [periodo.inicio, periodo.fim])
 
   const registrosDoMes = useMemo(() => registros
-    .filter(item => item.data.startsWith(mes))
-    .sort((a, b) => b.data.localeCompare(a.data)), [registros, mes])
+    .filter(item => item.data >= periodo.inicio && item.data <= periodo.fim)
+    .sort((a, b) => b.data.localeCompare(a.data)), [registros, periodo.inicio, periodo.fim])
   const kmRodado = registrosDoMes.reduce((total, item) => total + item.quilometragemTotal, 0)
   const kmMorto = registrosDoMes.reduce((total, item) => total + item.kmMorto, 0)
   const custo = registrosDoMes.reduce((total, item) => total + item.custoKmMorto, 0)
@@ -67,7 +69,7 @@ export default function QuilometragemPage() {
     const form = new FormData(evento.currentTarget)
     try {
       const veiculoEscolhido=veiculos.find(v=>v.id===Number(form.get('veiculoId')))
-      await criarQuilometragem({
+      const dados = {
         data: String(form.get('data')),
         veiculoId: Number(form.get('veiculoId')),
         motoristaId: form.get('motoristaId') ? Number(form.get('motoristaId')) : null,
@@ -79,10 +81,14 @@ export default function QuilometragemPage() {
         custoPorKm: veiculoEscolhido?.custoPorKm ?? 0,
         confirmarExcesso: form.get('confirmarExcesso') === 'on',
         observacoes: String(form.get('observacoes')||'')||null,
-      })
+      }
+      // O custo do km fica o do registro; so muda se a viatura mudou.
+      if (editando) await atualizarQuilometragem(editando.id, { ...dados, custoPorKm: dados.veiculoId === editando.veiculoId ? editando.custoPorKm : dados.custoPorKm })
+      else await criarQuilometragem(dados)
       await carregar()
       setModal(false)
-      setMensagem('Quilometragem registrada na base oficial.')
+      setMensagem(editando ? 'Quilometragem atualizada.' : 'Quilometragem registrada na base oficial.')
+      setEditando(null)
     } catch (erro) {
       setMensagem((erro as Error).message)
     }
@@ -90,7 +96,7 @@ export default function QuilometragemPage() {
 
   return <div className="page-enter">
     <header className="page-heading"><div><span className="eyebrow">Eficiência operacional</span><h1>Km rodado e km morto</h1><p>Distâncias e custos registrados no banco oficial da operação.</p></div>
-      <div className="heading-actions"><label className="month-picker"><span>Competência</span><input type="month" value={mes} onChange={evento => setMes(evento.target.value)}/></label><button className="button button-primary" onClick={() => setModal(true)}>+ Registrar quilometragem</button></div></header>
+      <div className="heading-actions"><div className="periodo-no-cabecalho"><SeletorPeriodo periodo={periodo} aoMudar={setPeriodo}/></div><button className="button button-primary" onClick={() => { setEditando(null); setModal(true) }}>+ Registrar quilometragem</button></div></header>
     {mensagem ? <div className="success-notice">{mensagem}</div> : null}
 
     <section className="km-definitions">
@@ -112,26 +118,31 @@ export default function QuilometragemPage() {
     </section>
 
     <section className="panel km-ledger"><header className="panel-title"><div><span className="eyebrow">Diário de bordo</span><h2>Registros do período</h2></div></header>
-      {carregando ? <Carregando/> : registrosDoMes.length ? <div className="table-scroll"><table><thead><tr><th>Data</th><th>Veículo</th><th>Socorrista</th><th>Hodômetros</th><th>Km rodado</th><th>Km remunerado</th><th>Km morto</th><th>Custo</th></tr></thead><tbody>
-        {registrosDoMes.map(item => <tr key={item.id}><td>{data(item.data)}</td><td><strong>{item.veiculo}</strong></td><td>{item.motorista ?? '—'}</td><td>{numero(item.hodometroInicial)} → {numero(item.hodometroFinal)}</td><td>{numero(item.quilometragemTotal)} km</td><td>{numero(item.quilometragemRemunerada)} km</td><td><strong>{numero(item.kmMorto)} km</strong></td><td>{moeda(item.custoKmMorto)}</td></tr>)}
+      {carregando ? <Carregando/> : registrosDoMes.length ? <div className="table-scroll"><table><thead><tr><th>Data</th><th>Veículo</th><th>Socorrista</th><th>Hodômetros</th><th>Km rodado</th><th>Km remunerado</th><th>Km morto</th><th>Custo</th>{admin ? <th/> : null}</tr></thead><tbody>
+        {registrosDoMes.map(item => <tr key={item.id}><td>{data(item.data)}</td><td><strong>{item.veiculo}</strong></td><td>{item.motorista ?? '—'}</td><td>{numero(item.hodometroInicial)} → {numero(item.hodometroFinal)}</td><td>{numero(item.quilometragemTotal)} km</td><td>{numero(item.quilometragemRemunerada)} km</td><td><strong>{numero(item.kmMorto)} km</strong></td><td>{moeda(item.custoKmMorto)}</td>{admin ? <td><span className="acoes-da-linha"><button className="table-action" onClick={() => { setEditando(item); setModal(true) }}>Editar</button><button className="table-action table-action-danger" onClick={() => setExcluindo(item)}>Excluir</button></span></td> : null}</tr>)}
       </tbody></table></div> : <Vazio titulo="Sem registros no período" descricao="Selecione outra competência ou registre a primeira quilometragem."/>}
     </section>
 
-    {modal ? <Modal etiqueta="Diário de bordo" titulo="Registrar quilometragem" largo aoFechar={() => setModal(false)}>
+    {modal ? <Modal etiqueta="Diário de bordo" titulo={editando ? 'Editar quilometragem' : 'Registrar quilometragem'} largo aoFechar={() => { setModal(false); setEditando(null) }}>
       <form onSubmit={salvar} className="form-grid three-columns">
-        <label className="field"><span>Data</span><input name="data" type="date" defaultValue={hojeLocal()} required/></label>
-        <Selecao rotulo="Veículo" name="veiculoId" required vazio="Selecione"
+        <label className="field"><span>Data</span><input name="data" type="date" defaultValue={editando?.data ?? hojeLocal()} required/></label>
+        <Selecao rotulo="Veículo" name="veiculoId" required vazio="Selecione" defaultValue={editando?.veiculoId ?? ''}
           opcoes={veiculos.map(item => ({valor:item.id, texto:`${item.identificacao}${item.modelo ? ` · ${item.modelo}` : ''}`}))}/>
-        <Selecao rotulo="Socorrista" name="motoristaId" vazio="Não informado"
+        <Selecao rotulo="Socorrista" name="motoristaId" vazio="Não informado" defaultValue={editando?.motoristaId ?? ''}
           opcoes={motoristas.map(item => ({valor:item.id, texto:item.nome}))}/>
-        <CampoNumero rotulo="Hodômetro inicial" name="hodometroInicial" min={0} required/>
-        <CampoNumero rotulo="Hodômetro final" name="hodometroFinal" min={0} required/>
-        <CampoNumero rotulo="Quilometragem remunerada" name="quilometragemRemunerada" min={0} required/>
-        <label className="field"><span>Protocolo</span><input name="protocolo" autoCapitalize="characters" autoCorrect="off" spellCheck={false}/></label>
-        <label className="field two-span"><span>Observações</span><textarea name="observacoes" rows={3}/></label>
+        <CampoNumero rotulo="Hodômetro inicial" name="hodometroInicial" min={0} defaultValue={editando ? String(editando.hodometroInicial) : undefined} required/>
+        <CampoNumero rotulo="Hodômetro final" name="hodometroFinal" min={0} defaultValue={editando ? String(editando.hodometroFinal) : undefined} required/>
+        <CampoNumero rotulo="Quilometragem remunerada" name="quilometragemRemunerada" min={0} defaultValue={editando ? String(editando.quilometragemRemunerada) : undefined} required/>
+        <label className="field"><span>Protocolo</span><input name="protocolo" defaultValue={editando?.protocolo} autoCapitalize="characters" autoCorrect="off" spellCheck={false}/></label>
+        <label className="field two-span"><span>Observações</span><textarea name="observacoes" rows={3} defaultValue={editando?.observacoes}/></label>
         <label className="check-line field-wide"><input name="confirmarExcesso" type="checkbox"/><span>Confirmo eventual quilometragem remunerada acima do total.</span></label>
-        <div className="modal-actions field-wide"><button type="button" className="button button-ghost" onClick={() => setModal(false)}>Cancelar</button><button className="button button-primary">Salvar registro</button></div>
+        <div className="modal-actions field-wide"><button type="button" className="button button-ghost" onClick={() => { setModal(false); setEditando(null) }}>Cancelar</button><button className="button button-primary">{editando ? 'Salvar alterações' : 'Salvar registro'}</button></div>
       </form>
     </Modal> : null}
+    {excluindo ? <ConfirmarExclusao coisa="registro de km" nome={`${excluindo.veiculo} ${data(excluindo.data)}`}
+      aviso="O registro sai da lista e dos totais de km."
+      resumo={[['Data', data(excluindo.data)], ['Viatura', excluindo.veiculo], ['Km rodado', `${numero(excluindo.quilometragemTotal)} km`]]}
+      aoConfirmar={async () => { await excluirQuilometragem(excluindo.id); setMensagem('Registro de km excluído.'); await carregar() }}
+      aoFechar={() => setExcluindo(null)}/> : null}
   </div>
 }

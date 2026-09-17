@@ -190,6 +190,17 @@ select pg_temp.checar('OP vazia mantem a sigla do painel',
 select pg_temp.checar('OP paga a OS do painel',
   (select status_financeiro::text from public.ordens_servico_porto where numero='1234/26'), 'RECEBIDO');
 
+\echo '========== PAINEL DE DEPOIS NAO DESFAZ O PAGAMENTO DA OP =========='
+-- A mesma OS reaparece no painel do dia seguinte com a situacao mudada (hash
+-- novo). O painel nao paga nem despaga: quem decide e a OP.
+select public.porto_registrar_importacao('painel2.csv','hash-painel2','PAINEL_DIARIO',1);
+select public.porto_confirmar_importacao(
+  (select id from public.importacoes_porto where hash_arquivo='hash-painel2'),
+  '[{"numero_os":"1234/26","data_atendimento":"2026-09-14","sigla_viatura":"L168","situacao_porto":"FINALIZADO","hash_registro":"p1b"}]'::jsonb
+);
+select pg_temp.checar('OS paga continua paga depois do painel',
+  (select status_financeiro::text from public.ordens_servico_porto where numero='1234/26'), 'RECEBIDO');
+
 \echo '========== IMPORTACAO CONFIRMADA NAO SE CONFIRMA DE NOVO =========='
 select pg_temp.checar('confirmar duas vezes e recusado',
   pg_temp.erro_de($$select public.porto_confirmar_importacao(

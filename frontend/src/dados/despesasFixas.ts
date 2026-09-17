@@ -1,6 +1,6 @@
 import { api } from '../api/http'
 import type { DespesaRecorrente, LancamentoRecorrente } from '../types/modelos'
-import { ou, supabase } from './cliente'
+import { excluirRegistro, ou, supabase } from './cliente'
 import { invalidarCacheFinanceiro } from './dashboard'
 import { moduloNoSupabase } from './modo'
 
@@ -102,4 +102,20 @@ export async function lancarDespesasFixasDoMes(mes: string): Promise<LancamentoR
     'Não foi possível lançar as despesas fixas.',
   ) as { mes: string; lancadas: number; jaExistiam: number; valorLancado: number }
   return { ...r, despesas: [] }
+}
+
+export async function atualizarDespesaFixa(id: number, dados: DadosDespesaFixa): Promise<void> {
+  ou(
+    await supabase().from('despesas_recorrentes').update({
+      descricao: dados.descricao, categoria_id: dados.categoriaId, valor: dados.valor,
+      dia_vencimento: dados.diaVencimento, veiculo_id: dados.veiculoId || null,
+      motorista_id: dados.motoristaId || null, observacoes: dados.observacoes || null,
+    }).eq('id', id).select('id').single(),
+    'Não foi possível salvar a despesa fixa.',
+  )
+}
+
+/** As despesas ja lancadas a partir dela continuam; so o molde sai. */
+export async function excluirDespesaFixa(id: number): Promise<void> {
+  await excluirRegistro('despesas_recorrentes', id, 'Não foi possível excluir a despesa fixa.')
 }

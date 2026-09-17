@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { listarPendenciasOsPorto, resolverPendenciasOsPorto } from '../dados/porto'
+import { useAoVivo } from '../dados/aoVivo'
 import { listarMotoristas } from '../dados/motoristas'
 import type { AcertoPendenciaOsPorto, Motorista, PendenciaOsPorto } from '../types/modelos'
-import { data, hojeIso, moeda } from '../utils/formatadores'
-import { Campo, Selecao } from '../components/Campos'
+import { data, moeda } from '../utils/formatadores'
+import { Selecao } from '../components/Campos'
+import { SeletorPeriodo } from '../components/SeletorPeriodo'
+import { usePeriodoGlobal } from '../utils/periodoGlobal'
 import { Carregando } from '../components/EstadoPagina'
 import { CabecalhoPagina, GradeIndicadores, Indicador, Painel } from '../components/ui/Pagina'
 import { CampoValor } from '../components/CampoValor'
@@ -22,7 +25,6 @@ import { CampoValor } from '../components/CampoValor'
  * abriria com milhares de linhas e a tela deixaria de ser util no dia em que
  * mais precisa ser.
  */
-const primeiroDiaDoMes = () => `${hojeIso().slice(0, 8)}01`
 
 const FILTROS = [
   { valor: 'TODAS', texto: 'Todas as pendências' },
@@ -32,8 +34,8 @@ const FILTROS = [
 ]
 
 export default function PortoPendenciasOsPage() {
-  const [inicio, setInicio] = useState(primeiroDiaDoMes())
-  const [fim, setFim] = useState(hojeIso())
+  const [periodo, setPeriodo] = usePeriodoGlobal()
+  const { inicio, fim } = periodo
   const [filtro, setFiltro] = useState('TODAS')
   const [itens, setItens] = useState<PendenciaOsPorto[]>([])
   const [motoristas, setMotoristas] = useState<Motorista[]>([])
@@ -50,7 +52,9 @@ export default function PortoPendenciasOsPage() {
     finally { setCarregando(false) }
   }, [])
 
-  useEffect(() => { void carregar(primeiroDiaDoMes(), hojeIso()) }, [carregar])
+  useEffect(() => { if (inicio && fim && inicio <= fim) void carregar(inicio, fim) }, [carregar, inicio, fim])
+  // Recarrega sozinha, mas nunca por cima do que esta sendo preenchido e ainda nao foi salvo.
+  useAoVivo(() => { if (!Object.keys(acertos).length) void carregar(inicio, fim) })
   useEffect(() => {
     listarMotoristas().then(setMotoristas).catch((e: Error) => setErro(e.message))
   }, [])
@@ -100,14 +104,8 @@ export default function PortoPendenciasOsPage() {
 
     <Painel className="painel-filtros">
       <form className="ledger-filters" onSubmit={e => { e.preventDefault(); void carregar(inicio, fim) }}>
-        <Campo rotulo="Data inicial">
-          <input type="date" value={inicio} onChange={e => setInicio(e.target.value)} required/>
-        </Campo>
-        <Campo rotulo="Data final">
-          <input type="date" value={fim} onChange={e => setFim(e.target.value)} required/>
-        </Campo>
+        <SeletorPeriodo periodo={periodo} aoMudar={setPeriodo}/>
         <Selecao rotulo="Mostrar" value={filtro} onChange={e => setFiltro(e.target.value)} opcoes={FILTROS}/>
-        <button className="button button-primary">Aplicar filtros</button>
       </form>
     </Painel>
 
@@ -152,7 +150,7 @@ export default function PortoPendenciasOsPage() {
                   opcoes={motoristas.map(m => ({ valor: m.id, texto: m.nome }))}/>
               : item.socorrista || '—'}</td>
             <td>{item.semViatura
-              ? <input aria-label={`Viatura da OS ${item.numeroOs}`} placeholder="Ex.: L168"
+              ? <input aria-label={`Viatura da OS ${item.numeroOs}`} placeholder="Sigla da viatura"
                   value={acertos[item.id]?.siglaViatura ?? ''}
                   onChange={e => anotar(item.id, 'siglaViatura', e.target.value.toUpperCase())}/>
               : item.siglaViatura}</td>

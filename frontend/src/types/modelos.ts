@@ -6,7 +6,7 @@ export type Perfil = 'ADMINISTRADOR' | 'FUNCIONARIO'
  */
 export interface Usuario { id: number | string; nome: string; email: string; perfil: Perfil; ativo?: boolean; senhaProvisoria?: boolean }
 export interface SenhaRedefinida { usuarioId: number | string; nome: string; email: string; senhaProvisoria: string }
-export interface Veiculo { id: number; identificacao: string; placa: string; modelo?: string; custoPorKm: number; siglaPorto?: string; ativo: boolean }
+export interface Veiculo { id: number; identificacao: string; placa?: string; modelo?: string; custoPorKm: number; siglaPorto?: string; ativo: boolean }
 export interface Contratante { id: number; nome: string; documento?: string; ativo: boolean }
 export interface Categoria { id: number; nome: string; tipo: 'RECEITA' | 'DESPESA'; ativo: boolean }
 /**
@@ -14,7 +14,7 @@ export interface Categoria { id: number; nome: string; tipo: 'RECEITA' | 'DESPES
  * Supabase e o uuid do perfil. A tela so pergunta se ha vinculo, nunca mostra o
  * valor, entao os dois servem e conviver evita tocar a tela na migracao.
  */
-export interface Motorista { id: number; nome: string; telefone?: string; documento?: string; qra?:string; usuarioId?: number | string; ativo: boolean; veiculoId?: number; veiculo?: string }
+export interface Motorista { id: number; nome: string; telefone?: string; documento?: string; qra?:string; codigosPorto?: string[]; usuarioId?: number | string; ativo: boolean; veiculoId?: number; veiculo?: string }
 export interface ContaReceber {
   id: number; contratante: Contratante; protocolo?: string; descricao: string; valorPrevisto: number;
   valorRecebido?: number; diferenca?: number; dataCompetencia: string; vencimento: string;
@@ -27,8 +27,8 @@ export interface Receita {
   contratanteId?:number; categoria?:string; categoriaId?:number; veiculo?:string; veiculoId?:number; contaReceberId?:number; observacoes?:string; manual:boolean
 }
 export interface Despesa {
-  id:number; descricao:string; categoria:string; valor:number; data:string; vencimento?:string;
-  dataPagamento?:string; formaPagamento?:string; veiculo?:string; motorista?:string; protocolo?:string;
+  id:number; descricao:string; categoria:string; categoriaId?:number; veiculoId?:number; motoristaId?:number; valor:number; data:string; vencimento?:string;
+  dataPagamento?:string; formaPagamento?:string; veiculo?:string; motorista?:string; protocolo?:string; descontaComissao?:boolean;
   comprovante?:string; observacoes?:string; status:'PENDENTE'|'PAGO'|'ATRASADO'|'REJEITADO';
   aprovada:boolean; criadoPor:string; comprovanteNomeOriginal?:string; comprovanteTamanhoBytes?:number
 }
@@ -42,7 +42,7 @@ export interface LancamentoFinanceiro {
   data:string; status:string; realizado:boolean; veiculo?:string; veiculoId?:number; motorista?:string; origem:string; protocolo?:string
 }
 export interface Quilometragem {
-  id:number; data:string; veiculo:string; motorista?:string; protocolo?:string; hodometroInicial:number;
+  id:number; data:string; veiculo:string; veiculoId?:number; motorista?:string; motoristaId?:number; protocolo?:string; hodometroInicial:number;
   hodometroFinal:number; quilometragemTotal:number; quilometragemRemunerada:number; kmMorto:number;
   custoPorKm:number; custoKmMorto:number; observacoes?:string
 }
@@ -67,7 +67,7 @@ export interface RecebimentoForaDoPeriodo { dataPagamento:string; valor:number; 
 /** Para onde o dinheiro foi: despesa paga do periodo somada por categoria. */
 export interface GastoPorCategoria { categoriaId:number; categoria:string; valor:number; participacao:number }
 /** Movimento pago do dia e a soma progressiva usada na trajetória financeira. */
-export interface DespesaAcumuladaDia { data:string; valorDia:number; acumulado:number }
+export interface DespesaAcumuladaDia { data:string; valorDia:number; acumulado:number; origens?:{ categoria:string; valor:number }[] }
 export interface ResultadoSocorrista { motoristaId:number; socorrista:string; servicos:number; producao:number; comissao:number; despesas:number; custoTotal:number }
 export interface ItemImportacao {
   id:number; protocolo?:string; dataServico:string; veiculoAtendido?:string; placaAtendida?:string;
@@ -82,7 +82,7 @@ export interface OsSemSocorristaPorto { hashRegistro:string; numeroOs:string; so
 export interface ReassociacaoOsPorto { numeroOs:string; opAtual:string; novaOp:string; valor:number }
 export interface AnaliseOrdemPagamentoPorto { numero:string; existente:boolean; valorAtual?:number; somaArquivo:number; diferenca?:number; quantidadeReassociacoes:number; valorReassociacoes:number; reassociacoes:ReassociacaoOsPorto[] }
 export interface PreviaPorto { id:number; nomeArquivo:string; tipo:TipoRelatorioPorto; status:string; totalLinhas:number; linhas:LinhaPreviaPorto[]; erros:string[]; requerOrdemPagamento:boolean; resumo?:ResumoPreviaPorto; analiseOrdemPagamento?:AnaliseOrdemPagamentoPorto; orfas?:OsSemSocorristaPorto[]; osSemSocorrista?:string[] }
-export interface ConfirmacaoPorto { importacaoId:number; tipo:TipoRelatorioPorto; importados:number; ignorados:number; novos?:number; atualizados?:number; receitasCriadas:number; receitasAtualizadas:number; valorTotalRecebido:number; quinzena?:string; dataPagamento?:string; erros:string[]; osSemSocorrista?:string[] }
+export interface ConfirmacaoPorto { importacaoId:number; tipo:TipoRelatorioPorto; importados:number; ignorados:number; novos?:number; atualizados?:number; receitasCriadas:number; receitasAtualizadas:number; valorTotalRecebido:number; quinzena?:string; dataPagamento?:string; erros:string[]; osSemSocorrista?:string[]; viaturasNovas?:string[] }
 export type StatusConciliacaoPorto='SEM_COMPOSICAO'|'CONCILIADA'|'VALOR_ABAIXO'|'VALOR_ACIMA'|'RECEBIDA_COM_DIVERGENCIA'
 export type StatusOperacionalPorto='NORMAL'|'AGUARDANDO_LANCAMENTO'|'PROCESSADO'|'LIBERADO_APOS_ANALISE'|'PENDENTE_PORTO'|'DEVOLVIDO_FINALIZADO'|'CANCELADO'
 export type StatusFinanceiroPorto='AGUARDANDO_OP'|'PAGAMENTO_PROGRAMADO'|'A_CONFIRMAR'|'RECEBIDO'|'BLOQUEADO_PARA_PAGAMENTO'|'VALOR_DIVERGENTE'
@@ -107,13 +107,13 @@ export interface CalendarioPorto { id:number; dataPagamento:string; competenciaI
 export interface AlimentacaoComissao { id:number; motoristaId:number; data:string; valor:number; situacao:string; aprovada:boolean; observacoes?:string }
 export interface ServicoComissao { id:number; numeroOs:string; especialidade?:string; dataAtendimento:string; numeroOp:string; valorServico:number; comissaoServico:number }
 export interface PagamentoComissao { id:number; motoristaId:number; calendarioPagamentoId?:number; ordemPagamentoId?:number; despesaId:number; valorPago:number; dataPagamento:string; formaPagamento?:string; observacoes?:string; pagoPor:string; criadoEm:string }
-export interface Comissao { calendarioPagamentoId?:number; ordemPagamentoId?:number; numeroOp?:string; periodoInicio?:string; periodoFim?:string; periodo:string; socorrista:string; motoristaId:number; quantidadeServicosPagos:number; producaoPaga:number; percentualComissao:number; comissaoBruta:number; alimentacaoAprovada:number; alimentacaoPendente:number; liquido:number; aguardandoOp:boolean; servicos:ServicoComissao[]; alimentacoes:AlimentacaoComissao[]; pagamento?:PagamentoComissao }
-export interface ResumoComissao { motoristaId:number; socorrista:string; quantidadeServicosPagos:number; producaoPaga:number; comissaoBruta:number; alimentacaoAprovada:number; liquido:number; pagamento?:PagamentoComissao }
+export interface Comissao { calendarioPagamentoId?:number; ordemPagamentoId?:number; numeroOp?:string; periodoInicio?:string; periodoFim?:string; periodo:string; socorrista:string; motoristaId:number; quantidadeServicosPagos:number; producaoPaga:number; percentualComissao:number; comissaoBruta:number; descontos:number; descontosPendentes:number; liquido:number; aguardandoOp:boolean; servicos:ServicoComissao[]; gastos:DespesaDoSocorrista[]; pagamento?:PagamentoComissao }
+export interface ResumoComissao { motoristaId:number; socorrista:string; quantidadeServicosPagos:number; producaoPaga:number; comissaoBruta:number; descontos:number; liquido:number; pagamento?:PagamentoComissao }
 export interface ServicoSocorrista { id:number; numeroOs:string; dataAtendimento?:string; especialidade?:string; viatura?:string; numeroOp?:string; valorServico:number; statusPagamento:'PAGO'|'PAGO_EM_OUTRO_PERIODO'|'AGUARDANDO_PAGAMENTO'; pagoNoPeriodo:boolean; comissaoGerada?:number }
 /**
- * Uma despesa lancada no nome do socorrista. `descontaDaComissao` e o que separa
- * as duas leituras: toda despesa ligada a ele aparece na tela dele, mas so a
- * alimentacao entra no fechamento — mostrar nao e cobrar.
+ * Um gasto lancado no nome do socorrista. `descontaDaComissao` e o que separa
+ * as duas leituras: todo gasto ligado a ele aparece na tela dele, mas so o que
+ * foi marcado para descontar sai da comissao — mostrar nao e cobrar.
  */
-export interface DespesaDoSocorrista { id:number; descricao:string; data:string; valor:number; categoria:string; veiculo?:string; situacao:Despesa['status']; aprovada:boolean; descontaDaComissao:boolean; observacoes?:string }
+export interface DespesaDoSocorrista { id:number; descricao:string; data:string; valor:number; categoria:string; veiculo?:string; situacao:Despesa['status']; aprovada:boolean; descontaDaComissao:boolean; descontaEmOutraOp?:boolean; observacoes?:string }
 export interface DetalheSocorrista { id:number; nome:string; ativo:boolean; telefone?:string; email?:string; qra?:string; veiculosUtilizados:string[]; totalServicosPrestados:number; comissao:Comissao; servicos:ServicoSocorrista[]; despesas:DespesaDoSocorrista[] }

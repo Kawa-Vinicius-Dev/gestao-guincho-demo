@@ -56,13 +56,34 @@ test('a prévia aponta só as OS que ficaram sem socorrista', async () => {
   expect(previa.orfas?.map(o => o.numeroOs)).toEqual(['5673329/26', '5673528/26'])
 })
 
-test('confirmar é recusado enquanto houver OS sem socorrista', async () => {
+// Servico cancelado nao teve atendimento: nao ha comissao para dar dono. Pedir
+// socorrista para ele travava a importacao do painel do dia inteiro.
+test('serviço cancelado não fica órfão nem trava a importação', async () => {
   servidorDePrevia()
+  const { criarPreviaConteudoPorto } = await carregar()
+
+  const previa = await criarPreviaConteudoPorto(`PORTO SEGURO	5677129/26	SOCORRO
+14/09/2026	09:02	09:02	CANCELADO	SERVIÇO CANCELADO	Não`)
+
+  expect(previa.orfas).toEqual([])
+})
+
+// Pedido do dono: OS sem socorrista vai para o Auxiliar (o banco faz isso), entao
+// a importacao nao trava mais esperando alguem escolher.
+test('OS sem socorrista não trava a importação: segue para o Auxiliar', async () => {
+  servidorDePrevia()
+  let chamou = false
+  servidor.use(http.post(`${SUPA}/rest/v1/rpc/porto_confirmar_importacao`, () => {
+    chamou = true
+    return HttpResponse.json({ id: 55, tipo: 'PAINEL_DIARIO', importados: 2, ignorados: 0, novos: 2,
+      atualizados: 0, receitasCriadas: 0, valorTotal: 0, osSemSocorrista: [] })
+  }))
   const { criarPreviaConteudoPorto, confirmarImportacaoPorto } = await carregar()
   const previa = await criarPreviaConteudoPorto(COLADO)
 
-  await expect(confirmarImportacaoPorto(previa))
-    .rejects.toThrow(/sem socorrista/i)
+  await confirmarImportacaoPorto(previa)
+
+  expect(chamou).toBe(true)
 })
 
 test('com o socorrista escolhido na tela, a importação segue', async () => {
@@ -73,6 +94,7 @@ test('com o socorrista escolhido na tela, a importação segue', async () => {
     return HttpResponse.json({
       id: 55, tipo: 'PAINEL_DIARIO', importados: 2, ignorados: 0, novos: 2,
       atualizados: 0, receitasCriadas: 0, valorTotal: 0, osSemSocorrista: [],
+      viaturasNovas: ['L200'],
     })
   }))
   const { criarPreviaConteudoPorto, confirmarImportacaoPorto } = await carregar()
@@ -86,6 +108,8 @@ test('com o socorrista escolhido na tela, a importação segue', async () => {
   const resposta = await confirmarImportacaoPorto(resolvida)
 
   expect(resposta.importados).toBe(2)
+  // Sigla nova no diario vira viatura sozinha, e a tela conta quais foram.
+  expect(resposta.viaturasNovas).toEqual(['L200'])
   const linhas = enviado.p_linhas as Record<string, string>[]
   expect(linhas.every(l => l.motorista_id === '4')).toBe(true)
 })
@@ -121,7 +145,39 @@ test('sem QRA, sugere quem rodou aquela viatura naquele dia', async () => {
   const previa = await criarPreviaConteudoPorto(OP_SEM_QRA)
 
   expect(previa.orfas).toHaveLength(0)
-  expect(previa.linhas[0].dados.motorista_id).toBe('4')
+  // Sugestao, e nao escolha travada: o QRA da OP ainda pode corrigir.
+  expect(previa.linhas[0].dados.motorista_sugerido_id).toBe('4')
+  expect(previa.linhas[0].dados.motorista_id).toBeUndefined()
+})
+
+// O painel do dia traz a viatura; as OS que ja vieram numa OP ja tem dono. Com
+// isso, as OS novas da mesma viatura no mesmo dia ganham a sugestao sem ninguem
+// escolher na mao.
+test('o próprio painel sugere o socorrista pela viatura das OS que já têm dono', async () => {
+  servidor.use(
+    http.post(`${SUPA}/rest/v1/rpc/porto_registrar_importacao`, () =>
+      HttpResponse.json({ id: 57, status: 'AGUARDANDO_CONFERENCIA' })),
+    http.get(`${SUPA}/rest/v1/registros_importados_porto`, () => HttpResponse.json([])),
+    http.get(`${SUPA}/rest/v1/veiculos`, () => HttpResponse.json([])),
+    http.get(`${SUPA}/rest/v1/motoristas`, () => HttpResponse.json([
+      { id: 8, nome: 'DJALMA BEZERRA DE MELO NETO', qra: '620980' },
+    ])),
+    http.get(`${SUPA}/rest/v1/ordens_servico_porto`, ({ request }) =>
+      HttpResponse.json(new URL(request.url).searchParams.has('data_atendimento') ? [] : [
+        { numero_normalizado: '559262526', ordem_pagamento_id: 6, valor_total: 125,
+          motorista_id: 8, sigla_viatura: null, ordens_pagamento_porto: { numero: '06438808' } },
+      ])),
+  )
+  const { criarPreviaConteudoPorto } = await carregar()
+
+  const previa = await criarPreviaConteudoPorto(`PORTO SEGURO	5592625/26	SOCORRO	L168
+DJALMA BEZERRA DE MELO	08/09/2026	11:20	11:20	ACIONADO/FINAL	FINALIZADO	Não
+AZUL SEGUROS	5599999/26	SOCORRO	L168
+DJALMA BEZERRA DE MELO	08/09/2026	15:00	15:00	ACIONADO/FINAL	EM PROCESSAMENTO	Não`)
+
+  expect(previa.orfas).toHaveLength(0)
+  const nova = previa.linhas.find(l => l.dados.numero_os === '5599999/26')!
+  expect(nova.dados.motorista_sugerido_id).toBe('8')
 })
 
 test('dois socorristas na mesma viatura no mesmo dia: ninguém é sugerido', async () => {
@@ -138,5 +194,26 @@ test('dois socorristas na mesma viatura no mesmo dia: ninguém é sugerido', asy
   // Entre dois donos possiveis o sistema nao escolhe: errar o dono da comissao
   // em silencio e pior do que perguntar.
   expect(previa.orfas?.map(o => o.numeroOs)).toEqual(['01/9990010-26'])
-  expect(previa.linhas[0].dados.motorista_id).toBeUndefined()
+  expect(previa.linhas[0].dados.motorista_sugerido_id).toBeUndefined()
+})
+
+// Na OP, a coluna QRA as vezes traz um codigo interno da Porto. Cadastrado no
+// socorrista, ele vincula igual ao QRA — a OP funciona sozinha.
+test('código da Porto cadastrado no socorrista vincula como o QRA', async () => {
+  servidor.use(
+    http.post(`${SUPA}/rest/v1/rpc/porto_registrar_importacao`, () =>
+      HttpResponse.json({ id: 58, status: 'AGUARDANDO_CONFERENCIA' })),
+    http.get(`${SUPA}/rest/v1/registros_importados_porto`, () => HttpResponse.json([])),
+    http.get(`${SUPA}/rest/v1/ordens_servico_porto`, () => HttpResponse.json([])),
+    http.get(`${SUPA}/rest/v1/motoristas`, () => HttpResponse.json([
+      { id: 9, nome: 'ANDERSON JORGE RIBEIRO', qra: '619238', codigos_porto: ['003TT0000176zMBYAY'] },
+    ])),
+  )
+  const { criarPreviaConteudoPorto } = await carregar()
+
+  const previa = await criarPreviaConteudoPorto(`"Número da Ordem de Serviço";"Valor Total";"Especialidade";"Sigla da Viatura";"Socorrista";"QRA";"Data de atendimento"
+"01/5562024-26";"181.00";"GUINCHO";"";"ANDERSON JORGE RIBEIRO";"003TT0000176zMBYAY";"2026-09-08 08:06:05"`)
+
+  expect(previa.orfas).toHaveLength(0)
+  expect(previa.linhas[0].dados.motorista_sugerido_id).toBe('9')
 })

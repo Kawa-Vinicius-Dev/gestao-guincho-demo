@@ -57,3 +57,10 @@ alter table storage.objects enable row level security;
 grant usage on schema storage to anon, authenticated, service_role;
 grant select, insert, update, delete on storage.objects to authenticated;
 grant select on storage.buckets to authenticated;
+
+-- A publication que o Realtime usa. No Supabase ela ja vem criada; aqui nao, e
+-- a migration que liga o tempo real nas tabelas de dinheiro parava com
+-- "publication supabase_realtime does not exist" — derrubando todas as suites,
+-- que aplicam as migrations antes de rodar. Nasce vazia, como la: sao as
+-- migrations que dizem quais tabelas entram.
+create publication supabase_realtime;

@@ -132,7 +132,7 @@ export function erroDoBanco(erro: ErroSupabase, contexto: string): ApiError {
         409,
       )
     }
-    return new ApiError('Este registro está em uso e não pode ser removido.', 409)
+    return new ApiError('Não dá para excluir: há lançamentos ligados a este cadastro. Desative em vez de excluir.', 409)
   }
   // 23514 check_violation — um valor fora da regra da tabela.
   if (codigo === '23514') {
@@ -163,4 +163,18 @@ export function ou<T>(
 ): T {
   if (resposta.error) throw erroDoBanco(resposta.error, contexto)
   return resposta.data as T
+}
+
+/**
+ * Exclui um registro e confirma que saiu.
+ *
+ * O delete que a policy nao alcanca nao da erro: volta zero linhas. Sem conferir,
+ * a tela fecharia a janela como se tivesse apagado.
+ */
+export async function excluirRegistro(tabela: string, id: number, contexto: string): Promise<void> {
+  const apagadas = ou(
+    await supabase().from(tabela).delete().eq('id', id).select('id'),
+    contexto,
+  ) as { id: number }[]
+  if (!apagadas.length) throw new ApiError('Você não tem permissão para excluir este registro.', 403)
 }

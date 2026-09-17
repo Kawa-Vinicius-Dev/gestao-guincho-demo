@@ -1,42 +1,57 @@
-import { useEffect,useState,type FormEvent } from 'react'
+import { useEffect,useState } from 'react'
 import { Carregando } from '../components/EstadoPagina'
 import { Selecao } from '../components/Campos'
 import { listarMotoristas } from '../dados/motoristas'
 import { baixarRelatorioComissoes } from '../dados/relatorios'
-import { lerComissaoDaOp, listarOpsComissao, registrarPagamentoComissao, resumirComissoes } from '../dados/comissoes'
-import type { Comissao,Motorista,OrdemPagamentoPorto,ResumoComissao } from '../types/modelos'
+import { lerComissaoDaOp, listarPeriodosComissao, resumirComissoes } from '../dados/comissoes'
+import type { Comissao,Motorista,ResumoComissao } from '../types/modelos'
 import { data,moeda } from '../utils/formatadores'
-import { opCorrente, rotuloOp } from '../utils/periodos'
+import { rotuloPeriodo, type PeriodoPorto } from '../utils/periodos'
+import { globalDoPeriodoPorto, periodoPortoDoGlobal, usePeriodoGlobal } from '../utils/periodoGlobal'
 import { Modal } from '../components/Modal'
+import { useAoVivo } from '../dados/aoVivo'
 
+/**
+ * Comissoes da OP.
+ *
+ * Nao ha botao de pagar: quando a OP chega, a comissao de cada socorrista ja
+ * nasce como despesa paga no fim do periodo, e se recalcula sozinha quando uma
+ * OS ganha dono ou entra um gasto marcado para descontar. Esta tela confere.
+ */
 export default function ComissoesPage(){
-  const [periodos,setPeriodos]=useState<OrdemPagamentoPorto[]>([]),[motoristas,setMotoristas]=useState<Motorista[]>([]),[periodoId,setPeriodoId]=useState(0),[motoristaId,setMotoristaId]=useState(0),[itens,setItens]=useState<ResumoComissao[]>([]),[detalhe,setDetalhe]=useState<Comissao|null>(null),[erro,setErro]=useState(''),[mensagem,setMensagem]=useState(''),[exportando,setExportando]=useState(false)
-  useEffect(()=>{Promise.all([listarOpsComissao(),listarMotoristas()]).then(([p,m])=>{setPeriodos(p);setMotoristas(m);const atual=opCorrente(p);if(atual)setPeriodoId(atual.id);if(!atual)setCarregando(false)}).catch(e=>{setErro(e.message);setCarregando(false)})},[])
+  const [periodos,setPeriodos]=useState<PeriodoPorto[]>([]),[motoristas,setMotoristas]=useState<Motorista[]>([]),[motoristaId,setMotoristaId]=useState(0),[itens,setItens]=useState<ResumoComissao[]>([]),[detalhe,setDetalhe]=useState<Comissao|null>(null),[erro,setErro]=useState(''),[exportando,setExportando]=useState(false)
+  const [global,setGlobal]=usePeriodoGlobal()
+  const periodoId=periodoPortoDoGlobal(periodos,global)?.id??''
+  const setPeriodoId=(id:string)=>{const p=periodos.find(x=>x.id===id);const novo=p&&globalDoPeriodoPorto(p);if(novo)setGlobal(novo)}
+  const ids=periodos.find(p=>p.id===periodoId)?.ids??[]
+  useEffect(()=>{Promise.all([listarPeriodosComissao(),listarMotoristas()]).then(([p,m])=>{setPeriodos(p);setMotoristas(m);if(!p.length)setCarregando(false)}).catch(e=>{setErro(e.message);setCarregando(false)})},[])
   const [carregando,setCarregando]=useState(true)
-  useEffect(()=>{if(!periodoId)return;setCarregando(true);resumirComissoes(periodoId,motoristaId||undefined).then(setItens).catch(e=>setErro(e.message)).finally(()=>setCarregando(false))},[periodoId,motoristaId])
-  async function abrir(id:number){try{setDetalhe(await lerComissaoDaOp(periodoId,id))}catch(e){setErro((e as Error).message)}}
-  async function pagar(evento:FormEvent<HTMLFormElement>){evento.preventDefault();if(!detalhe)return;const form=new FormData(evento.currentTarget)
-    try{await registrarPagamentoComissao(detalhe.motoristaId,periodoId,String(form.get('dataPagamento')),String(form.get('formaPagamento')),String(form.get('observacoes')||''));const [atualizado,resumo]=await Promise.all([lerComissaoDaOp(periodoId,detalhe.motoristaId),resumirComissoes(periodoId,motoristaId||undefined)]);setDetalhe(atualizado);setItens(resumo);setErro('');setMensagem('Pagamento registrado no financeiro oficial.')}
-    catch(e){setErro((e as Error).message)}
-  }
+  useEffect(()=>{if(!ids.length)return;setCarregando(true);resumirComissoes(ids,motoristaId||undefined).then(setItens).catch(e=>setErro(e.message)).finally(()=>setCarregando(false))},[periodoId,motoristaId,periodos])
+  // OS que ganha dono ou gasto marcado muda a comissao na hora, detalhe aberto inclusive.
+  useAoVivo(()=>{if(!ids.length)return
+    resumirComissoes(ids,motoristaId||undefined).then(setItens).catch(e=>setErro(e.message))
+    if(detalhe)lerComissaoDaOp(ids,detalhe.motoristaId).then(setDetalhe).catch(e=>setErro(e.message))})
+  async function abrir(id:number){try{setDetalhe(await lerComissaoDaOp(ids,id))}catch(e){setErro((e as Error).message)}}
   async function exportar(){setErro('');setExportando(true)
-    try{await baixarRelatorioComissoes(periodoId)}
+    try{await baixarRelatorioComissoes(ids)}
     catch(e){setErro((e as Error).message)}
     finally{setExportando(false)}
   }
-  return <div className="page-enter commission-page"><header className="page-heading"><div><span className="eyebrow">Equipe e pagamentos</span><h1>Comissões</h1><p>Conferência auditável das OS pagas e alimentações aprovadas.</p></div><button className="button button-ghost" disabled={!periodoId||exportando} onClick={()=>void exportar()}>{exportando?'Gerando CSV…':'Exportar CSV'}</button></header>{erro?<div className="form-alert">{erro}</div>:null}{carregando?<Carregando/>:null}
-    {mensagem?<div className="success-notice">{mensagem}</div>:null}
-    <section className="panel"><div className="ledger-filters"><Selecao rotulo="Ordem de pagamento" vazio="Selecione" value={periodoId||''} onChange={e=>setPeriodoId(Number(e.target.value))}
-      opcoes={periodos.map(p=>({valor:p.id,texto:rotuloOp(p)}))}/>
+  return <div className="page-enter commission-page"><header className="page-heading"><div><span className="eyebrow">Equipe e pagamentos</span><h1>Comissões</h1><p>20% dos serviços pagos na OP, menos os gastos marcados para descontar. Já entra em despesas sozinha.</p></div><button className="button button-ghost" disabled={!periodoId||exportando} onClick={()=>void exportar()}>{exportando?'Gerando CSV…':'Exportar CSV'}</button></header>{erro?<div className="form-alert">{erro}</div>:null}{carregando?<Carregando/>:null}
+    <section className="panel"><div className="ledger-filters"><Selecao rotulo="Período" vazio="Selecione" value={periodoId} onChange={e=>setPeriodoId(e.target.value)}
+      opcoes={periodos.map(p=>({valor:p.id,texto:rotuloPeriodo(p)}))}/>
       <Selecao rotulo="Socorrista" vazio="Todos" value={motoristaId||''} onChange={e=>setMotoristaId(Number(e.target.value))}
       opcoes={motoristas.map(m=>({valor:m.id,texto:m.nome}))}/></div>
-      <div className="table-scroll"><table><thead><tr><th>Socorrista</th><th>Serviços pagos</th><th>Produção paga</th><th>Comissão 20%</th><th>Alimentação</th><th>Líquido</th><th>Pagamento</th><th/></tr></thead><tbody>{itens.map(item=><tr key={item.motoristaId}><td><strong>{item.socorrista}</strong></td><td>{item.quantidadeServicosPagos}</td><td>{moeda(item.producaoPaga)}</td><td>{moeda(item.comissaoBruta)}</td><td>{moeda(item.alimentacaoAprovada)}</td><td className={item.liquido<0?'negative':'positive'}><strong>{moeda(item.liquido)}</strong></td><td>{item.pagamento?`Pago em ${data(item.pagamento.dataPagamento)}`:item.liquido>0?'Pendente':'Sem desembolso'}</td><td><button className="table-action" onClick={()=>void abrir(item.motoristaId)}>Detalhar</button></td></tr>)}</tbody></table></div></section>
-    {detalhe?<Modal etiqueta={detalhe.periodo} titulo={detalhe.socorrista} className="commission-detail" aoFechar={()=>setDetalhe(null)}><div className="porto-detail-summary"><span>Produção<strong>{moeda(detalhe.producaoPaga)}</strong></span><span>Comissão<strong>{moeda(detalhe.comissaoBruta)}</strong></span><span>Alimentação<strong>{moeda(detalhe.alimentacaoAprovada)}</strong></span><span>Líquido<strong>{moeda(detalhe.liquido)}</strong></span></div>
-      {detalhe.pagamento?<div className="success-notice"><strong>Pagamento registrado</strong> em {data(detalhe.pagamento.dataPagamento)} no valor de {moeda(detalhe.pagamento.valorPago)}. Despesa #{detalhe.pagamento.despesaId}.</div>:detalhe.liquido>0?<form className="form-grid three-columns" onSubmit={pagar}><label className="field"><span>Data do pagamento</span><input name="dataPagamento" type="date" required/></label><Selecao rotulo="Forma de pagamento" name="formaPagamento" defaultValue="PIX"
-        opcoes={[{valor:'PIX',texto:'PIX'},{valor:'Transferência',texto:'Transferência'},
-          {valor:'Dinheiro',texto:'Dinheiro'},{valor:'Outro',texto:'Outro'}]}/><label className="field"><span>Observações</span><input name="observacoes" autoCapitalize="sentences" autoComplete="off"/></label><div className="modal-actions field-wide"><button className="button button-primary">Registrar pagamento de {moeda(detalhe.liquido)}</button></div></form>:<div className="form-alert">Sem valor positivo a desembolsar. O líquido negativo permanece visível e não gera despesa de pagamento.</div>}
+      <div className="table-scroll"><table><thead><tr><th>Socorrista</th><th>Serviços pagos</th><th>Produção paga</th><th>Comissão 20%</th><th>Descontos</th><th>Líquido</th><th>Em despesas</th><th/></tr></thead><tbody>{itens.map(item=><tr key={item.motoristaId}><td><strong>{item.socorrista}</strong></td><td>{item.quantidadeServicosPagos}</td><td>{moeda(item.producaoPaga)}</td><td>{moeda(item.comissaoBruta)}</td><td>{moeda(item.descontos)}</td><td className={item.liquido<0?'negative':'positive'}><strong>{moeda(item.liquido)}</strong></td><td>{item.pagamento?`Lançada em ${data(item.pagamento.dataPagamento)}`:'Sem valor a lançar'}</td><td><button className="table-action" onClick={()=>void abrir(item.motoristaId)}>Detalhar</button></td></tr>)}</tbody></table></div></section>
+    {detalhe?<Modal etiqueta={detalhe.periodo} titulo={detalhe.socorrista} className="commission-detail" aoFechar={()=>setDetalhe(null)}><div className="porto-detail-summary"><span>Produção<strong>{moeda(detalhe.producaoPaga)}</strong></span><span>Comissão<strong>{moeda(detalhe.comissaoBruta)}</strong></span><span>Descontos<strong>{moeda(detalhe.descontos)}</strong></span><span>Líquido<strong>{moeda(detalhe.liquido)}</strong></span></div>
+      {detalhe.pagamento
+        ?<div className="success-notice"><strong>Lançada em despesas</strong> em {data(detalhe.pagamento.dataPagamento)}, no valor de {moeda(detalhe.pagamento.valorPago)}.</div>
+        :<div className="form-alert">Sem valor positivo: os descontos são maiores que a comissão, e nada entra em despesas.</div>}
       <h3>Serviços que formam a comissão</h3><div className="table-scroll"><table><thead><tr><th>OS</th><th>Atendimento</th><th>OP</th><th>Valor</th><th>Comissão</th></tr></thead><tbody>{detalhe.servicos.map(s=><tr key={s.id}><td>{s.numeroOs}</td><td>{data(s.dataAtendimento)}</td><td>{s.numeroOp}</td><td>{moeda(s.valorServico)}</td><td>{moeda(s.comissaoServico)}</td></tr>)}</tbody></table></div>
-      <h3>Alimentações do período</h3><div className="table-scroll"><table><thead><tr><th>Data</th><th>Valor</th><th>Situação</th><th>Observação</th></tr></thead><tbody>{detalhe.alimentacoes.map(a=><tr key={a.id}><td>{data(a.data)}</td><td>{moeda(a.valor)}</td><td>{a.aprovada?'Aprovada':a.situacao.toLowerCase()}</td><td>{a.observacoes||'—'}</td></tr>)}</tbody></table></div>
+      <h3>Gastos do período</h3>
+      {detalhe.gastos.length
+        ?<div className="table-scroll"><table><thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th>Viatura</th><th>Valor</th><th>Desconta da comissão</th></tr></thead><tbody>{detalhe.gastos.map(g=><tr key={g.id}><td>{data(g.data)}</td><td><strong>{g.descricao}</strong>{g.observacoes?<small>{g.observacoes}</small>:null}</td><td>{g.categoria}</td><td>{g.veiculo||'—'}</td><td>{moeda(g.valor)}</td><td>{g.descontaDaComissao?(g.aprovada?'Sim':'Sim, aguardando aprovação'):g.descontaEmOutraOp?'Em outra OP do período':'Não'}</td></tr>)}</tbody></table></div>
+        :<p className="empty-inline">Nenhum gasto no nome dele neste período.</p>}
     </Modal>:null}
   </div>
 }

@@ -1,35 +1,43 @@
+import { ehAuxiliar } from '../utils/auxiliar'
 import { useEffect,useState } from 'react'
 import { Link,useParams } from 'react-router-dom'
 import { Selecao } from '../components/Campos'
-import { listarOpsComissao, obterDetalheSocorrista } from '../dados/comissoes'
+import { listarPeriodosComissao, obterDetalheSocorrista } from '../dados/comissoes'
 import { Carregando,ErroPagina } from '../components/EstadoPagina'
-import type { DespesaDoSocorrista,DetalheSocorrista,OrdemPagamentoPorto } from '../types/modelos'
+import type { DespesaDoSocorrista,DetalheSocorrista } from '../types/modelos'
 import { data,moeda } from '../utils/formatadores'
-import { opCorrente, rotuloOp } from '../utils/periodos'
+import { rotuloPeriodo, type PeriodoPorto } from '../utils/periodos'
+import { globalDoPeriodoPorto, periodoPortoDoGlobal, usePeriodoGlobal } from '../utils/periodoGlobal'
+import { useAoVivo } from '../dados/aoVivo'
 
 const statusPagamento={PAGO:'Pago',PAGO_EM_OUTRO_PERIODO:'Pago em outro período',AGUARDANDO_PAGAMENTO:'Aguardando pagamento'} as const
 
 export default function EquipeDetalhePage(){
   const motoristaId=Number(useParams().id)
-  const [periodos,setPeriodos]=useState<OrdemPagamentoPorto[]>([]),[periodoId,setPeriodoId]=useState(0),[detalhe,setDetalhe]=useState<DetalheSocorrista|null>(null)
+  const [periodos,setPeriodos]=useState<PeriodoPorto[]>([]),[detalhe,setDetalhe]=useState<DetalheSocorrista|null>(null)
   const [carregandoPeriodos,setCarregandoPeriodos]=useState(true),[carregandoDetalhe,setCarregandoDetalhe]=useState(false),[erro,setErro]=useState('')
-  useEffect(()=>{listarOpsComissao().then(lista=>{setPeriodos(lista);const atual=opCorrente(lista);if(atual)setPeriodoId(atual.id)}).catch((e:Error)=>setErro(e.message)).finally(()=>setCarregandoPeriodos(false))},[])
-  useEffect(()=>{if(!motoristaId||!periodoId)return;setCarregandoDetalhe(true);setErro('');obterDetalheSocorrista(motoristaId,periodoId).then(setDetalhe).catch(e=>setErro(e.message)).finally(()=>setCarregandoDetalhe(false))},[motoristaId,periodoId])
+  const [global,setGlobal]=usePeriodoGlobal()
+  const periodoId=periodoPortoDoGlobal(periodos,global)?.id??''
+  const setPeriodoId=(id:string)=>{const p=periodos.find(x=>x.id===id);const novo=p&&globalDoPeriodoPorto(p);if(novo)setGlobal(novo)}
+  const ids=periodos.find(p=>p.id===periodoId)?.ids??[]
+  useEffect(()=>{listarPeriodosComissao().then(lista=>{setPeriodos(lista)}).catch((e:Error)=>setErro(e.message)).finally(()=>setCarregandoPeriodos(false))},[])
+  useEffect(()=>{if(!motoristaId||!ids.length)return;setCarregandoDetalhe(true);setErro('');obterDetalheSocorrista(motoristaId,ids).then(setDetalhe).catch(e=>setErro(e.message)).finally(()=>setCarregandoDetalhe(false))},[motoristaId,periodoId,periodos])
+  useAoVivo(()=>{if(motoristaId&&ids.length)obterDetalheSocorrista(motoristaId,ids).then(setDetalhe).catch(e=>setErro(e.message))})
   if(carregandoPeriodos)return <Carregando/>
   if(erro&&!detalhe)return <ErroPagina mensagem={erro}/>
   return <div className="page-enter employee-detail-page">
     <header className="employee-detail-heading">
       <div><Link className="back-link" to="/equipe">← Voltar para socorristas</Link><span className="eyebrow">Ficha administrativa</span><h1>{detalhe?.nome||'Socorrista'}</h1><p>Histórico operacional e composição financeira por fechamento Porto.</p></div>
-      <Selecao rotulo="Ordem de pagamento" className="month-picker" vazio="Selecione" value={periodoId||''} onChange={event=>setPeriodoId(Number(event.target.value))}
-        opcoes={periodos.map(rotuloEOp=>({valor:rotuloEOp.id,texto:rotuloOp(rotuloEOp)}))}/>
+      <Selecao rotulo="Período" className="month-picker" vazio="Selecione" value={periodoId} onChange={event=>setPeriodoId(event.target.value)}
+        opcoes={periodos.map(periodo=>({valor:periodo.id,texto:rotuloPeriodo(periodo)}))}/>
     </header>
     {erro?<div className="form-alert" role="alert">{erro}</div>:null}
     {carregandoDetalhe&&!detalhe?<Carregando/>:null}
     {detalhe?<>
       <section className="employee-identity panel" aria-label="Informações gerais do socorrista">
         <div className="employee-monogram">{detalhe.nome.split(' ').map(parte=>parte[0]).slice(0,2).join('')}</div>
-        <div className="employee-name"><span className={`staff-status ${detalhe.ativo?'staff-disponivel':'staff-folga'}`}>{detalhe.ativo?'Ativo':'Inativo'}</span><strong>{detalhe.nome}</strong><small>{detalhe.qra||'QRA não informado'}</small></div>
-        <dl><div><dt>Telefone</dt><dd>{detalhe.telefone||'Não informado'}</dd></div><div><dt>E-mail / usuário</dt><dd>{detalhe.email||'Não vinculado'}</dd></div></dl>
+        <div className="employee-name"><span className={`staff-status ${detalhe.ativo?'staff-disponivel':'staff-folga'}`}>{detalhe.ativo?'Ativo':'Inativo'}</span><strong>{detalhe.nome}</strong><small>{ehAuxiliar(detalhe.nome)?'Recebe as OS que chegam sem socorrista':detalhe.qra||'QRA não informado'}</small></div>
+        <dl><div><dt>Telefone</dt><dd>{detalhe.telefone||(ehAuxiliar(detalhe.nome)?'—':'Não informado')}</dd></div><div><dt>E-mail / usuário</dt><dd>{detalhe.email||'Não vinculado'}</dd></div></dl>
         <div className="employee-vehicles"><span>Viaturas utilizadas no período</span><div>{detalhe.veiculosUtilizados.length?detalhe.veiculosUtilizados.map(viatura=><strong key={viatura}>{viatura}</strong>):<small>Nenhuma viatura identificada nas OS deste período.</small>}</div></div>
       </section>
 
@@ -38,8 +46,8 @@ export default function EquipeDetalhePage(){
         <article className="metric"><span>Serviços já pagos</span><strong>{detalhe.comissao.quantidadeServicosPagos}</strong><small>Somente OP efetivamente paga</small></article>
         <article className="metric"><span>Produção paga</span><strong>{moeda(detalhe.comissao.producaoPaga)}</strong></article>
         <article className="metric metric-focus"><span>Comissão 20%</span><strong>{moeda(detalhe.comissao.comissaoBruta)}</strong></article>
-        <article className="metric"><span>Alimentação</span><strong>{moeda(detalhe.comissao.alimentacaoAprovada)}</strong><small>{moeda(detalhe.comissao.alimentacaoPendente)} pendente</small></article>
-        <article className={`metric ${detalhe.comissao.liquido<0?'metric-alert':'metric-net'}`}><span>Líquido</span><strong>{moeda(detalhe.comissao.liquido)}</strong><small>Comissão menos alimentação</small></article>
+        <article className="metric"><span>Descontos</span><strong>{moeda(detalhe.comissao.descontos)}</strong><small>{moeda(detalhe.comissao.descontosPendentes)} aguardando aprovação</small></article>
+        <article className={`metric ${detalhe.comissao.liquido<0?'metric-alert':'metric-net'}`}><span>Líquido</span><strong>{moeda(detalhe.comissao.liquido)}</strong><small>Comissão menos descontos</small></article>
       </section>
 
       <section className="panel employee-services"><header className="panel-title"><div><span className="eyebrow">Histórico do período</span><h2>Serviços prestados</h2></div><span className="service-count">{detalhe.totalServicosPrestados} OS</span></header>
@@ -47,9 +55,9 @@ export default function EquipeDetalhePage(){
         {!detalhe.servicos.length?<p className="empty-inline">Nenhum serviço identificado neste período.</p>:null}
       </section>
 
-      <section className="panel employee-food"><header className="panel-title"><div><span className="eyebrow">Mesma fonte do fechamento</span><h2>Alimentação</h2></div><div className="food-totals"><span>Total aprovado<strong>{moeda(detalhe.comissao.alimentacaoAprovada)}</strong></span><span>Pendente<strong>{moeda(detalhe.comissao.alimentacaoPendente)}</strong></span></div></header>
-        <div className="table-scroll"><table><thead><tr><th>Data</th><th>Valor</th><th>Situação</th><th>Observação</th></tr></thead><tbody>{detalhe.comissao.alimentacoes.map(alimentacao=><tr key={alimentacao.id}><td>{data(alimentacao.data)}</td><td>{moeda(alimentacao.valor)}</td><td>{alimentacao.aprovada?'Aprovada':alimentacao.situacao.toLowerCase()}</td><td>{alimentacao.observacoes||'—'}</td></tr>)}</tbody></table></div>
-        {!detalhe.comissao.alimentacoes.length?<p className="empty-inline">Nenhum lançamento de alimentação neste período.</p>:null}
+      <section className="panel employee-food"><header className="panel-title"><div><span className="eyebrow">Mesma fonte do fechamento</span><h2>Descontos da comissão</h2></div><div className="food-totals"><span>Total aprovado<strong>{moeda(detalhe.comissao.descontos)}</strong></span><span>Pendente<strong>{moeda(detalhe.comissao.descontosPendentes)}</strong></span></div></header>
+        <div className="table-scroll"><table><thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th>Valor</th><th>Situação</th></tr></thead><tbody>{detalhe.comissao.gastos.filter(g=>g.descontaDaComissao).map(g=><tr key={g.id}><td>{data(g.data)}</td><td><strong>{g.descricao}</strong>{g.observacoes?<small>{g.observacoes}</small>:null}</td><td>{g.categoria}</td><td>{moeda(g.valor)}</td><td>{g.aprovada?'Aprovada':g.situacao.toLowerCase()}</td></tr>)}</tbody></table></div>
+        {!detalhe.comissao.gastos.some(g=>g.descontaDaComissao)?<p className="empty-inline">Nenhum gasto marcado para descontar neste período.</p>:null}
       </section>
 
       <OutrasDespesas detalhe={detalhe}/>
@@ -60,9 +68,9 @@ export default function EquipeDetalhePage(){
 /**
  * Despesas lancadas no nome do socorrista que NAO descontam da comissao.
  *
- * O formulario pede o socorrista em qualquer categoria, mas so a alimentacao
- * entra no fechamento — um pedagio, uma peca, um diesel lancado no nome dele
- * conta na viatura ou no resultado geral. Antes, essas nao apareciam em lugar
+ * O formulario pede o socorrista em qualquer categoria, mas so o gasto marcado
+ * para descontar entra no fechamento — um pedagio, uma peca, a alimentacao que
+ * a empresa paga conta na viatura ou no resultado geral. Antes, essas nao apareciam em lugar
  * nenhum ligado a pessoa: o campo prometia um vinculo que nenhuma tela mostrava.
  *
  * Painel separado, e nao uma linha a mais na tabela de alimentacao, justamente
@@ -78,7 +86,7 @@ function OutrasDespesas({ detalhe }:{ detalhe:DetalheSocorrista }){
       <div className="food-totals"><span>Total no período<strong>{moeda(total)}</strong></span></div>
     </header>
     <p className="nota-fora-do-fechamento">
-      Lançadas com o socorrista preenchido, mas sem ser alimentação: pesam na viatura ou no
+      Lançadas com o socorrista preenchido, sem a marca de desconto: pesam na viatura ou no
       resultado geral da operação, e não no líquido dele.
     </p>
     <div className="table-scroll"><table>

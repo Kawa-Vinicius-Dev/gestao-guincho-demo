@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useRef } from 'react'
-import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { AuthProvider } from './auth/AuthContext'
 import { Carregando } from './components/EstadoPagina'
 import { Layout } from './components/Layout'
@@ -9,15 +9,14 @@ import { removerDadosDemoLegados } from './legacyStorage'
 const Login=lazy(()=>import('./auth/LoginPage'))
 const Dashboard=lazy(()=>import('./DashboardPage'))
 const Contas=lazy(()=>import('./financeiro/ContasReceberPage'))
+const Creditos=lazy(()=>import('./financeiro/CreditosPage'))
 const Lancamentos=lazy(()=>import('./financeiro/LancamentosPage'))
 const Despesas=lazy(()=>import('./financeiro/DespesasPage'))
 const Quilometragem=lazy(()=>import('./frota/QuilometragemPage'))
 const Frotas=lazy(()=>import('./frota/FrotasPage'))
-const FluxoCaixa=lazy(()=>import('./financeiro/FluxoCaixaPage'))
 const Dre=lazy(()=>import('./financeiro/DrePage'))
 const Equipe=lazy(()=>import('./equipe/EquipePage'))
 const EquipeDetalhe=lazy(()=>import('./equipe/EquipeDetalhePage'))
-const Receitas=lazy(()=>import('./financeiro/ReceitasPage'))
 const MinhaComissao=lazy(()=>import('./comissao/MinhaComissaoPage'))
 const Comissoes=lazy(()=>import('./comissao/ComissoesPage'))
 const PortoImportacoes=lazy(()=>import('./porto/PortoImportacoesPage'))
@@ -83,8 +82,9 @@ export default function App(){
         <Route index element={<Dashboard/>}/>
         <Route path="/lancamentos" element={<Lancamentos/>}/>
         <Route path="/contas-receber" element={<Contas/>}/>
-        <Route path="/receitas" element={<Receitas/>}/>
-        <Route path="/fluxo-caixa" element={<FluxoCaixa/>}/>
+        <Route path="/creditos" element={<Creditos/>}/>
+        <Route path="/receitas" element={<Navigate to="/lancamentos" replace/>}/>
+        <Route path="/fluxo-caixa" element={<Navigate to="/lancamentos" replace/>}/>
         <Route path="/dre" element={<Dre/>}/>
         <Route path="/veiculos" element={<Frotas/>}/>
         <Route path="/motoristas" element={<Equipe/>}/>
