@@ -50,10 +50,10 @@ test('a prévia aponta só as OS que ficaram sem socorrista', async () => {
 
   const previa = await criarPreviaConteudoPorto(COLADO)
 
-  // O painel do dia nao traz QRA, entao as duas linhas ficam orfas: a
-  // identificacao por nome nao existe de proposito, para nao vincular comissao
-  // a partir de um nome cortado pela largura da coluna de origem.
-  expect(previa.orfas?.map(o => o.numeroOs)).toEqual(['5673329/26', '5673528/26'])
+  // Kawa: a OS que vem com o nome do funcionario fica com ele; so a que vem sem
+  // nada vai para o Auxiliar. O nome no arquivo identifica mesmo sem QRA.
+  expect(previa.orfas?.map(o => o.numeroOs)).toEqual(['5673528/26'])
+  expect(previa.linhas[0].dados.motorista_sugerido_id).toBe('4')
 })
 
 // Servico cancelado nao teve atendimento: nao ha comissao para dar dono. Pedir
@@ -216,4 +216,35 @@ test('código da Porto cadastrado no socorrista vincula como o QRA', async () =>
 
   expect(previa.orfas).toHaveLength(0)
   expect(previa.linhas[0].dados.motorista_sugerido_id).toBe('9')
+})
+
+// Nome cortado pela largura da coluna identifica quando so serve para uma pessoa;
+// quando serve para duas (pai e filho), ninguem e escolhido.
+test('nome da OP identifica o socorrista, mas nome cortado que serve para dois não', async () => {
+  servidor.use(
+    http.post(`${SUPA}/rest/v1/rpc/porto_registrar_importacao`, () =>
+      HttpResponse.json({ id: 59, status: 'AGUARDANDO_CONFERENCIA' })),
+    http.get(`${SUPA}/rest/v1/registros_importados_porto`, () => HttpResponse.json([])),
+    http.get(`${SUPA}/rest/v1/ordens_servico_porto`, () => HttpResponse.json([])),
+    http.get(`${SUPA}/rest/v1/motoristas`, () => HttpResponse.json([
+      { id: 1, nome: 'Socorrista Pai da Silva', qra: '100' },
+      { id: 5, nome: 'Socorrista Pai da Silva Filho', qra: '500' },
+      { id: 2, nome: 'Qebson Ramos da Silva', qra: '609690' },
+      { id: 10, nome: 'AUXILIAR', qra: null },
+    ])),
+  )
+  const { criarPreviaConteudoPorto } = await carregar()
+
+  const previa = await criarPreviaConteudoPorto(`"Número da Ordem de Serviço";"Valor Total";"Especialidade";"Sigla da Viatura";"Socorrista";"QRA";"Data de atendimento"
+"01/1000001-26";"181.00";"GUINCHO";"";"QEBSON RAMOS DA SILVA";"0038Y00003nmcnXQAQ";"2026-07-01 07:30:00"
+"01/1000002-26";"181.00";"GUINCHO";"";"QEBSON RAMOS DA SIL";"";"2026-07-01 08:30:00"
+"01/1000003-26";"181.00";"GUINCHO";"";"SOCORRISTA PAI DA SILVA";"";"2026-07-01 09:30:00"
+"01/1000004-26";"181.00";"GUINCHO";"";"SOCORRISTA PAI DA";"";"2026-07-01 10:30:00"
+"01/1000005-26";"181.00";"GUINCHO";"";"";"";"2026-07-01 11:30:00"`)
+
+  const sugerido = (n: string) => previa.linhas.find(l => l.dados.numero_os === n)?.dados.motorista_sugerido_id
+  expect(sugerido('01/1000001-26')).toBe('2')
+  expect(sugerido('01/1000002-26')).toBe('2')
+  expect(sugerido('01/1000003-26')).toBe('1')
+  expect(previa.orfas?.map(o => o.numeroOs)).toEqual(['01/1000004-26', '01/1000005-26'])
 })
