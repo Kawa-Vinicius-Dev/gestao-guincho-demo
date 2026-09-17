@@ -194,3 +194,12 @@ test('OS paga pela OP mostra o valor informado e a diferença', async () => {
   // Quem ja esta numa OP nao tem valor para informar a mao.
   expect(screen.queryByRole('button', { name: /informar valor da os/i })).not.toBeInTheDocument()
 })
+
+test('card do painel abre a lista já na situação e na competência', async () => {
+  const pedidos: Record<string, unknown>[] = []
+  servidorBase(corpo => pedidos.push(corpo))
+  await abrir('/porto/ordens-servico?situacao=AGUARDANDO_PROXIMA_OP&competencia=1')
+
+  await screen.findByText('01/4312215-26')
+  expect(pedidos[0]).toMatchObject({ p_situacao: 'AGUARDANDO_PROXIMA_OP', p_por_competencia: true })
+})

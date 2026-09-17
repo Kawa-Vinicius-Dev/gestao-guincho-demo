@@ -1644,3 +1644,8 @@ tbody tr{transition:background-color .14s ease}
 .diario-dia-futuro{opacity:.45}
 .diario-dia-vazio{height:var(--diario-celula)}
 .diario-mapa-navegacao{display:flex;align-items:center;gap:12px;font-size:13px}
+
+/* Card de indicador que abre a lista que ele resume. */
+.indicador-link{display:flex;flex-direction:column;text-decoration:none;color:inherit;transition:border-color .15s,transform .15s}
+.indicador-link:hover{border-color:var(--blue-600);transform:translateY(-1px)}
+.indicador-link:focus-visible{outline:2px solid var(--blue-600);outline-offset:2px}

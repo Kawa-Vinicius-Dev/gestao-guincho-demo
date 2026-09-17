@@ -101,9 +101,11 @@ export interface DashboardPorto extends ResumoOpsPorto { quantidadeTotalServicos
 export interface PontoSeriePorto { inicio:string; produzido:number; servicos:number; recebido:number; programado:number }
 export interface OpDestaquePorto { id:number; numero:string; valorTotal:number; valorRecebido?:number; periodoInicio?:string; periodoFim?:string; dataPagamentoProgramada?:string; dataRecebimento?:string; situacaoFinanceira:string; statusConciliacao:StatusConciliacaoPorto; quantidadeOrdensServico:number; divergencia:number; vencida:boolean }
 /** Uma barra do faturamento por socorrista ou por viatura. `semVinculo` e a linha das OS sem dono. */
-export interface LinhaFaturamentoPorto { chave:string; rotulo:string; valor:number; quantidade:number; semVinculo:boolean }
+export interface LinhaFaturamentoPorto { chave:string; rotulo:string; valor:number; quantidade:number; semVinculo:boolean; valorPrevisto?:number; semValor?:number }
+/** Em que pé está a conciliação da competência: o que ainda não fechou com a OP. */
+export interface ConciliacaoPorto { semValor:number; comValorManual:number; valorManual:number; aguardandoProximaOp:number; valorAguardandoProximaOp:number; divergentes:number; valorDivergencia:number; valorPrevisto:number }
 export interface PendenciasVinculoPorto { quantidade:number; semSocorrista:number; semViatura:number }
-export interface DashboardAltoNivelPorto extends DashboardPorto { grao:'DIA'|'SEMANA'|'MES'; serie:PontoSeriePorto[]; opsDestaque:OpDestaquePorto[]; faturamentoPorSocorrista:LinhaFaturamentoPorto[]; faturamentoPorViatura:LinhaFaturamentoPorto[]; pendenciasVinculo:PendenciasVinculoPorto }
+export interface DashboardAltoNivelPorto extends DashboardPorto { grao:'DIA'|'SEMANA'|'MES'; serie:PontoSeriePorto[]; opsDestaque:OpDestaquePorto[]; faturamentoPorSocorrista:LinhaFaturamentoPorto[]; faturamentoPorViatura:LinhaFaturamentoPorto[]; pendenciasVinculo:PendenciasVinculoPorto; conciliacao?:ConciliacaoPorto }
 export interface JustificativaPorto { id:number; motivo:string; observacao:string; valorDiferenca?:number; usuario:string; criadoEm:string }
 export interface HistoricoPorto { id:number; evento:string; descricao:string; usuario?:string; criadoEm:string }
 export interface DetalheOpPorto { ordemPagamento:OrdemPagamentoPorto; ordensServico:OrdemServicoPorto[]; justificativas:JustificativaPorto[]; historico?:HistoricoPorto[] }
