@@ -49,3 +49,7 @@ frontend/test-results/
 
 # Logs
 *.log
+
+# Skills baixadas de terceiros: reinstalam com "npx skills add" a partir do skills-lock.json.
+.agents/skills/
+.claude/skills/

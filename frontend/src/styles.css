@@ -969,7 +969,10 @@ tbody tr{transition:background-color .14s ease}
    Faixa para composicao e linha em degraus para o momento de cada pagamento.
    A lista preserva os numeros exatos: cor nunca e a unica forma de leitura.
    =========================================================================== */
-.dashboard-tech .painel-gastos{margin-bottom:var(--espaco-2)}
+/* O mesmo respiro dos outros blocos da tela. Este painel usava 14px enquanto
+   todos os vizinhos usavam 22, e a tela ficava quase alinhada — que e pior do
+   que desalinhada de proposito. */
+.dashboard-tech .painel-gastos{margin-bottom:var(--espaco-3)}
 .dashboard-tech .gastos-leitura{
   display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);
   border-top:1px solid var(--line)}
@@ -999,14 +1002,17 @@ tbody tr{transition:background-color .14s ease}
   color:var(--ink);font:600 22px/1 'Barlow Condensed',sans-serif;font-variant-numeric:tabular-nums}
 .dashboard-tech .gastos-trajetoria svg{display:block;width:100%;height:auto;margin-top:var(--espaco-2);overflow:visible}
 .dashboard-tech .trajetoria-grade{stroke:var(--linha-suave);stroke-width:1}
+.dashboard-tech .trajetoria-escala{fill:var(--muted);font-size:11px;font-weight:600;font-variant-numeric:tabular-nums}
 .dashboard-tech .trajetoria-area{fill:var(--red);opacity:.12}
 .dashboard-tech .trajetoria-linha{
   fill:none;stroke:var(--red);stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;
   vector-effect:non-scaling-stroke}
 .dashboard-tech .trajetoria-ponto{
   fill:var(--superficie);stroke:var(--red);stroke-width:2;vector-effect:non-scaling-stroke}
+/* O padding acompanha as margens do SVG (64 e 14 de 640): sem isto a data de
+   inicio cai sob a escala, e nao sob o comeco da linha. */
 .dashboard-tech .trajetoria-eixo{
-  display:flex;justify-content:space-between;margin-top:4px;color:var(--muted);
+  display:flex;justify-content:space-between;margin-top:4px;padding:0 2.2% 0 10%;color:var(--muted);
   font:500 var(--t-rotulo) 'IBM Plex Mono',monospace}
 .dashboard-tech .gastos-trajetoria>p{margin:var(--espaco-2) 0 0;color:var(--muted);font-size:var(--t-apoio)}
 .dashboard-tech .gastos-trajetoria>p strong{color:var(--ink)}
@@ -1257,6 +1263,8 @@ tbody tr{transition:background-color .14s ease}
    quando ha o que resolver - zero divergencia e boa noticia, nao alarme.
    Os espacos saem da escala (--e1..--e5); nenhum valor solto aqui. */
 .painel-porto>section,.painel-porto>div,.painel-visao>section,.painel-visao>div{margin-bottom:var(--espaco-3)}
+/* A nota de rodape entra no mesmo ritmo dos blocos, so na Visao geral. */
+.painel-visao .calculation-note{margin-top:var(--espaco-3)}
 .painel-filtros .ledger-filters{display:grid;grid-template-columns:minmax(240px,1.4fr) repeat(2,minmax(150px,.8fr)) auto;align-items:end;gap:var(--espaco-2)}
 
 /* Os tres numeros que respondem "quanto entrou". Unico bloco escuro da tela. */
@@ -1536,7 +1544,10 @@ tbody tr{transition:background-color .14s ease}
 .nota-fora-do-fechamento{margin:0 0 var(--espaco-2);color:var(--muted);font-size:11px;line-height:1.55}
 
 /* Visao geral: o mesmo filtro de OP do painel Porto, sem botao (aplica ao mudar). */
-.destaque-periodo-sem-botao{grid-template-columns:minmax(240px,1.3fr) repeat(2,minmax(140px,.7fr))}
+/* Quatro campos (período, mês, de, até) pedem quatro colunas. A regra tinha
+   sobrado de quando eram três mais um botão, e o "Até" caía sozinho numa segunda
+   linha, quebrando o alinhamento do filtro inteiro. */
+.destaque-periodo-sem-botao{grid-template-columns:minmax(220px,1.3fr) repeat(3,minmax(130px,.7fr))}
 @media(max-width:1180px){.destaque-periodo-sem-botao{grid-template-columns:1fr 1fr}}
 @media(max-width:620px){.destaque-periodo-sem-botao{grid-template-columns:1fr}}
 
