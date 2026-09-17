@@ -430,17 +430,8 @@ export interface ConfirmacaoImportacao {
 export async function confirmarImportacaoPorto(
   previa: PreviaPorto, dados: ConfirmacaoImportacao = {},
 ): Promise<ConfirmacaoPorto> {
-  // OS sem socorrista e comissao que ninguem recebe, com o servico ja contado no
-  // faturamento. A previa mostra quais sao e deixa escolher; sem isso resolvido,
-  // a importacao nao acontece.
-  const orfas = (previa.orfas ?? []).filter(o =>
-    !previa.linhas.some(l => l.hashRegistro === o.hashRegistro && l.dados.motorista_id))
-  if (orfas.length) {
-    throw new ApiError(
-      `${orfas.length} ordem(ns) de serviço estão sem socorrista. Informe quem atendeu antes de importar.`,
-      422)
-  }
-
+  // OS que continuar sem socorrista vai para o Auxiliar no banco; a previa so
+  // mostra quais sao, para quem souber quem atendeu escolher antes.
   const reassociacoes = previa.analiseOrdemPagamento?.quantidadeReassociacoes ?? 0
   if (reassociacoes && !dados.confirmarReassociacoes) {
     throw new ApiError(
