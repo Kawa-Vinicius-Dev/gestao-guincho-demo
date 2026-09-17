@@ -14,6 +14,7 @@ Especificação do Kawã em 17/09/2026, com as decisões do grill-me. O que já 
 | Competência da OS | Com OP: a competência da OP. Sem OP: a da data do serviço, ou a primeira competência seguinte ainda sem OP, se a da data já teve OP importada e a OS não estava nela |
 | Valor oficial | `valor_total` vindo da OP |
 | Valor manual | `valor_manual`, informado antes da OP. Previsto, marcado como manual, sem comissão |
+| Crédito da OP | Valor da OP = serviços + créditos − descontos. O crédito não é de nenhuma OS: é receita lançada na aba Créditos, datada na competência, sem comissão. Nunca vira divergência de OS nem "OS não encontrada" |
 | Situação da OS | `AGUARDANDO_ANALISE` (sem OP, sem valor) · `VALOR_MANUAL` (sem OP, com valor manual) · `AGUARDANDO_PROXIMA_OP` (competência já teve OP e ela não estava) · `CONCILIADA` (na OP) · `DIVERGENTE` (na OP com valor diferente do manual) |
 
 ## Regras já atendidas (não mexer)
@@ -41,12 +42,14 @@ Especificação do Kawã em 17/09/2026, com as decisões do grill-me. O que já 
 3. **Importar OP**
    - Aviso de "N serviços do Operacional não foram encontrados nesta OP", com lista.
    - Aviso de OS com valor divergente do manual, com lista.
+   - Diferença entre o Valor da OP e a soma dos serviços mostrada como "provável crédito", com atalho para lançar na aba Créditos (não como erro de OS).
 4. **Ordens de serviço**
    - Filtro por situação e por competência ou data do serviço.
    - Informar o valor manual, com confirmação.
    - Mostrar o valor manual × o valor da OP.
 5. **Dashboard Porto**
    - Cards de sem valor, aguardando próxima OP e divergentes, com projeção na competência seguinte.
+   - Total da competência separado em serviços (oficial + previsto) e créditos lançados, para bater com o Valor da OP.
    - Contagem por socorrista e viatura incluindo as OS sem valor.
    - Cards clicáveis, abrindo a lista filtrada.
 6. **Resto do sistema**
