@@ -193,7 +193,9 @@ function socorristaPeloNome(nome: string | undefined, cadastro: Cadastro): { id:
 async function cadastroDeSocorristas(datas: string[]): Promise<Cadastro> {
   const dias = [...new Set(datas.filter(Boolean).map(d => d.slice(0, 10)))]
   const [motoristas, doDia] = await Promise.all([
-    supabase().from('motoristas').select('id,nome,qra,codigos_porto').eq('ativo', true),
+    // Ativos e desativados: o painel de meses atras traz quem ja saiu, e o
+    // servico antigo e dele, nao do Auxiliar.
+    supabase().from('motoristas').select('id,nome,qra,codigos_porto'),
     dias.length
       ? supabase().from('ordens_servico_porto')
           .select('data_atendimento,sigla_viatura,motorista_id,motoristas(nome)')

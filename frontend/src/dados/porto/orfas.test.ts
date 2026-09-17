@@ -248,3 +248,24 @@ test('nome da OP identifica o socorrista, mas nome cortado que serve para dois n
   expect(sugerido('01/1000003-26')).toBe('1')
   expect(previa.orfas?.map(o => o.numeroOs)).toEqual(['01/1000004-26', '01/1000005-26'])
 })
+// Painel de meses atras traz socorrista que ja saiu: o servico e dele, nao do Auxiliar.
+test('socorrista desativado ainda é reconhecido pelo nome na importação', async () => {
+  let consultaMotoristas = ''
+  servidor.use(
+    http.post(`${SUPA}/rest/v1/rpc/porto_registrar_importacao`, () =>
+      HttpResponse.json({ id: 61, status: 'AGUARDANDO_CONFERENCIA' })),
+    http.get(`${SUPA}/rest/v1/registros_importados_porto`, () => HttpResponse.json([])),
+    http.get(`${SUPA}/rest/v1/ordens_servico_porto`, () => HttpResponse.json([])),
+    http.get(`${SUPA}/rest/v1/motoristas`, ({ request }) => {
+      consultaMotoristas = new URL(request.url).search
+      return HttpResponse.json([{ id: 12, nome: 'SOCORRISTA ANTIGO DA CRUZ', qra: null, ativo: false }])
+    }),
+  )
+  const { criarPreviaConteudoPorto } = await carregar()
+
+  const previa = await criarPreviaConteudoPorto(`AZUL SEGUROS	2662727/26	SOCORRO	L168	SOCORRISTA ANTIGO DA	30/03/2026	06:53	06:53	ACIONADO/FINAL	FINALIZADO	Não`)
+
+  expect(consultaMotoristas).not.toContain('ativo')
+  expect(previa.orfas).toHaveLength(0)
+  expect(previa.linhas[0].dados.motorista_sugerido_id).toBe('12')
+})
