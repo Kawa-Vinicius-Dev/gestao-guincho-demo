@@ -19,7 +19,7 @@ import { useAoVivo } from '../dados/aoVivo'
  * OS ganha dono ou entra um gasto marcado para descontar. Esta tela confere.
  */
 export default function ComissoesPage(){
-  const [periodos,setPeriodos]=useState<PeriodoPorto[]>([]),[motoristas,setMotoristas]=useState<Motorista[]>([]),[motoristaId,setMotoristaId]=useState(0),[itens,setItens]=useState<ResumoComissao[]>([]),[detalhe,setDetalhe]=useState<Comissao|null>(null),[erro,setErro]=useState(''),[exportando,setExportando]=useState(false)
+  const [periodos,setPeriodos]=useState<PeriodoPorto[]>([]),[motoristas,setMotoristas]=useState<Motorista[]>([]),[motoristaId,setMotoristaId]=useState(0),[itens,setItens]=useState<ResumoComissao[]>([]),[detalhe,setDetalhe]=useState<Comissao|null>(null),[erro,setErro]=useState(''),[exportando,setExportando]=useState('')
   const [global,setGlobal]=usePeriodoGlobal()
   const periodoId=periodoPortoDoGlobal(periodos,global)?.id??''
   const setPeriodoId=(id:string)=>{const p=periodos.find(x=>x.id===id);const novo=p&&globalDoPeriodoPorto(p);if(novo)setGlobal(novo)}
@@ -32,12 +32,13 @@ export default function ComissoesPage(){
     resumirComissoes(ids,motoristaId||undefined).then(setItens).catch(e=>setErro(e.message))
     if(detalhe)lerComissaoDaOp(ids,detalhe.motoristaId).then(setDetalhe).catch(e=>setErro(e.message))})
   async function abrir(id:number){try{setDetalhe(await lerComissaoDaOp(ids,id))}catch(e){setErro((e as Error).message)}}
-  async function exportar(){setErro('');setExportando(true)
-    try{await baixarRelatorioComissoes(ids)}
+  async function exportar(formato:'excel'|'pdf'){setErro('');setExportando(formato)
+    const escolhido=periodos.find(p=>p.id===periodoId)
+    try{await baixarRelatorioComissoes(ids,escolhido?rotuloPeriodo(escolhido):'',formato)}
     catch(e){setErro((e as Error).message)}
-    finally{setExportando(false)}
+    finally{setExportando('')}
   }
-  return <div className="page-enter commission-page"><header className="page-heading"><div><span className="eyebrow">Equipe e pagamentos</span><h1>Comissões</h1><p>20% dos serviços pagos na OP, menos os gastos marcados para descontar. Já entra em despesas sozinha.</p></div><button className="button button-ghost" disabled={!periodoId||exportando} onClick={()=>void exportar()}>{exportando?'Gerando CSV…':'Exportar CSV'}</button></header>{erro?<div className="form-alert">{erro}</div>:null}{carregando?<Carregando/>:null}
+  return <div className="page-enter commission-page"><header className="page-heading"><div><span className="eyebrow">Equipe e pagamentos</span><h1>Comissões</h1><p>20% dos serviços pagos na OP, menos os gastos marcados para descontar. Já entra em despesas sozinha.</p></div><div className="heading-actions"><button className="button button-ghost" disabled={!periodoId||exportando!==''} onClick={()=>void exportar('pdf')}>{exportando==='pdf'?'Gerando PDF…':'Exportar PDF'}</button><button className="button button-primary" disabled={!periodoId||exportando!==''} onClick={()=>void exportar('excel')}>{exportando==='excel'?'Gerando Excel…':'Exportar Excel'}</button></div></header>{erro?<div className="form-alert">{erro}</div>:null}{carregando?<Carregando/>:null}
     <section className="panel"><div className="ledger-filters"><Selecao rotulo="Período" vazio="Selecione" value={periodoId} onChange={e=>setPeriodoId(e.target.value)}
       opcoes={periodos.map(p=>({valor:p.id,texto:rotuloPeriodo(p)}))}/>
       <Selecao rotulo="Socorrista" vazio="Todos" value={motoristaId||''} onChange={e=>setMotoristaId(Number(e.target.value))}

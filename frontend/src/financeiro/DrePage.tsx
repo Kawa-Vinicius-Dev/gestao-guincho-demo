@@ -3,7 +3,7 @@ import { usePeriodoGlobal } from '../utils/periodoGlobal'
 import { useEffect, useMemo, useState } from 'react'
 import { Carregando } from '../components/EstadoPagina'
 import { lerIndicadores } from '../dados/dashboard'
-import { baixarRelatorioCsv } from '../dados/relatorios'
+import { baixarDre } from '../dados/relatorios'
 import type { Dashboard } from '../types/modelos'
 import { moeda } from '../utils/formatadores'
 
@@ -19,7 +19,9 @@ export default function DrePage() {
   // O banco e lento: sem isto a tela ficava mostrando zeros como se fossem o
   // resultado do periodo, e so depois trocava pelos numeros de verdade.
   const [carregando,setCarregando]=useState(true)
-  const [exportando,setExportando]=useState(false)
+  const [exportando,setExportando]=useState('')
+  async function exportar(formato:'excel'|'pdf'){setExportando(formato);setErro('')
+    try{await baixarDre(inicio,fim,formato)}catch(e){setErro((e as Error).message)}finally{setExportando('')}}
   useEffect(()=>{
     if(!inicio||!fim||inicio>fim)return
     setCarregando(true)
@@ -50,8 +52,8 @@ export default function DrePage() {
         <p>A receita mostra somente valores recebidos. As despesas entram no resultado quando estão aprovadas e pagas.</p>
         <div><span>1</span><p><strong>Receita realizada</strong>Previsões e pagamentos programados não são tratados como entrada no caixa.</p></div>
         <div><span>2</span><p><strong>Lucro operacional</strong>O que sobra após descontar as despesas efetivamente pagas no período.</p></div>
-        <button className="button button-primary" disabled={exportando} onClick={()=>{setExportando(true);setErro('')
-          void baixarRelatorioCsv('dre',inicio,fim,`dre-${inicio}-a-${fim}.csv`).catch(e=>setErro((e as Error).message)).finally(()=>setExportando(false))}}>{exportando?'Gerando CSV…':'Exportar CSV'}</button>
+        <button className="button button-primary" disabled={exportando!==''} onClick={()=>void exportar('excel')}>{exportando==='excel'?'Gerando Excel…':'Exportar Excel'}</button>
+        <button className="button button-ghost" disabled={exportando!==''} onClick={()=>void exportar('pdf')}>{exportando==='pdf'?'Gerando PDF…':'Exportar PDF'}</button>
         <button className="button button-ghost" onClick={() => window.print()}>Imprimir DRE</button>
       </aside>
     </section>

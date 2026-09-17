@@ -1,170 +1,230 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
+import { useAoVivo } from '../dados/aoVivo'
+import { baixarRelatorio, type Relatorio } from '../dados/exportar'
 import { listarMotoristas } from '../dados/motoristas'
-import { associarMotoristaPorto, baixarOrdensServicoPorto, informarValorOrdemServicoPorto, listarOrdensServicoPorto, periodoPadraoOrdensServicoPorto } from '../dados/porto'
+import { corrigirOs, listarOs, listarTodasAsOs, TAMANHO_DA_PAGINA, type FiltroOs, type LinhaOs, type PaginaOs, type SituacaoOs } from '../dados/porto/listaOs'
+import { listarVeiculos } from '../dados/veiculos'
 import { Campo, Selecao } from '../components/Campos'
-import type { Motorista, OrdemServicoPorto } from '../types/modelos'
-import { ModalAssociarSocorrista } from './os/ModalAssociarSocorrista'
 import { Carregando } from '../components/EstadoPagina'
-import { TabelaOrdensServico } from './os/TabelaOrdensServico'
-import { FILTROS_OS, STATUS_FINANCEIRO, STATUS_OPERACIONAL } from './os/opcoes'
+import { Modal } from '../components/Modal'
+import { SeletorPeriodo } from '../components/SeletorPeriodo'
+import { CabecalhoPagina, GradeIndicadores, Indicador, Painel } from '../components/ui/Pagina'
+import type { Motorista, Veiculo } from '../types/modelos'
+import { data, moeda } from '../utils/formatadores'
+import { usePeriodoGlobal } from '../utils/periodoGlobal'
+import { useValorAdiado } from '../utils/useValorAdiado'
+
+/**
+ * Ordens de servico.
+ *
+ * Todas as OS do periodo, com filtros que o banco aplica de verdade, totais do
+ * que esta filtrado e a correcao de socorrista e viatura na propria linha (a
+ * comissao se recalcula). Valor e OP nao se editam: vem da Porto.
+ */
+const SITUACOES = [
+  { valor: 'PAGA', texto: 'Paga numa OP' },
+  { valor: 'AGUARDANDO', texto: 'Aguardando OP' },
+]
+
+const siglaDe = (v: Veiculo) => (v.siglaPorto || v.identificacao).toUpperCase()
 
 export default function PortoOrdensServicoPage() {
-  const [itens, setItens] = useState<OrdemServicoPorto[]>([])
-  const [motoristas, setMotoristas] = useState<Motorista[]>([])
-  const [associando, setAssociando] = useState<OrdemServicoPorto | null>(null)
+  const [periodo, setPeriodo] = usePeriodoGlobal()
+  const [numeroOs, setNumeroOs] = useState('')
+  const [numeroOp, setNumeroOp] = useState('')
+  const [especialidade, setEspecialidade] = useState('')
   const [motoristaId, setMotoristaId] = useState(0)
-  const [somenteNaoIdentificados, setSomenteNaoIdentificados] = useState(false)
-  const [somenteSemQra, setSomenteSemQra] = useState(false)
+  const [sigla, setSigla] = useState('')
+  const [situacao, setSituacao] = useState<SituacaoOs>('')
+  const [pagina, setPagina] = useState(0)
+  const [dados, setDados] = useState<PaginaOs | null>(null)
+  const [motoristas, setMotoristas] = useState<Motorista[]>([])
+  const [veiculos, setVeiculos] = useState<Veiculo[]>([])
+  const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState('')
+  const [mensagem, setMensagem] = useState('')
+  const [exportando, setExportando] = useState('')
+  const [corrigindo, setCorrigindo] = useState<LinhaOs | null>(null)
   const [salvando, setSalvando] = useState(false)
-  const [exportando, setExportando] = useState(false)
-  const [periodo, setPeriodo] = useState({ dataInicio: '', dataFim: '' })
-  const [parametros, setParametros] = useState(new URLSearchParams())
+  const [versao, setVersao] = useState(0)
+  useAoVivo(() => setVersao(v => v + 1))
 
-  async function carregar(params = new URLSearchParams()) {
-    setErro(''); setParametros(new URLSearchParams(params))
-    try { setItens(await listarOrdensServicoPorto(params)) }
-    catch (e) { setErro((e as Error).message) }
-  }
+  // Texto digitado espera a pessoa parar de digitar antes de consultar.
+  const numeroOsAdiado = useValorAdiado(numeroOs)
+  const numeroOpAdiado = useValorAdiado(numeroOp)
+  const especialidadeAdiada = useValorAdiado(especialidade)
 
-  const [carregando,setCarregando]=useState(true)
+  const filtro: FiltroOs = useMemo(() => ({
+    inicio: periodo.inicio, fim: periodo.fim, numeroOs: numeroOsAdiado, numeroOp: numeroOpAdiado,
+    especialidade: especialidadeAdiada, motoristaId, sigla, situacao,
+  }), [periodo.inicio, periodo.fim, numeroOsAdiado, numeroOpAdiado, especialidadeAdiada, motoristaId, sigla, situacao])
+
+  // Filtro novo volta para a primeira pagina.
+  useEffect(() => { setPagina(0) }, [filtro])
+
   useEffect(() => {
-    // a tela abre num mes so, para nao trazer a tabela inteira
-    periodoPadraoOrdensServicoPorto()
-      .then(p => { setPeriodo(p); return carregar(new URLSearchParams({ dataInicio: p.dataInicio, dataFim: p.dataFim })) })
-      .catch(e => { setErro((e as Error).message); return carregar() })
-      .finally(() => setCarregando(false))
-    listarMotoristas().then(setMotoristas).catch(e => setErro(e.message))
+    if (!filtro.inicio || !filtro.fim || filtro.inicio > filtro.fim) return
+    let valeu = true
+    setCarregando(true); setErro('')
+    listarOs(filtro, pagina)
+      .then(r => { if (valeu) setDados(r) })
+      .catch(e => { if (valeu) setErro((e as Error).message) })
+      .finally(() => { if (valeu) setCarregando(false) })
+    return () => { valeu = false }
+  }, [filtro, pagina, versao])
+
+  useEffect(() => {
+    listarMotoristas().then(setMotoristas).catch(() => setMotoristas([]))
+    listarVeiculos().then(setVeiculos).catch(() => setVeiculos([]))
   }, [])
 
-  async function aplicar(evento: FormEvent<HTMLFormElement>) {
-    evento.preventDefault()
-    const campos = new FormData(evento.currentTarget), params = new URLSearchParams()
-    for (const nome of FILTROS_OS) {
-      const valor = String(campos.get(nome) ?? '')
-      if (valor) params.set(nome, valor)
-    }
-    if (somenteNaoIdentificados) params.set('semSocorrista', 'true')
-    if (somenteSemQra) params.set('semQra', 'true')
-    await carregar(params)
+  const paginas = dados ? Math.max(1, Math.ceil(dados.total / TAMANHO_DA_PAGINA)) : 1
+  const temFiltro = Boolean(numeroOs || numeroOp || especialidade || motoristaId || sigla || situacao)
+  const veiculoPorSigla = useMemo(() => new Map(veiculos.map(v => [siglaDe(v), v])), [veiculos])
+
+  function limparFiltros() {
+    setNumeroOs(''); setNumeroOp(''); setEspecialidade(''); setMotoristaId(0); setSigla(''); setSituacao('')
   }
 
-  async function confirmarAssociacao() {
-    if (!associando || !motoristaId) return
-    setSalvando(true); setErro('')
+  async function exportar(formato: 'excel' | 'pdf') {
+    setExportando(formato); setErro('')
     try {
-      const atualizada = await associarMotoristaPorto(associando.id, motoristaId)
-      setItens(lista => somenteNaoIdentificados
-        ? lista.filter(os => os.id !== atualizada.id)
-        : lista.map(os => os.id === atualizada.id ? atualizada : os))
-      setAssociando(null); setMotoristaId(0)
-    } catch (e) { setErro((e as Error).message) } finally { setSalvando(false) }
-  }
-
-  async function informarValor(ordem: OrdemServicoPorto, valor: number) {
-    setErro('')
-    try {
-      const atualizada = await informarValorOrdemServicoPorto(ordem.id, valor)
-      setItens(lista => lista.map(os => os.id === atualizada.id ? atualizada : os))
+      const todas = await listarTodasAsOs(filtro)
+      const relatorio: Relatorio = {
+        titulo: 'Ordens de serviço',
+        subtitulo: `Período: ${data(filtro.inicio)} a ${data(filtro.fim)}`,
+        resumo: [
+          ['Ordens de serviço', String(todas.total)],
+          ['Valor total', moeda(todas.valorTotal)],
+          ['Comissão (OS pagas)', moeda(todas.comissaoTotal)],
+        ],
+        secoes: [{
+        colunas: [
+          { titulo: 'OS', largura: 16 }, { titulo: 'Atendimento', tipo: 'data', largura: 13 },
+          { titulo: 'Especialidade', largura: 20 }, { titulo: 'Socorrista', largura: 32 },
+          { titulo: 'Viatura', largura: 11 }, { titulo: 'OP', largura: 12 },
+          { titulo: 'Valor', tipo: 'moeda', largura: 14 }, { titulo: 'Comissão', tipo: 'moeda', largura: 14 },
+        ],
+        linhas: todas.itens.map(os => [os.numero, os.dataAtendimento, os.especialidade, os.motorista,
+          os.viatura, os.numeroOp ?? 'Aguardando OP', os.valorTotal, os.comissao]),
+        totais: ['Total', null, null, null, null, null, todas.valorTotal, todas.comissaoTotal],
+        vazio: 'Nenhuma OS com esses filtros.',
+        }],
+        nomeArquivo: `ordens-de-servico-${filtro.inicio}-a-${filtro.fim}`,
+      }
+      await baixarRelatorio(relatorio, formato)
     } catch (e) { setErro((e as Error).message) }
+    finally { setExportando('') }
   }
 
-  /**
-   * "Sem socorrista" e "sem QRA" sao filtros do servidor: peneirar em memoria
-   * alcancaria so o mes carregado. Ao marcar, o recorte de data sai para o
-   * operacional ver todo o acumulado.
-   */
-  async function alternarRecorte(chave: 'semSocorrista' | 'semQra', marcado: boolean) {
-    if (chave === 'semSocorrista') setSomenteNaoIdentificados(marcado)
-    else setSomenteSemQra(marcado)
-    const params = new URLSearchParams(parametros)
-    if (marcado) {
-      params.set(chave, 'true')
-      params.delete('dataInicio'); params.delete('dataFim')
-      setPeriodo({ dataInicio: '', dataFim: '' })
-    } else params.delete(chave)
-    await carregar(params)
+  async function salvarCorrecao(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    if (!corrigindo) return
+    const f = new FormData(e.currentTarget)
+    const novoMotorista = Number(f.get('motoristaId')) || undefined
+    const novaSigla = String(f.get('sigla') || '') || undefined
+    setSalvando(true); setErro(''); setMensagem('')
+    try {
+      await corrigirOs(corrigindo.id, {
+        motoristaId: novoMotorista !== corrigindo.motoristaId ? novoMotorista : undefined,
+        sigla: novaSigla && novaSigla !== corrigindo.viatura?.toUpperCase() ? novaSigla : undefined,
+      })
+      setMensagem(`OS ${corrigindo.numero} corrigida. A comissão foi recalculada.`)
+      setCorrigindo(null); setVersao(v => v + 1)
+    } catch (x) { setErro((x as Error).message) }
+    finally { setSalvando(false) }
   }
-
-  // exporta exatamente o recorte na tela: os filtros aplicados ja estao em parametros
-  async function exportar() {
-    setExportando(true); setErro('')
-    try { await baixarOrdensServicoPorto(parametros) }
-    catch (e) { setErro((e as Error).message) } finally { setExportando(false) }
-  }
-
-  const rotuloExportar = exportando ? 'Gerando arquivo…'
-    : somenteSemQra ? 'Exportar OS sem QRA'
-    : somenteNaoIdentificados ? 'Exportar OS sem socorrista'
-    : 'Exportar Excel'
 
   return <div className="page-enter">
-    <header className="page-heading">
-      <div>
-        <span className="eyebrow">Porto Seguro</span>
-        <h1>Ordens de serviço</h1>
-        <p>Serviços individuais importados, com previsão original e ciclo efetivo.</p>
-      </div>
-      <div className="heading-actions">
-        <button className="button button-primary" disabled={exportando} onClick={() => void exportar()}>
-          {rotuloExportar}
+    <CabecalhoPagina
+      modulo="Porto Seguro"
+      titulo="Ordens de serviço"
+      descricao="Todas as OS do período. Corrija socorrista e viatura na linha; valor e OP vêm da Porto."
+      contexto={<>Período: <strong>{data(periodo.inicio)}</strong> → <strong>{data(periodo.fim)}</strong></>}
+      acoes={<>
+        <button className="button button-ghost" disabled={exportando !== '' || !dados?.total} onClick={() => void exportar('pdf')}>
+          {exportando === 'pdf' ? 'Gerando PDF…' : 'Exportar PDF'}
         </button>
-      </div>
-    </header>
+        <button className="button button-primary" disabled={exportando !== '' || !dados?.total} onClick={() => void exportar('excel')}>
+          {exportando === 'excel' ? 'Gerando Excel…' : 'Exportar Excel'}
+        </button>
+      </>}/>
 
-    {erro ? <div className="form-alert">{erro}</div> : null}
+    {erro ? <div className="form-alert" role="alert">{erro}</div> : null}
+    {mensagem ? <div className="success-notice">{mensagem}</div> : null}
 
-    <section className="panel">
-      <form className="ledger-filters porto-os-filters" onSubmit={aplicar}>
-        <Campo rotulo="De">
-          <input aria-label="Data inicial" name="dataInicio" type="date"
-            defaultValue={periodo.dataInicio} key={`i${periodo.dataInicio}`}/>
-        </Campo>
-        <Campo rotulo="Até">
-          <input aria-label="Data final" name="dataFim" type="date"
-            defaultValue={periodo.dataFim} key={`f${periodo.dataFim}`}/>
-        </Campo>
-        <Campo rotulo="Número da OS" className="filter-grow"><input name="numeroOs" autoCapitalize="characters" autoCorrect="off" spellCheck={false}/></Campo>
-        <Campo rotulo="Número da OP"><input name="numeroOp" inputMode="numeric" autoComplete="off"/></Campo>
-        <Campo rotulo="Especialidade"><input name="especialidade" autoCapitalize="sentences" autoComplete="off"/></Campo>
-        <Campo rotulo="Socorrista"><input name="socorrista" autoCapitalize="words" autoComplete="off"/></Campo>
-        <Campo rotulo="Seguradora"><input name="seguradora" placeholder="Porto, Azul, Itaú…" autoCapitalize="sentences" autoComplete="off"/></Campo>
-        <Selecao rotulo="Status operacional" name="statusOperacional" vazio="Todos" opcoes={STATUS_OPERACIONAL}/>
-        <Selecao rotulo="Status financeiro" name="statusFinanceiro" vazio="Todos" opcoes={STATUS_FINANCEIRO}/>
-        <button className="button button-primary">Aplicar filtros</button>
+    <Painel className="painel-filtros">
+      <form className="ledger-filters" onSubmit={e => e.preventDefault()}>
+        <SeletorPeriodo periodo={periodo} aoMudar={setPeriodo}/>
+        <Campo rotulo="Número da OS"><input value={numeroOs} onChange={e => setNumeroOs(e.target.value)} autoCorrect="off" spellCheck={false} autoComplete="off"/></Campo>
+        <Campo rotulo="Número da OP"><input value={numeroOp} onChange={e => setNumeroOp(e.target.value)} inputMode="numeric" autoComplete="off"/></Campo>
+        <Selecao rotulo="Socorrista" vazio="Todos" value={motoristaId || ''} onChange={e => setMotoristaId(Number(e.target.value))}
+          opcoes={motoristas.map(m => ({ valor: m.id, texto: m.nome }))}/>
+        <Selecao rotulo="Viatura" vazio="Todas" value={sigla} onChange={e => setSigla(e.target.value)}
+          opcoes={veiculos.map(v => ({ valor: siglaDe(v), texto: v.identificacao }))}/>
+        <Campo rotulo="Especialidade"><input value={especialidade} onChange={e => setEspecialidade(e.target.value)} autoComplete="off"/></Campo>
+        <Selecao rotulo="Situação" vazio="Todas" value={situacao} onChange={e => setSituacao(e.target.value as SituacaoOs)} opcoes={SITUACOES}/>
+        {temFiltro ? <button type="button" className="button button-ghost" onClick={limparFiltros}>Limpar filtros</button> : null}
       </form>
+    </Painel>
 
-      {/* Recortes que o servidor resolve, e por isso ficam junto dos filtros e
-          nao dentro do formulario: marcar um deles ja refaz a consulta. */}
-      <div className="filtros-marcadores">
-        <label className="check-field">
-          <input type="checkbox" checked={somenteNaoIdentificados}
-            onChange={e => void alternarRecorte('semSocorrista', e.target.checked)}/>
-          <span>Somente OS sem socorrista</span>
-        </label>
-        <label className="check-field">
-          <input type="checkbox" checked={somenteSemQra}
-            onChange={e => void alternarRecorte('semQra', e.target.checked)}/>
-          <span>Somente OS sem QRA</span>
-        </label>
-      </div>
+    <GradeIndicadores>
+      <Indicador rotulo="Ordens de serviço" valor={dados ? dados.total.toLocaleString('pt-BR') : '—'}
+        apoio={temFiltro ? 'Com os filtros aplicados' : 'Todas do período'}/>
+      <Indicador rotulo="Valor" valor={dados ? moeda(dados.valorTotal) : '—'} apoio="Soma das OS da lista"/>
+      <Indicador rotulo="Comissão" valor={dados ? moeda(dados.comissaoTotal) : '—'} apoio="20% das OS já pagas numa OP"/>
+    </GradeIndicadores>
 
-      {somenteNaoIdentificados
-        ? <p className="empty-inline">
-            Mostrando as OS sem socorrista de todos os períodos. Associe cada uma ao socorrista
-            responsável, ou exporte a lista para tratar fora do sistema.
-          </p>
+    <Painel semRespiro>
+      {carregando && !dados ? <Carregando/> : null}
+      {dados && !dados.itens.length
+        ? <p className="empty-inline">{temFiltro ? 'Nenhuma OS com esses filtros neste período.' : 'Nenhuma OS neste período. Importe uma OP ou o painel diário.'}</p>
+        : dados ? <div className="table-scroll"><table aria-label="Ordens de serviço">
+          <thead><tr>
+            <th>OS</th><th>Atendimento</th><th>Especialidade</th><th>Socorrista</th><th>Viatura</th>
+            <th>OP</th><th>Valor</th><th>Comissão</th><th/>
+          </tr></thead>
+          <tbody>{dados.itens.map(os => {
+            const veiculo = os.viatura ? veiculoPorSigla.get(os.viatura.toUpperCase()) : undefined
+            return <tr key={os.id}>
+              <td><strong>{os.numero}</strong></td>
+              <td>{os.dataAtendimento ? data(os.dataAtendimento) : '—'}</td>
+              <td>{os.especialidade || '—'}</td>
+              <td>{os.motoristaId ? <Link to={`/equipe/${os.motoristaId}`}>{os.motorista}</Link> : '—'}</td>
+              <td>{veiculo ? <Link to={`/veiculos?veiculo=${veiculo.id}`}>{os.viatura}</Link> : os.viatura || '—'}</td>
+              <td>{os.numeroOp ?? <small>Aguardando OP</small>}</td>
+              <td>{os.valorTotal ? moeda(os.valorTotal) : <small>Chega com a OP</small>}</td>
+              <td>{os.comissao !== undefined ? moeda(os.comissao) : '—'}</td>
+              <td><button className="table-action" onClick={() => setCorrigindo(os)} aria-label={`Corrigir OS ${os.numero}`}>Corrigir</button></td>
+            </tr>
+          })}</tbody>
+        </table></div> : null}
+
+      {dados && paginas > 1
+        ? <div className="paginacao">
+            <button className="button button-ghost" disabled={pagina === 0 || carregando} onClick={() => setPagina(p => p - 1)}>Anterior</button>
+            <span>Página {pagina + 1} de {paginas} · {dados.total.toLocaleString('pt-BR')} OS</span>
+            <button className="button button-ghost" disabled={pagina + 1 >= paginas || carregando} onClick={() => setPagina(p => p + 1)}>Próxima</button>
+          </div>
         : null}
+    </Painel>
 
-      {carregando?<Carregando/>:<TabelaOrdensServico itens={itens}
-        aoAssociar={(ordem, sugestao) => { setAssociando(ordem); setMotoristaId(sugestao) }}
-        aoInformarValor={informarValor}/>}
-    </section>
-
-    {associando
-      ? <ModalAssociarSocorrista ordem={associando} motoristas={motoristas} motoristaId={motoristaId}
-          aoTrocar={setMotoristaId} aoConfirmar={() => void confirmarAssociacao()} salvando={salvando}
-          aoFechar={() => { setAssociando(null); setMotoristaId(0) }}/>
-      : null}
+    {corrigindo ? <Modal etiqueta={`OS ${corrigindo.numero}`} titulo="Corrigir socorrista e viatura" aoFechar={() => setCorrigindo(null)}>
+      <form onSubmit={salvarCorrecao} className="form-grid two-columns">
+        <Selecao rotulo="Socorrista" name="motoristaId" defaultValue={corrigindo.motoristaId ?? ''} vazio="Selecione"
+          opcoes={motoristas.filter(m => m.ativo || m.id === corrigindo.motoristaId).map(m => ({ valor: m.id, texto: m.nome }))}/>
+        <Selecao rotulo="Viatura" name="sigla" defaultValue={corrigindo.viatura?.toUpperCase() ?? ''} vazio="Selecione"
+          opcoes={veiculos.map(v => ({ valor: siglaDe(v), texto: v.identificacao }))}/>
+        {corrigindo.socorristaNoArquivo
+          ? <p className="empty-inline field-wide">No arquivo da Porto veio: <strong>{corrigindo.socorristaNoArquivo}</strong></p>
+          : null}
+        <p className="empty-inline field-wide">Trocar o socorrista recalcula a comissão. A próxima importação não desfaz esta escolha.</p>
+        <div className="modal-actions field-wide">
+          <button type="button" className="button button-ghost" onClick={() => setCorrigindo(null)}>Cancelar</button>
+          <button className="button button-primary" disabled={salvando}>{salvando ? 'Salvando…' : 'Salvar correção'}</button>
+        </div>
+      </form>
+    </Modal> : null}
   </div>
 }

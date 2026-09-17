@@ -1566,6 +1566,9 @@ tbody tr{transition:background-color .14s ease}
 .periodo-no-cabecalho .field{margin:0;min-width:150px}
 .periodo-no-cabecalho .field:first-child{min-width:260px}
 
+/* Paginacao das listas longas (ordens de servico). */
+.paginacao{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px;border-top:1px solid var(--line, rgba(127,127,127,.2))}
+.paginacao span{font-size:13px;color:var(--muted, #64748b)}
 /* ===========================================================================
    Listas de cadastro: as colunas param no mesmo lugar em toda linha
    ---------------------------------------------------------------------------

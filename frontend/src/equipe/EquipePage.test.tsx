@@ -89,19 +89,3 @@ test('quem já tem acesso não recebe o botão de criar de novo', async () => {
   expect(await screen.findByText('Anderson Ribeiro')).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /criar acesso/i })).not.toBeInTheDocument()
 })
-
-test('socorrista desativado não é oferecido para vincular uma OS', async () => {
-  const { default: PortoOrdensServicoPage } = await import('../porto/PortoOrdensServicoPage')
-  servidor.use(
-    http.get('/api/motoristas', () => HttpResponse.json([socorrista, { id: 5, nome: 'Quem Saiu', qra: 'QRA-2', ativo: false }])),
-    http.get('/api/porto/ordens-servico', () => HttpResponse.json([{ id: 3, numero: 'OS-SEM', valorTotal: 300, qra: 'QRA-X', dataAtendimento: '2026-07-02' }])),
-  )
-  const user = userEvent.setup()
-  comRota(<PortoOrdensServicoPage />)
-
-  await user.click(await screen.findByRole('button', { name: /associar socorrista/i }))
-  const opcoes = within(screen.getByRole('dialog')).getByLabelText(/socorrista respons/i)
-
-  expect(within(opcoes).getByRole('option', { name: /anderson ribeiro/i })).toBeInTheDocument()
-  expect(within(opcoes).queryByRole('option', { name: /quem saiu/i })).not.toBeInTheDocument()
-})

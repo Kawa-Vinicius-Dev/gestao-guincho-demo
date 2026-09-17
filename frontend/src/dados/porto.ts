@@ -608,23 +608,22 @@ export async function criarPreviaComposicaoPorto(
  * ------------------------------------------------------------------ */
 
 /** Fechamento do dia: servicos prestados, por socorrista e por especialidade. */
-export async function baixarRelatorioDiarioPorto(dia: string): Promise<void> {
-  return relatoriosPorto.baixarRelatorioDiarioPorto(dia)
+export async function baixarRelatorioDiarioPorto(dia: string, formato: 'excel' | 'pdf' = 'excel'): Promise<void> {
+  return relatoriosPorto.baixarRelatorioDiarioPorto(dia, formato)
 }
 
 export async function baixarRelatorioPorto(
   formato: 'excel' | 'pdf', params?: URLSearchParams,
 ): Promise<void> {
   if (!moduloNoSupabase('porto')) return relatoriosPorto.peloRender(formato, params)
-  return relatoriosPorto.baixarRelatorioPorto(params)
+  return relatoriosPorto.baixarRelatorioPorto(formato, params)
 }
 
 export async function baixarRelatorioOpPorto(id: number, formato: 'excel' | 'pdf'): Promise<void> {
   if (!moduloNoSupabase('porto')) return relatoriosPorto.opPeloRender(id, formato)
-  return relatoriosPorto.baixarRelatorioOpPorto(id)
+  return relatoriosPorto.baixarRelatorioOpPorto(id, formato)
 }
 
 export async function baixarOrdensServicoPorto(params?: URLSearchParams): Promise<void> {
-  if (!moduloNoSupabase('porto')) return relatoriosPorto.ossPeloRender(params)
-  return relatoriosPorto.baixarOrdensServicoPorto(params)
+  return relatoriosPorto.ossPeloRender(params)
 }

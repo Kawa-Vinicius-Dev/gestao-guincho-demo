@@ -85,6 +85,8 @@ export default function EquipePage(){
 
     {dandoAcesso?<Modal etiqueta={dandoAcesso.nome} titulo="Criar acesso" aoFechar={()=>setDandoAcesso(null)}>
       <p>{dandoAcesso.nome} vai poder registrar as próprias despesas e ver a comissão dele. O sistema gera uma senha provisória para você repassar.</p>
+      {/* O erro aparece aqui dentro: com a janela aberta, o aviso da pagina fica escondido atras dela. */}
+      {erro?<div className="form-alert" role="alert">{erro}</div>:null}
       <form onSubmit={criarAcesso} className="form-grid">
         <label className="field"><span>E-mail de acesso</span><input name="email" type="email" inputMode="email" autoComplete="email" autoCapitalize="none" autoCorrect="off" required/></label>
         <div className="modal-actions"><button type="button" className="button button-ghost" onClick={()=>setDandoAcesso(null)}>Cancelar</button><button className="button button-primary" disabled={salvando}>{salvando?'Criando…':'Criar acesso'}</button></div>
