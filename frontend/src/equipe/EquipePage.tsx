@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { listarVeiculos } from '../dados/veiculos'
 import { alternarAtivoMotorista, atualizarMotorista, criarMotorista, excluirMotorista, listarMotoristas } from '../dados/motoristas'
 import { ConfirmarExclusao } from '../components/ConfirmarExclusao'
+import { ConfirmarAcao, type PedidoConfirmacao } from '../components/ConfirmarAcao'
 import { CampoDocumento, CampoTelefone } from '../components/CamposMascarados'
 import { Carregando,ErroPagina,Vazio } from '../components/EstadoPagina'
 import type { Motorista,SenhaRedefinida,Veiculo } from '../types/modelos'
@@ -15,6 +16,7 @@ export default function EquipePage(){
   const [motoristas,setMotoristas]=useState<Motorista[]>([])
   const [veiculos,setVeiculos]=useState<Veiculo[]>([])
   const [carregando,setCarregando]=useState(true),[modal,setModal]=useState(false),[salvando,setSalvando]=useState(false),[erro,setErro]=useState('')
+  const [pedido,setPedido]=useState<PedidoConfirmacao|null>(null)
   const [editando,setEditando]=useState<Motorista|null>(null),[excluindo,setExcluindo]=useState<Motorista|null>(null)
   const [dandoAcesso,setDandoAcesso]=useState<Motorista|null>(null),[acesso,setAcesso]=useState<SenhaRedefinida|null>(null)
   const carregar=()=>{setCarregando(true);setErro('');listarMotoristas().then(setMotoristas).catch(e=>setErro(e.message)).finally(()=>setCarregando(false))}
@@ -63,7 +65,9 @@ export default function EquipePage(){
       <div className="team-contact"><span>Telefone<strong>{motorista.telefone||(ehAuxiliar(motorista.nome)?'—':'Não informado')}</strong></span><span>Usuário<strong>{motorista.usuarioId?'Vinculado':'Não vinculado'}</strong></span></div>
       <div className="team-card-actions"><Link className="button button-ghost team-detail-action" to={`/equipe/${motorista.id}`}>Ver detalhes</Link>
         <button className="table-action" onClick={()=>abrirEdicao(motorista)}>Editar</button>
-        <button className={motorista.ativo?'table-action table-action-danger':'table-action'} onClick={()=>void alternarAtivo(motorista)}>{motorista.ativo?'Desativar':'Reativar'}</button>
+        <button className={motorista.ativo?'table-action table-action-danger':'table-action'} onClick={()=>setPedido(motorista.ativo
+            ?{titulo:'Desativar socorrista?',efeito:<><strong>{motorista.nome}</strong> sai das listas de escolha e não recebe OS novas pelo QRA. Serviços, comissões e despesas já lançados continuam.</>,resumo:[['Socorrista',motorista.nome],['QRA',motorista.qra||'—']],textoConfirmar:'Desativar',perigo:true,aoConfirmar:()=>alternarAtivo(motorista)}
+            :{titulo:'Reativar socorrista?',efeito:<><strong>{motorista.nome}</strong> volta às listas de escolha e passa a receber OS pelo QRA.</>,resumo:[['Socorrista',motorista.nome],['QRA',motorista.qra||'—']],textoConfirmar:'Reativar',aoConfirmar:()=>alternarAtivo(motorista)})}>{motorista.ativo?'Desativar':'Reativar'}</button>
           {ehAuxiliar(motorista.nome)?null:<button className="table-action table-action-danger" onClick={()=>setExcluindo(motorista)}>Excluir</button>}
         {!motorista.usuarioId&&motorista.ativo&&!ehAuxiliar(motorista.nome)?<button className="table-action" onClick={()=>{setErro('');setDandoAcesso(motorista)}}>Criar acesso</button>:null}</div>
     </article>)}</section>:<Vazio titulo="Nenhum socorrista cadastrado" descricao="Cadastre o primeiro socorrista para vinculá-lo às ordens de serviço."/>}
@@ -103,5 +107,6 @@ export default function EquipePage(){
       resumo={[['Nome',excluindo.nome],['QRA',excluindo.qra||'—']]}
       aoConfirmar={async()=>{await excluirMotorista(excluindo.id);carregar()}}
       aoFechar={()=>setExcluindo(null)}/>:null}
+    {pedido?<ConfirmarAcao {...pedido} aoFechar={()=>setPedido(null)}/>:null}
   </div>
 }

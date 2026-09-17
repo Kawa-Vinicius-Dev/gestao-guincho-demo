@@ -4,6 +4,7 @@ import { http, HttpResponse } from 'msw'
 import { expect, test } from 'vitest'
 import App from '../App'
 import { servidor } from '../test/servidor'
+import { confirmarNaJanela } from '../test/confirmar'
 
 const TOKEN_KEY = 'fluxo-gestao:token:v1'
 
@@ -54,7 +55,7 @@ test('lança o mês e conta o que já existia', async () => {
   const user = userEvent.setup()
   abrir()
 
-  await user.click(await screen.findByRole('button', { name: /lançar as fixas do mês/i }))
+  await user.click(await screen.findByRole('button', { name: /lançar as fixas do mês/i }));await confirmarNaJanela()
 
   expect(pedido).toMatch(/^\d{4}-\d{2}$/)
   expect(await screen.findByText(/1 despesa fixa lançada/i)).toBeInTheDocument()

@@ -4,6 +4,7 @@ import { http, HttpResponse } from 'msw'
 import { expect, test } from 'vitest'
 import App from '../App'
 import { servidor } from '../test/servidor'
+import { confirmarNaJanela } from '../test/confirmar'
 
 const TOKEN_KEY = 'fluxo-gestao:token:v1'
 
@@ -27,7 +28,7 @@ test('o dono redefine a senha e vê a provisória uma vez', async () => {
   const user = userEvent.setup()
   abrir('/configuracoes')
 
-  await user.click(await screen.findByRole('button', { name: /redefinir senha/i }))
+  await user.click(await screen.findByRole('button', { name: /redefinir senha/i }));await confirmarNaJanela()
 
   expect(await screen.findByText('kjhs-2mp4-7xqt')).toBeInTheDocument()
   expect(screen.getByText(/uma única vez/i)).toBeInTheDocument()
