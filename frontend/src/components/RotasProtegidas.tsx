@@ -11,7 +11,9 @@ export function RotaProtegida(){
   if(usuario.senhaProvisoria&&pathname!=='/trocar-senha')return <Navigate to="/trocar-senha" replace/>
   return <Outlet/>
 }
+// Quem nao e administrador cai no turno do dia: e por ele que o dia do
+// socorrista comeca, e e a unica tela que ele abre em pe, na rua.
 export function RotaAdministrador(){
   const {usuario}=useAuth()
-  return usuario?.perfil==='ADMINISTRADOR'?<Outlet/>:<Navigate to="/despesas" replace/>
+  return usuario?.perfil==='ADMINISTRADOR'?<Outlet/>:<Navigate to="/turno" replace/>
 }

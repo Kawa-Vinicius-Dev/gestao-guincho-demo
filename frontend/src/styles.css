@@ -1652,3 +1652,100 @@ tbody tr{transition:background-color .14s ease}
 
 /* Ficha do socorrista na lista: o que ele rodou e ainda espera a OP. */
 .team-previsto{margin:0 0 10px;color:var(--muted);font-size:12px;line-height:1.5}
+
+/* ---------------------------------------------------------------------------
+   Área do socorrista e fila de aprovações
+   ---------------------------------------------------------------------------
+   O resto do sistema é de escritório: tabela larga, número pequeno, mouse. Esta
+   parte é a única que abre no celular, em pé, ao lado da viatura — por isso os
+   valores aqui são outros. Alvo de toque de 56px para cima, odômetro em corpo
+   grande porque é digitado sem conferir duas vezes, e uma coluna só: a tela
+   cabe na mão, não na mesa.
+
+   Os tokens são os mesmos do sistema (--blue-600, --superficie, --ink): a área
+   do socorrista é maior, não é outra marca. */
+
+.socorrista{margin:0 auto;display:grid;gap:14px;max-width:560px;padding:4px 0 40px}
+.socorrista-topo{display:grid;gap:3px}
+.socorrista-dia{color:var(--muted);font-size:12px;font-weight:600;letter-spacing:.02em}
+.socorrista-dia:first-letter{text-transform:uppercase}
+.socorrista-topo h1{margin:0;font-size:24px;line-height:1.2}
+.socorrista-qra{color:var(--muted);font-size:12px;font-weight:600}
+
+.socorrista-cartao{display:grid;gap:16px;padding:20px;border:1px solid var(--line);border-radius:14px;background:var(--superficie);box-shadow:var(--shadow)}
+.socorrista-cartao h2{margin:0;font-size:19px}
+.socorrista-intro{margin:-8px 0 0;color:var(--muted);font-size:13px;line-height:1.5}
+.socorrista-devolvido{border-color:var(--aviso-texto)}
+.socorrista-devolvido .socorrista-cartao{padding:0;border:0;box-shadow:none}
+
+.socorrista-campo{display:grid;gap:8px}
+.socorrista-campo>label,.socorrista-rotulo{color:var(--ink);font-size:13px;font-weight:600}
+.socorrista-campo>label span{color:var(--muted);font-weight:500}
+.socorrista-exigido{color:var(--erro-texto);font-style:normal;font-weight:600}
+.socorrista-apoio{margin:0;color:var(--muted);font-size:12.5px;line-height:1.45}
+.socorrista-ok{color:var(--ok-texto);font-weight:600}
+.socorrista-alerta{margin:0;padding:12px 14px;border-radius:10px;background:var(--aviso-fundo);color:var(--aviso-texto);font-size:13px;font-weight:600;line-height:1.45}
+
+/* O odômetro é o único número da tela: corpo grande, espaçado, centralizado —
+   quem digita seis dígitos no sol precisa ver o que digitou sem aproximar. */
+.socorrista-odometro{width:100%;height:68px;padding:0 14px;border:1.5px solid var(--controle-borda);border-radius:12px;background:var(--superficie-2);color:var(--ink);font-size:32px;font-weight:700;letter-spacing:.06em;text-align:center;font-variant-numeric:tabular-nums}
+.socorrista-odometro:focus{border-color:var(--blue-600);outline:2px solid var(--blue-100);outline-offset:1px}
+
+.socorrista-viaturas{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
+.socorrista-viatura{display:grid;gap:3px;min-height:64px;padding:12px;border:1.5px solid var(--line);border-radius:12px;background:var(--superficie-2);color:var(--ink);cursor:pointer;text-align:left}
+.socorrista-viatura strong{font-size:16px}
+.socorrista-viatura span{color:var(--muted);font-size:12px}
+.socorrista-viatura.esta-marcada{border-color:var(--blue-600);background:var(--blue-50);box-shadow:inset 0 0 0 1px var(--blue-600)}
+
+.socorrista-arquivo{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.socorrista-botao-foto{width:100%;min-height:56px;border:1.5px dashed var(--controle-borda);border-radius:12px;background:var(--superficie-2);color:var(--blue-600);font-size:15px;font-weight:600;cursor:pointer}
+.socorrista-botao-foto:active{background:var(--blue-50)}
+
+.socorrista-acao{width:100%;min-height:60px;border:0;border-radius:12px;background:var(--blue-600);color:#fff;font-size:17px;font-weight:700;cursor:pointer}
+.socorrista-acao:disabled{background:var(--line);color:var(--muted);cursor:not-allowed}
+
+.socorrista-resumo{display:grid;gap:10px;margin:0;grid-template-columns:1fr 1fr}
+.socorrista-resumo dt{color:var(--muted);font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.socorrista-resumo dd{margin:2px 0 0;font-size:16px;font-weight:700;font-variant-numeric:tabular-nums}
+
+.socorrista-historico{display:grid;gap:2px;margin:0;padding:0;list-style:none}
+.socorrista-historico li{display:grid;align-items:center;gap:8px;padding:11px 0;grid-template-columns:auto 1fr auto;border-top:1px solid var(--linha-suave)}
+.socorrista-historico li:first-child{border-top:0}
+.socorrista-historico-dia{font-size:13px;font-weight:600}
+.socorrista-historico-km{color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
+.socorrista-situacao{padding:4px 9px;border-radius:999px;font-size:11px;font-weight:700}
+.socorrista-situacao.situacao-aprovado{background:var(--ok-fundo);color:var(--ok-texto)}
+.socorrista-situacao.situacao-devolvido{background:var(--erro-fundo);color:var(--erro-texto)}
+.socorrista-situacao.situacao-aguardando_aprovacao{background:var(--info-fundo);color:var(--info-texto)}
+
+/* Fila do administrador: cartões em vez de tabela. Cada item traz foto,
+   observação e uma decisão — isso não cabe numa linha de tabela sem virar
+   scroll horizontal. */
+.aprovacoes-lista{display:grid;gap:14px}
+.aprovacao-item{display:grid;gap:14px;padding:18px 20px;border:1px solid var(--line);border-radius:12px;background:var(--superficie-2)}
+.aprovacao-item>header{display:grid;gap:3px}
+.aprovacao-item h3{margin:0;font-size:16px}
+.aprovacao-item h3 small{color:var(--muted);font-size:12px;font-weight:600}
+.aprovacao-data{color:var(--muted);font-size:12.5px}
+.aprovacao-tipo{justify-self:start;padding:3px 9px;border-radius:999px;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.aprovacao-tipo-turno{background:var(--info-fundo);color:var(--info-texto)}
+.aprovacao-tipo-despesa{background:var(--aviso-fundo);color:var(--aviso-texto)}
+.aprovacao-numeros{display:grid;gap:12px;margin:0;grid-template-columns:repeat(auto-fit,minmax(130px,1fr))}
+.aprovacao-numeros dt{color:var(--muted);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.aprovacao-numeros dd{margin:3px 0 0;font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}
+.aprovacao-destaque{font-size:18px!important;font-weight:700!important}
+.aprovacao-km{display:grid;gap:6px;padding:12px 14px;border-radius:10px;background:var(--superficie)}
+.aprovacao-km label{color:var(--ink);font-size:12px;font-weight:600}
+.aprovacao-km input{width:140px;height:var(--controle-altura);padding:0 12px;border:1px solid var(--controle-borda);border-radius:var(--controle-raio);background:var(--superficie-2);color:var(--ink);font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
+.aprovacao-apoio{margin:0;color:var(--muted);font-size:12.5px}
+.aprovacao-observacao{margin:0;color:var(--muted);font-size:13px;font-style:italic}
+.aprovacao-acoes{display:flex;flex-wrap:wrap;align-items:center;gap:8px;justify-content:flex-end}
+.aprovacoes-cobranca{display:grid;gap:8px;margin:0;padding:0 0 0 18px}
+.aprovacoes-cobranca li{color:var(--ink);font-size:13px;line-height:1.5}
+.aprovacoes-foto{display:block;width:100%;border-radius:10px}
+
+@media(max-width:620px){
+  .socorrista-resumo{grid-template-columns:1fr}
+  .aprovacao-acoes{justify-content:stretch}
+  .aprovacao-acoes .button{flex:1}
+}

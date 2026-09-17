@@ -1,4 +1,4 @@
-import { render,screen,within } from '@testing-library/react'
+import { render,screen,waitFor,within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http,HttpResponse } from 'msw'
 import { afterEach,beforeEach,expect,test,vi } from 'vitest'
@@ -108,8 +108,8 @@ test('socorrista comum não acessa a ficha administrativa nem chama o endpoint d
 
   render(<App/>)
 
-  expect(await screen.findByRole('heading',{name:'Despesas'})).toBeInTheDocument()
-  expect(window.location.pathname).toBe('/despesas')
+  // Quem nao e administrador cai no turno do dia, a tela de quem trabalha na rua.
+  await waitFor(()=>expect(window.location.pathname).toBe('/turno'))
   expect(chamadas).toBe(0)
   expect(screen.queryByText('OS-PENDENTE')).not.toBeInTheDocument()
 })
