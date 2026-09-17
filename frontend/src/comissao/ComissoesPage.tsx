@@ -6,7 +6,8 @@ import { baixarRelatorioComissoes } from '../dados/relatorios'
 import { lerComissaoDaOp, listarPeriodosComissao, resumirComissoes } from '../dados/comissoes'
 import type { Comissao,Motorista,ResumoComissao } from '../types/modelos'
 import { data,moeda } from '../utils/formatadores'
-import { periodoCorrente, rotuloPeriodo, type PeriodoPorto } from '../utils/periodos'
+import { rotuloPeriodo, type PeriodoPorto } from '../utils/periodos'
+import { globalDoPeriodoPorto, periodoPortoDoGlobal, usePeriodoGlobal } from '../utils/periodoGlobal'
 import { Modal } from '../components/Modal'
 import { useAoVivo } from '../dados/aoVivo'
 
@@ -18,9 +19,12 @@ import { useAoVivo } from '../dados/aoVivo'
  * OS ganha dono ou entra um gasto marcado para descontar. Esta tela confere.
  */
 export default function ComissoesPage(){
-  const [periodos,setPeriodos]=useState<PeriodoPorto[]>([]),[motoristas,setMotoristas]=useState<Motorista[]>([]),[periodoId,setPeriodoId]=useState(''),[motoristaId,setMotoristaId]=useState(0),[itens,setItens]=useState<ResumoComissao[]>([]),[detalhe,setDetalhe]=useState<Comissao|null>(null),[erro,setErro]=useState(''),[exportando,setExportando]=useState(false)
+  const [periodos,setPeriodos]=useState<PeriodoPorto[]>([]),[motoristas,setMotoristas]=useState<Motorista[]>([]),[motoristaId,setMotoristaId]=useState(0),[itens,setItens]=useState<ResumoComissao[]>([]),[detalhe,setDetalhe]=useState<Comissao|null>(null),[erro,setErro]=useState(''),[exportando,setExportando]=useState(false)
+  const [global,setGlobal]=usePeriodoGlobal()
+  const periodoId=periodoPortoDoGlobal(periodos,global)?.id??''
+  const setPeriodoId=(id:string)=>{const p=periodos.find(x=>x.id===id);const novo=p&&globalDoPeriodoPorto(p);if(novo)setGlobal(novo)}
   const ids=periodos.find(p=>p.id===periodoId)?.ids??[]
-  useEffect(()=>{Promise.all([listarPeriodosComissao(),listarMotoristas()]).then(([p,m])=>{setPeriodos(p);setMotoristas(m);const atual=periodoCorrente(p);if(atual)setPeriodoId(atual.id);if(!atual)setCarregando(false)}).catch(e=>{setErro(e.message);setCarregando(false)})},[])
+  useEffect(()=>{Promise.all([listarPeriodosComissao(),listarMotoristas()]).then(([p,m])=>{setPeriodos(p);setMotoristas(m);if(!p.length)setCarregando(false)}).catch(e=>{setErro(e.message);setCarregando(false)})},[])
   const [carregando,setCarregando]=useState(true)
   useEffect(()=>{if(!ids.length)return;setCarregando(true);resumirComissoes(ids,motoristaId||undefined).then(setItens).catch(e=>setErro(e.message)).finally(()=>setCarregando(false))},[periodoId,motoristaId,periodos])
   // OS que ganha dono ou gasto marcado muda a comissao na hora, detalhe aberto inclusive.

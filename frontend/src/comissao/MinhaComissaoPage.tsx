@@ -2,17 +2,21 @@ import { useEffect,useState,type FormEvent } from 'react'
 import { lerComissaoDaOp, listarPeriodosComissao, registrarAlimentacao } from '../dados/comissoes'
 import type { Comissao } from '../types/modelos'
 import { data,moeda } from '../utils/formatadores'
-import { periodoCorrente, rotuloPeriodo, type PeriodoPorto } from '../utils/periodos'
+import { rotuloPeriodo, type PeriodoPorto } from '../utils/periodos'
+import { globalDoPeriodoPorto, periodoPortoDoGlobal, usePeriodoGlobal } from '../utils/periodoGlobal'
 import { CampoValor } from '../components/CampoValor'
 import { Carregando } from '../components/EstadoPagina'
 import { Selecao } from '../components/Campos'
 import { useAoVivo } from '../dados/aoVivo'
 
 export default function MinhaComissaoPage(){
-  const [periodos,setPeriodos]=useState<PeriodoPorto[]>([]),[periodoId,setPeriodoId]=useState(''),[comissao,setComissao]=useState<Comissao|null>(null)
+  const [periodos,setPeriodos]=useState<PeriodoPorto[]>([]),[comissao,setComissao]=useState<Comissao|null>(null)
   const [erro,setErro]=useState(''),[mensagem,setMensagem]=useState(''),[salvando,setSalvando]=useState(false)
+  const [global,setGlobal]=usePeriodoGlobal()
+  const periodoId=periodoPortoDoGlobal(periodos,global)?.id??''
+  const setPeriodoId=(id:string)=>{const p=periodos.find(x=>x.id===id);const novo=p&&globalDoPeriodoPorto(p);if(novo)setGlobal(novo)}
   const ids=periodos.find(p=>p.id===periodoId)?.ids??[]
-  useEffect(()=>{listarPeriodosComissao().then(lista=>{setPeriodos(lista);const atual=periodoCorrente(lista);if(atual)setPeriodoId(atual.id);if(!atual)setCarregando(false)}).catch((e:Error)=>{setErro(e.message);setCarregando(false)})},[])
+  useEffect(()=>{listarPeriodosComissao().then(lista=>{setPeriodos(lista);if(!lista.length)setCarregando(false)}).catch((e:Error)=>{setErro(e.message);setCarregando(false)})},[])
   const [carregando,setCarregando]=useState(true)
   useAoVivo(()=>{if(ids.length)lerComissaoDaOp(ids).then(setComissao).catch((e:Error)=>setErro(e.message))})
   useEffect(()=>{if(!ids.length)return;setCarregando(true);lerComissaoDaOp(ids).then(setComissao).catch((e:Error)=>setErro(e.message)).finally(()=>setCarregando(false))},[periodoId])

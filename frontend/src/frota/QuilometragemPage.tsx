@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { SeletorPeriodo } from '../components/SeletorPeriodo'
+import { usePeriodoGlobal } from '../utils/periodoGlobal'
 import { criarQuilometragem, listarQuilometragens } from '../dados/quilometragem'
 import { listarMotoristas } from '../dados/motoristas'
 import { listarVeiculos } from '../dados/veiculos'
@@ -8,11 +10,6 @@ import type { Motorista, Quilometragem, Veiculo } from '../types/modelos'
 import { data, moeda, numero } from '../utils/formatadores'
 import { Selecao } from '../components/Campos'
 import { Modal } from '../components/Modal'
-
-function mesAtual() {
-  const hoje = new Date()
-  return `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`
-}
 
 function hojeLocal() {
   const hoje = new Date()
@@ -25,7 +22,7 @@ export default function QuilometragemPage() {
   const [veiculos, setVeiculos] = useState<Veiculo[]>([])
   const [motoristas, setMotoristas] = useState<Motorista[]>([])
   const [carregando, setCarregando] = useState(true)
-  const [mes, setMes] = useState(mesAtual)
+  const [periodo, setPeriodo] = usePeriodoGlobal()
   const [modal, setModal] = useState(false)
   const [mensagem, setMensagem] = useState('')
 
@@ -47,8 +44,8 @@ export default function QuilometragemPage() {
   }, [])
 
   const registrosDoMes = useMemo(() => registros
-    .filter(item => item.data.startsWith(mes))
-    .sort((a, b) => b.data.localeCompare(a.data)), [registros, mes])
+    .filter(item => item.data >= periodo.inicio && item.data <= periodo.fim)
+    .sort((a, b) => b.data.localeCompare(a.data)), [registros, periodo.inicio, periodo.fim])
   const kmRodado = registrosDoMes.reduce((total, item) => total + item.quilometragemTotal, 0)
   const kmMorto = registrosDoMes.reduce((total, item) => total + item.kmMorto, 0)
   const custo = registrosDoMes.reduce((total, item) => total + item.custoKmMorto, 0)
@@ -90,7 +87,7 @@ export default function QuilometragemPage() {
 
   return <div className="page-enter">
     <header className="page-heading"><div><span className="eyebrow">Eficiência operacional</span><h1>Km rodado e km morto</h1><p>Distâncias e custos registrados no banco oficial da operação.</p></div>
-      <div className="heading-actions"><label className="month-picker"><span>Competência</span><input type="month" value={mes} onChange={evento => setMes(evento.target.value)}/></label><button className="button button-primary" onClick={() => setModal(true)}>+ Registrar quilometragem</button></div></header>
+      <div className="heading-actions"><div className="periodo-no-cabecalho"><SeletorPeriodo periodo={periodo} aoMudar={setPeriodo}/></div><button className="button button-primary" onClick={() => setModal(true)}>+ Registrar quilometragem</button></div></header>
     {mensagem ? <div className="success-notice">{mensagem}</div> : null}
 
     <section className="km-definitions">

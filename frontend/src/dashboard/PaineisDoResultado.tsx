@@ -185,6 +185,7 @@ export function PainelFaturamentoPorViatura({ dados }: { dados: Dashboard }) {
   const viaturas = dados.resultadoPorVeiculo.filter(v => v.receitas > 0 || v.despesas > 0)
   const linhas: LinhaFaturamento[] = viaturas.map(v => ({
     chave: String(v.veiculoId), rotulo: v.veiculo, valor: v.receitas, semVinculo: false,
+    link: `/veiculos?veiculo=${v.veiculoId}`,
     detalhe: v.despesas > 0 ? `custo ${moeda(v.despesas)}` : undefined,
   }))
   const semDono = dados.receitaRecebida - viaturas.reduce((soma, v) => soma + v.receitas, 0)

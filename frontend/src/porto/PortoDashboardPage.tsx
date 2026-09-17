@@ -1,15 +1,15 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { baixarRelatorioPorto, listarPeriodosDeOp, obterDashboardAltoNivelPorto } from '../dados/porto'
+import { baixarRelatorioPorto, obterDashboardAltoNivelPorto } from '../dados/porto'
 import type {
   DashboardAltoNivelPorto, OpDestaquePorto, PendenciasVinculoPorto,
 } from '../types/modelos'
-import { data, hojeIso, moeda, percentual } from '../utils/formatadores'
+import { data, moeda, percentual } from '../utils/formatadores'
 import { Carregando } from '../components/EstadoPagina'
-import { Campo, Selecao } from '../components/Campos'
 import { EvolucaoAcumulada, FaturamentoPorGrupo } from '../components/Graficos'
 import { CabecalhoPagina, Etiqueta, GradeIndicadores, Indicador, Painel } from '../components/ui/Pagina'
-import { agruparPorPeriodo, rotuloPeriodo, type PeriodoPorto } from '../utils/periodos'
+import { usePeriodoGlobal } from '../utils/periodoGlobal'
+import { SeletorPeriodo } from '../components/SeletorPeriodo'
 import { gravarFiltro, lerFiltro } from '../utils/filtroLembrado'
 import { useAoVivo } from '../dados/aoVivo'
 
@@ -31,20 +31,7 @@ import { useAoVivo } from '../dados/aoVivo'
  * inicio e fim —, entao a tela prometia um recorte que nunca acontecia. Filtro
  * de linha vive na tela de ordens de servico, onde ha linhas para filtrar.
  */
-const primeiroDiaDoMes = () => `${hojeIso().slice(0, 8)}01`
-
-/**
- * O recorte escolhido sobrevive a ida e volta para outra tela.
- *
- * Sem isto, quem escolhia uma OP, abria as ordens de servico para conferir uma
- * linha e voltava, caia de novo no mes corrente e tinha de reescolher a OP a
- * cada consulta. O padrao continua sendo o mes corrente — so a primeira visita
- * da sessao e que o usa.
- */
-type Recorte = { op: string, inicio: string, fim: string, grao: 'DIA' | 'SEMANA' | 'MES' }
-const recorteInicial = (): Recorte => lerFiltro<Recorte>('porto-painel', {
-  op: '', inicio: primeiroDiaDoMes(), fim: hojeIso(), grao: 'DIA',
-})
+type Grao = 'DIA' | 'SEMANA' | 'MES'
 
 const GRAOS = [
   { valor: 'DIA', texto: 'Diário' },
@@ -83,12 +70,9 @@ const tom = (valor: number, cor: 'alerta' | 'atencao') => (valor > 0 ? cor : 'ne
 
 export default function PortoDashboardPage() {
   const [dados, setDados] = useState<DashboardAltoNivelPorto | null>(null)
-  const [periodos, setPeriodos] = useState<PeriodoPorto[]>([])
-  const [recorte] = useState(recorteInicial)
-  const [opEscolhida, setOpEscolhida] = useState(recorte.op)
-  const [inicio, setInicio] = useState(recorte.inicio)
-  const [fim, setFim] = useState(recorte.fim)
-  const [grao, setGrao] = useState<'DIA' | 'SEMANA' | 'MES'>(recorte.grao)
+  const [periodo, setPeriodo] = usePeriodoGlobal()
+  const { inicio, fim } = periodo
+  const [grao, setGrao] = useState<Grao>(() => lerFiltro<{ grao: Grao }>('porto-painel', { grao: 'DIA' }).grao)
   const [carregando, setCarregando] = useState(true)
   const [baixando, setBaixando] = useState('')
   const [erro, setErro] = useState('')
@@ -100,33 +84,15 @@ export default function PortoDashboardPage() {
     finally { setCarregando(false) }
   }, [])
 
-  useEffect(() => { void carregar(recorte.inicio, recorte.fim, recorte.grao) }, [carregar, recorte])
+  useEffect(() => { if (inicio && fim && inicio <= fim) void carregar(inicio, fim, grao) }, [carregar, inicio, fim, grao])
   // Grava depois de cada mudanca, e nao dentro de cada handler: assim nenhum
   // caminho novo de alteracao de periodo esquece de lembrar o que escolheu.
   useEffect(() => {
-    gravarFiltro('porto-painel', { op: opEscolhida, inicio, fim, grao })
-  }, [opEscolhida, inicio, fim, grao])
+    gravarFiltro('porto-painel', { grao })
+  }, [grao])
   // Importacao, pendencia resolvida ou OP nova em qualquer lugar: recarrega.
   useAoVivo(() => { void carregar(inicio, fim, grao) })
-  // A lista de OPs e conveniencia: se nao carregar, as datas continuam valendo.
-  useEffect(() => {
-    listarPeriodosDeOp().then(ops => setPeriodos(agruparPorPeriodo(ops))).catch(() => setPeriodos([]))
-  }, [])
-
-  function escolherOp(id: string) {
-    setOpEscolhida(id)
-    const periodo = periodos.find(p => p.id === id)
-    if (!periodo) return
-    const de = periodo.periodoInicio || inicio
-    const ate = periodo.periodoFim || fim
-    setInicio(de); setFim(ate)
-    void carregar(de, ate, grao)
-  }
-
-  function trocarGrao(novo: 'DIA' | 'SEMANA' | 'MES') {
-    setGrao(novo)
-    void carregar(inicio, fim, novo)
-  }
+  function trocarGrao(novo: Grao) { setGrao(novo) }
 
   async function exportar(formato: 'excel' | 'pdf') {
     setErro(''); setBaixando(formato)
@@ -167,17 +133,8 @@ export default function PortoDashboardPage() {
     {erro ? <div className="form-alert" role="alert">{erro}</div> : null}
 
     <section className="panel destaque" aria-label="Resumo financeiro">
-      <form className="destaque-periodo" onSubmit={e => { e.preventDefault(); void carregar(inicio, fim, grao) }}>
-        <Selecao rotulo="Período" vazio="Período personalizado" value={opEscolhida}
-          onChange={e => escolherOp(e.target.value)}
-          opcoes={periodos.map(p => ({ valor: p.id, texto: rotuloPeriodo(p) }))}/>
-        <Campo rotulo="De">
-          <input type="date" value={inicio} onChange={e => { setOpEscolhida(''); setInicio(e.target.value) }} required/>
-        </Campo>
-        <Campo rotulo="Até">
-          <input type="date" value={fim} onChange={e => { setOpEscolhida(''); setFim(e.target.value) }} required/>
-        </Campo>
-        <button className="button button-ghost">Aplicar</button>
+      <form className="destaque-periodo destaque-periodo-sem-botao" onSubmit={e => e.preventDefault()}>
+        <SeletorPeriodo periodo={periodo} aoMudar={setPeriodo}/>
       </form>
 
       {carregando && !dados ? <Carregando/> : null}
@@ -278,7 +235,8 @@ export default function PortoDashboardPage() {
         </Painel>
         <Painel etiqueta="Por viatura" titulo="Faturamento por viatura">
           <FaturamentoPorGrupo descricao="Faturamento por viatura no período"
-            vazio="Nenhum serviço neste período." linhas={dados.faturamentoPorViatura}/>
+            vazio="Nenhum serviço neste período."
+            linhas={dados.faturamentoPorViatura.map(l => l.semVinculo ? l : { ...l, link: `/veiculos?sigla=${encodeURIComponent(l.chave)}` })}/>
         </Painel>
       </div>
 

@@ -1,4 +1,7 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import { SeletorPeriodo } from '../components/SeletorPeriodo'
+import { usePeriodoGlobal } from '../utils/periodoGlobal'
 import { lerIndicadores } from '../dados/dashboard'
 import { lerExtrato } from '../dados/extrato'
 import { atualizarVeiculo, criarVeiculo, listarVeiculos } from '../dados/veiculos'
@@ -9,16 +12,19 @@ import { CampoValor } from '../components/CampoValor'
 import { CampoPlaca } from '../components/CamposMascarados'
 import { Modal } from '../components/Modal'
 
-const mesAtual=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`}
-const intervalo=(mes:string)=>{const [ano,m]=mes.split('-').map(Number);return {inicio:`${mes}-01`,fim:`${mes}-${String(new Date(ano,m,0).getDate()).padStart(2,'0')}`}}
 
 export default function FrotasPage(){
-  const [mes,setMes]=useState(mesAtual),[veiculos,setVeiculos]=useState<Veiculo[]>([]),[financeiro,setFinanceiro]=useState<Dashboard|null>(null)
+  const [periodo,setPeriodo]=usePeriodoGlobal(),[veiculos,setVeiculos]=useState<Veiculo[]>([]),[financeiro,setFinanceiro]=useState<Dashboard|null>(null)
+  // Clicar na viatura num painel abre esta tela ja nela: ?veiculo=id ou ?sigla=L168.
+  const [busca]=useSearchParams()
+  const pedido=useRef({id:Number(busca.get('veiculo'))||0,sigla:(busca.get('sigla')??'').toUpperCase()})
   const [lancamentos,setLancamentos]=useState<LancamentoFinanceiro[]>([]),[selecionado,setSelecionado]=useState(0),[modal,setModal]=useState(false),[mensagem,setMensagem]=useState('')
   const [editando,setEditando]=useState<Veiculo|null>(null),[salvando,setSalvando]=useState(false)
   // Primeira carga mostra o esqueleto; trocar de competencia mantem a tela.
   const [carregando,setCarregando]=useState(true)
-  const carregar=useCallback(async()=>{const {inicio,fim}=intervalo(mes);try{const [v,d,l]=await Promise.all([listarVeiculos(),lerIndicadores(inicio,fim),lerExtrato(inicio,fim)]);setVeiculos(v);setFinanceiro(d);setLancamentos(l);setSelecionado(atual=>v.some(x=>x.id===atual)?atual:(v[0]?.id??0))}catch(e){setMensagem((e as Error).message)}},[mes])
+  const carregar=useCallback(async()=>{const {inicio,fim}=periodo;if(!inicio||!fim||inicio>fim)return;try{const [v,d,l]=await Promise.all([listarVeiculos(),lerIndicadores(inicio,fim),lerExtrato(inicio,fim)]);setVeiculos(v);setFinanceiro(d);setLancamentos(l);setSelecionado(atual=>{const p=pedido.current;pedido.current={id:0,sigla:''}
+      const escolhido=v.find(x=>x.id===p.id||(p.sigla&&[x.siglaPorto,x.identificacao].some(s=>s?.toUpperCase()===p.sigla)))
+      return escolhido?escolhido.id:v.some(x=>x.id===atual)?atual:(v[0]?.id??0)})}catch(e){setMensagem((e as Error).message)}},[periodo])
   useEffect(()=>{void carregar().finally(()=>setCarregando(false))},[carregar])
   const veiculo=veiculos.find(v=>v.id===selecionado)
   const resultado=financeiro?.resultadoPorVeiculo.find(r=>r.veiculoId===selecionado)
@@ -35,7 +41,7 @@ export default function FrotasPage(){
       setModal(false);setEditando(null);setMensagem('Veículo salvo no cadastro real.');await carregar()
     }catch(x){setMensagem((x as Error).message)}finally{setSalvando(false)}}
 
-  return <div className="page-enter"><header className="page-heading"><div><span className="eyebrow">Ativos operacionais</span><h1>Veículos e custos</h1><p>Receitas, despesas e eficiência calculadas a partir dos vínculos reais do PostgreSQL.</p></div><div className="heading-actions"><label className="month-picker"><span>Competência</span><input type="month" value={mes} onChange={e=>setMes(e.target.value)}/></label><button className="button button-primary" onClick={()=>setModal(true)}>+ Cadastrar veículo</button></div></header>
+  return <div className="page-enter"><header className="page-heading"><div><span className="eyebrow">Ativos operacionais</span><h1>Veículos e custos</h1><p>Receitas, despesas e eficiência calculadas a partir dos vínculos reais do PostgreSQL.</p></div><div className="heading-actions"><div className="periodo-no-cabecalho"><SeletorPeriodo periodo={periodo} aoMudar={setPeriodo}/></div><button className="button button-primary" onClick={()=>setModal(true)}>+ Cadastrar veículo</button></div></header>
     {mensagem?<div className="success-notice">{mensagem}</div>:null}
     {carregando?<Carregando/>:<>
     <section className="fleet-summary"><div><span>Gasto total dos veículos</span><strong>{moeda(gastoFrota)}</strong><small>Despesas pagas vinculadas</small></div><div><span>Veículos disponíveis</span><strong>{veiculos.filter(v=>v.ativo).length}/{veiculos.length}</strong><small>Cadastro oficial</small></div><div><span>Melhor margem</span><strong>{Math.max(...margens,0).toFixed(1)}%</strong><small>Entre veículos com receita</small></div></section>
