@@ -1616,3 +1616,10 @@ tbody tr{transition:background-color .14s ease}
 .app-shell ::-webkit-scrollbar-thumb:hover{background-color:var(--muted)}
 /* O canto onde as duas barras se encontram numa tabela que rola nos dois eixos. */
 .app-shell ::-webkit-scrollbar-corner{background:transparent}
+
+/* Previa da importacao: OS que vao para o Auxiliar. Bloco de aviso informativo em largura total,
+   com o atalho e a tabela abaixo do texto (nao em linha, que espremia tudo). */
+.porto-aviso-auxiliar{display:block;margin:0 0 16px;padding:14px 16px;border:1px solid var(--info-texto);border-radius:7px;background:var(--info-fundo);color:var(--info-texto);font-size:13px;line-height:1.5}
+.porto-aviso-auxiliar strong{color:inherit}
+.porto-aviso-auxiliar .porto-orfas-atalho{margin:12px 0;max-width:420px}
+.porto-aviso-auxiliar .table-scroll{margin-top:8px;background:var(--superficie);border-radius:6px}

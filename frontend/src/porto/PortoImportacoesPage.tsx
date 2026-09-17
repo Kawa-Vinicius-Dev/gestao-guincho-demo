@@ -142,7 +142,7 @@ export default function PortoImportacoesPage(){
           <button type="button" className="button button-ghost" disabled={carregando} onClick={cancelar}>Cancelar prévia</button>
           <button className="button button-primary" disabled={carregando||validando||temErros||!divergenciaConfirmada||temReassociacoes&&!confirmarReassociacoes||previa.requerOrdemPagamento&&(!numeroNormalizado||!analise)||previa.linhas.length===0} onClick={confirmar}>Confirmar importação</button>
         </footer>
-        {orfas.length?<div className="porto-divergence" role="status"><strong>{orfas.length} {orfas.length===1?'ordem de serviço veio':'ordens de serviço vieram'} sem socorrista e {orfas.length===1?'vai':'vão'} para o Auxiliar.</strong> Se souber quem atendeu, escolha abaixo; se não, pode importar assim.
+        {orfas.length?<div className="porto-aviso-auxiliar" role="status"><strong>{orfas.length} {orfas.length===1?'ordem de serviço veio':'ordens de serviço vieram'} sem socorrista e {orfas.length===1?'vai':'vão'} para o Auxiliar.</strong> Se souber quem atendeu, escolha abaixo; se não, pode importar assim.
           <div className="porto-orfas-atalho"><Selecao rotulo="Aplicar o mesmo socorrista a todas" vazio="Escolha para aplicar a todas" value=""
             onChange={e=>aplicarSocorristaEmTodas(e.target.value)}
             opcoes={motoristas.map(m=>({valor:m.id,texto:m.nome}))}/></div>

@@ -139,6 +139,8 @@ async function registrosExistentes(tipo: TipoRelatorio, numeros: string[]) {
  */
 interface Cadastro {
   porQra: Map<string, { id: number; nome: string }>
+  /** Cadastro pelo nome normalizado; o Auxiliar fica de fora. */
+  pessoas?: { id: number; nome: string; chave: string }[]
   porEscala: Map<string, { id: number; nome: string }>
   nomes: Map<number, string>
 }
@@ -159,6 +161,34 @@ const escala = (dataAtendimento?: string | null, sigla?: string | null) =>
   `${(dataAtendimento ?? '').slice(0, 10)}|${(sigla ?? '').trim().toUpperCase()}`
 
 const chave = (valor?: string | null) => (valor ?? '').trim().toUpperCase()
+
+/** Nome sem acento, sem espaco duplo e em maiuscula: "Qebson  Ramos" = "QEBSON RAMOS". */
+const chaveDeNome = (nome?: string | null) => (nome ?? '')
+  .normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toUpperCase()
+
+const ehAuxiliar = (nome?: string | null) => chaveDeNome(nome) === 'AUXILIAR'
+
+/**
+ * Socorrista pelo nome que veio no arquivo.
+ *
+ * Kawa: OP que vem com o nome do funcionario continua com esse funcionario; o
+ * Auxiliar e so para a que vem sem nada. O QRA as vezes chega vazio ou com um
+ * codigo interno da Porto ainda nao cadastrado, mas o nome esta la.
+ *
+ * Nome igual ao do cadastro vale. A Porto corta nomes longos na largura da
+ * coluna, entao um nome que e o comeco de um so nome cadastrado tambem vale.
+ * Se o comeco servir para duas pessoas (JEFERSON MARTINS DA SIL... pai e filho),
+ * ninguem e escolhido: errar a comissao de alguem e pior que deixar para decidir.
+ */
+function socorristaPeloNome(nome: string | undefined, cadastro: Cadastro): { id: number; nome: string } | undefined {
+  const alvo = chaveDeNome(nome)
+  if (alvo.length < 5 || !cadastro.pessoas) return undefined
+  const exato = cadastro.pessoas.filter(p => p.chave === alvo)
+  if (exato.length === 1) return exato[0]
+  if (exato.length > 1) return undefined
+  const pelaParte = cadastro.pessoas.filter(p => p.chave.startsWith(alvo) || alvo.startsWith(p.chave))
+  return pelaParte.length === 1 ? pelaParte[0] : undefined
+}
 
 async function cadastroDeSocorristas(datas: string[]): Promise<Cadastro> {
   const dias = [...new Set(datas.filter(Boolean).map(d => d.slice(0, 10)))]
@@ -181,8 +211,10 @@ async function cadastroDeSocorristas(datas: string[]): Promise<Cadastro> {
 
   const porQra = new Map<string, { id: number; nome: string }>()
   const nomes = new Map<number, string>()
+  const listaDeNomes: { id: number; nome: string; chave: string }[] = []
   for (const pessoa of pessoas) {
     nomes.set(pessoa.id, pessoa.nome)
+    if (!ehAuxiliar(pessoa.nome)) listaDeNomes.push({ id: pessoa.id, nome: pessoa.nome, chave: chaveDeNome(pessoa.nome) })
     // O QRA e os codigos que a Porto usa no lugar dele identificam a mesma pessoa.
     // Codigo repetido em duas pessoas nao sugere ninguem.
     for (const codigo of [pessoa.qra, ...(pessoa.codigos_porto ?? [])]) {
@@ -197,19 +229,27 @@ async function cadastroDeSocorristas(datas: string[]): Promise<Cadastro> {
     if (!chave(servico.sigla_viatura)) continue
     const vinculo = servico.motoristas
     const nome = (Array.isArray(vinculo) ? vinculo[0] : vinculo)?.nome ?? ''
+    // Auxiliar nao e escala de ninguem: nao pode virar palpite para outras OS.
+    if (ehAuxiliar(nome)) continue
     anotarEscala(porEscala, escala(servico.data_atendimento, servico.sigla_viatura), servico.motorista_id, nome)
   }
 
-  return { porQra, porEscala, nomes }
+  return { porQra, porEscala, nomes, pessoas: listaDeNomes }
 }
 
 function socorristaDaLinha(
   linha: Linha, existente: OsExistente | undefined, cadastro: Cadastro,
 ): { id?: number; nome?: string } {
-  if (existente?.motorista_id) return { id: existente.motorista_id }
+  // Quem ja e dono continua dono; o Auxiliar nao, ele so guarda a OS ate alguem aparecer.
+  if (existente?.motorista_id && !ehAuxiliar(cadastro.nomes.get(existente.motorista_id))) {
+    return { id: existente.motorista_id }
+  }
 
   const porQra = cadastro.porQra.get(chave(linha.dados.qra))
   if (porQra?.id) return porQra
+
+  const peloNome = socorristaPeloNome(linha.dados.socorrista, cadastro)
+  if (peloNome) return peloNome
 
   const sigla = chave(linha.dados.sigla_viatura) || chave(existente?.sigla_viatura)
   const doDia = sigla
