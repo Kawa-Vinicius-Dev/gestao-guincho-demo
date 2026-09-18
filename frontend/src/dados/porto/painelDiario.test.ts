@@ -93,3 +93,47 @@ test('le a quinzena real da Porto, com registro quebrado, cancelado e OS sem via
     socorrista: 'QEBSON RAMOS DA SILV',
   })
 })
+
+test('le registros quando o numero da OS contem link markdown ou colchetes', async () => {
+  const coladoComLinks = `ITAU FROTA E RESIDE.
+[5449674/26](https://wwws.portoseguro.com.br/integracoesportaldeprestadores/click/0)
+SOCORRO
+L168
+ARYCLECIO CLEITON PE
+01/09/2026
+06:58
+06:58
+ACIONADO/FINAL
+EM PROCESSAMENTO
+Não
+PORTO SEGURO
+[5441453/26](https://wwws.portoseguro.com.br/integracoesportaldeprestadores/click/0)
+SOCORRO
+L25
+QEBSON RAMOS DA SILV
+01/09/2026
+07:00
+07:00
+ACIONADO/FINAL
+EM PROCESSAMENTO
+Não`
+
+  const { linhas, erros } = await lerPainelDiarioPorto(coladoComLinks)
+  expect(erros).toEqual([])
+  expect(linhas).toHaveLength(2)
+  expect(linhas[0].dados).toMatchObject({
+    seguradora: 'ITAU FROTA E RESIDE.',
+    numero_os: '5449674/26',
+    especialidade: 'SOCORRO',
+    sigla_viatura: 'L168',
+    socorrista: 'ARYCLECIO CLEITON PE',
+    data_atendimento: '2026-09-01',
+  })
+  expect(linhas[1].dados).toMatchObject({
+    seguradora: 'PORTO SEGURO',
+    numero_os: '5441453/26',
+    sigla_viatura: 'L25',
+    socorrista: 'QEBSON RAMOS DA SILV',
+  })
+})
+
