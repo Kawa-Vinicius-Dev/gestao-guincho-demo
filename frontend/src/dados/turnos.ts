@@ -129,7 +129,7 @@ export async function abrirTurno(dados: {
   veiculoId: number
   hodometro: number
   observacoes?: string
-  foto?: File | null
+  foto: File
 }): Promise<number> {
   exigirSupabase()
   const id = ou(
@@ -141,20 +141,27 @@ export async function abrirTurno(dados: {
     'Não foi possível abrir o turno.',
   ) as number
 
-  // A foto de abertura e opcional: se o envio falhar, o turno ja esta aberto e o
-  // socorrista pode rodar. Derrubar o turno por causa dela seria pior.
-  if (dados.foto) {
-    try {
-      const caminho = await subirFoto(id, 'abertura', dados.foto)
-      ou(
-        await supabase().rpc('registrar_foto_abertura', { p_turno_id: id, p_caminho: caminho }),
-        'Não foi possível registrar a foto.',
-      )
-    } catch {
-      /* o turno continua aberto, sem a foto opcional */
-    }
-  }
+  // A foto e obrigatoria, mas so pode subir depois que o turno existe: o caminho
+  // no Storage carrega o id dele. Se o envio falhar, o turno ja esta aberto — a
+  // falha nao e engolida: a tela avisa e oferece reenviar a foto da saida.
+  await enviarFotoAbertura(id, dados.foto)
   return id
+}
+
+/** Envia (ou reenvia) a foto do painel na saida de um turno ja aberto. */
+export async function enviarFotoAbertura(turnoId: number, foto: File): Promise<void> {
+  exigirSupabase()
+  try {
+    const caminho = await subirFoto(turnoId, 'abertura', foto)
+    ou(
+      await supabase().rpc('registrar_foto_abertura', { p_turno_id: turnoId, p_caminho: caminho }),
+      'Não foi possível registrar a foto.',
+    )
+  } catch {
+    throw new ApiError(
+      'O turno foi aberto, mas a foto do painel não subiu. Envie a foto de novo para continuar.', 400,
+    )
+  }
 }
 
 export async function fecharTurno(dados: {

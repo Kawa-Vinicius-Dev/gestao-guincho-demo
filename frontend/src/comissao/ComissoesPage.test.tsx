@@ -51,10 +51,17 @@ const detalhe = {
 const listaDeOps = () =>
   http.get(`${URL_SUPABASE}/rest/v1/porto_ops_conciliadas`, () => HttpResponse.json(ops))
 
+/** O socorrista nao le a view de OPs: a lista dele vem por RPC, sem valor. */
+const meusPeriodos = (lista = ops) =>
+  http.post(`${URL_SUPABASE}/rest/v1/rpc/meus_periodos_de_op`, () => HttpResponse.json(
+    lista.map(o => ({ id: o.id, numero: o.numero, periodo_inicio: o.periodo_inicio,
+      periodo_fim: o.periodo_fim, data_pagamento_programada: null,
+      quinzena_inicio: null, quinzena_entrega: null }))))
+
 test('socorrista vê composição auditável, saldo negativo e registra alimentação própria', async () => {
   let corpo: Record<string, unknown> = {}
   servidor.use(
-    listaDeOps(),
+    meusPeriodos(),
     http.post(`${URL_SUPABASE}/rest/v1/rpc/comissao_das_ops`, () => HttpResponse.json(detalhe)),
     http.post(`${URL_SUPABASE}/rest/v1/rpc/registrar_alimentacao`, async ({ request }) => {
       corpo = await request.json() as Record<string, unknown>
@@ -194,19 +201,25 @@ test('comissão prevista da competência aparece separada da confirmada', async 
   expect(corpo).toEqual(expect.objectContaining({ p_motorista_id: null }))
 })
 
-test('socorrista vê o previsto da competência antes da OP chegar', async () => {
+test('socorrista vê só a OP mais recente, sem escolher período', async () => {
+  let pedidas: unknown = null
   servidor.use(
-    listaDeOps(),
-    http.post(`${URL_SUPABASE}/rest/v1/rpc/comissao_das_ops`, () => HttpResponse.json(detalhe)),
-    http.post(`${URL_SUPABASE}/rest/v1/rpc/porto_comissao_prevista`, () => HttpResponse.json([
-      { motorista_id: 4, socorrista: 'Ana Motorista', servicos: 3, sem_valor: 1,
-        valor_previsto: 500, comissao_prevista: 100 },
-    ])),
+    meusPeriodos([
+      ops[0],
+      { ...ops[0], id: 9, numero: '06400330', periodo_inicio: '2026-04-30', periodo_fim: '2026-05-28' },
+    ]),
+    http.post(`${URL_SUPABASE}/rest/v1/rpc/comissao_das_ops`, async ({ request }) => {
+      pedidas = (await request.json() as { p_op_ids: number[] }).p_op_ids
+      return HttpResponse.json(detalhe)
+    }),
   )
   const MinhaComissaoPage = await abrirPagina(() => import('./MinhaComissaoPage'))
 
   render(<MinhaComissaoPage/>)
 
-  expect(await screen.findByText(/previsto nesta competência: r\$\s*100,00/i)).toBeInTheDocument()
-  expect(screen.getByText(/o valor final é o da op/i)).toBeInTheDocument()
+  expect(await screen.findByText('OS-1')).toBeInTheDocument()
+  // A mais recente (28/05), e nenhuma outra: sem seletor, sem "Selecione".
+  expect(pedidas).toEqual([9])
+  expect(screen.getByText(/30\/04\/2026 a 28\/05\/2026 · OP 06400330/)).toBeInTheDocument()
+  expect(screen.queryByLabelText('Período')).not.toBeInTheDocument()
 })

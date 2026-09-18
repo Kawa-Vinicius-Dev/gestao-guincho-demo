@@ -1721,6 +1721,39 @@ tbody tr{transition:background-color .14s ease}
 .socorrista-botao-foto{width:100%;min-height:56px;border:1.5px dashed var(--controle-borda);border-radius:12px;background:var(--superficie-2);color:var(--blue-600);font-size:15px;font-weight:600;cursor:pointer}
 .socorrista-botao-foto:active{background:var(--blue-50)}
 
+/* Passos numerados: viatura, odometro e foto sao uma sequencia de verdade, e o
+   numero diz em que ponto se esta sem precisar ler o rotulo. */
+.socorrista-passo{display:grid;grid-template-columns:28px minmax(0,1fr);gap:12px;align-items:start}
+.socorrista-passo+.socorrista-passo{padding-top:16px;border-top:1px solid var(--linha-suave)}
+.socorrista-passo-numero{display:grid;place-items:center;width:28px;height:28px;margin-top:-2px;border-radius:999px;background:var(--blue-50);color:var(--blue-600);font-size:13px;font-weight:700}
+.socorrista-passo-corpo{display:grid;gap:8px;min-width:0}
+/* Dentro do passo o espaco e menor: duas viaturas por linha ainda cabem no 375px. */
+.socorrista-passo .socorrista-viaturas{grid-template-columns:repeat(auto-fit,minmax(112px,1fr))}
+
+/* O "km" dentro do campo: o numero digitado e sempre em km, e a unidade ao lado
+   evita que alguem digite "148320km" ou em milhas. */
+.socorrista-odometro-caixa{position:relative}
+.socorrista-odometro-caixa .socorrista-odometro{padding-right:52px}
+.socorrista-odometro-unidade{position:absolute;right:16px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:15px;font-weight:700;pointer-events:none}
+.socorrista-odometro-caixa.com-aviso .socorrista-odometro{border-color:var(--aviso-texto)}
+.socorrista-aviso{margin:0;padding:9px 12px;border-radius:9px;background:var(--aviso-fundo);color:var(--aviso-texto);font-size:12.5px;font-weight:600;line-height:1.45}
+
+/* A foto tirada aparece, para ele conferir se o numero ficou legivel. */
+.socorrista-foto-pronta{display:grid;grid-template-columns:96px minmax(0,1fr);gap:12px;align-items:center;padding:10px;border:1.5px solid var(--ok-texto);border-radius:12px;background:var(--ok-fundo)}
+.socorrista-foto-pronta img{width:96px;height:72px;object-fit:cover;border-radius:8px;background:var(--superficie-2)}
+.socorrista-foto-pronta div{display:grid;gap:3px;min-width:0}
+.socorrista-foto-pronta strong{color:var(--ok-texto);font-size:14px}
+.socorrista-foto-pronta span{color:var(--ink);font-size:12px;line-height:1.4}
+.socorrista-trocar-foto{justify-self:start;min-height:36px;margin-top:4px;padding:0 12px;border:1px solid var(--controle-borda);border-radius:8px;background:var(--superficie);color:var(--blue-600);font-size:13px;font-weight:600;cursor:pointer}
+
+/* O botao da acao fica ao alcance do polegar: no celular ele gruda no rodape
+   enquanto o formulario rola, em vez de sumir abaixo da dobra. */
+.socorrista-rodape-acao{display:grid;gap:8px}
+.socorrista-rodape-acao .socorrista-apoio{text-align:center}
+@media(max-width:620px){
+  .socorrista-rodape-acao{position:sticky;bottom:0;z-index:5;margin:0 -20px -20px;padding:12px 20px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--linha-suave);border-radius:0 0 14px 14px;background:var(--superficie)}
+}
+
 .socorrista-acao{width:100%;min-height:60px;border:0;border-radius:12px;background:var(--blue-600);color:#fff;font-size:17px;font-weight:700;cursor:pointer}
 .socorrista-acao:disabled{background:var(--line);color:var(--muted);cursor:not-allowed}
 

@@ -38,6 +38,10 @@ async function abrir(resposta: Record<string, unknown>) {
 
 afterEach(() => vi.unstubAllEnvs())
 
+// jsdom nao implementa createObjectURL, que a miniatura da foto usa.
+URL.createObjectURL = vi.fn(() => 'blob:previa')
+URL.revokeObjectURL = vi.fn()
+
 test('sem turno aberto, a tela pede a viatura e o odometro da saida', async () => {
   servidor.use(http.post(`${SUPA}/rest/v1/rpc/meu_turno_do_dia`, () => HttpResponse.json(turno)))
   await abrir(turno)
@@ -48,18 +52,49 @@ test('sem turno aberto, a tela pede a viatura e o odometro da saida', async () =
   expect(screen.getByRole('button', { name: 'Abrir turno' })).toBeDisabled()
 })
 
-test('o botao de abrir so libera depois do odometro', async () => {
+test('abrir exige viatura, odometro e a foto do painel', async () => {
   servidor.use(http.post(`${SUPA}/rest/v1/rpc/meu_turno_do_dia`, () => HttpResponse.json(turno)))
   const user = userEvent.setup()
   await abrir(turno)
 
   await user.type(await screen.findByLabelText('Odômetro na saída'), '148502')
+  // Kawa, 18/09/2026: foto do painel obrigatoria tambem na abertura.
+  expect(screen.getByRole('button', { name: 'Abrir turno' })).toBeDisabled()
+  expect(screen.getByText('Tire a foto do painel para abrir o turno.')).toBeInTheDocument()
+
+  await user.upload(screen.getByLabelText(/Foto do painel/), new File(['x'], 'painel.jpg', { type: 'image/jpeg' }))
+  expect(screen.getByRole('img', { name: /foto do painel que será enviada/i })).toBeInTheDocument()
   expect(screen.getByRole('button', { name: 'Abrir turno' })).toBeEnabled()
 
   // Toda acao importante diz antes o que vai acontecer.
   await user.click(screen.getByRole('button', { name: 'Abrir turno' }))
   expect(await screen.findByRole('heading', { name: 'Abrir o turno?' })).toBeInTheDocument()
-  expect(screen.getByText('148.502 km')).toBeInTheDocument()
+  expect(screen.getAllByText('148.502 km').length).toBeGreaterThan(0)
+})
+
+test('odometro menor que o ultimo registro da viatura pede conferencia', async () => {
+  servidor.use(http.post(`${SUPA}/rest/v1/rpc/meu_turno_do_dia`, () => HttpResponse.json(turno)))
+  const user = userEvent.setup()
+  await abrir(turno)
+
+  await user.type(await screen.findByLabelText('Odômetro na saída'), '14832')
+  expect(screen.getByRole('alert')).toHaveTextContent(/menor que o último registro/i)
+})
+
+test('turno aberto sem a foto da saida pede a foto antes de tudo', async () => {
+  servidor.use(http.post(`${SUPA}/rest/v1/rpc/meu_turno_do_dia`, () => HttpResponse.json({
+    ...turno,
+    turnoAberto: {
+      id: 9, data: '2026-09-17', abertoEm: '2026-09-17T07:00:00Z', veiculoId: 2,
+      veiculo: 'L168', hodometroInicial: 148320, temFotoAbertura: false,
+      deDiaAnterior: false, observacoes: null,
+    },
+  })))
+  await abrir(turno)
+
+  expect(await screen.findByRole('heading', { name: 'Falta a foto da saída' })).toBeInTheDocument()
+  expect(screen.queryByLabelText('Odômetro na chegada')).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Enviar foto' })).toBeDisabled()
 })
 
 test('com turno aberto, fechar exige a foto do odometro', async () => {
@@ -67,7 +102,7 @@ test('com turno aberto, fechar exige a foto do odometro', async () => {
     ...turno,
     turnoAberto: {
       id: 9, data: '2026-09-17', abertoEm: '2026-09-17T07:00:00Z', veiculoId: 2,
-      veiculo: 'L168', hodometroInicial: 148320, temFotoAbertura: false,
+      veiculo: 'L168', hodometroInicial: 148320, temFotoAbertura: true,
       deDiaAnterior: false, observacoes: null,
     },
   })))
@@ -86,7 +121,7 @@ test('turno de dia anterior avisa que precisa ser fechado antes', async () => {
     ...turno,
     turnoAberto: {
       id: 9, data: '2026-09-15', abertoEm: '2026-09-15T07:00:00Z', veiculoId: 2,
-      veiculo: 'L168', hodometroInicial: 148320, temFotoAbertura: false,
+      veiculo: 'L168', hodometroInicial: 148320, temFotoAbertura: true,
       deDiaAnterior: true, observacoes: null,
     },
   })))
