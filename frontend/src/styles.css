@@ -1265,7 +1265,9 @@ tbody tr{transition:background-color .14s ease}
 .painel-porto>section,.painel-porto>div,.painel-visao>section,.painel-visao>div{margin-bottom:var(--espaco-3)}
 /* A nota de rodape entra no mesmo ritmo dos blocos, so na Visao geral. */
 .painel-visao .calculation-note{margin-top:var(--espaco-3)}
-.painel-filtros .ledger-filters{display:grid;grid-template-columns:minmax(240px,1.4fr) repeat(2,minmax(150px,.8fr)) auto;align-items:end;gap:var(--espaco-2)}
+/* Cinco controles: periodo, mes, de, ate e o que mostrar. A grade tinha quatro
+   colunas e o ultimo caia sozinho numa segunda linha. */
+.painel-filtros .ledger-filters{display:grid;grid-template-columns:minmax(220px,1.4fr) repeat(3,minmax(130px,.8fr)) auto;align-items:end;gap:var(--espaco-2)}
 
 /* Os tres numeros que respondem "quanto entrou". Unico bloco escuro da tela. */
 .painel-financeiro{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;overflow:hidden;border-radius:14px;background:rgba(255,255,255,.07);box-shadow:0 20px 48px rgba(7,20,38,.2)}

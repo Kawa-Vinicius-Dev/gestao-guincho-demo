@@ -1,3 +1,4 @@
+import type { SituacaoDaOs } from '../dados/porto/listaOs'
 export type Perfil = 'ADMINISTRADOR' | 'FUNCIONARIO'
 /**
  * `id` aceita numero ou texto: no backend antigo era o id da tabela `usuarios`,
@@ -92,7 +93,12 @@ export type StatusOperacionalPorto='NORMAL'|'AGUARDANDO_LANCAMENTO'|'PROCESSADO'
 export type StatusFinanceiroPorto='AGUARDANDO_OP'|'PAGAMENTO_PROGRAMADO'|'A_CONFIRMAR'|'RECEBIDO'|'BLOQUEADO_PARA_PAGAMENTO'|'VALOR_DIVERGENTE'
 export interface OrdemPagamentoPorto { id:number; numero:string; valorTotal:number; nomeCodigo?:string; dataPagamentoProgramada?:string; valorRecebido?:number; dataRecebimento?:string; situacao:'PROGRAMADO'|'A_CONFIRMAR'|'RECEBIDO'; quantidadeOrdensServico:number; valorOrdensServico:number; divergencia:number; statusConciliacao:StatusConciliacaoPorto; statusPorto?:string; observacao?:string; calendarioPagamentoId?:number; periodoInicio?:string; periodoFim?:string; periodoFinanceiro?:string }
 export interface OrdemServicoPorto { id:number; ordemPagamentoId?:number; ordemPagamento?:string; numero:string; valorTotal:number; especialidade?:string; viatura?:string; socorrista?:string; qra?:string; dataAtendimento?:string; valorKmExcedente?:number; kmMortoEstimado?:number; statusOperacional:StatusOperacionalPorto; statusFinanceiro:StatusFinanceiroPorto; dataDevolucao?:string; dataFinalizacaoDevolucao?:string; prestador?:string; seguradora?:string; cliente?:string; placa?:string; dataHoraAtendimento?:string; dataPrevistaOriginal?:string; dataEfetivaPagamento?:string; ciclosAtraso:number; motoristaId?:number; motorista?:string; sugestaoMotoristaId?:number; sugestaoMotorista?:string; sugestaoAmbigua?:boolean; atrasadaNoCiclo?:boolean }
-export interface PendenciaOsPorto { id:number; numeroOs:string; dataAtendimento?:string; seguradora?:string; especialidade?:string; siglaViatura?:string; socorrista?:string; motoristaId?:number; valorTotal:number; numeroOp?:string; semValor:boolean; semSocorrista:boolean; semViatura:boolean }
+export interface PendenciaOsPorto { id:number; numeroOs:string; dataAtendimento?:string; seguradora?:string; especialidade?:string; siglaViatura?:string; socorrista?:string; motoristaId?:number; valorTotal:number; numeroOp?:string; semValor:boolean; semSocorrista:boolean; semViatura:boolean;
+  /** Em que pé está a conciliação com a OP — a mesma situação das outras telas. */
+  situacao?:SituacaoDaOs; competenciaInicio?:string; competenciaFim?:string;
+  valorManual?:number; divergencia?:number;
+  /** Linha sem nada a preencher: só existe para ser conferida e aberta. */
+  apenasConferir?:boolean }
 export interface AcertoPendenciaOsPorto { id:number; valorTotal?:number; motoristaId?:number; siglaViatura?:string }
 export interface PendenciaPorto { id?:number; tipo:'RECEBIMENTO_OP'|'SERVICO_DEVOLVIDO'|'SERVICO_PENDENTE'|'OS_SEM_SOCORRISTA'; referenciaId:number; referencia:string; valor:number; data?:string; situacao:string; motivo?:string; observacao?:string; responsavel?:string; prazo?:string; referenciaPorto?:string }
 export interface ResumoOpsPorto { quantidadeTotalOps:number; valorTotalPrevisto:number; quantidadeSemComposicao:number; valorSemComposicao:number; quantidadeConciliadas:number; valorConciliadas:number; quantidadeValorAbaixo:number; diferencaTotalAbaixo:number; quantidadeValorAcima:number; diferencaTotalAcima:number; quantidadeComDivergencia:number; valorTotalDivergencias:number; quantidadePagamentoProgramado:number; valorProgramado:number; quantidadeRecebidas:number; valorRecebido:number; quantidadeAguardandoRecebimento:number; valorAguardandoRecebimento:number; quantidadeVencidasNaoRecebidas:number; valorVencidoNaoRecebido:number; valorMedioPorOp:number; quantidadeOrdensServico:number }

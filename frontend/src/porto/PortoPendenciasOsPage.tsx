@@ -11,6 +11,7 @@ import { usePeriodoGlobal } from '../utils/periodoGlobal'
 import { Carregando } from '../components/EstadoPagina'
 import { CabecalhoPagina, GradeIndicadores, Indicador, Painel } from '../components/ui/Pagina'
 import { CampoValor } from '../components/CampoValor'
+import { EtiquetaSituacao } from './situacaoOs'
 
 /**
  * O que falta para fechar o periodo, numa tela de trabalho.
@@ -31,6 +32,8 @@ const FILTROS = [
   { valor: 'VALOR', texto: 'Sem valor' },
   { valor: 'SOCORRISTA', texto: 'Sem socorrista' },
   { valor: 'VIATURA', texto: 'Sem viatura' },
+  { valor: 'PROXIMA_OP', texto: 'Aguardando próxima OP' },
+  { valor: 'DIVERGENTE', texto: 'Valor divergente' },
 ]
 
 export default function PortoPendenciasOsPage() {
@@ -79,17 +82,25 @@ export default function PortoPendenciasOsPage() {
     filtro === 'TODAS' ? true
       : filtro === 'VALOR' ? item.semValor
         : filtro === 'SOCORRISTA' ? item.semSocorrista
-          : item.semViatura)
+          : filtro === 'VIATURA' ? item.semViatura
+            : filtro === 'PROXIMA_OP' ? item.situacao === 'AGUARDANDO_PROXIMA_OP'
+              : item.situacao === 'DIVERGENTE')
   const pendentes = Object.keys(acertos).length
   const semValor = itens.filter(i => i.semValor).length
   const semSocorrista = itens.filter(i => i.semSocorrista).length
   const semViatura = itens.filter(i => i.semViatura).length
+  // As duas situacoes que tambem seguram o fechamento, e que ate aqui a tela nao
+  // enxergava: a OS que o Diario tem e a OP do periodo nao trouxe, e a que a OP
+  // pagou diferente do que foi informado a mao.
+  const proximaOp = itens.filter(i => i.situacao === 'AGUARDANDO_PROXIMA_OP').length
+  const divergentes = itens.filter(i => i.situacao === 'DIVERGENTE')
+  const valorDivergencia = divergentes.reduce((soma, i) => soma + Math.abs(i.divergencia ?? 0), 0)
 
   return <div className="page-enter">
     <CabecalhoPagina
       modulo="Módulo Porto"
       titulo="Pendências do período"
-      descricao="Ordens de serviço sem valor, sem socorrista ou sem viatura. Preencha o que faltar e salve de uma vez."
+      descricao="O que segura o fechamento do período: falta de valor, de socorrista ou de viatura, serviço que não veio nesta OP e valor que a OP pagou diferente."
       contexto={<>Período: <strong>{data(inicio)}</strong> → <strong>{data(fim)}</strong></>}
       acoes={<>
         <Link className="button button-ghost" to="/porto/ordens-servico">Ordens de serviço</Link>
@@ -123,6 +134,14 @@ export default function PortoPendenciasOsPage() {
         <Indicador rotulo="Sem viatura" valor={semViatura}
           tom={semViatura ? 'atencao' : 'neutro'}
           apoio="A viatura chega pelo painel do dia"/>
+        <Indicador rotulo="Aguardando próxima OP" valor={proximaOp}
+          tom={proximaOp ? 'atencao' : 'neutro'}
+          apoio={proximaOp ? 'Não vieram na OP deste período' : 'Nada ficou para trás'}/>
+        <Indicador rotulo="Valor divergente" valor={divergentes.length}
+          tom={divergentes.length ? 'alerta' : 'neutro'}
+          apoio={divergentes.length
+            ? `${moeda(valorDivergencia)} entre o informado e a OP`
+            : 'A OP bateu com o informado'}/>
       </GradeIndicadores>
 
     <Painel semRespiro>
@@ -130,7 +149,7 @@ export default function PortoPendenciasOsPage() {
         ? <p className="empty-inline">Nada pendente neste período. O fechamento está limpo.</p>
         : <div className="table-scroll"><table>
           <thead><tr>
-            <th>OS</th><th>Atendimento</th><th>Seguradora</th><th>OP</th>
+            <th>OS</th><th>Atendimento</th><th>Seguradora</th><th>OP</th><th>Situação</th>
             <th>Valor</th><th>Socorrista</th><th>Viatura</th>
           </tr></thead>
           <tbody>{visiveis.map(item => <tr key={item.id}>
@@ -138,6 +157,10 @@ export default function PortoPendenciasOsPage() {
             <td>{item.dataAtendimento ? data(item.dataAtendimento) : '—'}</td>
             <td>{item.seguradora || '—'}</td>
             <td>{item.numeroOp || 'Aguardando OP'}</td>
+            <td><EtiquetaSituacao situacao={item.situacao}/>
+              {item.situacao === 'DIVERGENTE' && item.divergencia
+                ? <small>{moeda(Math.abs(item.divergencia))} de diferença</small>
+                : null}</td>
             <td>{item.semValor
               ? <CampoValor rotulo={`Valor da OS ${item.numeroOs}`} name={`valor-${item.id}`}
                   exigirPositivo={false}

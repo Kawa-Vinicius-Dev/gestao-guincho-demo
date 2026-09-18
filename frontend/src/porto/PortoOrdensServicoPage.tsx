@@ -12,6 +12,7 @@ import { CampoValor } from '../components/CampoValor'
 import { Modal } from '../components/Modal'
 import { ConfirmarAcao, type PedidoConfirmacao } from '../components/ConfirmarAcao'
 import { SeletorPeriodo } from '../components/SeletorPeriodo'
+import { ETIQUETAS_SITUACAO } from './situacaoOs'
 import { CabecalhoPagina, GradeIndicadores, Indicador, Painel } from '../components/ui/Pagina'
 import type { Motorista, Veiculo } from '../types/modelos'
 import { data, moeda } from '../utils/formatadores'
@@ -35,14 +36,6 @@ const SITUACOES = [
   { valor: 'DIVERGENTE', texto: 'Valor divergente' },
 ]
 
-/** Como cada situacao aparece na linha. */
-const ETIQUETAS: Record<SituacaoDaOs, { texto: string; classe: string }> = {
-  AGUARDANDO_ANALISE: { texto: 'Sem valor', classe: 'status-pendente' },
-  VALOR_MANUAL: { texto: 'Valor informado', classe: 'status-prevista' },
-  AGUARDANDO_PROXIMA_OP: { texto: 'Aguardando próxima OP', classe: 'status-pendente' },
-  CONCILIADA: { texto: 'Conciliada', classe: 'status-recebido' },
-  DIVERGENTE: { texto: 'Valor divergente', classe: 'status-erro_leitura' },
-}
 
 const competenciaDe = (os: LinhaOs) => (os.competenciaInicio && os.competenciaFim
   ? `${data(os.competenciaInicio)} a ${data(os.competenciaFim)}` : '—')
@@ -304,7 +297,7 @@ export default function PortoOrdensServicoPage() {
               <td>{os.motoristaId ? <Link to={`/equipe/${os.motoristaId}`}>{os.motorista}</Link> : '—'}</td>
               <td>{veiculo ? <Link to={`/veiculos?veiculo=${veiculo.id}`}>{os.viatura}</Link> : os.viatura || '—'}</td>
               <td>{os.numeroOp ?? <small>Aguardando OP</small>}</td>
-              <td><span className={`vehicle-status ${ETIQUETAS[os.situacao].classe}`}>{ETIQUETAS[os.situacao].texto}</span></td>
+              <td><span className={`vehicle-status ${ETIQUETAS_SITUACAO[os.situacao].classe}`}>{ETIQUETAS_SITUACAO[os.situacao].texto}</span></td>
               {/* Com OP, o valor e o oficial; sem OP, o informado a mao, marcado como previsto. */}
               <td>{os.ordemPagamentoId
                 ? <>{moeda(os.valorTotal)}
