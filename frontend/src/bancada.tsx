@@ -185,6 +185,25 @@ const pendencias = [
     apenasConferir: true },
 ]
 
+const listaDeOs = {
+  total: 362,
+  semViatura: 0,
+  valorTotal: 0,
+  valorPrevisto: 0,
+  semValor: 362,
+  divergentes: 0,
+  comissaoTotal: 0,
+  itens: [
+    { id: 1, numero: '5729988/26', dataAtendimento: '2026-09-16', competenciaInicio: '2026-09-17', competenciaFim: '2026-09-30', especialidade: 'SOCORRO', motorista: 'ANDERSON JORGE RIBEIRO', motoristaId: 9, viatura: 'L845', numeroOp: null, situacao: 'AGUARDANDO_PROXIMA_OP', valorTotal: 0 },
+    { id: 2, numero: '5730590/26', dataAtendimento: '2026-09-16', competenciaInicio: '2026-09-17', competenciaFim: '2026-09-30', especialidade: 'SOCORRO', motorista: 'QEBSON RAMOS DA SILVA', motoristaId: 2, viatura: 'L25', numeroOp: null, situacao: 'AGUARDANDO_PROXIMA_OP', valorTotal: 0 },
+    { id: 3, numero: '5730927/26', dataAtendimento: '2026-09-16', competenciaInicio: '2026-09-17', competenciaFim: '2026-09-30', especialidade: 'TRANSPORTE', motorista: 'DJALMA BEZERRA DE MELO NETO', motoristaId: 8, viatura: 'K85', numeroOp: null, situacao: 'AGUARDANDO_PROXIMA_OP', valorTotal: 0 },
+    { id: 4, numero: '5736472/26', dataAtendimento: '2026-09-16', competenciaInicio: '2026-09-17', competenciaFim: '2026-09-30', especialidade: 'SOCORRO', motorista: 'QEBSON RAMOS DA SILVA', motoristaId: 2, viatura: 'L25', numeroOp: null, situacao: 'AGUARDANDO_PROXIMA_OP', valorTotal: 0 },
+    { id: 5, numero: '5737971/26', dataAtendimento: '2026-09-16', competenciaInicio: '2026-09-17', competenciaFim: '2026-09-30', especialidade: 'SOCORRO', motorista: 'ANDERSON JORGE RIBEIRO', motoristaId: 9, viatura: 'L845', numeroOp: null, situacao: 'AGUARDANDO_PROXIMA_OP', valorTotal: 0 },
+    { id: 6, numero: '5739218/26', dataAtendimento: '2026-09-16', competenciaInicio: '2026-09-17', competenciaFim: '2026-09-30', especialidade: 'SOCORRO', motorista: 'DJALMA BEZERRA DE MELO NETO', motoristaId: 8, viatura: 'K85', numeroOp: null, situacao: 'AGUARDANDO_PROXIMA_OP', valorTotal: 0 },
+    { id: 7, numero: '5742931/26', dataAtendimento: '2026-09-16', competenciaInicio: '2026-09-17', competenciaFim: '2026-09-30', especialidade: 'SOCORRO', motorista: 'EDUARDO MARTINS DA SILVA', motoristaId: 10, viatura: 'L168', numeroOp: null, situacao: 'AGUARDANDO_PROXIMA_OP', valorTotal: 0 },
+  ],
+}
+
 /** Responde as chamadas do Supabase com o exemplo acima, sem rede. */
 const original = window.fetch
 window.fetch = (async (entrada: RequestInfo | URL, init?: RequestInit) => {
@@ -192,6 +211,7 @@ window.fetch = (async (entrada: RequestInfo | URL, init?: RequestInit) => {
   const responder = (corpo: unknown) =>
     new Response(JSON.stringify(corpo), { headers: { 'Content-Type': 'application/json' } })
 
+  if (url.includes('porto_listar_os')) return responder(listaDeOs)
   if (url.includes('meu_turno_do_dia')) return responder(turnoDoDia)
   if (url.includes('fila_de_aprovacoes')) return responder(filaAprovacoes)
   if (url.includes('porto_pendencias_os')) return responder(pendencias)
@@ -245,9 +265,11 @@ const Pagina = tela === 'turno'
     ? (await import('./aprovacoes/AprovacoesPage')).default
     : tela === 'pendencias'
       ? (await import('./porto/PortoPendenciasOsPage')).default
-      : daVisao
-        ? (await import('./DashboardPage')).default
-        : (await import('./porto/PortoDashboardPage')).default
+      : tela === 'os'
+        ? (await import('./porto/PortoOrdensServicoPage')).default
+        : daVisao
+          ? (await import('./DashboardPage')).default
+          : (await import('./porto/PortoDashboardPage')).default
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

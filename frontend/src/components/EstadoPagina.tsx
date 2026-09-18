@@ -1,5 +1,15 @@
-export function Carregando() {
-  return <div className="page-state" role="status"><span className="spinner" /> Carregando operação…</div>
+type PropsCarregando = {
+  card?: boolean
+  mensagem?: string
+}
+
+export function Carregando({ card, mensagem = 'Carregando…' }: PropsCarregando = {}) {
+  return (
+    <div className={`page-state${card ? ' page-state-card' : ''}`} role="status">
+      <span className="spinner" aria-hidden="true" />
+      {mensagem ? <span className="page-state-text">{mensagem}</span> : null}
+    </div>
+  )
 }
 export function ErroPagina({mensagem,tentarNovamente}:{mensagem:string;tentarNovamente?:()=>void}){
   return <div className="page-state page-error" role="alert"><strong>Não foi possível carregar</strong><p>{mensagem}</p>

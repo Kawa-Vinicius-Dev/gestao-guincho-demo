@@ -1,4 +1,4 @@
-import { Vazio } from '../../components/EstadoPagina'
+import { Carregando, Vazio } from '../../components/EstadoPagina'
 import type { LancamentoFinanceiro } from '../../types/modelos'
 import { data, moeda } from '../../utils/formatadores'
 
@@ -9,7 +9,7 @@ type Props = {
 }
 
 export function TabelaExtrato({ itens, carregando, aoPagar }: Props) {
-  if (carregando) return <p className="loading-card">Carregando lançamentos oficiais…</p>
+  if (carregando) return <Carregando card />
   if (!itens.length) {
     return <Vazio titulo="Nenhum lançamento"
       descricao="O backend não possui movimentos nesta competência."/>

@@ -1,5 +1,6 @@
 import { useEffect,useRef,useState } from 'react'
 import { Link } from 'react-router-dom'
+import { Carregando } from './components/EstadoPagina'
 import { SeletorPeriodo } from './components/SeletorPeriodo'
 import { CabecalhoPagina } from './components/ui/Pagina'
 import { useAoVivo } from './dados/aoVivo'
@@ -86,9 +87,11 @@ export default function DashboardPage(){
       {periodoValido&&financeiro
         ? <ResultadoDoPeriodo dados={financeiro} atualizando={atualizando}/>
         : periodoValido
-        ? <div className="loading-card" role="status">
-            {erro?'Não foi possível carregar os indicadores deste período.':'Carregando indicadores financeiros oficiais…'}
-          </div>
+        ? erro
+          ? <div className="loading-card" role="alert">
+              <span className="page-state-text">Não foi possível carregar os indicadores deste período.</span>
+            </div>
+          : <Carregando card />
         : null}
     </section>
 
