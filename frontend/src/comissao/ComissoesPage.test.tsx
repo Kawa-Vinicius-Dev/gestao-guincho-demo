@@ -58,38 +58,21 @@ const meusPeriodos = (lista = ops) =>
       periodo_fim: o.periodo_fim, data_pagamento_programada: null,
       quinzena_inicio: null, quinzena_entrega: null }))))
 
-test('socorrista vê composição auditável, saldo negativo e registra alimentação própria', async () => {
-  let corpo: Record<string, unknown> = {}
+test('socorrista vê só a quantidade e os serviços feitos, sem dinheiro', async () => {
   servidor.use(
     meusPeriodos(),
     http.post(`${URL_SUPABASE}/rest/v1/rpc/comissao_das_ops`, () => HttpResponse.json(detalhe)),
-    http.post(`${URL_SUPABASE}/rest/v1/rpc/registrar_alimentacao`, async ({ request }) => {
-      corpo = await request.json() as Record<string, unknown>
-      return HttpResponse.json({ id: 10, motorista_id: 4, data_lancamento: '2026-04-20',
-        valor: 35, status: 'PENDENTE', aprovada: false })
-    }),
   )
   const MinhaComissaoPage = await abrirPagina(() => import('./MinhaComissaoPage'))
-  const user = userEvent.setup()
 
   render(<MinhaComissaoPage/>)
 
-  expect(await screen.findByText('-R$ 50,00')).toBeInTheDocument()
-  expect(screen.getByText('OS-1')).toBeInTheDocument()
-
-  // O campo usa a mascara de dinheiro como os demais: os digitos entram pela
-  // direita, entao R$ 35,00 se digita "3500".
-  await user.type(screen.getByLabelText(/valor da alimentação/i), '3500')
-  await user.type(screen.getByLabelText(/data da alimentação/i), '2026-04-20')
-  await user.click(screen.getByRole('button', { name: /registrar alimentação/i }))
-
-  expect(corpo).toEqual(expect.objectContaining({ p_valor: 35, p_data: '2026-04-20' }))
-  // De quem e a alimentacao sai da sessao, nunca do formulario.
-  expect(JSON.stringify(corpo)).not.toContain('motorista')
-  // Registrou: aviso de sucesso, sem erro, e o formulario limpo para o proximo gasto.
-  expect(await screen.findByText(/alimentação registrada/i)).toBeInTheDocument()
-  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
-  expect(screen.getByLabelText(/data da alimentação/i)).toHaveValue('')
+  expect(await screen.findByRole('heading', { name: 'Meus serviços' })).toBeInTheDocument()
+  expect(await screen.findByText('OS-1')).toBeInTheDocument()
+  expect(screen.getByText('Serviços feitos').nextSibling).toHaveTextContent('1')
+  // Kawa, 18/09/2026: nenhum valor em dinheiro na tela do socorrista.
+  expect(screen.queryByText(/R\$/)).not.toBeInTheDocument()
+  expect(screen.queryByText(/alimentação/i)).not.toBeInTheDocument()
 })
 
 test('administrador filtra resumo e abre o detalhamento que forma a comissão', async () => {

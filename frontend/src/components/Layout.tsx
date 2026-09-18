@@ -17,7 +17,7 @@ const itens = [
   ['/quilometragem', 'Km rodado e morto', true, 'operacao'],
   ['/veiculos', 'Veículos e custos', true, 'operacao'],
   ['/equipe', 'Socorristas', true, 'equipe'],
-  ['/minha-comissao', 'Minha comissão', false, 'equipe'],
+  ['/minha-comissao', 'Meus serviços', false, 'equipe'],
   ['/comissoes', 'Comissões', true, 'equipe'],
   ['/porto/dashboard', 'Dashboard Porto', true, 'porto'],
   ['/porto/diario', 'Diário Operacional', true, 'porto'],
