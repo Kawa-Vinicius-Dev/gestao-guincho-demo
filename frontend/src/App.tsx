@@ -80,7 +80,6 @@ export default function App(){
       <Route element={<Layout/>}>
       <Route path="/turno" element={<Turno/>}/>
       <Route path="/despesas" element={<Despesas/>}/>
-      <Route path="/quilometragem" element={<Quilometragem/>}/>
       <Route path="/minha-comissao" element={<MinhaComissao/>}/>
       <Route element={<RotaAdministrador/>}>
         <Route index element={<Dashboard/>}/>
@@ -90,6 +89,7 @@ export default function App(){
         <Route path="/receitas" element={<Navigate to="/lancamentos" replace/>}/>
         <Route path="/fluxo-caixa" element={<Navigate to="/lancamentos" replace/>}/>
         <Route path="/dre" element={<Dre/>}/>
+        <Route path="/quilometragem" element={<Quilometragem/>}/>
         <Route path="/veiculos" element={<Frotas/>}/>
         <Route path="/motoristas" element={<Equipe/>}/>
         <Route path="/equipe" element={<Equipe/>}/>
