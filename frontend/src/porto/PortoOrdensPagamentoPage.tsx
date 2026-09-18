@@ -1,8 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { atualizarOrdemPagamentoPorto, baixarRelatorioOpPorto, baixarRelatorioPorto, confirmarImportacaoPorto, criarPreviaComposicaoPorto, criarOrdemPagamentoPorto, detalharOrdemPagamentoPorto, justificarOrdemPagamentoPorto, listarOrdensPagamentoPorto, resumirOrdensPagamentoPorto } from '../dados/porto'
+import { atualizarOrdemPagamentoPorto, definirQuinzenaOp, baixarRelatorioOpPorto, baixarRelatorioPorto, confirmarImportacaoPorto, criarPreviaComposicaoPorto, criarOrdemPagamentoPorto, detalharOrdemPagamentoPorto, justificarOrdemPagamentoPorto, listarOrdensPagamentoPorto, resumirOrdensPagamentoPorto } from '../dados/porto'
 import { Campo, Selecao } from '../components/Campos'
 import type { DetalheOpPorto, OrdemPagamentoPorto, PreviaPorto, ResumoOpsPorto } from '../types/modelos'
-import { moeda } from '../utils/formatadores'
+import { data, moeda } from '../utils/formatadores'
+import { ConfirmarAcao } from '../components/ConfirmarAcao'
 import { FormularioOp } from './ops/FormularioOp'
 import { ModalDetalheOp } from './ops/ModalDetalheOp'
 import { TabelaOps } from './ops/TabelaOps'
@@ -21,11 +22,19 @@ const semResumo: ResumoOpsPorto = {
 const FILTROS = ['numero', 'calendarioPagamentoId', 'dataInicio', 'dataFim', 'situacaoPagamento',
   'statusConciliacao', 'recebida', 'vencida', 'comComposicao', 'comDivergencia'] as const
 
+type EnvioOp = {
+  corpo: Record<string, unknown>
+  quinzenaInicio: string
+  quinzenaEntrega: string
+  mudou: boolean
+}
+
 export default function PortoOrdensPagamentoPage() {
   const [itens, setItens] = useState<OrdemPagamentoPorto[]>([])
   const [resumo, setResumo] = useState<ResumoOpsPorto>(semResumo)
   const [detalhe, setDetalhe] = useState<DetalheOpPorto | null>(null)
   const [editando, setEditando] = useState<OrdemPagamentoPorto | null>(null)
+  const [quinzenaPendente, setQuinzenaPendente] = useState<EnvioOp | null>(null)
   const [novaAberta, setNovaAberta] = useState(false)
   const [previaComposicao, setPreviaComposicao] = useState<PreviaPorto | null>(null)
   const [arquivoComposicao, setArquivoComposicao] = useState<File | null>(null)
@@ -90,9 +99,29 @@ export default function PortoOrdensPagamentoPage() {
       pagamentoConfirmado: false,
       observacao: String(campos.get('observacao') ?? ''),
     }
+    const quinzenaInicio = String(campos.get('quinzenaInicio') ?? '')
+    const quinzenaEntrega = String(campos.get('quinzenaEntrega') ?? '')
+    if (Boolean(quinzenaInicio) !== Boolean(quinzenaEntrega)) {
+      setErro('Informe a data de início e a data de entrega da OP, ou deixe as duas em branco.')
+      return
+    }
+    const mudou = quinzenaInicio !== (editando?.quinzenaInicio ?? '')
+      || quinzenaEntrega !== (editando?.quinzenaEntrega ?? '')
+    const envio = { corpo, quinzenaInicio, quinzenaEntrega, mudou }
+    // Mudar a quinzena move a data da receita, da conta a receber e da comissao
+    // da OP: pede confirmacao antes. Sem mudanca de quinzena, salva direto.
+    if (mudou) { setQuinzenaPendente(envio); return }
+    await gravarOp(envio)
+  }
+
+  async function gravarOp({ corpo, quinzenaInicio, quinzenaEntrega, mudou }: EnvioOp) {
     try {
-      if (editando) { await atualizarOrdemPagamentoPorto(editando.id, corpo); setEditando(null) }
-      else { await criarOrdemPagamentoPorto(corpo); setNovaAberta(false) }
+      const salva = editando
+        ? await atualizarOrdemPagamentoPorto(editando.id, corpo)
+        : await criarOrdemPagamentoPorto(corpo)
+      if (mudou) await definirQuinzenaOp(salva.id, quinzenaInicio || null, quinzenaEntrega || null)
+      if (editando) setEditando(null)
+      else setNovaAberta(false)
       await carregar(parametros)
     } catch (e) { setErro((e as Error).message) }
   }
@@ -186,6 +215,21 @@ export default function PortoOrdensPagamentoPage() {
     </section>
 
     {novaAberta ? <FormularioOp aoEnviar={salvarOp} aoFechar={() => setNovaAberta(false)}/> : null}
+    {quinzenaPendente
+      ? <ConfirmarAcao
+          titulo="Mudar a quinzena da OP?"
+          efeito={quinzenaPendente.quinzenaInicio
+            ? 'O período da OP passa a ser a quinzena informada. A receita, a conta a receber e a comissão desta OP passam a ser lançadas na data de entrega.'
+            : 'A OP volta a ter o período calculado pelas datas dos serviços que ela trouxe.'}
+          resumo={[
+            ['OP', String(quinzenaPendente.corpo.numero)],
+            ['Data início', quinzenaPendente.quinzenaInicio ? data(quinzenaPendente.quinzenaInicio) : 'Calculada pelas OS'],
+            ['Data entrega', quinzenaPendente.quinzenaEntrega ? data(quinzenaPendente.quinzenaEntrega) : 'Calculada pelas OS'],
+          ]}
+          textoConfirmar="Salvar quinzena"
+          aoConfirmar={() => gravarOp(quinzenaPendente)}
+          aoFechar={() => setQuinzenaPendente(null)}/>
+      : null}
     {editando ? <FormularioOp edicao={editando} aoEnviar={salvarOp} aoFechar={() => setEditando(null)}/> : null}
     {detalhe
       ? <ModalDetalheOp detalhe={detalhe} previa={previaComposicao}

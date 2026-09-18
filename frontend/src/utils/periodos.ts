@@ -42,6 +42,10 @@ export interface PeriodoPorto {
 }
 
 const DIA_MS = 86_400_000
+
+function diaSeguinte(iso: string) {
+  return new Date(Date.parse(`${iso}T00:00:00Z`) + DIA_MS).toISOString().slice(0, 10)
+}
 /** OPs que fecham com ate uma semana de diferenca e se cruzam sao do mesmo periodo. */
 const FOLGA_DIAS = 7
 
@@ -64,6 +68,25 @@ export function agruparPorPeriodo(ops: OrdemPagamentoPorto[]): PeriodoPorto[] {
     } else {
       grupos.push({ ops: [op], inicio, fim })
     }
+  }
+  // Onde a quinzena comeca. Os fins das OPs seguem o calendario da Porto; os
+  // inicios, quando vem das OS, nao: a OP pode trazer servicos atrasados de
+  // outros meses, e um so esticava o periodo inteiro — a 06427802 trouxe 13
+  // servicos de 19/06 a 02/07, pagos em agosto, e o seletor mostrava "19/06 a
+  // 13/08", somando na Visao geral a receita de 8 OPs.
+  //
+  // O inicio e a primeira data de inicio do grupo que nao recua para antes do
+  // fechamento anterior. OP com a quinzena da Porto informada ja traz o inicio
+  // certo (01/09, 15/08...) e ele vence; sem quinzena informada, o inicio
+  // esticado e descartado e a quinzena comeca no dia seguinte ao fechamento
+  // anterior. Onde o servico atrasado conta nao muda: na OP em que entrou.
+  for (let i = 0; i < grupos.length; i++) {
+    const anterior = i > 0 ? grupos[i - 1].fim : undefined
+    const piso = anterior ? diaSeguinte(anterior) : undefined
+    const inicios = grupos[i].ops.map(inicioDe).filter((d): d is string => Boolean(d))
+    const validos = piso ? inicios.filter(d => d >= piso) : inicios
+    const primeiro = [...validos].sort()[0]
+    grupos[i].inicio = primeiro ?? piso ?? grupos[i].inicio
   }
   return grupos.reverse().map(g => {
     const doGrupo = [...g.ops].sort((a, b) => a.numero.localeCompare(b.numero))

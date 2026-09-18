@@ -28,6 +28,7 @@ const COLUNAS_OP = [
   'observacao', 'calendario_pagamento_id', 'periodo_inicio', 'periodo_fim',
   'quantidade_ordens_servico',
   'valor_ordens_servico', 'divergencia', 'status_conciliacao', 'periodo_financeiro',
+  'quinzena_inicio', 'quinzena_entrega',
 ].join(',')
 
 type LinhaOp = Record<string, unknown>
@@ -52,6 +53,8 @@ function opParaModelo(l: LinhaOp): OrdemPagamentoPorto {
     periodoInicio: (l.periodo_inicio as string) ?? undefined,
     periodoFim: (l.periodo_fim as string) ?? undefined,
     periodoFinanceiro: (l.periodo_financeiro as string) ?? undefined,
+    quinzenaInicio: (l.quinzena_inicio as string) ?? undefined,
+    quinzenaEntrega: (l.quinzena_entrega as string) ?? undefined,
   }
 }
 
@@ -199,6 +202,41 @@ export async function detalharOrdemPagamentoPorto(id: number): Promise<DetalheOp
   }
 }
 
+/**
+ * O formulario de OP manda `valorInformado` e `dataPrevista`; a gravacao lia
+ * `valorTotal` e `dataPagamentoProgramada`. Os nomes nunca bateram, e editar uma
+ * OP gravava valor 0 e apagava a data prevista. Aceita os dois nomes.
+ */
+function valorDoFormulario(dados: Record<string, unknown>): number | undefined {
+  const bruto = dados.valorInformado ?? dados.valorTotal
+  return bruto === undefined || bruto === null || bruto === '' ? undefined : Number(bruto)
+}
+function dataDoFormulario(dados: Record<string, unknown>): string | undefined {
+  const bruto = (dados.dataPrevista ?? dados.dataPagamentoProgramada) as string | undefined
+  return bruto || undefined
+}
+/** Editar nao apaga o que o formulario nao mostra (codigo, calendario). */
+function somenteInformados(campos: Record<string, unknown>) {
+  return Object.fromEntries(Object.entries(campos).filter(([, v]) => v !== undefined))
+}
+
+/**
+ * Quinzena da OP como a Porto declara. O banco refaz o periodo, o fechamento e
+ * as comissoes da OP no mesmo passo, porque o fim da quinzena e a data da
+ * receita e da comissao. As duas datas vazias voltam ao periodo pelas OS.
+ */
+export async function definirQuinzenaOp(
+  id: number, inicio: string | null, entrega: string | null,
+): Promise<void> {
+  invalidarCacheFinanceiro()
+  ou(
+    await supabase().rpc('porto_definir_quinzena_op', {
+      p_op_id: id, p_inicio: inicio || null, p_entrega: entrega || null,
+    }),
+    'Não foi possível salvar a quinzena da OP.',
+  )
+}
+
 export async function criarOrdemPagamentoPorto(
   dados: Record<string, unknown>,
 ): Promise<OrdemPagamentoPorto> {
@@ -211,9 +249,9 @@ export async function criarOrdemPagamentoPorto(
   const nova = ou(
     await supabase().from('ordens_pagamento_porto').insert({
       numero: dados.numero,
-      valor_total: dados.valorTotal ?? 0,
+      valor_total: valorDoFormulario(dados) ?? 0,
       nome_codigo: dados.nomeCodigo ?? null,
-      data_pagamento_programada: dados.dataPagamentoProgramada ?? null,
+      data_pagamento_programada: dataDoFormulario(dados) ?? null,
       status_porto: dados.statusPorto ?? null,
       observacao: dados.observacao ?? null,
       calendario_pagamento_id: dados.calendarioPagamentoId ?? null,
@@ -233,15 +271,15 @@ export async function atualizarOrdemPagamentoPorto(
     })
   }
   ou(
-    await supabase().from('ordens_pagamento_porto').update({
+    await supabase().from('ordens_pagamento_porto').update(somenteInformados({
       numero: dados.numero,
-      valor_total: dados.valorTotal ?? 0,
-      nome_codigo: dados.nomeCodigo ?? null,
-      data_pagamento_programada: dados.dataPagamentoProgramada ?? null,
-      status_porto: dados.statusPorto ?? null,
-      observacao: dados.observacao ?? null,
-      calendario_pagamento_id: dados.calendarioPagamentoId ?? null,
-    }).eq('id', id).select('id').single(),
+      valor_total: valorDoFormulario(dados),
+      nome_codigo: dados.nomeCodigo,
+      data_pagamento_programada: dataDoFormulario(dados),
+      status_porto: dados.statusPorto,
+      observacao: dados.observacao,
+      calendario_pagamento_id: dados.calendarioPagamentoId,
+    })).eq('id', id).select('id').single(),
     'Não foi possível salvar a ordem de pagamento.',
   )
   return (await detalharOrdemPagamentoPorto(id)).ordemPagamento
@@ -331,7 +369,7 @@ export async function associarMotoristaPorto(
 export async function listarPeriodosDeOp(): Promise<OrdemPagamentoPorto[]> {
   const linhas = ou(
     await supabase().from('porto_ops_conciliadas')
-      .select('id,numero,valor_total,situacao_financeira,periodo_inicio,periodo_fim,data_pagamento_programada')
+      .select('id,numero,valor_total,situacao_financeira,periodo_inicio,periodo_fim,data_pagamento_programada,quinzena_inicio,quinzena_entrega')
       .order('periodo_fim', { ascending: false, nullsFirst: false }),
     'Não foi possível carregar as ordens de pagamento.',
   ) as Record<string, unknown>[]
@@ -348,6 +386,8 @@ export async function listarPeriodosDeOp(): Promise<OrdemPagamentoPorto[]> {
     periodoInicio: (l.periodo_inicio as string) ?? undefined,
     periodoFim: (l.periodo_fim as string) ?? undefined,
     dataPagamentoProgramada: (l.data_pagamento_programada as string) ?? undefined,
+    quinzenaInicio: (l.quinzena_inicio as string) ?? undefined,
+    quinzenaEntrega: (l.quinzena_entrega as string) ?? undefined,
   }))
 }
 
