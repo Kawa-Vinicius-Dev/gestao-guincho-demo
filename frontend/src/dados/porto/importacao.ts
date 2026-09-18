@@ -35,7 +35,7 @@ const PAGA: TipoRelatorio[] = ['OS_VINCULADAS', 'SERVICOS_GERAIS']
  * vezes. Precisa continuar igual a `numero_os_normalizado` do banco: e a mesma
  * chave dos dois lados.
  */
-const NUMERO_OS = /^(?:\d{1,2}[/-])?(\d{4,})[-/](\d{2})$/
+const NUMERO_OS = /^(?:\[)?(?:\d{1,2}[/-])?(\d{4,})[-/](\d{2})(?:\](?:\([^)]*\))?)?$/
 
 const normalizarNumero = (valor: string) => {
   const limpo = valor.trim()

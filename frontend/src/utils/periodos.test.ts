@@ -68,3 +68,61 @@ test('OS atrasada não junta quinzenas diferentes', () => {
 
   expect(periodos.map(p => p.id)).toEqual(['8', '7'])
 })
+
+// As 16 OPs reais do banco, com o periodo que cada uma tem (da primeira a ultima
+// OS dela). Kawa viu o seletor mostrar "19/06 a 13/08" e "13/05 a 15/06": um
+// servico atrasado esticava o inicio da OP e o periodo cruzava quinzenas.
+test('com as OPs reais, cada periodo e uma quinzena encaixada na anterior', () => {
+  const periodos = agruparPorPeriodo([
+    op(19, '06389821', '2026-03-30', '2026-04-29'),
+    op(18, '06400330', '2026-04-29', '2026-05-28'),
+    op(17, '06405579', '2026-05-21', '2026-06-15'),
+    op(16, '06405580', '2026-05-13', '2026-06-15'),
+    op(14, '06411002', '2026-06-15', '2026-06-29'),
+    op(15, '06411001', '2026-06-15', '2026-06-30'),
+    op(13, '06416626', '2026-06-23', '2026-07-14'),
+    op(12, '06416627', '2026-06-29', '2026-07-14'),
+    op(9, '06422282', '2026-07-15', '2026-07-29'),
+    op(11, '06422281', '2026-07-01', '2026-07-30'),
+    op(7, '06427803', '2026-07-15', '2026-08-12'),
+    op(8, '06427802', '2026-06-19', '2026-08-13'),
+    op(6, '06433184', '2026-08-12', '2026-08-26'),
+    op(5, '06433185', '2026-08-13', '2026-08-26'),
+    op(4, '06438808', '2026-08-27', '2026-09-14'),
+    op(10, '06438807', '2026-08-27', '2026-09-15'),
+  ])
+
+  expect(periodos.map(rotuloPeriodo)).toEqual([
+    '27/08/2026 a 15/09/2026 · OPs 06438807 e 06438808',
+    '14/08/2026 a 26/08/2026 · OPs 06433184 e 06433185',
+    '31/07/2026 a 13/08/2026 · OPs 06427802 e 06427803',
+    '15/07/2026 a 30/07/2026 · OPs 06422281 e 06422282',
+    '01/07/2026 a 14/07/2026 · OPs 06416626 e 06416627',
+    '16/06/2026 a 30/06/2026 · OPs 06411001 e 06411002',
+    '29/05/2026 a 15/06/2026 · OPs 06405579 e 06405580',
+    '30/04/2026 a 28/05/2026 · OP 06400330',
+    '30/03/2026 a 29/04/2026 · OP 06389821',
+  ])
+})
+
+// Depois de Kawa informar a quinzena da Porto em quatro OPs (Data inicio e Data
+// entrega), o periodo delas passa a ser a quinzena. As OPs parceiras (Taxi e
+// Guincho da mesma quinzena) ainda sem data seguem no grupo sem esticar o inicio.
+test('a quinzena informada pela Porto define o periodo do grupo', () => {
+  const periodos = agruparPorPeriodo([
+    op(11, '06422281', '2026-07-01', '2026-07-30'),
+    op(9, '06422282', '2026-07-15', '2026-07-29'),
+    op(7, '06427803', '2026-08-01', '2026-08-14'),
+    op(8, '06427802', '2026-06-19', '2026-08-13'),
+    op(6, '06433184', '2026-08-12', '2026-08-26'),
+    op(5, '06433185', '2026-08-15', '2026-08-28'),
+    op(4, '06438808', '2026-09-01', '2026-09-16'),
+    op(10, '06438807', '2026-09-01', '2026-09-16'),
+  ])
+
+  expect(periodos.map(rotuloPeriodo).slice(0, 3)).toEqual([
+    '01/09/2026 a 16/09/2026 · OPs 06438807 e 06438808',
+    '15/08/2026 a 28/08/2026 · OPs 06433184 e 06433185',
+    '01/08/2026 a 14/08/2026 · OPs 06427802 e 06427803',
+  ])
+})

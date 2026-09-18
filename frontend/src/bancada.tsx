@@ -64,10 +64,43 @@ const painel = {
   quantidadeServicosPagamentoProgramado: 0,
 }
 
-// A unica OP que existe no banco.
+// As 16 OPs do banco, copiadas em 17/09/2026 com o periodo que cada uma tem:
+// a quinzena da Porto nas quatro que ja a tem informada, e da primeira a
+// ultima OS nas demais. E com elas que o seletor de periodo mostra
+// se as quinzenas se encaixam.
 const ops = [
-  { id: 1, numero: '06389821', valor_total: 74770, situacao_financeira: 'RECEBIDO',
+  { id: 19, numero: '06389821', valor_total: 74770.0, situacao_financeira: 'RECEBIDO',
     periodo_inicio: '2026-03-30', periodo_fim: '2026-04-29' },
+  { id: 18, numero: '06400330', valor_total: 64394.23, situacao_financeira: 'RECEBIDO',
+    periodo_inicio: '2026-04-29', periodo_fim: '2026-05-28' },
+  { id: 17, numero: '06405579', valor_total: 76878.82, situacao_financeira: 'RECEBIDO',
+    periodo_inicio: '2026-05-21', periodo_fim: '2026-06-15' },
+  { id: 16, numero: '06405580', valor_total: 18767.56, situacao_financeira: 'RECEBIDO',
+    periodo_inicio: '2026-05-13', periodo_fim: '2026-06-15' },
+  { id: 14, numero: '06411002', valor_total: 18995.0, situacao_financeira: 'RECEBIDO',
+    periodo_inicio: '2026-06-15', periodo_fim: '2026-06-29' },
+  { id: 15, numero: '06411001', valor_total: 61366.0, situacao_financeira: 'RECEBIDO',
+    periodo_inicio: '2026-06-15', periodo_fim: '2026-06-30' },
+  { id: 13, numero: '06416626', valor_total: 54800.2, situacao_financeira: 'RECEBIDO',
+    periodo_inicio: '2026-06-23', periodo_fim: '2026-07-14' },
+  { id: 12, numero: '06416627', valor_total: 11489.4, situacao_financeira: 'RECEBIDO',
+    periodo_inicio: '2026-06-29', periodo_fim: '2026-07-14' },
+  { id: 9, numero: '06422282', valor_total: 12987.8, situacao_financeira: 'RECEBIDO',
+    periodo_inicio: '2026-07-15', periodo_fim: '2026-07-29' },
+  { id: 11, numero: '06422281', valor_total: 57699.7, situacao_financeira: 'RECEBIDO',
+    periodo_inicio: '2026-07-01', periodo_fim: '2026-07-30' },
+  { id: 7, numero: '06427803', valor_total: 16866.44, situacao_financeira: 'RECEBIDO',
+    periodo_inicio: '2026-08-01', periodo_fim: '2026-08-14' },
+  { id: 8, numero: '06427802', valor_total: 59246.5, situacao_financeira: 'RECEBIDO',
+    periodo_inicio: '2026-06-19', periodo_fim: '2026-08-13' },
+  { id: 6, numero: '06433184', valor_total: 49082.71, situacao_financeira: 'RECEBIDO',
+    periodo_inicio: '2026-08-12', periodo_fim: '2026-08-26' },
+  { id: 5, numero: '06433185', valor_total: 11521.22, situacao_financeira: 'RECEBIDO',
+    periodo_inicio: '2026-08-15', periodo_fim: '2026-08-28' },
+  { id: 4, numero: '06438808', valor_total: 21168.96, situacao_financeira: 'RECEBIDO',
+    periodo_inicio: '2026-09-01', periodo_fim: '2026-09-16' },
+  { id: 10, numero: '06438807', valor_total: 78696.67, situacao_financeira: 'RECEBIDO',
+    periodo_inicio: '2026-09-01', periodo_fim: '2026-09-16' },
 ]
 
 
