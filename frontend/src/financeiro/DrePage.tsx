@@ -6,6 +6,7 @@ import { lerIndicadores } from '../dados/dashboard'
 import { baixarDre } from '../dados/relatorios'
 import type { Dashboard } from '../types/modelos'
 import { moeda } from '../utils/formatadores'
+import { ServicosSemValor } from './dre/ServicosSemValor'
 
 function Linha({ titulo, valor, nivel = 0, total = false, negativo = false }: { titulo: string; valor: number; nivel?: number; total?: boolean; negativo?: boolean }) {
   return <div className={`dre-line ${total ? 'dre-total' : ''}`} style={{ paddingLeft: `${22 + nivel * 18}px` }}><span>{negativo ? '(−) ' : ''}{titulo}</span><strong className={valor < 0 ? 'negative' : ''}>{moeda(Math.abs(valor))}</strong></div>
@@ -57,6 +58,7 @@ export default function DrePage() {
         <button className="button button-ghost" onClick={() => window.print()}>Imprimir DRE</button>
       </aside>
     </section>
+    {inicio&&fim&&inicio<=fim?<ServicosSemValor inicio={inicio} fim={fim}/>:null}
     </>}
   </div>
 }

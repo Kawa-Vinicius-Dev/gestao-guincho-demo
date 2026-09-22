@@ -3,7 +3,9 @@ import { ConfirmarAcao } from '../components/ConfirmarAcao'
 import { Carregando, ErroPagina, Vazio } from '../components/EstadoPagina'
 import { Modal } from '../components/Modal'
 import { CabecalhoPagina, Painel } from '../components/ui/Pagina'
-import { aprovarDespesa } from '../dados/despesas'
+import { aprovarDespesa, excluirDespesa } from '../dados/despesas'
+import { ConfirmarExclusao } from '../components/ConfirmarExclusao'
+import type { Despesa } from '../types/modelos'
 import {
   aprovarTurno, devolverTurno, filaDeAprovacoes, linkDaFoto,
   type FilaDeAprovacoes, type ItemDaFila,
@@ -143,6 +145,7 @@ function LinhaTurno({ item, aoResolver }: { item: ItemDaFila; aoResolver: () => 
 
 function LinhaDespesa({ item, aoResolver }: { item: ItemDaFila; aoResolver: () => void }) {
   const [confirmar, setConfirmar] = useState(false)
+  const [excluindo, setExcluindo] = useState(false)
   return <article className="aprovacao-item">
     <header>
       <span className="aprovacao-tipo aprovacao-tipo-despesa">Despesa</span>
@@ -161,10 +164,28 @@ function LinhaDespesa({ item, aoResolver }: { item: ItemDaFila; aoResolver: () =
 
     <footer className="aprovacao-acoes">
       {item.comprovante ? <VerFoto caminho={item.comprovante} rotulo="Ver comprovante" /> : null}
+      <button type="button" className="button button-ghost" onClick={() => setExcluindo(true)}>
+        Excluir
+      </button>
       <button type="button" className="button button-primary" onClick={() => setConfirmar(true)}>
         Aprovar
       </button>
     </footer>
+
+    {excluindo
+      ? <ConfirmarExclusao coisa="despesa" nome={item.descricao ?? 'despesa'}
+          aviso={`A despesa lançada por ${item.socorrista} sai do sistema, com o comprovante. Não dá para desfazer.`}
+          resumo={[
+            ['Socorrista', item.socorrista],
+            ['Descrição', item.descricao ?? '—'],
+            ['Valor', dinheiro.format(item.valor ?? 0)],
+          ]}
+          aoConfirmar={async () => {
+            await excluirDespesa({ id: item.id, comprovante: item.comprovante ?? undefined } as Despesa)
+            aoResolver()
+          }}
+          aoFechar={() => setExcluindo(false)}/>
+      : null}
 
     {confirmar
       ? <ConfirmarAcao

@@ -6,6 +6,7 @@ import { data as dataBr } from '../utils/formatadores'
 import { ConfirmarAcao, type PedidoConfirmacao } from '../components/ConfirmarAcao'
 import { CabecalhoPagina, Painel } from '../components/ui/Pagina'
 import { Carregando } from '../components/EstadoPagina'
+import { OsDoDia } from './diario/OsDoDia'
 
 /**
  * Diario Operacional.
@@ -40,7 +41,7 @@ const mesVizinho = (mes: string, passo: number) => {
 }
 
 /** Um mes de dias, cada um dizendo se o Diario ja passou por ali. */
-function MapaDoMes({ mes, dias }: { mes: string; dias: DiaDoDiario[] }) {
+function MapaDoMes({ mes, dias, aoEscolher }: { mes: string; dias: DiaDoDiario[]; aoEscolher: (dia: string) => void }) {
   const hoje = new Date().toISOString().slice(0, 10)
   // Alinha o dia 1 na coluna do dia da semana certo.
   const vazios = new Date(`${mes}-01T12:00:00`).getDay()
@@ -56,11 +57,16 @@ function MapaDoMes({ mes, dias }: { mes: string; dias: DiaDoDiario[] }) {
         const texto = futuro ? 'ainda não aconteceu'
           : d.importado ? `${d.os} ${d.os === 1 ? 'serviço' : 'serviços'}${d.semValor ? `, ${d.semValor} sem valor` : ''}`
           : 'sem Diário importado'
-        return <li key={d.dia} className={`diario-dia diario-dia-${estado}`}
-          title={`${dataBr(d.dia)} — ${texto}`}>
+        // Dia que ja aconteceu e clicavel: abre as OS daquele dia.
+        const conteudoDoDia = <>
           <span className="diario-dia-numero">{Number(d.dia.slice(8))}</span>
           <span className="diario-dia-os">{futuro ? '' : d.os || ''}</span>
           <span className="apenas-leitor">{dataBr(d.dia)}: {texto}</span>
+        </>
+        return <li key={d.dia} className={`diario-dia diario-dia-${estado}`}
+          title={`${dataBr(d.dia)} — ${texto}`}>
+          {futuro ? conteudoDoDia
+            : <button type="button" className="diario-dia-botao" onClick={() => aoEscolher(d.dia)}>{conteudoDoDia}</button>}
         </li>
       })}
     </ol>
@@ -78,6 +84,7 @@ export default function PortoDiarioPage() {
   const [mes, setMes] = useState(mesCorrente)
   const [dias, setDias] = useState<DiaDoDiario[]>([])
   const [carregandoMapa, setCarregandoMapa] = useState(true)
+  const [diaAberto, setDiaAberto] = useState<string | null>(null)
 
   const carregarMapa = useCallback(() => {
     setCarregandoMapa(true)
@@ -213,7 +220,7 @@ export default function PortoDiarioPage() {
           onClick={() => setMes(m => mesVizinho(m, 1))}>Próximo mês</button>
       </div>}>
       {carregandoMapa ? <Carregando/> : <>
-        <MapaDoMes mes={mes} dias={dias}/>
+        <MapaDoMes mes={mes} dias={dias} aoEscolher={setDiaAberto}/>
         <p className="empty-inline">
           {faltando
             ? `${faltando} ${faltando === 1 ? 'dia ainda sem Diário importado' : 'dias ainda sem Diário importado'} neste mês.`
@@ -224,5 +231,6 @@ export default function PortoDiarioPage() {
     </Painel>
 
     {pedido ? <ConfirmarAcao {...pedido} aoFechar={() => setPedido(null)}/> : null}
+    {diaAberto ? <OsDoDia dia={diaAberto} aoFechar={() => setDiaAberto(null)}/> : null}
   </div>
 }

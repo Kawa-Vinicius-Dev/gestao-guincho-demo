@@ -25,9 +25,15 @@ test('comissão mostra o socorrista e a OP, com o nome levando à ficha dele', (
   expect(link.closest('strong')?.textContent).toBe('ANDERSON JORGE — comissão da OP 1234')
 })
 
-test('despesa comum continua com a própria descrição e sem link', () => {
+test('despesa comum continua com a própria descrição, e o único link é o Editar', () => {
   desenhar([{ ...base, descricao: 'Diesel', origem: 'MANUAL', protocolo: undefined,
     numeroOp: undefined, motoristaId: 7 }])
   expect(screen.getByText('Diesel')).toBeTruthy()
-  expect(screen.queryByRole('link')).toBeNull()
+  expect(screen.getAllByRole('link').map(l => l.textContent)).toEqual(['Editar'])
+  expect(screen.getByRole('link', { name: 'Editar' }).getAttribute('href')).toBe('/despesas?editar=1')
+})
+
+test('a comissão lançada pelo sistema não se edita pelo extrato', () => {
+  desenhar([base])
+  expect(screen.queryByRole('link', { name: 'Editar' })).toBeNull()
 })
