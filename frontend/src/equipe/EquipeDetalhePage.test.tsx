@@ -150,3 +150,35 @@ test('mostrar as outras despesas não mexe no líquido da comissão',async()=>{
   // Comissao 100 menos o desconto de 30. Os R$ 258 de pedagio e peca ficam fora.
   expect(within(resumo).getByText('R$ 70,00')).toBeInTheDocument()
 })
+
+// O que sai do bolso do socorrista e a comissao, nunca o valor do servico. A
+// janela mostrava so "Valor do servico R$ 500,00" e dava a entender que eram os
+// 500 que saiam. Kawa apontou isso olhando a tela.
+test('a janela de tirar comissão diz que sai a comissão, não o valor do serviço',async()=>{
+  const consultaMotoristas=configurarAdmin()
+  let enviado:Record<string,unknown>|null=null
+  servidor.use(http.post(`${URL_SUPABASE}/rest/v1/rpc/porto_definir_comissao_da_os`,async({request})=>{
+    enviado=await request.json() as Record<string,unknown>
+    return HttpResponse.json(null)
+  }))
+  const App=await abrirApp()
+  const user=userEvent.setup({ delay: null })
+  render(<App/>)
+
+  await consultaMotoristas
+  const cartao=(await screen.findByText('Ana Motorista')).closest('article')
+  await user.click(within(cartao!).getByRole('link',{name:/ver detalhes/i}))
+  await screen.findByRole('heading',{name:'Ana Motorista'})
+
+  const linha=(await screen.findByText('OS-PAGA')).closest('tr')!
+  await user.click(within(linha).getByRole('button',{name:/tirar a comissão da os/i}))
+
+  const janela=await screen.findByRole('dialog')
+  // A OS vale 500 e gerou 100 de comissao: o que sai sao os 100.
+  expect(within(janela).getByText('Sai da comissão dele')).toBeInTheDocument()
+  expect(within(janela).getByText('R$ 100,00')).toBeInTheDocument()
+  expect(within(janela).getByText(/não é o que sai/i)).toBeInTheDocument()
+
+  await user.click(within(janela).getByRole('button',{name:/^tirar comissão$/i}))
+  await waitFor(()=>expect(enviado).toEqual({p_os_id:1,p_sem_comissao:true}))
+})

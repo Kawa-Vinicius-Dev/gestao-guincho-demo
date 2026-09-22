@@ -32,13 +32,19 @@ export default function EquipeDetalhePage(){
   const recarregar=()=>obterDetalheSocorrista(motoristaId,ids).then(setDetalhe)
   // Tirar a comissao muda o dinheiro da OP inteira, entao a confirmacao diz de
   // quanto e o servico antes de o administrador decidir.
-  function pedirComissao(servico:{id:number;numeroOs:string;valorServico:number;semComissao?:boolean}){
+  function pedirComissao(servico:{id:number;numeroOs:string;valorServico:number;comissaoGerada?:number;semComissao?:boolean}){
     const tirando=!servico.semComissao
+    const emJogo=servico.comissaoGerada!=null?moeda(servico.comissaoGerada):null
     setPedido({titulo:tirando?'Tirar a comissão desta OS?':'Devolver a comissão desta OS?',
       efeito:tirando
         ?<>A OS continua no nome de <strong>{detalhe?.nome}</strong> e na produção dele, mas deixa de gerar comissão. Se ela já estiver paga numa OP, a comissão daquela OP é refeita e o líquido dele baixa.</>
         :<>A OS volta a gerar comissão e a comissão da OP é refeita, aumentando o líquido de <strong>{detalhe?.nome}</strong>.</>,
-      resumo:[['OS',servico.numeroOs],['Valor do serviço',moeda(servico.valorServico)]],
+      resumo:[
+        [tirando?'Sai da comissão dele':'Volta para a comissão dele',
+          emJogo??'Ainda sem valor: a OS não foi paga numa OP'],
+        ['OS',servico.numeroOs],
+        ['Valor do serviço (não é o que sai)',moeda(servico.valorServico)],
+      ],
       textoConfirmar:tirando?'Tirar comissão':'Devolver comissão',perigo:tirando,
       aoConfirmar:async()=>{await definirComissaoDaOs(servico.id,tirando);await recarregar()}})
   }
