@@ -148,11 +148,10 @@ Deno.serve(async (req) => {
       const { error: desligou } = await admin.from('perfis').update({ ativo: false }).eq('id', id)
       if (desligou) return responder({ detalhe: desligou.message }, 400)
 
-      // Solta o cadastro do socorrista, senao "Criar acesso" recusa dizendo que
-      // ele ja tem conta — e a conta que ele tem nao serve mais para nada.
-      // Servicos, comissoes e historico ficam: eles dependem do motorista, nao
-      // do login.
-      await admin.from('motoristas').update({ perfil_id: null }).eq('perfil_id', id)
+      // O vinculo com o cadastro do socorrista FICA. Encerrar e reversivel, e
+      // reativar nao teria como adivinhar a qual socorrista religar — a pessoa
+      // voltava a entrar e a tela dela nao carregava. Quem solta o vinculo e
+      // o excluir, que nao tem volta.
 
       return responder({ usuarioId: id, encerrado: true })
     }
@@ -168,8 +167,6 @@ Deno.serve(async (req) => {
       if (id === sessao.user.id) {
         return responder({ detalhe: 'Você não pode excluir o seu próprio acesso.' }, 400)
       }
-
-      await admin.from('motoristas').update({ perfil_id: null }).eq('perfil_id', id)
 
       const { error } = await admin.auth.admin.deleteUser(id)
       if (error) {

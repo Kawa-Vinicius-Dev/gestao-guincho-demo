@@ -10,6 +10,7 @@ import { listarCategorias } from '../dados/cadastros'
 import { listarMotoristas } from '../dados/motoristas'
 import { listarVeiculos } from '../dados/veiculos'
 import { useAuth } from '../auth/AuthContext'
+import { meuTurnoDoDia, type MeuTurnoDoDia } from '../dados/turnos'
 import { useAoVivo } from '../dados/aoVivo'
 import { CampoNumero } from '../components/CamposMascarados'
 import { StatusBadge } from '../components/StatusBadge'
@@ -32,10 +33,19 @@ export default function DespesasPage(){
   // O socorrista escolhido decide se a marca de desconto aparece: sem ele nao ha
   // de quem descontar.
   const [socorristaDoForm,setSocorristaDoForm]=useState('')
+  // A despesa do socorrista nao pergunta quem ele e nem em que viatura estava:
+  // as duas respostas ja existem no turno aberto, e deixar escolher e deixar
+  // errar — gasto no nome de outro, ou preso a viatura que ele nao dirigiu.
+  const [turno,setTurno]=useState<MeuTurnoDoDia|null>(null)
   // Despesa aberta para edicao; nulo e lancamento novo.
   const [editando,setEditando]=useState<Despesa|null>(null)
   const [pedido,setPedido]=useState<PedidoConfirmacao|null>(null)
   const [fixaEditando,setFixaEditando]=useState<DespesaRecorrente|null>(null),[fixaExcluindo,setFixaExcluindo]=useState<DespesaRecorrente|null>(null)
+  useEffect(()=>{if(admin)return
+    meuTurnoDoDia().then(setTurno).catch(()=>setTurno(null))},[admin])
+  const souEu=turno?.socorrista??null
+  const minhaViatura=turno?.turnoAberto??null
+  const possoLancar=Boolean(souEu&&minhaViatura)
   const abrirForm=()=>{setEditando(null);setSocorristaDoForm('');setForm(true)}
   const abrirEdicao=(d:Despesa)=>{setEditando(d);setSocorristaDoForm(d.motoristaId?String(d.motoristaId):'');setForm(true)}
   const [fixas,setFixas]=useState<DespesaRecorrente[]>([]),[mes,setMes]=useState(mesAtual()),[lancando,setLancando]=useState(false)
@@ -158,7 +168,14 @@ export default function DespesasPage(){
             <IconeLixeira/>
           </button></>}</span></td></tr>)}
       </tbody></table></div>:<Vazio titulo="Nenhuma despesa" descricao="Registre custos ou aguarde lançamentos dos socorristas."/>}</section>
-      :<section className="chamada-socorrista"><h2>Lance o gasto na hora em que ele acontece</h2><p>Combustível, pedágio, alimentação, uma peça na estrada. O administrador confere antes de entrar no financeiro.</p><button className="button button-primary botao-alto" onClick={abrirForm}>Registrar um gasto</button></section>}
+      :<section className="chamada-socorrista"><h2>Lance o gasto na hora em que ele acontece</h2>
+        <p>Combustível, pedágio, alimentação, uma peça na estrada. O administrador confere antes de entrar no financeiro.</p>
+        {possoLancar
+          ? <><p className="chamada-turno">No seu turno de hoje: <strong>{souEu?.nome}</strong> na viatura <strong>{minhaViatura?.veiculo}</strong>. O gasto entra assim.</p>
+              <button className="button button-primary botao-alto" onClick={abrirForm}>Registrar um gasto</button></>
+          : <><p className="chamada-turno">Abra o turno antes: é dele que saem o seu nome e a viatura em que você está.</p>
+              <a className="button button-primary botao-alto" href="/turno">Abrir turno</a></>}
+      </section>}
     {admin?<section className="panel" aria-label="Despesas fixas"><header className="panel-title"><div><h2>Despesas fixas</h2><p>O que cai todo mês: aluguel, seguro, parcela. Cadastre uma vez e lance o mês quando quiser.</p></div>
       <div className="heading-actions"><Campo rotulo="Mês"><input aria-label="Mês do lançamento" type="month" value={mes} onChange={e=>setMes(e.target.value)}/></Campo>
         <button className="button button-primary" disabled={lancando||!fixas.some(f=>f.ativo)} onClick={()=>{const ativas=fixas.filter(f=>f.ativo);setPedido({titulo:'Lançar as despesas fixas do mês?',efeito:<>As despesas fixas ativas viram despesas pagas de <strong>{mes.split('-').reverse().join('/')}</strong> e entram na Visão geral. As que já foram lançadas nesse mês não duplicam.</>,resumo:[['Mês',mes.split('-').reverse().join('/')],['Despesas fixas ativas',String(ativas.length)],['Total',moeda(ativas.reduce((s,f)=>s+f.valor,0))]],textoConfirmar:'Lançar despesas',aoConfirmar:lancarFixas})}}>{lancando?'Lançando…':'Lançar as fixas do mês'}</button></div></header>
@@ -179,8 +196,18 @@ export default function DespesasPage(){
         <CampoValor rotulo="Valor" name="valor" defaultValue={editando?.valor} required/>
         <Selecao rotulo="Categoria" name="categoriaId" defaultValue={editando?.categoriaId??''} required opcoes={categorias.map(x=>({valor:x.id,texto:x.nome}))}/>
         <label className="field"><span>Data</span><input name="data" type="date" defaultValue={editando?.data??hoje()} required/></label>
-        <Selecao rotulo="Viatura" name="veiculoId" vazio="Nenhuma" defaultValue={editando?.veiculoId??''} opcoes={veiculos.map(x=>({valor:x.id,texto:x.identificacao}))}/>
-        <Selecao rotulo="Socorrista" name="motoristaId" vazio="Nenhum" defaultValue={editando?.motoristaId??''} onChange={e=>setSocorristaDoForm(e.target.value)} opcoes={motoristas.map(x=>({valor:x.id,texto:x.nome}))}/>
+        {admin
+          ? <><Selecao rotulo="Viatura" name="veiculoId" vazio="Nenhuma" defaultValue={editando?.veiculoId??''} opcoes={veiculos.map(x=>({valor:x.id,texto:x.identificacao}))}/>
+              <Selecao rotulo="Socorrista" name="motoristaId" vazio="Nenhum" defaultValue={editando?.motoristaId??''} onChange={e=>setSocorristaDoForm(e.target.value)} opcoes={motoristas.map(x=>({valor:x.id,texto:x.nome}))}/></>
+          /* O socorrista nao escolhe nem quem e nem em que viatura estava: as
+             duas coisas vem do turno aberto. Escolher aqui so abre caminho para
+             o gasto cair no nome de outro ou numa viatura que ele nao dirigiu. */
+          : <div className="despesa-do-turno field-wide">
+              <span><small>Socorrista</small><strong>{souEu?.nome}</strong></span>
+              <span><small>Viatura do turno</small><strong>{minhaViatura?.veiculo}</strong></span>
+              <input type="hidden" name="motoristaId" value={souEu?.id??''}/>
+              <input type="hidden" name="veiculoId" value={minhaViatura?.veiculoId??''}/>
+            </div>}
         <label className="field"><span>Descrição</span><input name="descricao" placeholder="Opcional" defaultValue={editando?.descricao} autoCapitalize="sentences" autoComplete="off"/></label>
         {admin&&socorristaDoForm
           ?<label className="porto-divergence field-wide despesa-desconto"><input type="checkbox" name="descontaComissao" defaultChecked={editando?.descontaComissao} aria-label="Descontar da comissão"/><span>Descontar da comissão do socorrista — gasto pessoal que ele pediu para tirar do bolso dele.</span></label>
