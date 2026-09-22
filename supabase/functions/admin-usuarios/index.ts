@@ -13,6 +13,7 @@
 //   POST { acao: 'criar',    nome, email, perfil }
 //   POST { acao: 'redefinir', perfilId }
 //   POST { acao: 'acesso',   motoristaId, email }
+//   POST { acao: 'encerrar', perfilId }
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 
@@ -118,6 +119,40 @@ Deno.serve(async (req) => {
         email: p?.email ?? alterado.user?.email ?? '',
         senhaProvisoria: senha,
       })
+    }
+
+    // Encerrar e tirar a entrada para sempre, sem apagar historico.
+    //
+    // Nao da para apagar o login: `perfis.id` referencia auth.users com
+    // `on delete cascade`, entao deletar o usuario derruba o perfil junto — e o
+    // perfil e barrado por `despesas.criado_por` e `pagamentos_comissao.pago_por`,
+    // que sao `on delete restrict` de proposito, para nunca sumir com o registro
+    // de quem fez o que. O delete falharia justamente para quem ja usou o
+    // sistema. Banimento permanente da o mesmo efeito pratico: a pessoa nao
+    // entra mais, com senha nenhuma, e nada do que ela fez se perde.
+    if (corpo.acao === 'encerrar') {
+      const id = String(corpo.perfilId ?? '')
+      if (!id) return responder({ detalhe: 'Informe o usuário.' }, 400)
+      if (id === sessao.user.id) {
+        return responder({ detalhe: 'Você não pode encerrar o seu próprio acesso.' }, 400)
+      }
+
+      // 100 anos: o painel do Supabase nao aceita "para sempre", e isto e.
+      const { error } = await admin.auth.admin.updateUserById(id, { ban_duration: '876000h' })
+      if (error) return responder({ detalhe: error.message }, 400)
+
+      // A marca que as policies leem. Sem ela, um token ainda valido entraria
+      // ate expirar.
+      const { error: desligou } = await admin.from('perfis').update({ ativo: false }).eq('id', id)
+      if (desligou) return responder({ detalhe: desligou.message }, 400)
+
+      // Solta o cadastro do socorrista, senao "Criar acesso" recusa dizendo que
+      // ele ja tem conta — e a conta que ele tem nao serve mais para nada.
+      // Servicos, comissoes e historico ficam: eles dependem do motorista, nao
+      // do login.
+      await admin.from('motoristas').update({ perfil_id: null }).eq('perfil_id', id)
+
+      return responder({ usuarioId: id, encerrado: true })
     }
 
     return responder({ detalhe: 'Ação desconhecida.' }, 400)
