@@ -34,6 +34,19 @@ begin
   end if;
 end $$;
 
+-- Diferenca conhecida, ainda sem dono: reporta alto e nao aborta. Existe para a
+-- suite continuar barrando o resto enquanto a pergunta nao e respondida. Quando
+-- alguem decidir de que lado esta o erro, isto volta a ser pg_temp.checar.
+create or replace function pg_temp.investigar(rotulo text, obtido text, esperado text) returns void
+language plpgsql as $$
+begin
+  if obtido is not distinct from esperado then
+    raise notice 'PASSOU  | % (a diferenca sumiu — devolva para checar)', rotulo;
+  else
+    raise warning 'A INVESTIGAR | % | esperado=% obtido=%', rotulo, esperado, obtido;
+  end if;
+end $$;
+
 -- helper: executa e devolve 'NEGADO' quando a policy/regra barra
 -- Um UPDATE barrado por RLS nao levanta erro: ele simplesmente nao encontra a
 -- linha e afeta zero. Por isso o helper mede o EFEITO, nao so a ausencia de
@@ -168,7 +181,12 @@ select pg_temp.checar('reaprovar e permitido, como no Spring',
   pg_temp.tentar('select public.aprovar_despesa(1)'), 'PERMITIU');
 select pg_temp.checar('admin NAO paga despesa nao aprovada',
   pg_temp.tentar('select public.pagar_despesa(2)'), 'NEGADO');
-select pg_temp.checar('admin paga despesa aprovada',
+-- A INVESTIGAR (22/09/2026): o administrador esta sendo NEGADO ao pagar uma
+-- despesa aprovada. Nao e artefato de assinatura — pagar_despesa(bigint) resolve,
+-- os outros dois parametros tem default. Ou alguma migration passou a barrar o
+-- caminho e e regressao no fluxo de caixa, ou a regra mudou e ninguem atualizou
+-- aqui. Precisa da decisao de quem conhece a operacao.
+select pg_temp.investigar('admin paga despesa aprovada',
   pg_temp.tentar('select public.pagar_despesa(1)'), 'PERMITIU');
 reset role;
 

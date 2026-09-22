@@ -74,13 +74,16 @@ select pg_temp.checar('servicosDoPeriodo', (select (j->>'servicosDoPeriodo') fro
 select pg_temp.checar('servicosPendentes', (select (j->>'servicosPendentes') from d), '1');
 select pg_temp.checar('comissaoAPagar (ciclo sem repasse)', (select (j->>'comissaoAPagar') from d), '200.00');
 
--- Resultado por veiculo: alimentacao NAO entra no custo da viatura (400, nao 450)
-select pg_temp.checar('veiculo: despesas sem alimentacao',
-  (select j->'resultadoPorVeiculo'->0->>'despesas' from d), '400.00');
+-- Resultado por veiculo: alimentacao ENTRA no custo da viatura (450 = 400 + 50).
+-- A regra era o contrario ate 20260916170000, que a inverteu de proposito: o
+-- cartao que a equipe usa e vinculado a viatura, entao a refeicao comprada nele
+-- e custo daquela viatura, como o diesel. O teste ficou na premissa antiga.
+select pg_temp.checar('veiculo: despesas com alimentacao',
+  (select j->'resultadoPorVeiculo'->0->>'despesas' from d), '450.00');
 select pg_temp.checar('veiculo: receitas',
   (select j->'resultadoPorVeiculo'->0->>'receitas' from d), '1000.00');
 select pg_temp.checar('veiculo: resultado',
-  (select j->'resultadoPorVeiculo'->0->>'resultado' from d), '600.00');
+  (select j->'resultadoPorVeiculo'->0->>'resultado' from d), '550.00');
 
 -- Socorrista: despesa com viatura NAO conta (so a alimentacao, 50)
 select pg_temp.checar('socorrista: so alimentacao como despesa propria',

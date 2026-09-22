@@ -67,7 +67,7 @@ select pg_temp.checar('despesa nao aprovada fica fora das previstas',
   (public.dashboard_financeiro('2026-09-01','2026-09-30') ->> 'despesasPrevistas'), '100.00');
 select pg_temp.checar('despesa nao aprovada nao entra no custo da viatura',
   (public.dashboard_financeiro('2026-09-01','2026-09-30') -> 'resultadoPorVeiculo' -> 0 ->> 'despesas'),
-  '400.00');
+  '450.00');
 
 \echo '===== ACUMULADOS E INDICADORES ====='
 select pg_temp.checar('saldoRealizado = recebida - pagas',
