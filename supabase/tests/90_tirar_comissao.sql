@@ -29,6 +29,9 @@ insert into public.ordens_servico_porto
 select public.porto_recalcular_periodos();
 select public.porto_sincronizar_comissoes();
 
+set role authenticated;
+set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';
+
 \echo '===== Antes: as duas OS geram comissao ====='
 select pg_temp.checar('comissao bruta da OP e 200',
   (public.comissao_das_ops(array[1]::bigint[],1) ->> 'comissaoBruta'), '200.00');
@@ -36,11 +39,8 @@ select pg_temp.checar('a despesa de comissao lancada e 200',
   (select sum(valor)::text from public.despesas where protocolo like 'COMISSAO-OP-%'), '200.00');
 
 \echo '===== Tirar a comissao da OS-B, que ja esta paga ====='
-set role authenticated;
-set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';
 select public.porto_definir_comissao_da_os(
   (select id from public.ordens_servico_porto where numero='OS-B'), true);
-reset role;
 
 select pg_temp.checar('comissao bruta cai para 100',
   (public.comissao_das_ops(array[1]::bigint[],1) ->> 'comissaoBruta'), '100.00');
@@ -55,16 +55,12 @@ select pg_temp.checar('a despesa de comissao foi refeita para 100',
   (select sum(valor)::text from public.despesas where protocolo like 'COMISSAO-OP-%'), '100.00');
 
 \echo '===== Devolver a comissao desfaz ====='
-set role authenticated;
-set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';
 select public.porto_definir_comissao_da_os(
   (select id from public.ordens_servico_porto where numero='OS-B'), false);
-reset role;
 select pg_temp.checar('comissao bruta volta a 200',
   (public.comissao_das_ops(array[1]::bigint[],1) ->> 'comissaoBruta'), '200.00');
 
 \echo '===== So o administrador tira ====='
-set role authenticated;
 set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000002';
 do $$
 begin
@@ -76,7 +72,7 @@ exception
     if sqlerrm like 'FALHOU%' then raise; end if;
     raise notice 'PASSOU  | socorrista nao tira comissao';
 end $$;
-reset role;
+set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';
 select pg_temp.checar('e a comissao continua intacta',
   (public.comissao_das_ops(array[1]::bigint[],1) ->> 'comissaoBruta'), '200.00');
 
