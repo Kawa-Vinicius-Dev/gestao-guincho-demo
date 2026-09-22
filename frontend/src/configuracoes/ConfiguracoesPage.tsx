@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { criarUsuario, encerrarAcesso, listarUsuarios, redefinirSenha } from '../dados/usuarios'
+import { criarUsuario, encerrarAcesso, excluirAcesso, listarUsuarios, reativarAcesso, redefinirSenha } from '../dados/usuarios'
 import { atualizarCategoria, atualizarContratante, criarCategoria, criarContratante, excluirCategoria, excluirContratante, listarCategorias, listarContratantes } from '../dados/cadastros'
 import { ConfirmarExclusao } from '../components/ConfirmarExclusao'
 import { ConfirmarAcao, type PedidoConfirmacao } from '../components/ConfirmarAcao'
@@ -62,6 +62,27 @@ export default function ConfiguracoesPage(){
         try{await encerrarAcesso(String(u.id));setMensagem(`O acesso de ${u.nome} foi encerrado.`);await carregar()}
         catch(x){setErro((x as Error).message)}}})
   }
+  // Conta criada errada se apaga; conta que ja trabalhou, nao. O banco decide,
+  // e a mensagem dele aponta o caminho quando recusa.
+  function pedirExclusao(u:Usuario){
+    setPedido({titulo:`Excluir o acesso de ${u.nome}?`,
+      efeito:<>A conta de <strong>{u.nome}</strong> é apagada. Só dá certo se ela ainda não lançou nada no sistema — se já tiver histórico, o sistema recusa e explica, e aí o caminho é encerrar.</>,
+      resumo:[['Usuário',u.nome],['E-mail',u.email]],
+      textoConfirmar:'Excluir',perigo:true,
+      aoConfirmar:async()=>{setErro('');setMensagem('')
+        try{await excluirAcesso(String(u.id));setMensagem(`O acesso de ${u.nome} foi excluído.`);await carregar()}
+        catch(x){setErro((x as Error).message)}}})
+  }
+  // Encerrar sem volta, num sistema com uma pessoa so administrando, e pegadinha.
+  function pedirReativacao(u:Usuario){
+    setPedido({titulo:`Reativar o acesso de ${u.nome}?`,
+      efeito:<><strong>{u.nome}</strong> volta a entrar no sistema. Se não souber a senha, use Redefinir senha depois.</>,
+      resumo:[['Usuário',u.nome],['E-mail',u.email]],
+      textoConfirmar:'Reativar',
+      aoConfirmar:async()=>{setErro('');setMensagem('')
+        try{await reativarAcesso(String(u.id));setMensagem(`O acesso de ${u.nome} foi reativado.`);await carregar()}
+        catch(x){setErro((x as Error).message)}}})
+  }
   async function redefinir(usuario:Usuario){
     setErro('');setMensagem('');setCopiada(false)
     try{setGerada(await redefinirSenha(usuario));await carregar()}
@@ -95,7 +116,7 @@ export default function ConfiguracoesPage(){
           <Selecao rotulo="Tipo da categoria" name="tipo" opcoes={[{valor:'DESPESA',texto:'Despesa'},{valor:'RECEITA',texto:'Receita'}]}/>
           <button className="button button-ghost">Adicionar</button></form></section>
       <section className="panel settings-card"><header><h2>Trocar senha</h2><p>A nova senha deve ter pelo menos oito caracteres.</p></header><form onSubmit={senha} className="form-grid"><label className="field"><span>Senha atual</span><input name="senhaAtual" type="password" autoComplete="current-password" required/></label><label className="field"><span>Nova senha</span><input name="novaSenha" type="password" autoComplete="new-password" minLength={8} required/></label><button className="button button-primary">Alterar senha</button></form></section>
-      <section className="panel settings-card"><header><h2>Acessos</h2><p>Quem entra no sistema. Crie uma conta nova, ou redefina a senha de quem esqueceu e passe a provisória para a pessoa.</p></header><ul className="simple-list">{usuarios.map(u=><li key={u.id}><strong>{u.nome}</strong><small>{u.email} · {u.perfil==='ADMINISTRADOR'?'Administrador':'Socorrista'}{u.senhaProvisoria?' · senha provisória pendente':''}</small><button className="table-action" onClick={()=>setPedido({titulo:'Redefinir senha?',efeito:<>A senha atual de <strong>{u.nome}</strong> para de funcionar na hora. O sistema gera uma senha provisória para você repassar, e a pessoa troca no primeiro acesso.</>,resumo:[['Usuário',u.nome],['E-mail',u.email]],textoConfirmar:'Redefinir senha',perigo:true,aoConfirmar:()=>redefinir(u)})}>Redefinir senha</button><button className="table-action table-action-danger" onClick={()=>pedirEncerramento(u)}>Encerrar acesso</button></li>)}</ul>
+      <section className="panel settings-card"><header><h2>Acessos</h2><p>Quem entra no sistema. Crie uma conta nova, ou redefina a senha de quem esqueceu e passe a provisória para a pessoa.</p></header><ul className="simple-list">{usuarios.map(u=><li key={u.id}><strong>{u.nome}</strong><small>{u.email} · {u.perfil==='ADMINISTRADOR'?'Administrador':'Socorrista'}{u.ativo?'':' · encerrado'}{u.senhaProvisoria?' · senha provisória pendente':''}</small><button className="table-action" onClick={()=>setPedido({titulo:'Redefinir senha?',efeito:<>A senha atual de <strong>{u.nome}</strong> para de funcionar na hora. O sistema gera uma senha provisória para você repassar, e a pessoa troca no primeiro acesso.</>,resumo:[['Usuário',u.nome],['E-mail',u.email]],textoConfirmar:'Redefinir senha',perigo:true,aoConfirmar:()=>redefinir(u)})}>Redefinir senha</button>{u.ativo?<button className="table-action table-action-danger" onClick={()=>pedirEncerramento(u)}>Encerrar acesso</button>:<button className="table-action" onClick={()=>pedirReativacao(u)}>Reativar acesso</button>}<button className="table-action table-action-danger" onClick={()=>pedirExclusao(u)}>Excluir</button></li>)}</ul>
         <form onSubmit={criarAcesso} className="inline-form">
           <Campo rotulo="Nome"><input name="nome" required autoCapitalize="words" autoComplete="off"/></Campo>
           <Campo rotulo="E-mail de acesso"><input name="email" type="email" inputMode="email" autoComplete="off" autoCapitalize="none" autoCorrect="off" spellCheck={false} required/></Campo>
