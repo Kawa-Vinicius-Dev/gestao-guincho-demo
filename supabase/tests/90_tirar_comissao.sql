@@ -46,9 +46,12 @@ select pg_temp.checar('comissao bruta cai para 100',
   (public.comissao_das_ops(array[1]::bigint[],1) ->> 'comissaoBruta'), '100.00');
 select pg_temp.checar('o liquido acompanha',
   (public.comissao_das_ops(array[1]::bigint[],1) ->> 'liquido'), '100.00');
--- O ponto inteiro da marca: o servico nao sai da producao nem do nome dele.
-select pg_temp.checar('a producao paga continua 1000',
-  (public.comissao_das_ops(array[1]::bigint[],1) ->> 'producaoPaga'), '1000.00');
+-- Kawa, 22/09/2026: tirar a comissao cancela a OS. Ela sai da producao, mas
+-- nao do nome de quem rodou o servico.
+select pg_temp.checar('a OS ficou cancelada',
+  (select status_operacional::text from public.ordens_servico_porto where numero='OS-B'), 'CANCELADO');
+select pg_temp.checar('a producao paga cai para 500',
+  (public.comissao_das_ops(array[1]::bigint[],1) ->> 'producaoPaga'), '500.00');
 select pg_temp.checar('a OS continua no nome do socorrista',
   (select motorista_id::text from public.ordens_servico_porto where numero='OS-B'), '1');
 select pg_temp.checar('a despesa de comissao foi refeita para 100',
@@ -59,6 +62,24 @@ select public.porto_definir_comissao_da_os(
   (select id from public.ordens_servico_porto where numero='OS-B'), false);
 select pg_temp.checar('comissao bruta volta a 200',
   (public.comissao_das_ops(array[1]::bigint[],1) ->> 'comissaoBruta'), '200.00');
+select pg_temp.checar('e a OS volta a situacao de antes',
+  (select status_operacional::text from public.ordens_servico_porto where numero='OS-B'), 'PROCESSADO');
+
+\echo '===== Uma OS que ja vinha cancelada volta cancelada ====='
+reset role;
+update public.ordens_servico_porto set status_operacional='CANCELADO' where numero='OS-A';
+set role authenticated;
+set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';
+select public.porto_definir_comissao_da_os((select id from public.ordens_servico_porto where numero='OS-A'), true);
+select public.porto_definir_comissao_da_os((select id from public.ordens_servico_porto where numero='OS-A'), true);
+select public.porto_definir_comissao_da_os((select id from public.ordens_servico_porto where numero='OS-A'), false);
+select pg_temp.checar('devolver nao reativa o que a Porto cancelou',
+  (select status_operacional::text from public.ordens_servico_porto where numero='OS-A'), 'CANCELADO');
+reset role;
+update public.ordens_servico_porto set status_operacional='PROCESSADO' where numero='OS-A';
+select public.porto_sincronizar_comissoes();
+set role authenticated;
+set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';
 
 \echo '===== So o administrador tira ====='
 set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000002';
@@ -83,6 +104,7 @@ select pg_temp.checar('e a comissao continua intacta',
 -- vezes e o efeito e o mesmo.
 reset role;
 \i migrations/20260922120000_tirar_comissao_de_uma_os.sql
+\i migrations/20260922180000_tirar_comissao_cancela_a_os.sql
 set role authenticated;
 set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';
 select pg_temp.checar('depois de reaplicar, a comissao continua 200',
