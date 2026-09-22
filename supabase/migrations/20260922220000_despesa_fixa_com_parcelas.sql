@@ -58,7 +58,7 @@ declare
     v_encerradas integer := 0;
     v_valor numeric := 0;
     v_quem uuid := (select auth.uid());
-    r record;
+    r public.despesas_recorrentes;
     v_vencimento date;
     v_parcela integer;
 begin
@@ -81,7 +81,7 @@ begin
             continue;
         end if;
 
-        v_parcela := public.proxima_parcela(r::public.despesas_recorrentes);
+        v_parcela := public.proxima_parcela(r);
         -- Todas as parcelas ja foram lancadas: a fixa acabou.
         if v_parcela is not null and v_parcela > r.total_parcelas then
             update public.despesas_recorrentes set ativo = false where id = r.id;
