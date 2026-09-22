@@ -22,7 +22,7 @@ const turnoAberto = {
   turnosDevolvidos: [], ultimosTurnos: [], viaturas: [], veiculoSugerido: 2,
 }
 
-async function abrir(turno: unknown) {
+async function abrir(turno: Record<string, unknown>) {
   vi.resetModules()
   vi.stubEnv('VITE_SUPABASE_URL', SUPA)
   vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'chave-anon-de-teste')
