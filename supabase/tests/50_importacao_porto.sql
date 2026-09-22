@@ -9,18 +9,6 @@ begin
   else raise exception 'FALHOU  | % | esperado=% obtido=%', rotulo, esperado, obtido; end if;
 end $$;
 
--- Diferenca conhecida, ainda sem dono: reporta alto e nao aborta. Existe para a
--- suite continuar barrando o resto enquanto a pergunta nao e respondida. Quando
--- alguem decidir de que lado esta o erro, isto volta a ser pg_temp.checar.
-create or replace function pg_temp.investigar(rotulo text, obtido text, esperado text) returns void
-language plpgsql as $$
-begin
-  if obtido is not distinct from esperado then
-    raise notice 'PASSOU  | % (a diferenca sumiu — devolva para checar)', rotulo;
-  else
-    raise warning 'A INVESTIGAR | % | esperado=% obtido=%', rotulo, esperado, obtido;
-  end if;
-end $$;
 
 -- Executa e devolve o errcode, ou 'OK' se passou. Usado nos testes de portao.
 create or replace function pg_temp.erro_de(sql text) returns text
@@ -90,7 +78,7 @@ select pg_temp.checar('socorrista por QRA',
 -- socorrista", que e outra pergunta. Se a capacidade de achar pelo cadastro foi
 -- perdida sem querer, e regressao; se foi de proposito, este teste e que esta
 -- velho. So quem conhece a operacao decide.
-select pg_temp.investigar('socorrista por sigla da viatura',
+select pg_temp.checar('socorrista por sigla da viatura',
   (select m.nome from public.ordens_servico_porto os join public.motoristas m on m.id=os.motorista_id
     where os.numero='5632136/26'), 'Por viatura');
 
@@ -157,7 +145,7 @@ select public.porto_registrar_importacao('div.csv','hash-div','OS_VINCULADAS',1)
 -- esta passando direto (OK no lugar do erro 22023). Se o portao caiu sem querer,
 -- um arquivo errado reescreve o valor da OP em silencio. Pode tambem ter sido
 -- mudanca deliberada, porque 20260916190000 mexeu em como o valor da OP se forma.
-select pg_temp.investigar('divergencia sem confirmacao e recusada',
+select pg_temp.checar('divergencia sem confirmacao e recusada',
   pg_temp.erro_de($$select public.porto_confirmar_importacao(
     (select id from public.importacoes_porto where hash_arquivo='hash-div'),
     '[{"numero_os":"888/26","valor_total":"100.00","hash_registro":"v1"}]'::jsonb,

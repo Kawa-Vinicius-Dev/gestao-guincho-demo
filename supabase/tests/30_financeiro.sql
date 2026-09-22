@@ -6,16 +6,6 @@ begin
   else raise exception 'FALHOU  | % | esperado=% obtido=%', rotulo, esperado, obtido; end if;
 end $$;
 
--- Diferenca conhecida, ainda sem dono: reporta alto e nao aborta.
-create or replace function pg_temp.investigar(rotulo text, obtido text, esperado text) returns void
-language plpgsql as $$
-begin
-  if obtido is not distinct from esperado then
-    raise notice 'PASSOU  | % (a diferenca sumiu — devolva para checar)', rotulo;
-  else
-    raise warning 'A INVESTIGAR | % | esperado=% obtido=%', rotulo, esperado, obtido;
-  end if;
-end $$;
 
 insert into auth.users (id,email,raw_user_meta_data) values
  ('aaaaaaaa-0000-0000-0000-000000000001','dono@t.local','{"nome":"Dono","perfil":"ADMINISTRADOR"}'),
@@ -133,7 +123,7 @@ select pg_temp.checar('OS cancelada fica fora da producao pendente',
 -- a intencao registrada aqui era que ele saisse do dinheiro mas continuasse na
 -- contagem de producao. Se alguma migration passou a exclui-lo por completo, a
 -- contagem de servicos do periodo esta menor do que a operacao realizou.
-select pg_temp.investigar('mas continua contada nos servicos do periodo',
+select pg_temp.checar('mas continua contada nos servicos do periodo',
   (public.dashboard_financeiro('2026-09-01','2026-09-30') ->> 'servicosDoPeriodo'), '4');
 
 \echo '===== COMISSAO A PAGAR: some quando o ciclo e repassado ====='
