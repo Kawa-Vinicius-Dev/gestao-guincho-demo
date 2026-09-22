@@ -133,7 +133,14 @@ export default function DespesasPage(){
     // A janela fica aberta quando da erro: fechar levaria embora a unica
     // explicacao de por que a despesa continua na lista.
     catch(x){setErro((x as Error).message)}finally{setApagando(false)}}
-  return <div className="page-enter pagina-despesas"><header className="page-heading"><div><span className="eyebrow">Saídas</span><h1>Despesas</h1><p>Custos da operação vinculados a veículos, motoristas e protocolos.</p></div><button className="button button-primary" onClick={abrirForm}>Registrar despesa</button></header>
+  // O socorrista e o administrador abrem a mesma rota para coisas diferentes: um
+  // lanca o proprio gasto na rua, o outro confere o caixa. O cabecalho do
+  // administrador falava de protocolo e vinha com um botao que repetia o da
+  // chamada abaixo — duas vezes a mesma acao na tela de quem so quer lancar.
+  return <div className={`page-enter ${admin?'pagina-despesas':'pagina-socorrista'}`}>
+    {admin
+      ? <header className="page-heading"><div><span className="eyebrow">Saídas</span><h1>Despesas</h1><p>Custos da operação vinculados a veículos, motoristas e protocolos.</p></div><button className="button button-primary" onClick={abrirForm}>Registrar despesa</button></header>
+      : <header className="cabecalho-socorrista"><h1>Minhas despesas</h1></header>}
     {erro?<div className="form-alert" role="alert">{erro}</div>:null}{carregando?<Carregando/>:null}{mensagem?<div className="success-notice">{mensagem}</div>:null}
     {admin?<section className="panel painel-filtros"><form className="ledger-filters" onSubmit={e=>e.preventDefault()}><SeletorPeriodo periodo={periodo} aoMudar={setPeriodo}/></form></section>:null}
     {admin?<section className="panel">{lista.length?<div className="table-scroll"><table><thead><tr><th>Descrição</th><th>Categoria</th><th>Data</th><th>Veículo</th><th>Socorrista</th><th>Situação</th><th>Aprovação</th><th>Valor</th><th>Comprovante</th><th/></tr></thead><tbody>
@@ -151,7 +158,7 @@ export default function DespesasPage(){
             <IconeLixeira/>
           </button></>}</span></td></tr>)}
       </tbody></table></div>:<Vazio titulo="Nenhuma despesa" descricao="Registre custos ou aguarde lançamentos dos socorristas."/>}</section>
-      :<section className="employee-callout"><span className="eyebrow">Perfil socorrista</span><h2>Registre os custos assim que acontecerem.</h2><p>Seus lançamentos serão conferidos pelo administrador antes de entrarem no financeiro.</p><button className="button button-primary" onClick={abrirForm}>Registrar agora</button></section>}
+      :<section className="chamada-socorrista"><h2>Lance o gasto na hora em que ele acontece</h2><p>Combustível, pedágio, alimentação, uma peça na estrada. O administrador confere antes de entrar no financeiro.</p><button className="button button-primary botao-alto" onClick={abrirForm}>Registrar um gasto</button></section>}
     {admin?<section className="panel" aria-label="Despesas fixas"><header className="panel-title"><div><h2>Despesas fixas</h2><p>O que cai todo mês: aluguel, seguro, parcela. Cadastre uma vez e lance o mês quando quiser.</p></div>
       <div className="heading-actions"><Campo rotulo="Mês"><input aria-label="Mês do lançamento" type="month" value={mes} onChange={e=>setMes(e.target.value)}/></Campo>
         <button className="button button-primary" disabled={lancando||!fixas.some(f=>f.ativo)} onClick={()=>{const ativas=fixas.filter(f=>f.ativo);setPedido({titulo:'Lançar as despesas fixas do mês?',efeito:<>As despesas fixas ativas viram despesas pagas de <strong>{mes.split('-').reverse().join('/')}</strong> e entram na Visão geral. As que já foram lançadas nesse mês não duplicam.</>,resumo:[['Mês',mes.split('-').reverse().join('/')],['Despesas fixas ativas',String(ativas.length)],['Total',moeda(ativas.reduce((s,f)=>s+f.valor,0))]],textoConfirmar:'Lançar despesas',aoConfirmar:lancarFixas})}}>{lancando?'Lançando…':'Lançar as fixas do mês'}</button></div></header>

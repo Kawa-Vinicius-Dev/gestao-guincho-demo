@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { listarUsuarios, redefinirSenha } from '../dados/usuarios'
+import { criarUsuario, listarUsuarios, redefinirSenha } from '../dados/usuarios'
 import { atualizarCategoria, atualizarContratante, criarCategoria, criarContratante, excluirCategoria, excluirContratante, listarCategorias, listarContratantes } from '../dados/cadastros'
 import { ConfirmarExclusao } from '../components/ConfirmarExclusao'
 import { ConfirmarAcao, type PedidoConfirmacao } from '../components/ConfirmarAcao'
@@ -42,6 +42,15 @@ export default function ConfiguracoesPage(){
       setEditandoCadastro(null);setMensagem('Cadastro atualizado.');await carregar()
     }catch(x){setErro((x as Error).message)}
   }
+  // O dono nao escolhe senha por ninguem: o sistema sorteia uma provisoria, mostra
+  // uma unica vez para ele repassar, e a pessoa troca no primeiro acesso.
+  async function criarAcesso(e:FormEvent<HTMLFormElement>){e.preventDefault();const formulario=e.currentTarget;const f=new FormData(formulario)
+    setErro('');setMensagem('');setCopiada(false)
+    try{
+      const criado=await criarUsuario(String(f.get('nome')),String(f.get('email')),f.get('perfil') as Usuario['perfil'])
+      formulario.reset();setGerada(criado);await carregar()
+    }catch(x){setErro((x as Error).message)}
+  }
   async function redefinir(usuario:Usuario){
     setErro('');setMensagem('');setCopiada(false)
     try{setGerada(await redefinirSenha(usuario));await carregar()}
@@ -75,7 +84,13 @@ export default function ConfiguracoesPage(){
           <Selecao rotulo="Tipo da categoria" name="tipo" opcoes={[{valor:'DESPESA',texto:'Despesa'},{valor:'RECEITA',texto:'Receita'}]}/>
           <button className="button button-ghost">Adicionar</button></form></section>
       <section className="panel settings-card"><header><h2>Trocar senha</h2><p>A nova senha deve ter pelo menos oito caracteres.</p></header><form onSubmit={senha} className="form-grid"><label className="field"><span>Senha atual</span><input name="senhaAtual" type="password" autoComplete="current-password" required/></label><label className="field"><span>Nova senha</span><input name="novaSenha" type="password" autoComplete="new-password" minLength={8} required/></label><button className="button button-primary">Alterar senha</button></form></section>
-      <section className="panel settings-card"><header><h2>Acessos</h2><p>Quem entra no sistema. Esqueceu a senha? Redefina aqui e passe a provisória para a pessoa.</p></header><ul className="simple-list">{usuarios.map(u=><li key={u.id}><strong>{u.nome}</strong><small>{u.email} · {u.perfil==='ADMINISTRADOR'?'Administrador':'Socorrista'}{u.senhaProvisoria?' · senha provisória pendente':''}</small><button className="table-action" onClick={()=>setPedido({titulo:'Redefinir senha?',efeito:<>A senha atual de <strong>{u.nome}</strong> para de funcionar na hora. O sistema gera uma senha provisória para você repassar, e a pessoa troca no primeiro acesso.</>,resumo:[['Usuário',u.nome],['E-mail',u.email]],textoConfirmar:'Redefinir senha',perigo:true,aoConfirmar:()=>redefinir(u)})}>Redefinir senha</button></li>)}</ul></section>
+      <section className="panel settings-card"><header><h2>Acessos</h2><p>Quem entra no sistema. Crie uma conta nova, ou redefina a senha de quem esqueceu e passe a provisória para a pessoa.</p></header><ul className="simple-list">{usuarios.map(u=><li key={u.id}><strong>{u.nome}</strong><small>{u.email} · {u.perfil==='ADMINISTRADOR'?'Administrador':'Socorrista'}{u.senhaProvisoria?' · senha provisória pendente':''}</small><button className="table-action" onClick={()=>setPedido({titulo:'Redefinir senha?',efeito:<>A senha atual de <strong>{u.nome}</strong> para de funcionar na hora. O sistema gera uma senha provisória para você repassar, e a pessoa troca no primeiro acesso.</>,resumo:[['Usuário',u.nome],['E-mail',u.email]],textoConfirmar:'Redefinir senha',perigo:true,aoConfirmar:()=>redefinir(u)})}>Redefinir senha</button></li>)}</ul>
+        <form onSubmit={criarAcesso} className="inline-form">
+          <Campo rotulo="Nome"><input name="nome" required autoCapitalize="words" autoComplete="off"/></Campo>
+          <Campo rotulo="E-mail de acesso"><input name="email" type="email" inputMode="email" autoComplete="off" autoCapitalize="none" autoCorrect="off" spellCheck={false} required/></Campo>
+          <Selecao rotulo="Perfil" name="perfil" opcoes={[{valor:'FUNCIONARIO',texto:'Socorrista'},{valor:'ADMINISTRADOR',texto:'Administrador'}]}/>
+          <button className="button button-ghost">Criar acesso</button></form>
+        <p className="empty-inline">Administrador vê e mexe em tudo: financeiro, Porto, equipe e os acessos das outras pessoas. Socorrista só registra as próprias despesas e vê a comissão dele. Para dar acesso a um socorrista já cadastrado, use o botão na tela de Socorristas — lá a conta já nasce ligada ao cadastro dele.</p></section>
       <section className="panel settings-card"><header><h2>Cópia dos dados</h2><p>O banco não tem backup automático. Baixe de tempos em tempos e guarde fora do sistema.</p></header>
         <p className="empty-inline">Um arquivo do Excel com ordens de pagamento, ordens de serviço, receitas, despesas, contas a receber, socorristas, veículos, quilometragem, calendário e despesas fixas.</p>
         <button className="button button-primary" disabled={baixando} onClick={()=>void baixarCopia()}>{baixando?'Preparando cópia…':'Baixar cópia de tudo'}</button></section>
@@ -83,6 +98,7 @@ export default function ConfiguracoesPage(){
     </div>
     {gerada?<Modal etiqueta={gerada.nome} titulo="Senha provisória" aoFechar={()=>setGerada(null)}>
       <p>Passe esta senha para {gerada.nome}. Ela aparece <strong>uma única vez</strong> e só serve para o próximo acesso: o sistema vai obrigar a troca antes de liberar qualquer tela.</p>
+      <p className="senha-provisoria"><code>{gerada.email}</code></p>
       <p className="senha-provisoria"><code>{gerada.senhaProvisoria}</code></p>
       {copiada?<div className="success-notice">Senha copiada.</div>:null}
       <div className="modal-actions"><button className="button button-ghost" onClick={()=>void copiar(gerada.senhaProvisoria)}>Copiar</button><button className="button button-primary" onClick={()=>setGerada(null)}>Já anotei</button></div>

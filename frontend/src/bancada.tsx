@@ -9,6 +9,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { MemoryRouter } from 'react-router-dom'
+import { AuthProvider } from './auth/AuthContext'
 import './styles.css'
 import '@fontsource/barlow-condensed/600.css'
 import '@fontsource/ibm-plex-sans/400.css'
@@ -185,6 +186,23 @@ const pendencias = [
     apenasConferir: true },
 ]
 
+// Meus servicos: resposta de `comissao_das_ops` para o socorrista. A tela nova
+// so le `servicos` — nenhum valor em dinheiro aparece para ele.
+const comissao = {
+  ordemPagamentoId: 19, numeroOp: '06389821', periodo: '30/03 a 29/04',
+  periodoInicio: '2026-03-30', periodoFim: '2026-04-29',
+  socorrista: 'JEFERSON MARTINS DA SILVA', motoristaId: 1,
+  quantidadeServicosPagos: 8, producaoPaga: 0, percentualComissao: 20,
+  comissaoBruta: 0, descontos: 0, descontosPendentes: 0, liquido: 0, aguardandoOp: false,
+  servicos: Array.from({ length: 8 }, (_, i) => ({
+    id: 300 + i, numeroOs: `01/536${4383 + i * 29}-26`,
+    dataAtendimento: `2026-04-${String(2 + i * 3).padStart(2, '0')}`,
+    especialidade: i % 3 === 1 ? 'PANE SECA' : i % 3 === 2 ? 'REMOCAO' : 'GUINCHO',
+    numeroOp: '06389821', valorServico: 0, comissaoServico: 0,
+  })),
+  gastos: [],
+}
+
 const listaDeOs = {
   total: 362,
   semViatura: 0,
@@ -217,6 +235,11 @@ window.fetch = (async (entrada: RequestInfo | URL, init?: RequestInit) => {
   if (url.includes('porto_pendencias_os')) return responder(pendencias)
   if (url.includes('porto_dashboard_alto_nivel')) return responder(painel)
   if (url.includes('dashboard_resumo')) return responder(visaoGeral)
+  if (url.includes('comissao_das_ops')) return responder(comissao)
+  if (url.includes('meus_periodos_de_op')) return responder([
+    { id: 19, numero: '06389821', periodo_inicio: '2026-03-30', periodo_fim: '2026-04-29',
+      data_pagamento_programada: '2026-06-07' },
+  ])
   if (url.includes('porto_ops_conciliadas')) return responder(ops)
   if (url.includes('/rest/v1/') || url.includes('/auth/v1/')) return responder([])
   return original(entrada, init)
@@ -257,26 +280,33 @@ const visaoGeral = {
 const tela = new URLSearchParams(location.search).get('tela')
 const daVisao = tela === 'visao'
 // A Visao geral abre no periodo da OP real, para os graficos terem o que mostrar.
+if (tela === 'os') sessionStorage.setItem('filtro:periodo', JSON.stringify({ inicio: '2026-09-16', fim: '2026-09-30' }))
 if (daVisao) sessionStorage.setItem('filtro:periodo', JSON.stringify({ inicio: '2026-03-30', fim: '2026-04-29', op: '1' }))
 
-const Pagina = tela === 'turno'
+const Pagina = tela === 'despesas'
+  ? (await import('./financeiro/DespesasPage')).default
+  : tela === 'comissao'
+  ? (await import('./comissao/MinhaComissaoPage')).default
+  : tela === 'os'
+  ? (await import('./porto/PortoOrdensServicoPage')).default
+  : tela === 'turno'
   ? (await import('./socorrista/TurnoPage')).default
   : tela === 'aprovacoes'
     ? (await import('./aprovacoes/AprovacoesPage')).default
     : tela === 'pendencias'
       ? (await import('./porto/PortoPendenciasOsPage')).default
-      : tela === 'os'
-        ? (await import('./porto/PortoOrdensServicoPage')).default
-        : daVisao
-          ? (await import('./DashboardPage')).default
-          : (await import('./porto/PortoDashboardPage')).default
+      : daVisao
+        ? (await import('./DashboardPage')).default
+        : (await import('./porto/PortoDashboardPage')).default
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <MemoryRouter>
-      <main className="content">
-        <Pagina/>
-      </main>
+      <AuthProvider>
+        <main className="content">
+          <Pagina/>
+        </main>
+      </AuthProvider>
     </MemoryRouter>
   </StrictMode>,
 )

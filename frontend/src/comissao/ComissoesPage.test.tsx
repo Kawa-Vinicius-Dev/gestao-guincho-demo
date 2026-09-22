@@ -69,7 +69,7 @@ test('socorrista vê só a quantidade e os serviços feitos, sem dinheiro', asyn
 
   expect(await screen.findByRole('heading', { name: 'Meus serviços' })).toBeInTheDocument()
   expect(await screen.findByText('OS-1')).toBeInTheDocument()
-  expect(screen.getByText('Serviços feitos').nextSibling).toHaveTextContent('1')
+  expect(screen.getByRole('heading', { name: '1 serviço feito' })).toBeInTheDocument()
   // Kawa, 18/09/2026: nenhum valor em dinheiro na tela do socorrista.
   expect(screen.queryByText(/R\$/)).not.toBeInTheDocument()
   expect(screen.queryByText(/alimentação/i)).not.toBeInTheDocument()

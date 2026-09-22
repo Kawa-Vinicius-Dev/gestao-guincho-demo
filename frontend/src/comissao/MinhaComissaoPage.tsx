@@ -27,13 +27,26 @@ export default function MinhaComissaoPage(){
   useAoVivo(()=>{if(ids.length)lerComissaoDaOp(ids).then(setComissao).catch((e:Error)=>setErro(e.message))})
   useEffect(()=>{if(!ids.length)return;setCarregando(true);lerComissaoDaOp(ids).then(setComissao).catch((e:Error)=>setErro(e.message)).finally(()=>setCarregando(false))},[recente?.id])
   const servicos=comissao?.servicos??[]
-  return <div className="page-enter commission-page"><header className="page-heading"><div><span className="eyebrow">Área do socorrista</span><h1>Meus serviços</h1><p>Os serviços que você fez na OP mais recente.</p></div>{recente?<p className="cabecalho-contexto"><i aria-hidden="true"/>{rotuloPeriodo(recente)}</p>:null}</header>
+  // Esta tela e lida no celular, na rua. A tabela de tres colunas rolava 295px
+  // para o lado em 375px — para ver a data do proprio servico ele tinha que
+  // arrastar. Vira lista: a OS e a especialidade de um lado, o dia do outro.
+  return <div className="page-enter pagina-socorrista">
+    <header className="cabecalho-socorrista">
+      <h1>Meus serviços</h1>
+      {recente?<p className="cabecalho-contexto"><i aria-hidden="true"/>{rotuloPeriodo(recente)}</p>:null}
+    </header>
     {erro?<div className="form-alert">{erro}</div>:null}{carregando?<Carregando/>:null}{!carregando&&!recente&&!erro?<p className="empty-inline">Nenhuma OP com serviço seu ainda. Quando a Porto pagar a primeira, ela aparece aqui.</p>:null}
-    {comissao?<>
+    {comissao?<section className="bloco-socorrista">
       {/* Kawa, 18/09/2026: na tela do socorrista, so a quantidade e os servicos
           feitos. Nenhum valor em dinheiro aparece aqui. */}
-      <section className="metric-grid commission-metrics"><article className="metric"><span>Serviços feitos</span><strong>{servicos.length}</strong></article></section>
-      <article className="panel"><header className="panel-title"><div><h2>Serviços da OP</h2></div></header><div className="table-scroll"><table><thead><tr><th>OS</th><th>Especialidade</th><th>Atendimento</th></tr></thead><tbody>{servicos.map(s=><tr key={s.id}><td><strong>{s.numeroOs}</strong></td><td>{s.especialidade||'—'}</td><td>{data(s.dataAtendimento)}</td></tr>)}</tbody></table></div>{!servicos.length?<p className="empty-inline">Nenhum serviço seu nesta OP.</p>:null}</article>
-    </>:null}
+      <h2>{servicos.length} {servicos.length===1?'serviço feito':'serviços feitos'}</h2>
+      <p className="bloco-apoio">Os serviços que você fez na OP mais recente.</p>
+      {servicos.length
+        ? <ul className="lista-socorrista">{servicos.map(s=><li key={s.id}>
+            <span className="linha-identidade"><strong>{s.numeroOs}</strong><small>{s.especialidade||'Sem especialidade'}</small></span>
+            <span className="linha-apoio">{data(s.dataAtendimento)}</span>
+          </li>)}</ul>
+        : <p className="empty-inline">Nenhum serviço seu nesta OP.</p>}
+    </section>:null}
   </div>
 }
