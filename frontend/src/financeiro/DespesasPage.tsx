@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import './tipoCusto.css'
 import { alternarAtivoDespesaFixa, atualizarDespesaFixa, criarDespesaFixa, excluirDespesaFixa, lancarDespesasFixasDoMes, listarDespesasFixas } from '../dados/despesasFixas'
 import { ConfirmarExclusao } from '../components/ConfirmarExclusao'
 import { ConfirmarAcao, type PedidoConfirmacao } from '../components/ConfirmarAcao'
