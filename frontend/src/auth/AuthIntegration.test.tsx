@@ -17,8 +17,8 @@ async function entrar(email = 'admin@fluxogestao.local', senha = 'Admin@123') {
   const user = userEvent.setup({ delay: null })
   await user.clear(await screen.findByLabelText(/e-mail/i))
   await user.type(screen.getByLabelText(/e-mail/i), email)
-  await user.clear(screen.getByLabelText(/senha/i))
-  await user.type(screen.getByLabelText(/senha/i), senha)
+  await user.clear(screen.getByLabelText(/^senha$/i))
+  await user.type(screen.getByLabelText(/^senha$/i), senha)
   await user.click(screen.getByRole('button', { name: /entrar no sistema/i }))
   return user
 }

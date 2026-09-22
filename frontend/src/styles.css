@@ -1856,3 +1856,6 @@ tbody tr{transition:background-color .14s ease}
 
 /* Extrato: o nome do socorrista na comissao leva a ficha dele. */
 .extrato-socorrista{color:var(--blue-600);text-decoration:underline;text-underline-offset:2px}.extrato-socorrista:hover{text-decoration-thickness:2px}
+
+/* Senha com o olho: o botao fica dentro do campo, a direita. */
+.entrada-senha{position:relative;display:block}.entrada-senha input{padding-right:42px}.entrada-senha-olho{position:absolute;top:50%;right:6px;display:grid;place-items:center;width:32px;height:32px;padding:0;border:0;border-radius:6px;color:var(--muted);background:transparent;cursor:pointer;transform:translateY(-50%)}.entrada-senha-olho:hover{color:var(--ink)}.entrada-senha-olho:focus-visible{outline:2px solid var(--blue-600);outline-offset:1px}

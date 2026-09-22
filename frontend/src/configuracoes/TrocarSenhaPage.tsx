@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { EntradaSenha } from '../components/EntradaSenha'
 import { trocarSenha } from '../dados/sessao'
 import { useAuth } from '../auth/AuthContext'
 import { MarcaJms } from '../components/MarcaJms'
@@ -35,7 +36,7 @@ export default function TrocarSenhaPage(){
               ? 'A senha que você recebeu é temporária. Escolha a sua para liberar o sistema.'
               : 'Informe a senha atual e a nova senha.'}</p>
             {erro?<div className="form-alert" role="alert">{erro}</div>:null}
-            <label className="field"><span>{usuario?.senhaProvisoria?'Senha provisória que você recebeu':'Senha atual'}</span><input name="senhaAtual" type="password" autoComplete="current-password" required/></label>
+            <label className="field"><span>{usuario?.senhaProvisoria?'Senha provisória que você recebeu':'Senha atual'}</span><EntradaSenha name="senhaAtual" autoComplete="current-password" required/></label>
             <label className="field"><span>Nova senha</span><input name="novaSenha" type="password" autoComplete="new-password" minLength={8} required onInput={()=>setErro('')}/><small>Pelo menos 8 caracteres.</small></label>
             <label className="field"><span>Repita a nova senha</span><input name="repetirSenha" type="password" autoComplete="new-password" minLength={8} required onInput={()=>setErro('')}/></label>
             <button className="button button-primary button-block" disabled={enviando}>{enviando?'Salvando…':'Salvar nova senha'}</button>
