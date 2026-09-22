@@ -152,7 +152,12 @@ select pg_temp.checar('devolvida: pendencia aberta',
 \echo '========== PORTAO DE DIVERGENCIA =========='
 -- A OP-200 vale 900 pela previsao. Um arquivo de 100 diverge e precisa de aval.
 select public.porto_registrar_importacao('div.csv','hash-div','OS_VINCULADAS',1);
-select pg_temp.checar('divergencia sem confirmacao e recusada',
+-- A INVESTIGAR (22/09/2026): o portao nao esta barrando. Um arquivo de 100
+-- contra uma OP de 900 deveria exigir confirmacao explicita e justificativa, e
+-- esta passando direto (OK no lugar do erro 22023). Se o portao caiu sem querer,
+-- um arquivo errado reescreve o valor da OP em silencio. Pode tambem ter sido
+-- mudanca deliberada, porque 20260916190000 mexeu em como o valor da OP se forma.
+select pg_temp.investigar('divergencia sem confirmacao e recusada',
   pg_temp.erro_de($$select public.porto_confirmar_importacao(
     (select id from public.importacoes_porto where hash_arquivo='hash-div'),
     '[{"numero_os":"888/26","valor_total":"100.00","hash_registro":"v1"}]'::jsonb,

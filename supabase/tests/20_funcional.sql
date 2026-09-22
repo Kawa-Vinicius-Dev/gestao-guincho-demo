@@ -85,9 +85,12 @@ select pg_temp.checar('veiculo: receitas',
 select pg_temp.checar('veiculo: resultado',
   (select j->'resultadoPorVeiculo'->0->>'resultado' from d), '550.00');
 
--- Socorrista: despesa com viatura NAO conta (so a alimentacao, 50)
-select pg_temp.checar('socorrista: so alimentacao como despesa propria',
-  (select j->'resultadoPorSocorrista'->0->>'despesas' from d), '50.00');
+-- Socorrista: nenhuma despesa propria. A alimentacao era a unica que contava
+-- aqui, e 20260916170000 a mandou para a viatura — "nao e adiantamento ao
+-- socorrista, e nao tem por que sair do liquido dele". O que desconta dele
+-- continua sendo o gasto marcado com desconta_comissao, que este caso nao tem.
+select pg_temp.checar('socorrista: sem despesa propria',
+  (select j->'resultadoPorSocorrista'->0->>'despesas' from d), '0');
 select pg_temp.checar('socorrista: producao',
   (select j->'resultadoPorSocorrista'->0->>'producao' from d), '1000.00');
 select pg_temp.checar('socorrista: custoTotal 200+50',
