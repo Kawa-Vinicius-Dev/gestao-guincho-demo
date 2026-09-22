@@ -31,19 +31,32 @@ begin
     return replace(v_def, v_antes, v_depois);
 end $$;
 
+-- Aplica as trocas numa funcao so se ela ainda nao tiver a marca. Sem isto,
+-- rodar de novo (no SQL Editor, ou depois de uma aplicacao que parou no meio)
+-- morre em "Ancora nao encontrada", porque na segunda vez a ancora ja virou
+-- outra coisa. Com isto, rodar de novo e simplesmente nao fazer nada.
+create or replace function public.__ja_tem_marca(v_funcao text)
+returns boolean language plpgsql as $$
+begin
+    return position('sem_comissao' in pg_get_functiondef(v_funcao::regprocedure)) > 0;
+end $$;
+
 do $migracao$
 declare v_def text;
 begin
     -- 1. A despesa de comissao: a OS marcada sai da soma que vira dinheiro.
+    if not public.__ja_tem_marca('public.porto_sincronizar_comissoes()') then
     v_def := pg_get_functiondef('public.porto_sincronizar_comissoes()'::regprocedure);
     v_def := public.__trocar_no_corpo(v_def,
         E'where os.motorista_id is not null\n              and os.status_operacional <> ''CANCELADO''',
         E'where os.motorista_id is not null\n              and os.status_operacional <> ''CANCELADO''\n              and not os.sem_comissao',
         'porto_sincronizar_comissoes');
     execute v_def;
+    end if;
 
     -- 2. A leitura da comissao do periodo. A OS marcada continua na lista e na
     --    producao — some so a comissao dela, que passa a ser zero.
+    if not public.__ja_tem_marca('public.comissao_das_ops(bigint[], bigint)') then
     v_def := pg_get_functiondef('public.comissao_das_ops(bigint[], bigint)'::regprocedure);
     v_def := public.__trocar_no_corpo(v_def,
         'os.valor_total, round(os.valor_total * v_pct, 2) as comissao_servico',
@@ -64,16 +77,19 @@ begin
         E'coalesce((select sum(valor_total) from servicos), 0) as producao,\n               coalesce((select sum(comissao_servico) from servicos), 0) as comissao_bruta,',
         'comissao_das_ops (somas)');
     execute v_def;
+    end if;
 
     -- 3. A ficha do socorrista: a coluna "Comissao gerada" da tela de onde o
     --    administrador tira a comissao. Ela precisa mostrar zero no mesmo
     --    instante, senao o botao parece nao ter funcionado.
+    if not public.__ja_tem_marca('public.detalhe_socorrista_ops(bigint, bigint[])') then
     v_def := pg_get_functiondef('public.detalhe_socorrista_ops(bigint, bigint[])'::regprocedure);
     v_def := public.__trocar_no_corpo(v_def,
         E'''comissaoGerada'', case when os.status_financeiro = ''RECEBIDO''\n                    then round(os.valor_total * v_pct, 2) end)',
         E'''semComissao'', os.sem_comissao,\n                ''comissaoGerada'', case when os.sem_comissao then 0\n                    when os.status_financeiro = ''RECEBIDO''\n                    then round(os.valor_total * v_pct, 2) end)',
         'detalhe_socorrista_ops');
     execute v_def;
+    end if;
 
     -- 4. O previsto da competencia, que e o que ainda nao entrou em OP.
     v_def := pg_get_functiondef('public.porto_comissao_prevista(date, date, bigint)'::regprocedure);
@@ -89,6 +105,7 @@ end
 $migracao$;
 
 drop function public.__trocar_no_corpo(text, text, text, text);
+drop function public.__ja_tem_marca(text);
 
 -- ------------------------------------------------------------------ escrita
 -- Tirar e devolver a comissao e do administrador, e a comissao se refaz na
