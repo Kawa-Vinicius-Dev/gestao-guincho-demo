@@ -1845,3 +1845,11 @@ tbody tr{transition:background-color .14s ease}
 @media(min-width:620px){
   .cabecalho-socorrista h1{font-size:35px}
 }
+/* Na despesa do socorrista, quem ele e e em que viatura esta nao se escolhe:
+   vem do turno. Aparece como fato, nao como campo. */
+.despesa-do-turno{display:grid;gap:10px;grid-template-columns:1fr 1fr;padding:14px;border:1px solid var(--line);border-radius:10px;background:var(--superficie-2)}
+.despesa-do-turno span{display:grid;gap:3px;min-width:0}
+.despesa-do-turno small{color:var(--muted);font-size:11px}
+.despesa-do-turno strong{font-size:14px;overflow-wrap:anywhere}
+.chamada-turno{margin:0;color:#9fc0e4;font-size:13px;line-height:1.5}
+.chamada-turno strong{color:#eaf2fb}
