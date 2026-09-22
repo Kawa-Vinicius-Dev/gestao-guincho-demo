@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { MemoryRouter } from 'react-router-dom'
@@ -90,4 +90,32 @@ test('senha provisória fica visível na lista até o socorrista trocar', async 
   await abrir()
 
   expect(await screen.findByText('Senha provisória')).toBeInTheDocument()
+})
+
+// A comissao e por pessoa, com teto de 20%, e vai por RPC propria porque refaz
+// o dinheiro das OPs que ainda nao fecharam.
+test('o dono define a comissão do socorrista em porcentagem', async () => {
+  let enviado: Record<string, unknown> | null = null
+  servidorBase()
+  servidor.use(
+    http.patch(`${SUPA}/rest/v1/motoristas`, () => HttpResponse.json({
+      id: 4, nome: 'ANDERSON JORGE RIBEIRO', telefone: null, documento: null, qra: 'QRA-1',
+      codigos_porto: [], ativo: true, veiculo_id: null, perfil_id: null,
+      percentual_comissao: null, veiculos: null,
+    })),
+    http.post(`${SUPA}/rest/v1/rpc/definir_percentual_do_socorrista`, async ({ request }) => {
+      enviado = await request.json() as Record<string, unknown>
+      return HttpResponse.json(null)
+    }),
+  )
+  const user = userEvent.setup({ delay: null })
+  await abrir()
+
+  await user.click(await screen.findByRole('button', { name: /^editar$/i }))
+  const janela = await screen.findByRole('dialog')
+  // 15% na tela vira 0,15 no banco.
+  await user.type(within(janela).getByLabelText(/^comissão/i), '15')
+  await user.click(within(janela).getByRole('button', { name: /salvar alterações/i }))
+
+  await waitFor(() => expect(enviado).toEqual({ p_motorista_id: 4, p_percentual: 0.15 }))
 })

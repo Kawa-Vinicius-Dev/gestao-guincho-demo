@@ -20,7 +20,7 @@ import { moduloNoSupabase } from './modo'
  * banco. A alternativa seria listar motoristas e depois buscar o nome de cada
  * viatura — o N+1 classico, uma consulta por linha da lista.
  */
-const COLUNAS = 'id,nome,telefone,documento,qra,codigos_porto,ativo,veiculo_id,perfil_id,veiculos(identificacao)'
+const COLUNAS = 'id,nome,telefone,documento,qra,codigos_porto,ativo,veiculo_id,perfil_id,percentual_comissao,veiculos(identificacao)'
 
 type LinhaMotorista = {
   id: number
@@ -32,6 +32,7 @@ type LinhaMotorista = {
   ativo: boolean
   veiculo_id: number | null
   perfil_id: string | null
+  percentual_comissao?: number | string | null
   veiculos: { identificacao: string } | { identificacao: string }[] | null
 }
 
@@ -55,6 +56,8 @@ function paraModelo(linha: LinhaMotorista): Motorista {
     // valor em si nunca e exibido. Por isso o uuid do perfil cabe aqui sem
     // mudar nada do que a pessoa ve.
     usuarioId: linha.perfil_id ?? undefined,
+    // numeric do Postgres chega como string no PostgREST.
+    percentualComissao: linha.percentual_comissao == null ? undefined : Number(linha.percentual_comissao),
   }
 }
 
@@ -120,6 +123,25 @@ export async function atualizarMotorista(id: number, dados: DadosMotorista): Pro
  * Desativar nao apaga: o socorrista sai dos vinculos novos e o historico dele
  * continua de pe. Era essa a regra do backend e continua sendo aqui.
  */
+/**
+ * A comissao deste socorrista, de 0 a 0,20.
+ *
+ * Vale para o que ainda nao fechou. OP que ja fechou comissao guarda a taxa
+ * dela e nao se move — mudar a porcentagem hoje nao reescreve o que a pessoa
+ * ja recebeu.
+ */
+export async function definirPercentualDoSocorrista(
+  motoristaId: number, percentual: number | null,
+): Promise<void> {
+  invalidarCadastro('motoristas')
+  ou(
+    await supabase().rpc('definir_percentual_do_socorrista', {
+      p_motorista_id: motoristaId, p_percentual: percentual,
+    }),
+    'Não foi possível salvar a comissão deste socorrista.',
+  )
+}
+
 export async function alternarAtivoMotorista(motorista: Motorista): Promise<Motorista> {
   invalidarCadastro('motoristas')
   if (!moduloNoSupabase('motoristas')) {

@@ -6,7 +6,7 @@ import { usePeriodoGlobal } from '../utils/periodoGlobal'
 import { moeda } from '../utils/formatadores'
 import { Link } from 'react-router-dom'
 import { listarVeiculos } from '../dados/veiculos'
-import { alternarAtivoMotorista, atualizarMotorista, criarMotorista, excluirMotorista, listarMotoristas } from '../dados/motoristas'
+import { alternarAtivoMotorista, atualizarMotorista, criarMotorista, definirPercentualDoSocorrista, excluirMotorista, listarMotoristas } from '../dados/motoristas'
 import { ConfirmarExclusao } from '../components/ConfirmarExclusao'
 import { ConfirmarAcao, type PedidoConfirmacao } from '../components/ConfirmarAcao'
 import { CampoDocumento, CampoTelefone } from '../components/CamposMascarados'
@@ -49,6 +49,14 @@ export default function EquipePage(){
       const motorista=editando
         ?await atualizarMotorista(editando.id,corpo)
         :await criarMotorista(corpo)
+      // A comissao vai por caminho proprio: ela refaz o dinheiro das OPs que
+      // ainda nao fecharam, e por isso nao entra junto do cadastro comum.
+      const digitado=String(form.get('percentualComissao')||'').trim()
+      const novoPercentual=digitado===''?null:Number(digitado.replace(',','.'))/100
+      if(novoPercentual!==(editando?.percentualComissao??null)){
+        await definirPercentualDoSocorrista(motorista.id,novoPercentual)
+        motorista.percentualComissao=novoPercentual??undefined
+      }
       setMotoristas(lista=>editando?lista.map(item=>item.id===motorista.id?motorista:item):[...lista,motorista])
       fechar()
     }catch(e){setErro((e as Error).message)}finally{setSalvando(false)}
@@ -101,7 +109,7 @@ export default function EquipePage(){
       <SeletorPeriodo periodo={periodo} aoMudar={setPeriodo}/>
     </form></section>
     {motoristas.length?<section className="team-grid" aria-label="Socorristas cadastrados">{motoristas.map(motorista=><article className="panel team-card team-card-real" key={motorista.id}>
-      <header><span className="team-avatar">{motorista.nome.split(' ').map(parte=>parte[0]).slice(0,2).join('')}</span><span><strong>{motorista.nome}</strong><small>{ehAuxiliar(motorista.nome)?'Recebe as OS que chegam sem socorrista':<>{motorista.qra||'QRA não informado'}{motorista.veiculo?` · ${motorista.veiculo}`:' · sem viatura'}</>}</small></span><span className={`staff-status ${motorista.ativo?'staff-disponivel':'staff-folga'}`}>{motorista.ativo?'Ativo':'Inativo'}</span></header>
+      <header><span className="team-avatar">{motorista.nome.split(' ').map(parte=>parte[0]).slice(0,2).join('')}</span><span><strong>{motorista.nome}</strong><small>{ehAuxiliar(motorista.nome)?'Recebe as OS que chegam sem socorrista':<>{motorista.qra||'QRA não informado'}{motorista.veiculo?` · ${motorista.veiculo}`:' · sem viatura'}{motorista.percentualComissao!=null?` · ${Math.round(motorista.percentualComissao*1000)/10}% de comissão`:''}</>}</small></span><span className={`staff-status ${motorista.ativo?'staff-disponivel':'staff-folga'}`}>{motorista.ativo?'Ativo':'Inativo'}</span></header>
       <div className="team-contact"><span>Telefone<strong>{motorista.telefone||(ehAuxiliar(motorista.nome)?'—':'Não informado')}</strong></span>
         <span>Acesso<strong>{(()=>{const c=contaDe(motorista)
           if(!motorista.usuarioId)return 'Sem acesso'
@@ -135,6 +143,11 @@ export default function EquipePage(){
         <Selecao rotulo="Viatura habitual" name="veiculoId" defaultValue={editando?.veiculoId??''} vazio="Sem viatura"
           ajuda="Só referência — a viatura de cada serviço vem da OS, não daqui."
           opcoes={veiculos.map(v=>({valor:v.id,texto:v.identificacao}))}/>
+        <label className="field"><span>Comissão</span>
+          <input name="percentualComissao" type="number" min="0" max="20" step="0.5" inputMode="decimal"
+            defaultValue={editando?.percentualComissao!=null?String(Math.round(editando.percentualComissao*1000)/10):''}
+            placeholder="20"/>
+          <small>Em % do serviço, no máximo 20. Vazio usa os 20% padrão. Vale para o que ainda não foi pago: OP já fechada mantém a taxa dela.</small></label>
         <CampoDocumento rotulo="Documento" name="documento" className="field-wide" defaultValue={editando?.documento} aceitaRg ajuda="CPF, CNPJ ou RG. Só números."/>
         <div className="modal-actions field-wide"><button type="button" className="button button-ghost" onClick={fechar}>Cancelar</button><button className="button button-primary" disabled={salvando}>{salvando?'Salvando…':editando?'Salvar alterações':'Salvar socorrista'}</button></div>
       </form></Modal>:null}
