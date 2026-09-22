@@ -15,6 +15,7 @@ import { moduloNoSupabase } from './modo'
 const COLUNAS = [
   'id', 'descricao', 'valor', 'dia_vencimento', 'ativo',
   'categoria_id', 'veiculo_id', 'motorista_id', 'observacoes',
+  'total_parcelas', 'parcela_inicial', 'proxima_parcela',
   'categorias(nome)', 'veiculos(identificacao)', 'motoristas(nome)',
 ].join(',')
 
@@ -25,6 +26,7 @@ type Linha = {
   id: number; descricao: string; valor: number | string; dia_vencimento: number
   ativo: boolean; categoria_id: number; veiculo_id: number | null
   motorista_id: number | null; observacoes: string | null
+  total_parcelas?: number | null; parcela_inicial?: number | null; proxima_parcela?: number | null
   categorias: Vinculo<{ nome: string }>
   veiculos: Vinculo<{ identificacao: string }>
   motoristas: Vinculo<{ nome: string }>
@@ -43,11 +45,16 @@ const paraModelo = (l: Linha): DespesaRecorrente => ({
   motoristaId: l.motorista_id ?? undefined,
   observacoes: l.observacoes ?? undefined,
   ativo: l.ativo,
+  totalParcelas: l.total_parcelas ?? undefined,
+  parcelaInicial: l.parcela_inicial ?? undefined,
+  proximaParcela: l.proxima_parcela ?? undefined,
 })
 
 export interface DadosDespesaFixa {
   descricao: string; categoriaId: number; valor: number; diaVencimento: number
   veiculoId?: number | null; motoristaId?: number | null; observacoes?: string | null
+  /** As duas juntas ou nenhuma: "3 de 10" e parcelaInicial 3, totalParcelas 10. */
+  parcelaInicial?: number | null; totalParcelas?: number | null
 }
 
 export async function listarDespesasFixas(): Promise<DespesaRecorrente[]> {
@@ -71,6 +78,7 @@ export async function criarDespesaFixa(dados: DadosDespesaFixa): Promise<Despesa
       descricao: dados.descricao, categoria_id: dados.categoriaId, valor: dados.valor,
       dia_vencimento: dados.diaVencimento, veiculo_id: dados.veiculoId || null,
       motorista_id: dados.motoristaId || null, observacoes: dados.observacoes || null,
+      total_parcelas: dados.totalParcelas || null, parcela_inicial: dados.totalParcelas ? (dados.parcelaInicial || 1) : null,
     }).select(COLUNAS).single(),
     'Não foi possível cadastrar a despesa fixa.',
   ) as unknown as Linha
@@ -100,7 +108,7 @@ export async function lancarDespesasFixasDoMes(mes: string): Promise<LancamentoR
   const r = ou(
     await supabase().rpc('lancar_despesas_recorrentes', { p_mes: `${mes}-01` }),
     'Não foi possível lançar as despesas fixas.',
-  ) as { mes: string; lancadas: number; jaExistiam: number; valorLancado: number }
+  ) as { mes: string; lancadas: number; jaExistiam: number; valorLancado: number; encerradas?: number }
   return { ...r, despesas: [] }
 }
 
@@ -110,6 +118,7 @@ export async function atualizarDespesaFixa(id: number, dados: DadosDespesaFixa):
       descricao: dados.descricao, categoria_id: dados.categoriaId, valor: dados.valor,
       dia_vencimento: dados.diaVencimento, veiculo_id: dados.veiculoId || null,
       motorista_id: dados.motoristaId || null, observacoes: dados.observacoes || null,
+      total_parcelas: dados.totalParcelas || null, parcela_inicial: dados.totalParcelas ? (dados.parcelaInicial || 1) : null,
     }).eq('id', id).select('id').single(),
     'Não foi possível salvar a despesa fixa.',
   )

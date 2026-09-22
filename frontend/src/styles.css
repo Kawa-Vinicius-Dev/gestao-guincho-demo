@@ -1859,3 +1859,9 @@ tbody tr{transition:background-color .14s ease}
 
 /* Senha com o olho: o botao fica dentro do campo, a direita. */
 .entrada-senha{position:relative;display:block}.entrada-senha input{padding-right:42px}.entrada-senha-olho{position:absolute;top:50%;right:6px;display:grid;place-items:center;width:32px;height:32px;padding:0;border:0;border-radius:6px;color:var(--muted);background:transparent;cursor:pointer;transform:translateY(-50%)}.entrada-senha-olho:hover{color:var(--ink)}.entrada-senha-olho:focus-visible{outline:2px solid var(--blue-600);outline-offset:1px}
+/* Despesas: custo fixo x variavel, cada um com o total do periodo. */
+.tipo-custo{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.tipo-custo-opcao{display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:12px 16px;border:1px solid var(--line);border-radius:8px;background:var(--superficie);color:var(--ink);text-align:left;cursor:pointer}
+.tipo-custo-opcao span{color:var(--muted);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+.tipo-custo-opcao strong{font:600 22px 'Barlow Condensed',sans-serif;font-variant-numeric:tabular-nums}
+.tipo-custo-opcao:hover{border-color:var(--blue-600)}.tipo-custo-opcao.ativa{border-color:var(--blue-600);box-shadow:inset 0 0 0 1px var(--blue-600)}

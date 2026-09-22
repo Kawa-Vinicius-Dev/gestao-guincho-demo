@@ -32,12 +32,16 @@ export interface Despesa {
   dataPagamento?:string; formaPagamento?:string; veiculo?:string; motorista?:string; protocolo?:string; descontaComissao?:boolean;
   comprovante?:string; observacoes?:string; status:'PENDENTE'|'PAGO'|'ATRASADO'|'REJEITADO';
   aprovada:boolean; criadoPor:string; comprovanteNomeOriginal?:string; comprovanteTamanhoBytes?:number
+  /** Veio de uma despesa fixa (custo fixo); sem isto, e custo variavel. */
+  despesaRecorrenteId?:number
 }
 export interface DespesaRecorrente {
   id:number; descricao:string; categoria:string; categoriaId:number; valor:number; diaVencimento:number;
   veiculo?:string; veiculoId?:number; motorista?:string; motoristaId?:number; observacoes?:string; ativo:boolean
+  /** Parcelas: 3/10 e totalParcelas 10, parcelaInicial 3. Sem total, a fixa nao acaba. */
+  totalParcelas?:number; parcelaInicial?:number; proximaParcela?:number
 }
-export interface LancamentoRecorrente { mes:string; lancadas:number; jaExistiam:number; valorLancado:number; despesas:Despesa[] }
+export interface LancamentoRecorrente { mes:string; lancadas:number; jaExistiam:number; valorLancado:number; despesas:Despesa[]; encerradas?:number }
 export interface LancamentoFinanceiro {
   id:string; tipo:'RECEITA'|'DESPESA'; referenciaId:number; descricao:string; categoria:string; valor:number;
   data:string; status:string; realizado:boolean; veiculo?:string; veiculoId?:number; motorista?:string; origem:string; protocolo?:string

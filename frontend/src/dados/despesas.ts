@@ -24,13 +24,14 @@ import { moduloNoSupabase } from './modo'
 const COLUNAS = [
   'id', 'descricao', 'valor', 'data_lancamento', 'vencimento', 'data_pagamento',
   'forma_pagamento', 'status', 'aprovada', 'protocolo', 'observacoes', 'desconta_comissao',
-  'categoria_id', 'veiculo_id', 'motorista_id',
+  'categoria_id', 'veiculo_id', 'motorista_id', 'despesa_recorrente_id',
   'comprovante_arquivo', 'comprovante_nome_original', 'comprovante_tamanho_bytes',
   'categorias(nome)', 'veiculos(identificacao)', 'motoristas(nome)', 'perfis!despesas_criado_por_fkey(nome)',
 ].join(',')
 
 type Vinculo<T> = T | T[] | null
 type LinhaDespesa = {
+  despesa_recorrente_id?: number | null
   id: number
   descricao: string
   valor: number | string
@@ -76,6 +77,7 @@ function paraModelo(linha: LinhaDespesa): Despesa {
     veiculo: um(linha.veiculos)?.identificacao,
     motorista: um(linha.motoristas)?.nome,
     protocolo: linha.protocolo ?? undefined,
+    despesaRecorrenteId: linha.despesa_recorrente_id ?? undefined,
     descontaComissao: Boolean(linha.desconta_comissao),
     comprovante: linha.comprovante_arquivo ?? undefined,
     observacoes: linha.observacoes ?? undefined,

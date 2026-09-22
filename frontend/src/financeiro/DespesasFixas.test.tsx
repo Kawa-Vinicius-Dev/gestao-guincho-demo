@@ -72,3 +72,30 @@ test('sem despesa fixa ativa não há o que lançar', async () => {
   expect(await screen.findByRole('button', { name: /reativar/i })).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /lançar as fixas do mês/i })).toBeDisabled()
 })
+
+test('cadastra seguro em 3 de 10 e a lista mostra a próxima parcela', async () => {
+  let enviado: Record<string, unknown> | null = null
+  const seguro = { ...aluguel, id: 2, descricao: 'Seguro dos caminhões', valor: 5716.4,
+    totalParcelas: 10, parcelaInicial: 3, proximaParcela: 3 }
+  let fixas: Record<string, unknown>[] = []
+  servidor.use(
+    http.get('/api/despesas-recorrentes', () => HttpResponse.json(fixas)),
+    http.post('/api/despesas-recorrentes', async ({ request }) => {
+      enviado = await request.json() as Record<string, unknown>
+      fixas = [seguro]
+      return HttpResponse.json(seguro, { status: 201 })
+    }),
+  )
+  const user = userEvent.setup({ delay: null })
+  abrir()
+
+  await user.type(await screen.findByLabelText(/descrição da despesa fixa/i), 'Seguro dos caminhões')
+  await user.type(screen.getByLabelText(/valor da despesa fixa/i), '571640')
+  await user.type(screen.getByLabelText(/dia do vencimento/i), '18')
+  await user.type(screen.getByLabelText(/parcela atual/i), '3')
+  await user.type(screen.getByLabelText(/total de parcelas/i), '10')
+  await user.click(screen.getByRole('button', { name: /adicionar/i }))
+
+  expect(enviado).toMatchObject({ parcelaInicial: 3, totalParcelas: 10 })
+  expect(await screen.findByText(/próxima parcela 3\/10/)).toBeInTheDocument()
+})
