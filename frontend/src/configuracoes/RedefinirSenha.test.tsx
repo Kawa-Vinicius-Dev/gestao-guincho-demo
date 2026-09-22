@@ -61,10 +61,34 @@ test('depois de trocar, o acesso antigo é encerrado e a tela manda entrar de no
   abrir('/minha-comissao')
 
   await screen.findByRole('heading', { name: /troque sua senha/i })
-  await user.type(screen.getByLabelText(/senha atual/i), 'kjhs-2mp4-7xqt')
-  await user.type(screen.getByLabelText(/nova senha/i), 'MinhaSenha@2026')
+  await user.type(screen.getByLabelText(/senha provisória que você recebeu/i), 'kjhs-2mp4-7xqt')
+  await user.type(screen.getByLabelText(/^nova senha/i), 'MinhaSenha@2026')
+  await user.type(screen.getByLabelText(/^repita a nova senha/i), 'MinhaSenha@2026')
   await user.click(screen.getByRole('button', { name: /salvar nova senha/i }))
 
   expect(await screen.findByText(/acessos abertos foram encerrados/i)).toBeInTheDocument()
   expect(enviado).toEqual({ senhaAtual: 'kjhs-2mp4-7xqt', novaSenha: 'MinhaSenha@2026' })
+})
+
+test('nova senha digitada diferente não troca nada e diz o que houve', async () => {
+  let chamou = false
+  servidor.use(
+    http.get('/api/auth/me', () => HttpResponse.json({
+      id: 9, nome: 'Anderson Ribeiro', email: 'anderson@jms.local', perfil: 'FUNCIONARIO', senhaProvisoria: true,
+    })),
+    http.put('/api/auth/senha', () => { chamou = true; return new HttpResponse(null, { status: 204 }) }),
+  )
+  const user = userEvent.setup()
+  abrir('/minha-comissao')
+
+  await screen.findByRole('heading', { name: /troque sua senha/i })
+  await user.type(screen.getByLabelText(/senha provisória que você recebeu/i), 'kjhs-2mp4-7xqt')
+  await user.type(screen.getByLabelText(/^nova senha/i), 'MinhaSenha@2026')
+  await user.type(screen.getByLabelText(/^repita a nova senha/i), 'MinhaSenha@2027')
+  await user.click(screen.getByRole('button', { name: /salvar nova senha/i }))
+
+  expect(await screen.findByRole('alert')).toHaveTextContent(/não são iguais/i)
+  // O erro e da tela: uma senha que a pessoa nao sabe qual e nao pode ser gravada.
+  expect(chamou).toBe(false)
+  expect(screen.getByRole('heading', { name: /troque sua senha/i })).toBeInTheDocument()
 })

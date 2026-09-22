@@ -203,3 +203,16 @@ test('card do painel abre a lista já na situação e na competência', async ()
   await screen.findByText('01/4312215-26')
   expect(pedidos[0]).toMatchObject({ p_situacao: 'AGUARDANDO_PROXIMA_OP', p_por_competencia: true })
 })
+
+// O card "Sem viatura" do painel Porto abre esta tela por link. Se o parametro
+// parar de ser lido, o clique passa a mostrar todas as OS do periodo e ninguem
+// percebe: o numero continua na tela do painel, so a lista e que nao bate.
+test('link do painel abre a tela já filtrada só nas OS sem viatura', async () => {
+  const pedidos: Record<string, unknown>[] = []
+  servidorBase(corpo => pedidos.push(corpo))
+
+  await abrir('/porto/ordens-servico?semViatura=1')
+
+  expect(await screen.findByLabelText(/só sem viatura/i)).toBeChecked()
+  expect(pedidos.at(-1)).toEqual(expect.objectContaining({ p_sem_viatura: true }))
+})

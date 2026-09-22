@@ -59,7 +59,7 @@ export default function PortoOrdensServicoPage() {
   const [motoristaId, setMotoristaId] = useState(0)
   const [sigla, setSigla] = useState(() => (busca.get('sigla') ?? '').toUpperCase())
   const [situacao, setSituacao] = useState<SituacaoOs>(() => (busca.get('situacao') ?? '') as SituacaoOs)
-  const [semViatura, setSemViatura] = useState(false)
+  const [semViatura, setSemViatura] = useState(() => busca.get('semViatura') === '1')
   const [porCompetencia, setPorCompetencia] = useState(() => busca.get('competencia') === '1')
   const [informando, setInformando] = useState<LinhaOs | null>(null)
   const [emLote, setEmLote] = useState(false)

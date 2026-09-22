@@ -21,7 +21,7 @@ function escala(valores:number[]){
 function Vazio({texto}:{texto:string}){return <p className="grafico-vazio">{texto}</p>}
 
 /** `link`: para onde o nome leva — a ficha do socorrista, por exemplo. */
-export type LinhaFaturamento={chave:string;rotulo:string;valor:number;quantidade?:number;detalhe?:string;semVinculo:boolean;link?:string}
+export type LinhaFaturamento={chave:string;rotulo:string;valor:number;quantidade?:number;detalhe?:string;semVinculo:boolean;link?:string;ajudaDoLink?:string}
 
 /**
  * Quanto cada socorrista ou viatura faturou, uma barra por linha. A linha sem
@@ -38,7 +38,7 @@ export function FaturamentoPorGrupo({descricao,linhas,vazio}:{descricao:string;l
   return <ul className="faturamento-grupo" aria-label={descricao}>
     {ordenadas.map(l=><li key={l.chave} className={l.semVinculo?'sem-vinculo':undefined}>
       {l.link
-        ?<Link className="faturamento-grupo-rotulo faturamento-grupo-link" title={`Ver detalhes de ${l.rotulo}`} to={l.link}>{l.rotulo}</Link>
+        ?<Link className="faturamento-grupo-rotulo faturamento-grupo-link" title={l.ajudaDoLink??`Ver detalhes de ${l.rotulo}`} to={l.link}>{l.rotulo}</Link>
         :<span className="faturamento-grupo-rotulo" title={l.rotulo}>{l.rotulo}</span>}
       <span className="faturamento-grupo-trilho" aria-hidden="true"><span style={{width:largura(l.valor)}}/></span>
       <strong>{moeda(l.valor)}</strong>
