@@ -68,7 +68,7 @@ begin
     -- 3. A ficha do socorrista: a coluna "Comissao gerada" da tela de onde o
     --    administrador tira a comissao. Ela precisa mostrar zero no mesmo
     --    instante, senao o botao parece nao ter funcionado.
-    v_def := pg_get_functiondef('public.detalhe_socorrista_ops(bigint[], bigint)'::regprocedure);
+    v_def := pg_get_functiondef('public.detalhe_socorrista_ops(bigint, bigint[])'::regprocedure);
     v_def := public.__trocar_no_corpo(v_def,
         E'''comissaoGerada'', case when os.status_financeiro = ''RECEBIDO''\n                    then round(os.valor_total * v_pct, 2) end)',
         E'''semComissao'', os.sem_comissao,\n                ''comissaoGerada'', case when os.sem_comissao then 0\n                    when os.status_financeiro = ''RECEBIDO''\n                    then round(os.valor_total * v_pct, 2) end)',
