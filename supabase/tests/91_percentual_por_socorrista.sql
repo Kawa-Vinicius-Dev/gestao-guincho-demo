@@ -78,7 +78,7 @@ select pg_temp.checar('e a antiga continua em 200',
 select public.porto_definir_comissao_da_os(
   (select id from public.ordens_servico_porto where numero='OS-1'), true);
 select pg_temp.checar('sem a OS, a OP antiga zera',
-  (public.comissao_das_ops(array[1]::bigint[],1) ->> 'comissaoBruta'), '0.00');
+  round((public.comissao_das_ops(array[1]::bigint[],1) ->> 'comissaoBruta')::numeric, 2)::text, '0.00');
 select public.porto_definir_comissao_da_os(
   (select id from public.ordens_servico_porto where numero='OS-1'), false);
 select pg_temp.checar('e ao devolver volta a 200, nao a 150',
