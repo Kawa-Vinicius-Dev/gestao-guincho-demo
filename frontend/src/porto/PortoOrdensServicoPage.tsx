@@ -282,7 +282,7 @@ export default function PortoOrdensServicoPage() {
       {carregando && !dados ? <Carregando/> : null}
       {dados && !dados.itens.length
         ? <p className="empty-inline">{temFiltro ? 'Nenhuma OS com esses filtros neste período.' : 'Nenhuma OS neste período. Importe uma OP ou o painel diário.'}</p>
-        : dados ? <div className="table-scroll"><table aria-label="Ordens de serviço">
+        : dados ? <div className="table-scroll tabela-densa"><table aria-label="Ordens de serviço">
           <thead><tr>
             <th>OS</th><th>Atendimento</th><th>Competência</th><th>Especialidade</th><th>Socorrista</th><th>Viatura</th>
             <th>OP</th><th>Situação</th><th>Valor</th><th>Comissão</th><th/>

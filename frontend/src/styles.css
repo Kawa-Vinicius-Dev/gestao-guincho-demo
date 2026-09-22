@@ -41,7 +41,7 @@ button,input,select,textarea{font:inherit}button{color:inherit}a{color:inherit}:
 .metric-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:18px}.metric{min-height:126px;padding:19px;border:1px solid var(--line);border-radius:9px;background:var(--superficie)}.metric>span,.metric small,.metric strong{display:block}.metric>span{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.07em}.metric strong{margin:17px 0 8px;font:600 27px 'Barlow Condensed',sans-serif}.metric small{color:#8a99a9;font-size:10px;line-height:1.35}.metric-alert{border-top:3px solid #f4a7b4}.metric-alert strong{color:var(--red)}.metric-focus{border-top:3px solid var(--blue-500);background:var(--blue-50)}
 .dashboard-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.road-ledger,.vehicle-results{padding:24px}.road-ledger header,.vehicle-results header{display:flex;justify-content:space-between;align-items:start}.panel h2{margin:6px 0 0;font:600 25px 'Barlow Condensed',sans-serif}.road-ledger header>strong{font:600 28px 'Barlow Condensed',sans-serif}.km-track{height:8px;margin:32px 0 18px;overflow:hidden;border-radius:99px;background:#e5ebf1}.km-track span{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--blue-600),var(--cyan))}.km-values{display:grid;grid-template-columns:repeat(3,1fr);gap:15px}.km-values span,.km-values strong{display:block}.km-values span{color:var(--muted);font-size:10px}.km-values strong{margin-top:6px;font-size:15px}.inline-empty{margin:35px 0 12px;color:var(--muted);font-size:12px}.positive{color:var(--green)!important}.negative{color:var(--red)!important}
 .filters{display:grid;grid-template-columns:minmax(220px,1fr) 210px;gap:14px;padding:18px 20px;border-bottom:1px solid var(--line)}.search-field>span,.filter-select>span{display:block;margin-bottom:6px;color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.08em}.search-field input,.filter-select select{width:100%;height:40px;padding:0 11px;border:1px solid var(--line);border-radius:6px;background:var(--superficie)}
-.table-scroll{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:12px}th{padding:12px 15px;color:var(--muted);background:var(--superficie-2);text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:.08em}td{padding:15px;border-top:1px solid var(--linha-suave);vertical-align:middle}td strong,td small{display:block}td small{margin-top:4px;color:var(--muted);font-size:10px}tbody tr{content-visibility:auto;contain-intrinsic-size:0 65px}tbody tr:hover{background:var(--superficie-hover)}.table-action{padding:7px 10px;border:1px solid var(--blue-100);border-radius:5px;color:var(--blue-600);background:var(--blue-50);cursor:pointer;font-size:10px;font-weight:600}
+.table-scroll{overflow-x:auto}/* Tabela de muitas colunas: em 1366 as onze da tela de OS nao cabem com o respiro padrao, e rolar de lado esconde justamente os botoes da ponta. Aperta o respiro lateral (o de cima e de baixo fica) e deixa a etiqueta de situacao quebrar linha. */.tabela-densa th,.tabela-densa td{padding-left:9px;padding-right:9px}.tabela-densa th:first-child,.tabela-densa td:first-child{padding-left:15px}.tabela-densa th:last-child,.tabela-densa td:last-child{padding-right:15px}.tabela-densa .vehicle-status{white-space:normal}table{width:100%;border-collapse:collapse;font-size:12px}th{padding:12px 15px;color:var(--muted);background:var(--superficie-2);text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:.08em}td{padding:15px;border-top:1px solid var(--linha-suave);vertical-align:middle}td strong,td small{display:block}td small{margin-top:4px;color:var(--muted);font-size:10px}tbody tr{content-visibility:auto;contain-intrinsic-size:0 65px}tbody tr:hover{background:var(--superficie-hover)}.table-action{padding:7px 10px;border:1px solid var(--blue-100);border-radius:5px;color:var(--blue-600);background:var(--blue-50);cursor:pointer;font-size:10px;font-weight:600}
 .status-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 8px;border-radius:99px;font-size:9px;font-weight:600;white-space:nowrap}.status-badge:before{content:'';width:5px;height:5px;border-radius:50%;background:currentColor}
 .status-pendente,.status-prevista,.status-aguardando_conferencia{color:var(--aviso-texto);background:var(--aviso-fundo)}.status-recebido,.status-recebida,.status-pago,.status-confirmada{color:var(--ok-texto);background:var(--ok-fundo)}.status-atrasado,.status-rejeitado,.status-cancelado,.status-cancelada,.status-erro_leitura{color:#a62940;background:var(--erro-fundo)}.status-processando{color:var(--info-texto);background:var(--info-fundo)}
 .empty-state{display:grid;place-items:center;min-height:280px;padding:35px;text-align:center}.empty-state h2{margin:16px 0 4px;font:600 25px 'Barlow Condensed',sans-serif}.empty-state p{max-width:420px;margin:0;color:var(--muted);font-size:12px}.empty-ledger{width:64px;height:48px;border:2px solid var(--blue-100);border-radius:7px;background:repeating-linear-gradient(180deg,transparent 0 10px,var(--blue-100) 10px 11px)}
@@ -1769,3 +1769,64 @@ tbody tr{transition:background-color .14s ease}
   .aprovacao-acoes{justify-content:stretch}
   .aprovacao-acoes .button{flex:1}
 }
+
+/* ---------------------------------------------------------------------------
+   Area do socorrista — celular primeiro.
+   Ele abre isto na rua, dentro da viatura, de relance e muitas vezes no sol.
+   Entao: uma resposta por vez, alvo grande para dedo sujo, e uma unica
+   superficie escura (o holerite) carregando o numero que importa. O resto da
+   area fica de proposito quieto, para nao disputar com ele.
+   --------------------------------------------------------------------------- */
+.pagina-socorrista{margin:0 auto;display:grid;gap:14px;max-width:560px;padding:4px 0 40px;align-content:start}
+.cabecalho-socorrista{display:grid;gap:var(--espaco-1)}
+.cabecalho-socorrista h1{margin:0;font:600 31px/1.05 'Barlow Condensed',sans-serif;color:var(--ink)}
+
+.holerite{padding:22px 20px;border-radius:14px;box-shadow:var(--shadow);color:#eaf2fb;background:linear-gradient(168deg,var(--navy-900),var(--navy-950))}
+.holerite-rotulo{margin:0;color:#9fc0e4;font-size:12px}
+.holerite-valor{display:block;margin:1px 0 0;font:600 46px/1 'Barlow Condensed',sans-serif;font-variant-numeric:tabular-nums}
+.holerite-apoio{margin:7px 0 0;color:#9fc0e4;font-size:12px;line-height:1.45}
+.holerite-conta{display:grid;gap:7px;margin:var(--espaco-2) 0 0;padding-top:var(--espaco-2);border-top:1px solid rgba(255,255,255,.15)}
+.holerite-conta>div{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.holerite-conta dt{color:#9fc0e4;font-size:12px}
+.holerite-conta dd{margin:0;font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}
+.holerite-saida dd{color:#ffb9a6}
+.holerite-nota dt,.holerite-nota dd{color:#88a4c4;font-size:11px;font-weight:500}
+.holerite-previsto{margin:0;padding:12px 14px;border:1px dashed var(--line);border-radius:12px;color:var(--muted);font-size:12px;line-height:1.5}
+.holerite-previsto strong{color:var(--ink)}
+
+.bloco-socorrista{padding:20px;border:1px solid var(--line);border-radius:14px;background:var(--superficie);box-shadow:var(--shadow)}
+.bloco-socorrista h2{margin:0;font:600 20px/1.1 'Barlow Condensed',sans-serif;color:var(--ink)}
+.bloco-apoio{margin:5px 0 0;color:var(--muted);font-size:12px;line-height:1.45}
+
+.lista-socorrista{margin:var(--espaco-1) 0 0;padding:0;list-style:none}
+.lista-socorrista li{display:flex;align-items:start;justify-content:space-between;gap:14px;padding:11px 0;border-top:1px solid var(--linha-suave)}
+.lista-socorrista li:first-child{border-top:0}
+.linha-identidade,.linha-dinheiro{display:grid;gap:2px;min-width:0}
+.linha-identidade strong{font-size:13px;line-height:1.3;overflow-wrap:anywhere}
+.linha-dinheiro{justify-items:end;text-align:right;white-space:nowrap}
+.linha-dinheiro strong{font-size:14px;font-variant-numeric:tabular-nums}
+.lista-socorrista small{color:var(--muted);font-size:11px;line-height:1.35}
+.valor-saida{color:var(--erro-texto)}
+
+/* Dedo com luva ou graxa: o alvo principal ocupa a largura toda. */
+.botao-alto{width:100%;min-height:60px;border-radius:12px;font-size:17px;font-weight:700}
+.pagina-socorrista .form-grid{margin-top:var(--espaco-2)}
+
+@media(min-width:620px){
+  .cabecalho-socorrista{grid-template-columns:1fr auto;align-items:end}
+  .cabecalho-socorrista h1{font-size:35px}
+  .holerite-valor{font-size:52px}
+}
+/* O seletor ja diz o periodo por extenso; o rotulo acima so repetia em caixa
+   alta e empurrava o holerite para baixo. Fica para quem le por leitor de tela. */
+.cabecalho-socorrista .field>span{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+/* No tema escuro o navy do holerite encosta no fundo da pagina e o cartao some.
+   Ele sobe um tom e ganha borda para continuar sendo a superficie em destaque. */
+[data-tema="escuro"] .holerite{border:1px solid var(--blue-100);background:linear-gradient(168deg,#173453,#0d2239)}
+/* A chamada da tela de despesas do socorrista, no mesmo tom do holerite: uma
+   superficie escura so, com a acao ocupando a largura do polegar. */
+.chamada-socorrista{display:grid;gap:12px;padding:22px 20px;border-radius:14px;color:#eaf2fb;background:linear-gradient(168deg,var(--navy-900),var(--navy-950));box-shadow:var(--shadow)}
+.chamada-socorrista h2{margin:0;font:600 24px/1.15 'Barlow Condensed',sans-serif}
+.chamada-socorrista p{margin:0;color:#9fc0e4;font-size:13px;line-height:1.5}
+.chamada-socorrista .botao-alto{margin-top:4px}
+[data-tema="escuro"] .chamada-socorrista{border:1px solid var(--blue-100);background:linear-gradient(168deg,#173453,#0d2239)}

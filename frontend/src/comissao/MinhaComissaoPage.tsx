@@ -9,6 +9,18 @@ import { Carregando } from '../components/EstadoPagina'
 import { Selecao } from '../components/Campos'
 import { useAoVivo } from '../dados/aoVivo'
 
+/**
+ * Minha comissao, no celular do socorrista.
+ *
+ * Ele abre esta tela para responder uma pergunta so: quanto eu recebo. Antes,
+ * cinco cartoes de mesma altura empurravam essa resposta para baixo da dobra e
+ * a lista de servicos rolava de lado. Agora o liquido e a primeira coisa da
+ * tela, a conta que chega nele vem logo abaixo, e o resto e apoio.
+ */
+
+/** Curto porque e lido de relance, na rua: "02/04", nao "02/04/2026". */
+const diaEMes = (iso?: string) => (iso ? data(iso).slice(0, 5) : '—')
+
 export default function MinhaComissaoPage(){
   const [periodos,setPeriodos]=useState<PeriodoPorto[]>([]),[comissao,setComissao]=useState<Comissao|null>(null)
   const [erro,setErro]=useState(''),[mensagem,setMensagem]=useState(''),[salvando,setSalvando]=useState(false)
@@ -25,13 +37,68 @@ export default function MinhaComissaoPage(){
     listarComissaoPrevista(global.inicio,global.fim).then(l=>setPrevista(l[0]??null)).catch(()=>setPrevista(null))},[global.inicio,global.fim])
   useEffect(()=>{if(!ids.length)return;setCarregando(true);lerComissaoDaOp(ids).then(setComissao).catch((e:Error)=>setErro(e.message)).finally(()=>setCarregando(false))},[periodoId])
   async function salvar(event:FormEvent<HTMLFormElement>){event.preventDefault();const formulario=event.currentTarget;const form=new FormData(formulario);setSalvando(true);setErro('');try{await registrarAlimentacao(String(form.get('data')),Number(form.get('valor')),String(form.get('observacoes')||''));setMensagem('Alimentação registrada e enviada para aprovação.');formulario.reset();setComissao(await lerComissaoDaOp(ids))}catch(e){setErro((e as Error).message)}finally{setSalvando(false)}}
-  return <div className="page-enter commission-page"><header className="page-heading"><div><span className="eyebrow">Área do socorrista</span><h1>Minha comissão</h1><p>Seus serviços pagos, os gastos no seu nome e o que desconta da sua comissão.</p></div><Selecao rotulo="Período" className="month-picker" vazio="Selecione" value={periodoId}
-      onChange={e=>setPeriodoId(e.target.value)}
-      opcoes={periodos.map(p=>({valor:p.id,texto:rotuloPeriodo(p)}))}/></header>
+
+  const aguardando=comissao?.aguardandoOp
+
+  return <div className="page-enter pagina-socorrista">
+    <header className="cabecalho-socorrista">
+      <h1>Minha comissão</h1>
+      <Selecao rotulo="Período" className="month-picker" vazio="Selecione" value={periodoId}
+        onChange={e=>setPeriodoId(e.target.value)}
+        opcoes={periodos.map(p=>({valor:p.id,texto:rotuloPeriodo(p)}))}/>
+    </header>
+
     {erro?<div className="form-alert">{erro}</div>:null}{carregando?<Carregando/>:null}{mensagem?<div className="success-notice">{mensagem}</div>:null}
-    {prevista?<div className="success-notice"><strong>Previsto nesta competência: {moeda(prevista.comissaoPrevista)}</strong> — 20% de {moeda(prevista.valorPrevisto)} em {prevista.servicos} {prevista.servicos===1?'serviço':'serviços'} que ainda não entraram numa OP{prevista.semValor?`, sendo ${prevista.semValor} sem valor ainda`:''}. O valor final é o da OP.</div>:null}
-    {comissao?<><section className="metric-grid commission-metrics"><article className="metric"><span>Serviços pagos</span><strong>{comissao.quantidadeServicosPagos}</strong></article><article className="metric"><span>Total pago pela Porto</span><strong>{moeda(comissao.producaoPaga)}</strong></article><article className="metric"><span>Comissão 20%</span><strong>{comissao.aguardandoOp?'Aguardando OP':moeda(comissao.comissaoBruta)}</strong></article><article className="metric"><span>Descontos</span><strong>{moeda(comissao.descontos)}</strong><small>{moeda(comissao.descontosPendentes)} aguardando aprovação</small></article><article className={`metric ${comissao.liquido<0?'metric-alert':''}`}><span>Líquido</span><strong>{comissao.aguardandoOp?'Aguardando OP':moeda(comissao.liquido)}</strong></article></section>
-      <section className="commission-grid"><article className="panel"><header className="panel-title"><div><span className="eyebrow">Auditoria</span><h2>Serviços pagos</h2></div></header><div className="table-scroll"><table><thead><tr><th>OS</th><th>Especialidade</th><th>Atendimento</th><th>OP</th><th>Valor</th><th>Comissão</th></tr></thead><tbody>{comissao.servicos.map(s=><tr key={s.id}><td><strong>{s.numeroOs}</strong></td><td>{s.especialidade||'—'}</td><td>{data(s.dataAtendimento)}</td><td>{s.numeroOp}</td><td>{moeda(s.valorServico)}</td><td>{moeda(s.comissaoServico)}</td></tr>)}</tbody></table></div>{!comissao.servicos.length?<p className="empty-inline">Nenhum serviço pago neste período. A comissão está aguardando OP.</p>:null}</article>
-      <article className="panel food-panel"><header className="panel-title"><div><span className="eyebrow">Uso diário</span><h2>Alimentação</h2></div></header><form className="form-grid" onSubmit={salvar}><label className="field"><span>Data da alimentação</span><input aria-label="Data da alimentação" name="data" type="date" required/></label><CampoValor rotulo="Valor da alimentação" name="valor" required/><label className="field field-wide"><span>Observação</span><input name="observacoes" placeholder="Opcional" autoCapitalize="sentences" autoComplete="off"/></label><button className="button button-primary" disabled={salvando}>Registrar alimentação</button></form><div className="food-list">{comissao.gastos.map(g=><div key={g.id}><span><strong>{data(g.data)} · {g.descricao}</strong><small>{g.descontaDaComissao?'Desconta da comissão':g.descontaEmOutraOp?'Desconta em outra OP':'Não desconta'} · {g.aprovada?'aprovado':g.situacao.toLowerCase()}</small></span><strong>{moeda(g.valor)}</strong></div>)}</div></article></section></>:null}
+
+    {comissao?<>
+      {/* O numero que ele abriu o app para ver, antes de qualquer outra coisa. */}
+      <section className="holerite" aria-label="Resumo da comissão">
+        <p className="holerite-rotulo">{aguardando?'A receber quando a OP chegar':'A receber'}</p>
+        <strong className="holerite-valor">{aguardando?'Aguardando OP':moeda(comissao.liquido)}</strong>
+        <p className="holerite-apoio">{comissao.quantidadeServicosPagos} {comissao.quantidadeServicosPagos===1?'serviço pago':'serviços pagos'}, somando {moeda(comissao.producaoPaga)}</p>
+        <dl className="holerite-conta">
+          <div><dt>Comissão de {comissao.percentualComissao}%</dt><dd>{aguardando?'—':moeda(comissao.comissaoBruta)}</dd></div>
+          <div className={comissao.descontos?'holerite-saida':''}><dt>Descontos</dt><dd>{comissao.descontos?`− ${moeda(comissao.descontos)}`:'nenhum'}</dd></div>
+          {comissao.descontosPendentes?<div className="holerite-nota"><dt>Ainda em aprovação</dt><dd>{moeda(comissao.descontosPendentes)}</dd></div>:null}
+        </dl>
+      </section>
+
+      {/* Da competencia seguinte: producao que ainda nao virou pagamento. */}
+      {prevista?<p className="holerite-previsto"><strong>{moeda(prevista.comissaoPrevista)}</strong> se somam quando a próxima OP sair — {prevista.servicos} {prevista.servicos===1?'serviço rodado que ainda não foi pago':'serviços rodados que ainda não foram pagos'}{prevista.semValor?`, ${prevista.semValor} deles sem valor definido`:''}. O valor final é o da OP.</p>:null}
+
+      <section className="bloco-socorrista">
+        <h2>Serviços pagos</h2>
+        {comissao.servicos.length
+          ? <ul className="lista-socorrista">{comissao.servicos.map(s=><li key={s.id}>
+              <span className="linha-identidade"><strong>{s.numeroOs}</strong><small>{s.especialidade||'Sem especialidade'} · {diaEMes(s.dataAtendimento)}</small></span>
+              <span className="linha-dinheiro"><strong>{moeda(s.comissaoServico)}</strong><small>de {moeda(s.valorServico)}</small></span>
+            </li>)}</ul>
+          : <p className="empty-inline">Nenhum serviço pago neste período. A comissão está aguardando OP.</p>}
+      </section>
+
+      <section className="bloco-socorrista">
+        <h2>Gastos no seu nome</h2>
+        {comissao.gastos.length
+          ? <ul className="lista-socorrista">{comissao.gastos.map(g=><li key={g.id}>
+              <span className="linha-identidade"><strong>{g.descricao}</strong><small>{diaEMes(g.data)}{g.veiculo?` · ${g.veiculo}`:''}</small></span>
+              <span className="linha-dinheiro">
+                <strong className={g.descontaDaComissao?'valor-saida':''}>{g.descontaDaComissao?`− ${moeda(g.valor)}`:moeda(g.valor)}</strong>
+                <small>{g.descontaDaComissao?(g.aprovada?'sai da comissão':'sai se for aprovado'):g.descontaEmOutraOp?'sai em outra OP':'não sai da sua comissão'}</small>
+              </span>
+            </li>)}</ul>
+          : <p className="empty-inline">Nenhum gasto lançado no seu nome neste período.</p>}
+      </section>
+
+      <section className="bloco-socorrista">
+        <h2>Registrar alimentação</h2>
+        <p className="bloco-apoio">O administrador aprova antes de entrar na conta.</p>
+        <form className="form-grid" onSubmit={salvar}>
+          <label className="field"><span>Dia</span><input aria-label="Data da alimentação" name="data" type="date" required/></label>
+          <CampoValor rotulo="Quanto gastou" name="valor" required/>
+          <label className="field field-wide"><span>Observação</span><input name="observacoes" placeholder="Opcional" autoCapitalize="sentences" autoComplete="off"/></label>
+          <button className="button button-primary botao-alto" disabled={salvando}>{salvando?'Registrando…':'Registrar alimentação'}</button>
+        </form>
+      </section>
+    </>:null}
   </div>
 }

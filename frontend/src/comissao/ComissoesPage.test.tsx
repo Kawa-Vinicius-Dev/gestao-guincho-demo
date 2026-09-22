@@ -72,7 +72,7 @@ test('socorrista vê composição auditável, saldo negativo e registra alimenta
 
   // O campo usa a mascara de dinheiro como os demais: os digitos entram pela
   // direita, entao R$ 35,00 se digita "3500".
-  await user.type(screen.getByLabelText(/valor da alimentação/i), '3500')
+  await user.type(screen.getByLabelText(/quanto gastou/i), '3500')
   await user.type(screen.getByLabelText(/data da alimentação/i), '2026-04-20')
   await user.click(screen.getByRole('button', { name: /registrar alimentação/i }))
 
@@ -207,6 +207,9 @@ test('socorrista vê o previsto da competência antes da OP chegar', async () =>
 
   render(<MinhaComissaoPage/>)
 
-  expect(await screen.findByText(/previsto nesta competência: r\$\s*100,00/i)).toBeInTheDocument()
+  // O previsto e o que vem, nao o que esta pago: a tela diz o numero e diz de
+  // quem e a ultima palavra.
+  expect(await screen.findByText(/r\$\s*100,00/i)).toBeInTheDocument()
   expect(screen.getByText(/o valor final é o da op/i)).toBeInTheDocument()
+  expect(screen.getByText(/3 serviços rodados que ainda não foram pagos/i)).toBeInTheDocument()
 })
