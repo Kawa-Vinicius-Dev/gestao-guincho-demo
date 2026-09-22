@@ -283,7 +283,9 @@ const daVisao = tela === 'visao'
 if (tela === 'os') sessionStorage.setItem('filtro:periodo', JSON.stringify({ inicio: '2026-09-16', fim: '2026-09-30' }))
 if (daVisao) sessionStorage.setItem('filtro:periodo', JSON.stringify({ inicio: '2026-03-30', fim: '2026-04-29', op: '1' }))
 
-const Pagina = tela === 'despesas'
+const Pagina = tela === 'senha'
+  ? (await import('./configuracoes/TrocarSenhaPage')).default
+  : tela === 'despesas'
   ? (await import('./financeiro/DespesasPage')).default
   : tela === 'comissao'
   ? (await import('./comissao/MinhaComissaoPage')).default
@@ -301,7 +303,7 @@ const Pagina = tela === 'despesas'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[`/${location.search}`]}>
       <AuthProvider>
         <main className="content">
           <Pagina/>

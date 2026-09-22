@@ -18,6 +18,11 @@ export default defineConfig({
     },
     setupFiles: './src/test/setup.ts',
     css: true,
-    testTimeout: 10_000,
+    // Os testes de integracao (login, navegacao, modal, salvar) levam ~2s
+    // sozinhos e passam de 10s quando 59 arquivos disputam a maquina — falhavam
+    // por tempo, a cada rodada num arquivo diferente, sem erro nenhum.
+    // Folga de ~10x sobre o tempo real: teste travado ainda aborta, so demora
+    // mais para desistir.
+    testTimeout: 20_000,
   },
 })

@@ -11,7 +11,7 @@ beforeEach(() => {
 })
 
 test('administrador começa com a base vazia e cria o primeiro lançamento', async () => {
-  const user = userEvent.setup()
+  const user = userEvent.setup({ delay: null })
   render(<App />)
 
   expect(await screen.findByText(/sistema de gestão · ANAIV/i)).toBeInTheDocument()
@@ -51,7 +51,7 @@ test('administrador começa com a base vazia e cria o primeiro lançamento', asy
 })
 
 test('socorrista vê apenas os lançamentos operacionais permitidos', async () => {
-  const user = userEvent.setup()
+  const user = userEvent.setup({ delay: null })
   render(<App />)
 
   await user.clear(await screen.findByLabelText(/e-mail/i))
@@ -75,7 +75,7 @@ test('mede a transição entre rotas no navegador', async () => {
   const medida = vi.spyOn(performance, 'measure')
   const marcacao = vi.spyOn(performance, 'mark')
   try {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<App />)
 
     await user.clear(await screen.findByLabelText(/e-mail/i))

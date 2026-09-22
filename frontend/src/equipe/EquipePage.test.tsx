@@ -26,7 +26,7 @@ test('edita um socorrista já cadastrado', async () => {
     enviado = await request.json() as Record<string, unknown>
     return HttpResponse.json({ ...socorrista, ...enviado, id: 4 })
   }))
-  const user = userEvent.setup()
+  const user = userEvent.setup({ delay: null })
   comRota(<EquipePage />)
 
   await user.click(await screen.findByRole('button', { name: /editar/i }))
@@ -42,7 +42,7 @@ test('edita um socorrista já cadastrado', async () => {
 test('desativa sem sumir com o socorrista da tela', async () => {
   comEquipe([socorrista])
   servidor.use(http.patch('/api/motoristas/4/desativar', () => HttpResponse.json({ ...socorrista, ativo: false })))
-  const user = userEvent.setup()
+  const user = userEvent.setup({ delay: null })
   comRota(<EquipePage />)
 
   await user.click(await screen.findByRole('button', { name: /desativar/i }));await confirmarNaJanela()
@@ -55,7 +55,7 @@ test('desativa sem sumir com o socorrista da tela', async () => {
 test('erro do backend ao desativar aparece na tela', async () => {
   comEquipe([socorrista])
   servidor.use(http.patch('/api/motoristas/4/desativar', () => HttpResponse.json({ detalhe: 'Socorrista não encontrado.' }, { status: 404 })))
-  const user = userEvent.setup()
+  const user = userEvent.setup({ delay: null })
   comRota(<EquipePage />)
 
   await user.click(await screen.findByRole('button', { name: /desativar/i }));await confirmarNaJanela()
@@ -70,7 +70,7 @@ test('cria acesso para o socorrista e mostra a senha provisória uma vez', async
     enviado = await request.json() as Record<string, unknown>
     return HttpResponse.json({ usuarioId: 12, nome: 'Anderson Ribeiro', email: 'anderson@jms.local', senhaProvisoria: 'kjhs-2mp4-7xqt' }, { status: 201 })
   }))
-  const user = userEvent.setup()
+  const user = userEvent.setup({ delay: null })
   comRota(<EquipePage />)
 
   await user.click(await screen.findByRole('button', { name: /criar acesso/i }))

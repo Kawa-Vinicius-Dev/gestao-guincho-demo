@@ -273,7 +273,9 @@ export default function PortoDashboardPage() {
         <Painel etiqueta="Por viatura" titulo="Faturamento por viatura">
           <FaturamentoPorGrupo descricao="Faturamento por viatura no período"
             vazio="Nenhum serviço neste período."
-            linhas={dados.faturamentoPorViatura.map(l => ({ ...detalhar(l), ...(l.semVinculo ? {} : { link: `/veiculos?sigla=${encodeURIComponent(l.chave)}` }) }))}/>
+            linhas={dados.faturamentoPorViatura.map(l => ({ ...detalhar(l),
+              link: l.semVinculo ? '/porto/ordens-servico?semViatura=1' : `/veiculos?sigla=${encodeURIComponent(l.chave)}`,
+              ...(l.semVinculo ? { ajudaDoLink: 'Ver as OS que estão sem viatura' } : {}) }))}/>
         </Painel>
       </div>
 

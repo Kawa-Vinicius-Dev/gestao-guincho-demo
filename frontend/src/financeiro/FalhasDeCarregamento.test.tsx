@@ -32,7 +32,7 @@ test('falha ao aprovar uma despesa aparece na tela', async () => {
     }])),
     http.patch('/api/despesas/7/aprovar', () => HttpResponse.json({ detalhe: 'Despesa já aprovada.' }, { status: 400 })),
   )
-  const user = userEvent.setup()
+  const user = userEvent.setup({ delay: null })
   abrir('/despesas')
 
   await user.click(await screen.findByRole('button', { name: /aprovar/i }));await confirmarNaJanela()

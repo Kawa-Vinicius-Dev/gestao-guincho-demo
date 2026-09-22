@@ -89,7 +89,7 @@ test('despesa se registra só com valor e categoria', async () => {
     return HttpResponse.json({ ...diesel, id: 99, descricao: 'Combustível', status: 'PAGO' })
   }))
   abrir()
-  const user = userEvent.setup()
+  const user = userEvent.setup({ delay: null })
 
   await user.click(await screen.findByRole('button', { name: /^registrar despesa$/i }))
   const janela = screen.getByRole('dialog', { name: /registrar despesa/i })
@@ -103,7 +103,7 @@ test('despesa se registra só com valor e categoria', async () => {
 // So existe de quem descontar quando ha socorrista: a marca aparece com ele.
 test('descontar da comissão só aparece com socorrista escolhido', async () => {
   abrir()
-  const user = userEvent.setup()
+  const user = userEvent.setup({ delay: null })
 
   await user.click(await screen.findByRole('button', { name: /^registrar despesa$/i }))
   const janela = screen.getByRole('dialog', { name: /registrar despesa/i })

@@ -24,6 +24,57 @@ jobs:
       - name: Rodar testes (perfil test, H2 em memoria)
         run: chmod +x mvnw && ./mvnw -B test
 
+  banco:
+    # As ~200 assercoes de supabase/tests rodavam so na mao, num Postgres local.
+    # Migration que mexe em dinheiro entrava sem ninguem conferir: aqui elas
+    # passam a rodar em toda PR, sobre as migrations aplicadas do zero.
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    defaults:
+      run:
+        working-directory: supabase
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rodar as suites do esquema
+        env:
+          PGPASSWORD: postgres
+          PSQL: psql -h localhost -U postgres -v ON_ERROR_STOP=1 -q
+        run: |
+          set -euo pipefail
+          falhou=0
+          for suite in tests/[0-9]*.sql; do
+            nome=$(basename "$suite" .sql)
+            # 00 nao e suite: e o ambiente que o Supabase da pronto.
+            if [ "$nome" = "00_ambiente_supabase" ]; then continue; fi
+            # Cada suite quer um banco recem-criado: as fixtures usam ids fixos.
+            banco="teste_${nome}"
+            echo "::group::$nome"
+            $PSQL -d postgres -c "create database \"$banco\"" > /dev/null
+            $PSQL -d "$banco" -f tests/00_ambiente_supabase.sql > /dev/null
+            for m in migrations/*.sql; do
+              $PSQL -d "$banco" -f "$m" > /dev/null
+            done
+            if $PSQL -d "$banco" -f "$suite"; then
+              echo "OK   $nome"
+            else
+              echo "FALHOU $nome"
+              falhou=1
+            fi
+            echo "::endgroup::"
+          done
+          exit $falhou
+
   frontend:
     runs-on: ubuntu-latest
     defaults:

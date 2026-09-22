@@ -9,7 +9,7 @@ import { servidor } from '../test/servidor'
 test('cria OP processada sem marcar como recebida',async()=>{
   let payload:Record<string,unknown>={},criada:Record<string,unknown>|null=null
   servidor.use(http.get('/api/porto/ordens-pagamento',()=>HttpResponse.json(criada?[criada]:[])),http.post('/api/porto/ordens-pagamento',async({request})=>{payload=await request.json() as Record<string,unknown>;criada={id:4,numero:payload.numero,valorTotal:payload.valorInformado,dataPagamentoProgramada:payload.dataPrevista,situacao:'A_CONFIRMAR',statusPorto:'PROCESSADO',quantidadeOrdensServico:0,valorOrdensServico:0,divergencia:payload.valorInformado,statusConciliacao:'SEM_COMPOSICAO'};return HttpResponse.json(criada,{status:201})}))
-  const user=userEvent.setup();render(<PortoOrdensPagamentoPage/>);await screen.findByText('Nenhuma OP');await user.click(screen.getByRole('button',{name:/nova ordem de pagamento/i}));const dialogo=screen.getByRole('dialog')
+  const user=userEvent.setup({ delay: null });render(<PortoOrdensPagamentoPage/>);await screen.findByText('Nenhuma OP');await user.click(screen.getByRole('button',{name:/nova ordem de pagamento/i}));const dialogo=screen.getByRole('dialog')
   await user.type(within(dialogo).getByLabelText(/número da op/i),'OP-MANUAL-4');await user.type(within(dialogo).getByLabelText(/data prevista/i),'2026-09-16');await user.type(within(dialogo).getByLabelText(/valor informado/i),'48000');await user.selectOptions(within(dialogo).getByLabelText(/status porto/i),'PROCESSADO');await user.selectOptions(within(dialogo).getByLabelText(/situação financeira/i),'A_CONFIRMAR');await user.click(within(dialogo).getByRole('button',{name:/salvar ordem/i}))
   expect(payload.pagamentoConfirmado).toBe(false);expect(await screen.findByText('OP-MANUAL-4')).toBeInTheDocument()
   // A coluna de situacao saiu junto com o passo de confirmar recebimento: toda
@@ -25,7 +25,7 @@ test('edita uma OP manual e oferece os relatórios individuais',async()=>{
     http.get('/api/porto/ordens-pagamento/41',()=>HttpResponse.json({ordemPagamento:op,ordensServico:[],justificativas:[],historico:[]})),
     http.put('/api/porto/ordens-pagamento/41',async({request})=>{payload=await request.json() as Record<string,unknown>;return HttpResponse.json({...op,numero:payload.numero,valorTotal:payload.valorInformado})}),
   )
-  const user=userEvent.setup();render(<PortoOrdensPagamentoPage/>);await user.click(await screen.findByRole('button',{name:'OP-EDIT-41'}))
+  const user=userEvent.setup({ delay: null });render(<PortoOrdensPagamentoPage/>);await user.click(await screen.findByRole('button',{name:'OP-EDIT-41'}))
   expect(await screen.findByRole('button',{name:/baixar excel da op/i})).toBeInTheDocument();expect(screen.getByRole('button',{name:/baixar pdf da op/i})).toBeInTheDocument()
   await user.click(screen.getByRole('button',{name:/editar op/i}));const dialogo=screen.getByRole('dialog')
   const valor=within(dialogo).getByLabelText(/valor informado/i);await user.clear(valor);await user.type(valor,'82500')
@@ -44,7 +44,7 @@ test('resume e filtra OPs recalculando quantidade e valores',async()=>{
     http.get('/api/porto/ordens-pagamento',({request})=>{numeroFiltrado=new URL(request.url).searchParams.get('numero')??'';return HttpResponse.json([{id:71,numero:'OP-701',valorTotal:500,dataPagamentoProgramada:'2026-08-15',situacao:'PROGRAMADO',quantidadeOrdensServico:2,valorOrdensServico:450,divergencia:50,statusConciliacao:'VALOR_ABAIXO'}])}),
     http.get('/api/porto/ordens-pagamento/resumo',()=>HttpResponse.json({quantidadeTotalOps:1,valorTotalPrevisto:500,quantidadeSemComposicao:0,valorSemComposicao:0,quantidadeConciliadas:0,valorConciliadas:0,quantidadeValorAbaixo:1,diferencaTotalAbaixo:50,quantidadeValorAcima:0,diferencaTotalAcima:0,quantidadeComDivergencia:1,valorTotalDivergencias:50,quantidadePagamentoProgramado:1,valorProgramado:500,quantidadeRecebidas:0,valorRecebido:0,quantidadeAguardandoRecebimento:1,valorAguardandoRecebimento:500,quantidadeVencidasNaoRecebidas:0,valorVencidoNaoRecebido:0,valorMedioPorOp:500,quantidadeOrdensServico:2})),
   )
-  const user=userEvent.setup();render(<PortoOrdensPagamentoPage/>);expect(await screen.findByText('OP-701')).toBeInTheDocument()
+  const user=userEvent.setup({ delay: null });render(<PortoOrdensPagamentoPage/>);expect(await screen.findByText('OP-701')).toBeInTheDocument()
   expect(screen.getByText('Total de OPs')).toBeInTheDocument();expect(screen.getByText('Valor médio por OP')).toBeInTheDocument()
   expect(screen.getByRole('columnheader',{name:/soma das os/i})).toBeInTheDocument()
   await user.type(screen.getByLabelText(/número da op/i),'OP-701');await user.click(screen.getByRole('button',{name:/aplicar filtros/i}))
@@ -61,14 +61,14 @@ test('solicita Excel e PDF com os filtros ativos',async()=>{
     http.get('/api/porto/relatorios/excel',()=>{excel++;return new HttpResponse(new Uint8Array([1]),{headers:{'Content-Type':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}})}),
     http.get('/api/porto/relatorios/pdf',()=>{pdf++;return new HttpResponse(new Uint8Array([1]),{headers:{'Content-Type':'application/pdf'}})}),
   )
-  const user=userEvent.setup();render(<PortoOrdensPagamentoPage/>);await screen.findByText('Nenhuma OP')
+  const user=userEvent.setup({ delay: null });render(<PortoOrdensPagamentoPage/>);await screen.findByText('Nenhuma OP')
   await user.click(screen.getByRole('button',{name:/exportar excel/i}));await user.click(screen.getByRole('button',{name:/exportar pdf/i}))
   expect(excel).toBe(1);expect(pdf).toBe(1);clique.mockRestore()
 })
 
 test('mostra erro quando a exportação falha',async()=>{
   servidor.use(http.get('/api/porto/ordens-pagamento',()=>HttpResponse.json([])),http.get('/api/porto/relatorios/excel',()=>new HttpResponse(null,{status:500})))
-  const user=userEvent.setup();render(<PortoOrdensPagamentoPage/>);await screen.findByText('Nenhuma OP');await user.click(screen.getByRole('button',{name:/exportar excel/i}))
+  const user=userEvent.setup({ delay: null });render(<PortoOrdensPagamentoPage/>);await screen.findByText('Nenhuma OP');await user.click(screen.getByRole('button',{name:/exportar excel/i}))
   expect(await screen.findByText(/não foi possível exportar o relatório Porto/i)).toBeInTheDocument()
 })
 
@@ -80,7 +80,7 @@ test('abre a composição da OP e registra justificativa',async()=>{
     http.get('/api/porto/ordens-pagamento/91',()=>HttpResponse.json({ordemPagamento:op,ordensServico:[{id:92,numero:'OS-DET-92',valorTotal:450,especialidade:'PANE',dataAtendimento:'2026-08-01',statusOperacional:'NORMAL',statusFinanceiro:'PAGAMENTO_PROGRAMADO'}],justificativas:justificou?[{id:1,motivo:'DESCONTO',observacao:'Justificativa sintética',usuario:'Administrador',criadoEm:'2026-08-01T10:00:00Z'}]:[]})),
     http.post('/api/porto/ordens-pagamento/91/justificativas',()=>{justificou=true;return HttpResponse.json({id:1,motivo:'DESCONTO',observacao:'Justificativa sintética',usuario:'Administrador',criadoEm:'2026-08-01T10:00:00Z'},{status:201})}),
   )
-  const user=userEvent.setup();render(<PortoOrdensPagamentoPage/>);await user.click(await screen.findByRole('button',{name:'OP-DET-91'}));expect(await screen.findByText('OS-DET-92')).toBeInTheDocument()
+  const user=userEvent.setup({ delay: null });render(<PortoOrdensPagamentoPage/>);await user.click(await screen.findByRole('button',{name:'OP-DET-91'}));expect(await screen.findByText('OS-DET-92')).toBeInTheDocument()
   await user.selectOptions(screen.getByLabelText(/motivo/i),'DESCONTO');await user.type(screen.getByLabelText(/observação/i),'Justificativa sintética');await user.click(screen.getByRole('button',{name:/registrar justificativa/i}));expect(justificou).toBe(true)
 })
 

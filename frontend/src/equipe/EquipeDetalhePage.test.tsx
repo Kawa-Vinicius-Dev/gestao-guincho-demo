@@ -61,7 +61,7 @@ function configurarAdmin(){
 test('administrador abre o socorrista pela Equipe e consulta composição oficial e período anterior',async()=>{
   const consultaMotoristas=configurarAdmin()
   const App=await abrirApp()
-  const user=userEvent.setup()
+  const user=userEvent.setup({ delay: null })
   render(<App/>)
 
   await consultaMotoristas
@@ -120,7 +120,7 @@ test('socorrista comum não acessa a ficha administrativa nem chama o endpoint d
 test('as despesas no nome do socorrista que não descontam aparecem à parte',async()=>{
   const consultaMotoristas=configurarAdmin()
   const App=await abrirApp()
-  const user=userEvent.setup()
+  const user=userEvent.setup({ delay: null })
   render(<App/>)
   await consultaMotoristas
   const cartao=(await screen.findByText('Ana Motorista')).closest('article')
@@ -140,7 +140,7 @@ test('as despesas no nome do socorrista que não descontam aparecem à parte',as
 test('mostrar as outras despesas não mexe no líquido da comissão',async()=>{
   const consultaMotoristas=configurarAdmin()
   const App=await abrirApp()
-  const user=userEvent.setup()
+  const user=userEvent.setup({ delay: null })
   render(<App/>)
   await consultaMotoristas
   const cartao=(await screen.findByText('Ana Motorista')).closest('article')

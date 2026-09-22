@@ -51,7 +51,7 @@ function servidorBase(aoListar: (corpo: Record<string, unknown>) => void = () =>
 test('filtros da tela vão para a consulta no banco, com o período global', async () => {
   const pedidos: Record<string, unknown>[] = []
   servidorBase(corpo => pedidos.push(corpo))
-  const user = userEvent.setup()
+  const user = userEvent.setup({ delay: null })
   await abrir()
 
   expect(await screen.findByText('01/4312215-26')).toBeInTheDocument()
@@ -70,7 +70,7 @@ test('corrigir a OS do Auxiliar troca socorrista e viatura', async () => {
     correcao = await request.json() as Record<string, unknown>
     return new HttpResponse(null, { status: 204 })
   }))
-  const user = userEvent.setup()
+  const user = userEvent.setup({ delay: null })
   await abrir()
 
   await user.click(await screen.findByRole('button', { name: /corrigir os 01\/4312215-26/i }))
@@ -88,7 +88,7 @@ test('socorrista desativado não é oferecido para corrigir a OS', async () => {
   servidor.use(http.get(`${SUPA}/rest/v1/motoristas`, () => HttpResponse.json([
     { id: 9, nome: 'ANDERSON JORGE RIBEIRO', ativo: true }, { id: 5, nome: 'QUEM SAIU', ativo: false },
   ])))
-  const user = userEvent.setup()
+  const user = userEvent.setup({ delay: null })
   await abrir()
 
   await user.click(await screen.findByRole('button', { name: /corrigir os 01\/4312215-26/i }))
@@ -109,7 +109,7 @@ test('define a viatura das OS filtradas em lote, só depois de confirmar', async
       return HttpResponse.json(12)
     }),
   )
-  const user = userEvent.setup()
+  const user = userEvent.setup({ delay: null })
   await abrir()
 
   await user.click(await screen.findByLabelText(/só sem viatura/i))
@@ -140,7 +140,7 @@ test('abre filtrada pela OS do link, procurando fora do período', async () => {
 test('filtra por competência em vez da data do serviço', async () => {
   const pedidos: Record<string, unknown>[] = []
   servidorBase(corpo => pedidos.push(corpo))
-  const user = userEvent.setup()
+  const user = userEvent.setup({ delay: null })
   await abrir()
 
   await screen.findByText('01/4312215-26')
@@ -164,7 +164,7 @@ test('informa o valor da Porto numa OS sem OP, depois de confirmar', async () =>
       return new HttpResponse(null, { status: 204 })
     }),
   )
-  const user = userEvent.setup()
+  const user = userEvent.setup({ delay: null })
   await abrir()
 
   await user.click(await screen.findByRole('button', { name: /informar valor da os 01\/4312215-26/i }))
@@ -202,4 +202,17 @@ test('card do painel abre a lista já na situação e na competência', async ()
 
   await screen.findByText('01/4312215-26')
   expect(pedidos[0]).toMatchObject({ p_situacao: 'AGUARDANDO_PROXIMA_OP', p_por_competencia: true })
+})
+
+// O card "Sem viatura" do painel Porto abre esta tela por link. Se o parametro
+// parar de ser lido, o clique passa a mostrar todas as OS do periodo e ninguem
+// percebe: o numero continua na tela do painel, so a lista e que nao bate.
+test('link do painel abre a tela já filtrada só nas OS sem viatura', async () => {
+  const pedidos: Record<string, unknown>[] = []
+  servidorBase(corpo => pedidos.push(corpo))
+
+  await abrir('/porto/ordens-servico?semViatura=1')
+
+  expect(await screen.findByLabelText(/só sem viatura/i)).toBeChecked()
+  expect(pedidos.at(-1)).toEqual(expect.objectContaining({ p_sem_viatura: true }))
 })

@@ -60,7 +60,7 @@ test('cada item da fila diz de qual socorrista veio', async () => {
 
 test('o km morto acompanha o km produtivo que o administrador reconhece', async () => {
   servidor.use(http.post(`${SUPA}/rest/v1/rpc/fila_de_aprovacoes`, () => HttpResponse.json(fila)))
-  const user = userEvent.setup()
+  const user = userEvent.setup({ delay: null })
   await abrir()
 
   // Sem km produtivo, o turno inteiro e km morto: 182 km a R$ 1,85.
@@ -74,7 +74,7 @@ test('o km morto acompanha o km produtivo que o administrador reconhece', async 
 
 test('aprovar o turno avisa que o km entra no sistema', async () => {
   servidor.use(http.post(`${SUPA}/rest/v1/rpc/fila_de_aprovacoes`, () => HttpResponse.json(fila)))
-  const user = userEvent.setup()
+  const user = userEvent.setup({ delay: null })
   await abrir()
 
   const cartao = (await screen.findAllByRole('article'))[0]
@@ -88,7 +88,7 @@ test('aprovar o turno avisa que o km entra no sistema', async () => {
 
 test('devolver exige o motivo, que e o que o socorrista vai ler', async () => {
   servidor.use(http.post(`${SUPA}/rest/v1/rpc/fila_de_aprovacoes`, () => HttpResponse.json(fila)))
-  const user = userEvent.setup()
+  const user = userEvent.setup({ delay: null })
   await abrir()
 
   const cartao = (await screen.findAllByRole('article'))[0]

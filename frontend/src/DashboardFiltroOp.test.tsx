@@ -30,7 +30,7 @@ async function abrirVisao() {
 // O mesmo atalho do painel Porto: a OP ja sabe o proprio periodo.
 test('escolher a OP preenche as datas com o período dela', async () => {
   const Visao = await abrirVisao()
-  const user = userEvent.setup()
+  const user = userEvent.setup({ delay: null })
   render(<MemoryRouter><Visao/></MemoryRouter>)
 
   const op = await screen.findByLabelText('Período')
@@ -43,7 +43,7 @@ test('escolher a OP preenche as datas com o período dela', async () => {
 
 test('mexer numa data volta para período personalizado', async () => {
   const Visao = await abrirVisao()
-  const user = userEvent.setup()
+  const user = userEvent.setup({ delay: null })
   render(<MemoryRouter><Visao/></MemoryRouter>)
 
   const op = await screen.findByLabelText('Período')

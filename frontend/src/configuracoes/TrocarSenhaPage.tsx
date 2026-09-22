@@ -7,8 +7,13 @@ export default function TrocarSenhaPage(){
   const {usuario,logout}=useAuth()
   const [erro,setErro]=useState(''),[trocada,setTrocada]=useState(false),[enviando,setEnviando]=useState(false)
   async function trocar(e:FormEvent<HTMLFormElement>){
-    e.preventDefault();const f=new FormData(e.currentTarget);setErro('');setEnviando(true)
-    try{await trocarSenha(String(f.get('senhaAtual')),String(f.get('novaSenha')));setTrocada(true)}
+    e.preventDefault();const f=new FormData(e.currentTarget);setErro('')
+    const nova=String(f.get('novaSenha')),repetida=String(f.get('repetirSenha'))
+    // A senha nova ninguem ve enquanto digita, e errar aqui tranca a pessoa para
+    // fora: ela sairia desta tela sem saber que senha acabou de gravar.
+    if(nova!==repetida){setErro('As duas senhas novas não são iguais. Digite de novo.');return}
+    setEnviando(true)
+    try{await trocarSenha(String(f.get('senhaAtual')),nova);setTrocada(true)}
     catch(x){setErro((x as Error).message)}finally{setEnviando(false)}
   }
   return <main className="login-page">
@@ -30,8 +35,9 @@ export default function TrocarSenhaPage(){
               ? 'A senha que você recebeu é temporária. Escolha a sua para liberar o sistema.'
               : 'Informe a senha atual e a nova senha.'}</p>
             {erro?<div className="form-alert" role="alert">{erro}</div>:null}
-            <label className="field"><span>Senha atual</span><input name="senhaAtual" type="password" autoComplete="current-password" required/></label>
-            <label className="field"><span>Nova senha</span><input name="novaSenha" type="password" autoComplete="new-password" minLength={8} required/></label>
+            <label className="field"><span>{usuario?.senhaProvisoria?'Senha provisória que você recebeu':'Senha atual'}</span><input name="senhaAtual" type="password" autoComplete="current-password" required/></label>
+            <label className="field"><span>Nova senha</span><input name="novaSenha" type="password" autoComplete="new-password" minLength={8} required onInput={()=>setErro('')}/><small>Pelo menos 8 caracteres.</small></label>
+            <label className="field"><span>Repita a nova senha</span><input name="repetirSenha" type="password" autoComplete="new-password" minLength={8} required onInput={()=>setErro('')}/></label>
             <button className="button button-primary button-block" disabled={enviando}>{enviando?'Salvando…':'Salvar nova senha'}</button>
           </form>}
     </section>
