@@ -35,6 +35,32 @@ export async function listarPeriodosComissao(): Promise<PeriodoPorto[]> {
   return agruparPorPeriodo(await listarPeriodosDeOp())
 }
 
+/**
+ * Os periodos do proprio socorrista.
+ *
+ * `listarPeriodosComissao` le as OPs, e OP e tabela de administrador: para o
+ * socorrista ela vinha vazia, e "Minha comissao" ficava parada em "Selecione".
+ * A RPC devolve so as OPs em que ele tem servico, com numero e periodo, sem
+ * valor nenhum.
+ */
+export async function listarMeusPeriodosComissao(): Promise<PeriodoPorto[]> {
+  const linhas = ou(
+    await supabase().rpc('meus_periodos_de_op'),
+    'Não foi possível carregar os seus períodos.',
+  ) as {
+    id: number; numero: string; periodo_inicio: string | null; periodo_fim: string | null
+    data_pagamento_programada: string | null
+  }[]
+  return agruparPorPeriodo((linhas ?? []).map(l => ({
+    id: l.id, numero: l.numero, valorTotal: 0, situacao: 'RECEBIDO',
+    quantidadeOrdensServico: 0, valorOrdensServico: 0, divergencia: 0,
+    statusConciliacao: 'CONCILIADA',
+    periodoInicio: l.periodo_inicio ?? undefined,
+    periodoFim: l.periodo_fim ?? undefined,
+    dataPagamentoProgramada: l.data_pagamento_programada ?? undefined,
+  })))
+}
+
 export async function lerComissaoDaOp(
   ordensPagamento: number[], motoristaId?: number,
 ): Promise<Comissao> {

@@ -40,6 +40,16 @@ export function FormularioOp({ edicao, aoEnviar, aoFechar }: Props) {
         opcoes={STATUS_PORTO}/>
       <Selecao rotulo="Situação financeira" name="situacaoFinanceira" required
         defaultValue={edicao?.situacao} opcoes={SITUACAO_FINANCEIRA}/>
+      {/* A quinzena como a Porto declara na tela da OP. Nao da para deduzir: a OP
+          traz servicos atrasados de outros meses, e as datas nao seguem formula
+          (01/08 a 14/08, 15/08 a 28/08, 01/09 a 16/09). Em branco, o periodo
+          continua sendo calculado pelas OS. */}
+      <Campo rotulo="Data início (Porto)" ajuda="Como aparece na OP, no site da Porto.">
+        <input name="quinzenaInicio" type="date" defaultValue={edicao?.quinzenaInicio}/>
+      </Campo>
+      <Campo rotulo="Data entrega (Porto)">
+        <input name="quinzenaEntrega" type="date" defaultValue={edicao?.quinzenaEntrega}/>
+      </Campo>
       <Campo rotulo="Observação" className="field-wide">
         <textarea name="observacao" defaultValue={edicao?.observacao}/>
       </Campo>

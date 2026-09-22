@@ -109,7 +109,7 @@ test.each([
   ['Despesas', '/despesas'],
   ['Quilometragem', '/quilometragem'],
   ['Configurações', '/configuracoes'],
-  ['Minha comissão', '/minha-comissao'],
+  ['Meus serviços', '/minha-comissao'],
 ])('%s (%s) nao faz nenhuma chamada ao Render', async (_n, rota) => {
   const chamadas = await abrir(rota)
   const caminhos = [...new Set(chamadas.map(c => c.split(' ')[1]))].sort()

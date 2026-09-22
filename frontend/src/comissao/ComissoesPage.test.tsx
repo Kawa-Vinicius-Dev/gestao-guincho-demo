@@ -51,38 +51,28 @@ const detalhe = {
 const listaDeOps = () =>
   http.get(`${URL_SUPABASE}/rest/v1/porto_ops_conciliadas`, () => HttpResponse.json(ops))
 
-test('socorrista vê composição auditável, saldo negativo e registra alimentação própria', async () => {
-  let corpo: Record<string, unknown> = {}
+/** O socorrista nao le a view de OPs: a lista dele vem por RPC, sem valor. */
+const meusPeriodos = (lista = ops) =>
+  http.post(`${URL_SUPABASE}/rest/v1/rpc/meus_periodos_de_op`, () => HttpResponse.json(
+    lista.map(o => ({ id: o.id, numero: o.numero, periodo_inicio: o.periodo_inicio,
+      periodo_fim: o.periodo_fim, data_pagamento_programada: null,
+      quinzena_inicio: null, quinzena_entrega: null }))))
+
+test('socorrista vê só a quantidade e os serviços feitos, sem dinheiro', async () => {
   servidor.use(
-    listaDeOps(),
+    meusPeriodos(),
     http.post(`${URL_SUPABASE}/rest/v1/rpc/comissao_das_ops`, () => HttpResponse.json(detalhe)),
-    http.post(`${URL_SUPABASE}/rest/v1/rpc/registrar_alimentacao`, async ({ request }) => {
-      corpo = await request.json() as Record<string, unknown>
-      return HttpResponse.json({ id: 10, motorista_id: 4, data_lancamento: '2026-04-20',
-        valor: 35, status: 'PENDENTE', aprovada: false })
-    }),
   )
   const MinhaComissaoPage = await abrirPagina(() => import('./MinhaComissaoPage'))
-  const user = userEvent.setup()
 
   render(<MinhaComissaoPage/>)
 
-  expect(await screen.findByText('-R$ 50,00')).toBeInTheDocument()
-  expect(screen.getByText('OS-1')).toBeInTheDocument()
-
-  // O campo usa a mascara de dinheiro como os demais: os digitos entram pela
-  // direita, entao R$ 35,00 se digita "3500".
-  await user.type(screen.getByLabelText(/quanto gastou/i), '3500')
-  await user.type(screen.getByLabelText(/data da alimentação/i), '2026-04-20')
-  await user.click(screen.getByRole('button', { name: /registrar alimentação/i }))
-
-  expect(corpo).toEqual(expect.objectContaining({ p_valor: 35, p_data: '2026-04-20' }))
-  // De quem e a alimentacao sai da sessao, nunca do formulario.
-  expect(JSON.stringify(corpo)).not.toContain('motorista')
-  // Registrou: aviso de sucesso, sem erro, e o formulario limpo para o proximo gasto.
-  expect(await screen.findByText(/alimentação registrada/i)).toBeInTheDocument()
-  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
-  expect(screen.getByLabelText(/data da alimentação/i)).toHaveValue('')
+  expect(await screen.findByRole('heading', { name: 'Meus serviços' })).toBeInTheDocument()
+  expect(await screen.findByText('OS-1')).toBeInTheDocument()
+  expect(screen.getByRole('heading', { name: '1 serviço feito' })).toBeInTheDocument()
+  // Kawa, 18/09/2026: nenhum valor em dinheiro na tela do socorrista.
+  expect(screen.queryByText(/R\$/)).not.toBeInTheDocument()
+  expect(screen.queryByText(/alimentação/i)).not.toBeInTheDocument()
 })
 
 test('administrador filtra resumo e abre o detalhamento que forma a comissão', async () => {
@@ -194,22 +184,25 @@ test('comissão prevista da competência aparece separada da confirmada', async 
   expect(corpo).toEqual(expect.objectContaining({ p_motorista_id: null }))
 })
 
-test('socorrista vê o previsto da competência antes da OP chegar', async () => {
+test('socorrista vê só a OP mais recente, sem escolher período', async () => {
+  let pedidas: unknown = null
   servidor.use(
-    listaDeOps(),
-    http.post(`${URL_SUPABASE}/rest/v1/rpc/comissao_das_ops`, () => HttpResponse.json(detalhe)),
-    http.post(`${URL_SUPABASE}/rest/v1/rpc/porto_comissao_prevista`, () => HttpResponse.json([
-      { motorista_id: 4, socorrista: 'Ana Motorista', servicos: 3, sem_valor: 1,
-        valor_previsto: 500, comissao_prevista: 100 },
-    ])),
+    meusPeriodos([
+      ops[0],
+      { ...ops[0], id: 9, numero: '06400330', periodo_inicio: '2026-04-30', periodo_fim: '2026-05-28' },
+    ]),
+    http.post(`${URL_SUPABASE}/rest/v1/rpc/comissao_das_ops`, async ({ request }) => {
+      pedidas = (await request.json() as { p_op_ids: number[] }).p_op_ids
+      return HttpResponse.json(detalhe)
+    }),
   )
   const MinhaComissaoPage = await abrirPagina(() => import('./MinhaComissaoPage'))
 
   render(<MinhaComissaoPage/>)
 
-  // O previsto e o que vem, nao o que esta pago: a tela diz o numero e diz de
-  // quem e a ultima palavra.
-  expect(await screen.findByText(/r\$\s*100,00/i)).toBeInTheDocument()
-  expect(screen.getByText(/o valor final é o da op/i)).toBeInTheDocument()
-  expect(screen.getByText(/3 serviços rodados que ainda não foram pagos/i)).toBeInTheDocument()
+  expect(await screen.findByText('OS-1')).toBeInTheDocument()
+  // A mais recente (28/05), e nenhuma outra: sem seletor, sem "Selecione".
+  expect(pedidas).toEqual([9])
+  expect(screen.getByText(/30\/04\/2026 a 28\/05\/2026 · OP 06400330/)).toBeInTheDocument()
+  expect(screen.queryByLabelText('Período')).not.toBeInTheDocument()
 })

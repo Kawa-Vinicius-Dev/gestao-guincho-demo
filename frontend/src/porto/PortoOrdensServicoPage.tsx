@@ -37,8 +37,14 @@ const SITUACOES = [
 ]
 
 
-const competenciaDe = (os: LinhaOs) => (os.competenciaInicio && os.competenciaFim
-  ? `${data(os.competenciaInicio)} a ${data(os.competenciaFim)}` : '—')
+const competenciaDe = (os: LinhaOs) => {
+  if (!os.competenciaInicio || !os.competenciaFim) return '—'
+  const ini = data(os.competenciaInicio)
+  const fim = data(os.competenciaFim)
+  const anoIni = ini.slice(6)
+  const anoFim = fim.slice(6)
+  return anoIni === anoFim ? `${ini.slice(0, 5)} a ${fim}` : `${ini} a ${fim}`
+}
 
 const siglaDe = (v: Veiculo) => (v.siglaPorto || v.identificacao).toUpperCase()
 
@@ -282,24 +288,24 @@ export default function PortoOrdensServicoPage() {
       {carregando && !dados ? <Carregando/> : null}
       {dados && !dados.itens.length
         ? <p className="empty-inline">{temFiltro ? 'Nenhuma OS com esses filtros neste período.' : 'Nenhuma OS neste período. Importe uma OP ou o painel diário.'}</p>
-        : dados ? <div className="table-scroll tabela-densa"><table aria-label="Ordens de serviço">
+        : dados ? <div className="table-scroll"><table className="tabela-os" aria-label="Ordens de serviço">
           <thead><tr>
             <th>OS</th><th>Atendimento</th><th>Competência</th><th>Especialidade</th><th>Socorrista</th><th>Viatura</th>
-            <th>OP</th><th>Situação</th><th>Valor</th><th>Comissão</th><th/>
+            <th>OP</th><th>Situação</th><th>Valor</th><th>Comissão</th><th className="th-acoes"/>
           </tr></thead>
           <tbody>{dados.itens.map(os => {
             const veiculo = os.viatura ? veiculoPorSigla.get(os.viatura.toUpperCase()) : undefined
             return <tr key={os.id}>
-              <td><strong>{os.numero}</strong></td>
-              <td>{os.dataAtendimento ? data(os.dataAtendimento) : '—'}</td>
-              <td><small>{competenciaDe(os)}</small></td>
-              <td>{os.especialidade || '—'}</td>
-              <td>{os.motoristaId ? <Link to={`/equipe/${os.motoristaId}`}>{os.motorista}</Link> : '—'}</td>
-              <td>{veiculo ? <Link to={`/veiculos?veiculo=${veiculo.id}`}>{os.viatura}</Link> : os.viatura || '—'}</td>
-              <td>{os.numeroOp ?? <small>Aguardando OP</small>}</td>
-              <td><span className={`vehicle-status ${ETIQUETAS_SITUACAO[os.situacao].classe}`}>{ETIQUETAS_SITUACAO[os.situacao].texto}</span></td>
+              <td className="col-os"><strong>{os.numero}</strong></td>
+              <td className="col-data">{os.dataAtendimento ? data(os.dataAtendimento) : '—'}</td>
+              <td className="col-competencia"><small>{competenciaDe(os)}</small></td>
+              <td className="col-especialidade">{os.especialidade || '—'}</td>
+              <td className="col-socorrista">{os.motoristaId ? <Link to={`/equipe/${os.motoristaId}`}>{os.motorista}</Link> : '—'}</td>
+              <td className="col-viatura">{veiculo ? <Link to={`/veiculos?veiculo=${veiculo.id}`}>{os.viatura}</Link> : os.viatura || '—'}</td>
+              <td className="col-op">{os.numeroOp ?? <small>Aguardando OP</small>}</td>
+              <td className="col-situacao"><span className={`vehicle-status ${ETIQUETAS_SITUACAO[os.situacao].classe}`}>{ETIQUETAS_SITUACAO[os.situacao].texto}</span></td>
               {/* Com OP, o valor e o oficial; sem OP, o informado a mao, marcado como previsto. */}
-              <td>{os.ordemPagamentoId
+              <td className="col-valor">{os.ordemPagamentoId
                 ? <>{moeda(os.valorTotal)}
                     {os.divergencia !== undefined
                       ? <><br/><small>informado {moeda(os.valorManual ?? 0)} · {os.divergencia > 0 ? '+' : ''}{moeda(os.divergencia)}</small></>
@@ -307,10 +313,12 @@ export default function PortoOrdensServicoPage() {
                 : os.valorManual !== undefined
                   ? <>{moeda(os.valorManual)}<br/><small>informado, aguarda a OP</small></>
                   : <small>Chega com a OP</small>}</td>
-              <td>{os.comissao !== undefined ? moeda(os.comissao) : <small>Só com a OP</small>}</td>
-              <td>
-                {os.ordemPagamentoId ? null : <button className="table-action" onClick={() => setInformando(os)} aria-label={`Informar valor da OS ${os.numero}`}>Informar valor</button>}
-                <button className="table-action" onClick={() => setCorrigindo(os)} aria-label={`Corrigir OS ${os.numero}`}>Corrigir</button>
+              <td className="col-comissao">{os.comissao !== undefined ? moeda(os.comissao) : <small>Só com a OP</small>}</td>
+              <td className="col-acoes">
+                <div className="table-actions">
+                  {os.ordemPagamentoId ? null : <button className="table-action" onClick={() => setInformando(os)} aria-label={`Informar valor da OS ${os.numero}`}>Informar valor</button>}
+                  <button className="table-action" onClick={() => setCorrigindo(os)} aria-label={`Corrigir OS ${os.numero}`}>Corrigir</button>
+                </div>
               </td>
             </tr>
           })}</tbody>

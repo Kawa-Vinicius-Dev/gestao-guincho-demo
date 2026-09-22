@@ -65,65 +65,43 @@ const painel = {
   quantidadeServicosPagamentoProgramado: 0,
 }
 
-// Ordens de servico: uma pagina de `porto_listar_os`, no formato exato da RPC.
-// As linhas sao as da tela real de 22/09/2026 — nomes longos e situacoes
-// diferentes, que e onde a largura da tabela aperta.
-const NOMES = [
-  [6, 'LUIZ FELIPE DA SILVA'], [7, 'EDUARDO MARTINS DA SILVA JUNIOR'],
-  [1, 'JEFERSON MARTINS DA SILVA'], [4, 'NATANAEL JOSE DE FREITAS NETO'],
-] as const
-const listaOs = {
-  total: 42, semViatura: 0, valorTotal: 12840, valorPrevisto: 12840, semValor: 6,
-  divergentes: 1, comissaoTotal: 2568,
-  itens: Array.from({ length: 12 }, (_, i) => {
-    const [motoristaId, motorista] = NOMES[i % NOMES.length]
-    const paga = i % 6 === 5
-    return {
-      id: 900 + i,
-      numero: `${5723704 + i * 137}/26`,
-      dataAtendimento: `2026-09-${String(16 - (i % 3)).padStart(2, '0')}`,
-      especialidade: i % 3 === 2 ? 'REMOCAO' : 'SOCORRO',
-      viatura: 'L168', motoristaId, motorista,
-      competenciaInicio: '2026-09-17', competenciaFim: '2026-09-30',
-      ...(paga
-        ? { valorTotal: 310.5, comissao: 62.1, ordemPagamentoId: 1, numeroOp: '06438807',
-            situacao: 'CONCILIADA', valorPrevisto: 310.5 }
-        : { valorTotal: 0, situacao: 'AGUARDANDO_PROXIMA_OP' }),
-    }
-  }),
-}
-
-// Minha comissao: resposta de `comissao_das_ops` para o Jeferson na OP real.
-const comissao = {
-  ordemPagamentoId: 1, numeroOp: '06389821', periodo: '30/03 a 29/04',
-  periodoInicio: '2026-03-30', periodoFim: '2026-04-29',
-  socorrista: 'JEFERSON MARTINS DA SILVA', motoristaId: 1,
-  quantidadeServicosPagos: 49, producaoPaga: 23853.12, percentualComissao: 20,
-  comissaoBruta: 4770.62, descontos: 138.5, descontosPendentes: 38.5,
-  liquido: 4632.12, aguardandoOp: false,
-  servicos: Array.from({ length: 8 }, (_, i) => ({
-    id: 300 + i, numeroOs: `01/536${4383 + i * 29}-26`,
-    dataAtendimento: `2026-04-${String(2 + i * 3).padStart(2, '0')}`,
-    especialidade: i % 3 === 1 ? 'PANE SECA' : i % 3 === 2 ? 'REMOCAO' : 'GUINCHO',
-    numeroOp: '06389821', valorServico: 181 + i * 37.4, comissaoServico: (181 + i * 37.4) * 0.2,
-  })),
-  gastos: [
-    { id: 51, descricao: 'Almoço em serviço', data: '2026-04-26', valor: 38.5,
-      categoria: 'Alimentação', veiculo: 'L168', situacao: 'PENDENTE',
-      aprovada: false, descontaDaComissao: true },
-    { id: 47, descricao: 'Almoço em serviço', data: '2026-04-18', valor: 42,
-      categoria: 'Alimentação', veiculo: 'L168', situacao: 'PAGO',
-      aprovada: true, descontaDaComissao: true },
-    { id: 39, descricao: 'Lava-jato da viatura', data: '2026-04-11', valor: 58,
-      categoria: 'Manutenção', veiculo: 'L168', situacao: 'PAGO',
-      aprovada: true, descontaDaComissao: false },
-  ],
-}
-
-// A unica OP que existe no banco.
+// As 16 OPs do banco, copiadas em 17/09/2026 com o periodo que cada uma tem:
+// a quinzena da Porto nas quatro que ja a tem informada, e da primeira a
+// ultima OS nas demais. E com elas que o seletor de periodo mostra
+// se as quinzenas se encaixam.
 const ops = [
-  { id: 1, numero: '06389821', valor_total: 74770, situacao_financeira: 'RECEBIDO',
+  { id: 19, numero: '06389821', valor_total: 74770.0, situacao_financeira: 'RECEBIDO',
     periodo_inicio: '2026-03-30', periodo_fim: '2026-04-29' },
+  { id: 18, numero: '06400330', valor_total: 64394.23, situacao_financeira: 'RECEBIDO',
+    periodo_inicio: '2026-04-29', periodo_fim: '2026-05-28' },
+  { id: 17, numero: '06405579', valor_total: 76878.82, situacao_financeira: 'RECEBIDO',
+    periodo_inicio: '2026-05-21', periodo_fim: '2026-06-15' },
+  { id: 16, numero: '06405580', valor_total: 18767.56, situacao_financeira: 'RECEBIDO',
+    periodo_inicio: '2026-05-13', periodo_fim: '2026-06-15' },
+  { id: 14, numero: '06411002', valor_total: 18995.0, situacao_financeira: 'RECEBIDO',
+    periodo_inicio: '2026-06-15', periodo_fim: '2026-06-29' },
+  { id: 15, numero: '06411001', valor_total: 61366.0, situacao_financeira: 'RECEBIDO',
+    periodo_inicio: '2026-06-15', periodo_fim: '2026-06-30' },
+  { id: 13, numero: '06416626', valor_total: 54800.2, situacao_financeira: 'RECEBIDO',
+    periodo_inicio: '2026-06-23', periodo_fim: '2026-07-14' },
+  { id: 12, numero: '06416627', valor_total: 11489.4, situacao_financeira: 'RECEBIDO',
+    periodo_inicio: '2026-06-29', periodo_fim: '2026-07-14' },
+  { id: 9, numero: '06422282', valor_total: 12987.8, situacao_financeira: 'RECEBIDO',
+    periodo_inicio: '2026-07-15', periodo_fim: '2026-07-29' },
+  { id: 11, numero: '06422281', valor_total: 57699.7, situacao_financeira: 'RECEBIDO',
+    periodo_inicio: '2026-07-01', periodo_fim: '2026-07-30' },
+  { id: 7, numero: '06427803', valor_total: 16866.44, situacao_financeira: 'RECEBIDO',
+    periodo_inicio: '2026-08-01', periodo_fim: '2026-08-14' },
+  { id: 8, numero: '06427802', valor_total: 59246.5, situacao_financeira: 'RECEBIDO',
+    periodo_inicio: '2026-06-19', periodo_fim: '2026-08-13' },
+  { id: 6, numero: '06433184', valor_total: 49082.71, situacao_financeira: 'RECEBIDO',
+    periodo_inicio: '2026-08-12', periodo_fim: '2026-08-26' },
+  { id: 5, numero: '06433185', valor_total: 11521.22, situacao_financeira: 'RECEBIDO',
+    periodo_inicio: '2026-08-15', periodo_fim: '2026-08-28' },
+  { id: 4, numero: '06438808', valor_total: 21168.96, situacao_financeira: 'RECEBIDO',
+    periodo_inicio: '2026-09-01', periodo_fim: '2026-09-16' },
+  { id: 10, numero: '06438807', valor_total: 78696.67, situacao_financeira: 'RECEBIDO',
+    periodo_inicio: '2026-09-01', periodo_fim: '2026-09-16' },
 ]
 
 
@@ -208,6 +186,42 @@ const pendencias = [
     apenasConferir: true },
 ]
 
+// Meus servicos: resposta de `comissao_das_ops` para o socorrista. A tela nova
+// so le `servicos` — nenhum valor em dinheiro aparece para ele.
+const comissao = {
+  ordemPagamentoId: 19, numeroOp: '06389821', periodo: '30/03 a 29/04',
+  periodoInicio: '2026-03-30', periodoFim: '2026-04-29',
+  socorrista: 'JEFERSON MARTINS DA SILVA', motoristaId: 1,
+  quantidadeServicosPagos: 8, producaoPaga: 0, percentualComissao: 20,
+  comissaoBruta: 0, descontos: 0, descontosPendentes: 0, liquido: 0, aguardandoOp: false,
+  servicos: Array.from({ length: 8 }, (_, i) => ({
+    id: 300 + i, numeroOs: `01/536${4383 + i * 29}-26`,
+    dataAtendimento: `2026-04-${String(2 + i * 3).padStart(2, '0')}`,
+    especialidade: i % 3 === 1 ? 'PANE SECA' : i % 3 === 2 ? 'REMOCAO' : 'GUINCHO',
+    numeroOp: '06389821', valorServico: 0, comissaoServico: 0,
+  })),
+  gastos: [],
+}
+
+const listaDeOs = {
+  total: 362,
+  semViatura: 0,
+  valorTotal: 0,
+  valorPrevisto: 0,
+  semValor: 362,
+  divergentes: 0,
+  comissaoTotal: 0,
+  itens: [
+    { id: 1, numero: '5729988/26', dataAtendimento: '2026-09-16', competenciaInicio: '2026-09-17', competenciaFim: '2026-09-30', especialidade: 'SOCORRO', motorista: 'ANDERSON JORGE RIBEIRO', motoristaId: 9, viatura: 'L845', numeroOp: null, situacao: 'AGUARDANDO_PROXIMA_OP', valorTotal: 0 },
+    { id: 2, numero: '5730590/26', dataAtendimento: '2026-09-16', competenciaInicio: '2026-09-17', competenciaFim: '2026-09-30', especialidade: 'SOCORRO', motorista: 'QEBSON RAMOS DA SILVA', motoristaId: 2, viatura: 'L25', numeroOp: null, situacao: 'AGUARDANDO_PROXIMA_OP', valorTotal: 0 },
+    { id: 3, numero: '5730927/26', dataAtendimento: '2026-09-16', competenciaInicio: '2026-09-17', competenciaFim: '2026-09-30', especialidade: 'TRANSPORTE', motorista: 'DJALMA BEZERRA DE MELO NETO', motoristaId: 8, viatura: 'K85', numeroOp: null, situacao: 'AGUARDANDO_PROXIMA_OP', valorTotal: 0 },
+    { id: 4, numero: '5736472/26', dataAtendimento: '2026-09-16', competenciaInicio: '2026-09-17', competenciaFim: '2026-09-30', especialidade: 'SOCORRO', motorista: 'QEBSON RAMOS DA SILVA', motoristaId: 2, viatura: 'L25', numeroOp: null, situacao: 'AGUARDANDO_PROXIMA_OP', valorTotal: 0 },
+    { id: 5, numero: '5737971/26', dataAtendimento: '2026-09-16', competenciaInicio: '2026-09-17', competenciaFim: '2026-09-30', especialidade: 'SOCORRO', motorista: 'ANDERSON JORGE RIBEIRO', motoristaId: 9, viatura: 'L845', numeroOp: null, situacao: 'AGUARDANDO_PROXIMA_OP', valorTotal: 0 },
+    { id: 6, numero: '5739218/26', dataAtendimento: '2026-09-16', competenciaInicio: '2026-09-17', competenciaFim: '2026-09-30', especialidade: 'SOCORRO', motorista: 'DJALMA BEZERRA DE MELO NETO', motoristaId: 8, viatura: 'K85', numeroOp: null, situacao: 'AGUARDANDO_PROXIMA_OP', valorTotal: 0 },
+    { id: 7, numero: '5742931/26', dataAtendimento: '2026-09-16', competenciaInicio: '2026-09-17', competenciaFim: '2026-09-30', especialidade: 'SOCORRO', motorista: 'EDUARDO MARTINS DA SILVA', motoristaId: 10, viatura: 'L168', numeroOp: null, situacao: 'AGUARDANDO_PROXIMA_OP', valorTotal: 0 },
+  ],
+}
+
 /** Responde as chamadas do Supabase com o exemplo acima, sem rede. */
 const original = window.fetch
 window.fetch = (async (entrada: RequestInfo | URL, init?: RequestInit) => {
@@ -215,17 +229,17 @@ window.fetch = (async (entrada: RequestInfo | URL, init?: RequestInit) => {
   const responder = (corpo: unknown) =>
     new Response(JSON.stringify(corpo), { headers: { 'Content-Type': 'application/json' } })
 
+  if (url.includes('porto_listar_os')) return responder(listaDeOs)
   if (url.includes('meu_turno_do_dia')) return responder(turnoDoDia)
   if (url.includes('fila_de_aprovacoes')) return responder(filaAprovacoes)
   if (url.includes('porto_pendencias_os')) return responder(pendencias)
   if (url.includes('porto_dashboard_alto_nivel')) return responder(painel)
   if (url.includes('dashboard_resumo')) return responder(visaoGeral)
   if (url.includes('comissao_das_ops')) return responder(comissao)
-  if (url.includes('porto_comissao_prevista')) return responder([
-    { motorista_id: 1, socorrista: 'JEFERSON MARTINS DA SILVA', servicos: 11, sem_valor: 3,
-      valor_previsto: 3420.8, comissao_previsto: 0, comissao_prevista: 684.16 },
+  if (url.includes('meus_periodos_de_op')) return responder([
+    { id: 19, numero: '06389821', periodo_inicio: '2026-03-30', periodo_fim: '2026-04-29',
+      data_pagamento_programada: '2026-06-07' },
   ])
-  if (url.includes('porto_listar_os')) return responder(listaOs)
   if (url.includes('porto_ops_conciliadas')) return responder(ops)
   if (url.includes('/rest/v1/') || url.includes('/auth/v1/')) return responder([])
   return original(entrada, init)
@@ -266,7 +280,6 @@ const visaoGeral = {
 const tela = new URLSearchParams(location.search).get('tela')
 const daVisao = tela === 'visao'
 // A Visao geral abre no periodo da OP real, para os graficos terem o que mostrar.
-if (tela === 'comissao') sessionStorage.setItem('filtro:periodo', JSON.stringify({ inicio: '2026-03-30', fim: '2026-04-29' }))
 if (tela === 'os') sessionStorage.setItem('filtro:periodo', JSON.stringify({ inicio: '2026-09-16', fim: '2026-09-30' }))
 if (daVisao) sessionStorage.setItem('filtro:periodo', JSON.stringify({ inicio: '2026-03-30', fim: '2026-04-29', op: '1' }))
 

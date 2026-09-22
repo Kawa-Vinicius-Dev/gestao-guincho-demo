@@ -23,8 +23,14 @@ import type { Previa } from './csv'
  * Ate la a OS existe, conta como servico feito e fica pendente de valor.
  */
 
-/** "5673329/26". O numero abre o registro. */
-const NUMERO = /^\d{4,}[-/]\d{2}$/
+/** "5673329/26", ou com link markdown "[5673329/26](https://...)" copiado de navegadores como Edge. O numero abre o registro. */
+const NUMERO = /^(?:\[)?(\d{4,}[-/]\d{2})(?:\](?:\([^)]*\))?)?$/
+
+function extrairNumero(campo: string): string {
+  const m = campo.match(NUMERO)
+  return m ? m[1] : campo
+}
+
 /** "14/09/2026". A data fecha a parte variavel. */
 const DATA = /^\d{2}\/\d{2}\/\d{4}$/
 /** "L168", "K85", "L25". Serve para desempatar quando so um campo veio. */
@@ -79,7 +85,7 @@ export async function lerPainelDiarioPorto(conteudo: string): Promise<Previa> {
     const inicio = inicios[n]
     const fim = n + 1 < inicios.length ? inicios[n + 1] - 1 : campos.length
     const registro = campos.slice(inicio, fim)
-    const numero = registro[0]
+    const numero = extrairNumero(registro[0])
 
     const posicaoData = registro.findIndex(c => DATA.test(c))
     if (posicaoData < 0) {
