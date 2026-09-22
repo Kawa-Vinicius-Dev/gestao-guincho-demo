@@ -18,7 +18,7 @@ async function abrir(user: ReturnType<typeof userEvent.setup>, rotulo: string) {
 // doze viaturas a pessoa abria o campo sem ver qual estava escolhida, e a seta
 // para baixo andava a partir do topo em vez de a partir dela.
 test('abre com o destaque na opcao ja escolhida, nao na primeira', async () => {
-  const user = userEvent.setup()
+  const user = userEvent.setup({ delay: null })
   render(<Selecao rotulo="Viatura" opcoes={veiculos} value="v7" onChange={() => {}}/>)
 
   const painel = await abrir(user, 'Viatura')
@@ -28,7 +28,7 @@ test('abre com o destaque na opcao ja escolhida, nao na primeira', async () => {
 })
 
 test('buscar devolve o destaque ao topo da lista filtrada', async () => {
-  const user = userEvent.setup()
+  const user = userEvent.setup({ delay: null })
   render(<Selecao rotulo="Viatura" opcoes={veiculos} value="v7" onChange={() => {}}/>)
 
   const painel = await abrir(user, 'Viatura')
@@ -40,7 +40,7 @@ test('buscar devolve o destaque ao topo da lista filtrada', async () => {
 // O <select> nativo continua sendo o controle de verdade: e dele que o formulario
 // tira o valor. Clicar na linha do painel precisa chegar ate ele.
 test('escolher no painel escreve no select que o formulario envia', async () => {
-  const user = userEvent.setup()
+  const user = userEvent.setup({ delay: null })
   render(<form><Selecao rotulo="Viatura" name="viatura" opcoes={veiculos} defaultValue="v7"/></form>)
 
   const painel = await abrir(user, 'Viatura')
@@ -69,7 +69,7 @@ test.each([
     window.dispatchEvent(new Event('resize'))
   }],
 ])('%s nao fecha o painel', async (_nome, mexer) => {
-  const user = userEvent.setup()
+  const user = userEvent.setup({ delay: null })
   render(<Selecao rotulo="Período" opcoes={veiculos}/>)
   await abrir(user, 'Período')
 
@@ -83,7 +83,7 @@ test.each([
 // impossivel de abrir: ele aparecia e sumia no mesmo toque. NADA que mexa na
 // janela pode fechar o painel; so Esc, o fundo ou escolher uma opcao.
 test('campo sair de vista nao fecha o painel', async () => {
-  const user = userEvent.setup()
+  const user = userEvent.setup({ delay: null })
   render(<Selecao rotulo="Período" opcoes={veiculos}/>)
   // Depois de aberto o painel tambem se chama "Período": pega o campo antes.
   const campo = screen.getByLabelText('Período')

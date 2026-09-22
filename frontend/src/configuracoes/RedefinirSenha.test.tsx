@@ -25,7 +25,7 @@ test('o dono redefine a senha e vê a provisória uma vez', async () => {
       return HttpResponse.json({ usuarioId: 9, nome: 'Anderson Ribeiro', email: 'anderson@jms.local', senhaProvisoria: 'kjhs-2mp4-7xqt' })
     }),
   )
-  const user = userEvent.setup()
+  const user = userEvent.setup({ delay: null })
   abrir('/configuracoes')
 
   await user.click(await screen.findByRole('button', { name: /redefinir senha/i }));await confirmarNaJanela()
@@ -57,7 +57,7 @@ test('depois de trocar, o acesso antigo é encerrado e a tela manda entrar de no
       return new HttpResponse(null, { status: 204 })
     }),
   )
-  const user = userEvent.setup()
+  const user = userEvent.setup({ delay: null })
   abrir('/minha-comissao')
 
   await screen.findByRole('heading', { name: /troque sua senha/i })
@@ -78,7 +78,7 @@ test('nova senha digitada diferente não troca nada e diz o que houve', async ()
     })),
     http.put('/api/auth/senha', () => { chamou = true; return new HttpResponse(null, { status: 204 }) }),
   )
-  const user = userEvent.setup()
+  const user = userEvent.setup({ delay: null })
   abrir('/minha-comissao')
 
   await screen.findByRole('heading', { name: /troque sua senha/i })

@@ -87,7 +87,7 @@ test('administrador filtra resumo e abre o detalhamento que forma a comissão', 
     http.post(`${URL_SUPABASE}/rest/v1/rpc/comissao_das_ops`, () => HttpResponse.json(detalhe)),
   )
   const ComissoesPage = await abrirPagina(() => import('./ComissoesPage'))
-  const user = userEvent.setup()
+  const user = userEvent.setup({ delay: null })
 
   render(<ComissoesPage/>)
 
@@ -115,7 +115,7 @@ test('comissão já lançada em despesas, sem botão de pagar', async () => {
     http.post(`${URL_SUPABASE}/rest/v1/rpc/comissao_das_ops`, () => HttpResponse.json(positivo)),
   )
   const ComissoesPage = await abrirPagina(() => import('./ComissoesPage'))
-  const user = userEvent.setup()
+  const user = userEvent.setup({ delay: null })
 
   render(<ComissoesPage/>)
 
@@ -141,7 +141,7 @@ test('o detalhe lista todos os gastos e diz quais descontam', async () => {
     http.post(`${URL_SUPABASE}/rest/v1/rpc/comissao_das_ops`, () => HttpResponse.json(detalhe)),
   )
   const ComissoesPage = await abrirPagina(() => import('./ComissoesPage'))
-  const user = userEvent.setup()
+  const user = userEvent.setup({ delay: null })
 
   render(<ComissoesPage/>)
   const linha = await screen.findByRole('row', { name: /ana motorista/i })

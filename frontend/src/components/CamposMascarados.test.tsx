@@ -23,7 +23,7 @@ test('telefone aceita fixo e celular', () => {
 })
 
 test('documento envia so os digitos, nunca o formatado', async () => {
-  const user = userEvent.setup()
+  const user = userEvent.setup({ delay: null })
   render(<form aria-label="f"><CampoDocumento rotulo="Documento" name="documento"/></form>)
 
   await user.type(screen.getByLabelText('Documento'), '12345678000190')
@@ -34,7 +34,7 @@ test('documento envia so os digitos, nunca o formatado', async () => {
 })
 
 test('telefone envia so os digitos', async () => {
-  const user = userEvent.setup()
+  const user = userEvent.setup({ delay: null })
   render(<form aria-label="f"><CampoTelefone rotulo="Telefone" name="telefone"/></form>)
 
   await user.type(screen.getByLabelText('Telefone'), '85999998888')
@@ -46,7 +46,7 @@ test('telefone envia so os digitos', async () => {
 // A Porto escreve a placa em maiuscula; minuscula criava um segundo veiculo
 // para o mesmo carro.
 test('placa sobe para maiuscula e recusa pontuacao', async () => {
-  const user = userEvent.setup()
+  const user = userEvent.setup({ delay: null })
   render(<CampoPlaca rotulo="Placa" name="placa"/>)
 
   await user.type(screen.getByLabelText('Placa'), 'abc-1d23')

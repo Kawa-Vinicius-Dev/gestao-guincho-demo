@@ -54,7 +54,7 @@ test('sem turno aberto, a tela pede a viatura e o odometro da saida', async () =
 
 test('abrir exige viatura, odometro e a foto do painel', async () => {
   servidor.use(http.post(`${SUPA}/rest/v1/rpc/meu_turno_do_dia`, () => HttpResponse.json(turno)))
-  const user = userEvent.setup()
+  const user = userEvent.setup({ delay: null })
   await abrir(turno)
 
   await user.type(await screen.findByLabelText('Odômetro na saída'), '148502')
@@ -74,7 +74,7 @@ test('abrir exige viatura, odometro e a foto do painel', async () => {
 
 test('odometro menor que o ultimo registro da viatura pede conferencia', async () => {
   servidor.use(http.post(`${SUPA}/rest/v1/rpc/meu_turno_do_dia`, () => HttpResponse.json(turno)))
-  const user = userEvent.setup()
+  const user = userEvent.setup({ delay: null })
   await abrir(turno)
 
   await user.type(await screen.findByLabelText('Odômetro na saída'), '14832')
@@ -106,7 +106,7 @@ test('com turno aberto, fechar exige a foto do odometro', async () => {
       deDiaAnterior: false, observacoes: null,
     },
   })))
-  const user = userEvent.setup()
+  const user = userEvent.setup({ delay: null })
   await abrir(turno)
 
   await user.type(await screen.findByLabelText('Odômetro na chegada'), '148502')

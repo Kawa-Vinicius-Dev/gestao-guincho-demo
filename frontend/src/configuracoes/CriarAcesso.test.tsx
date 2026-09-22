@@ -45,7 +45,7 @@ test('o dono cria um administrador e vê a senha provisória uma única vez', as
       senhaProvisoria: 'kjhs-2mp4-7xqt',
     }, { status: 201 })
   }))
-  const user = userEvent.setup()
+  const user = userEvent.setup({ delay: null })
   await abrir()
 
   await user.type(await screen.findByLabelText(/^nome$/i), 'Jeferson')
@@ -66,7 +66,7 @@ test('e-mail repetido não cria conta nenhuma: o erro da Edge Function aparece n
   servidorBase()
   servidor.use(http.post(`${SUPA}/functions/v1/admin-usuarios`, () => HttpResponse.json(
     { detalhe: 'A user with this email address has already been registered' }, { status: 400 })))
-  const user = userEvent.setup()
+  const user = userEvent.setup({ delay: null })
   await abrir()
 
   await user.type(await screen.findByLabelText(/^nome$/i), 'Jeferson')

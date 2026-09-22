@@ -230,7 +230,7 @@ test('trocar o agrupamento recarrega a série com o novo grão', async () => {
     http.get(`${SUPA}/rest/v1/porto_ops_conciliadas`, () => HttpResponse.json([])),
   )
   const Painel = await abrirPainel()
-  const user = userEvent.setup()
+  const user = userEvent.setup({ delay: null })
 
   render(<MemoryRouter><Painel/></MemoryRouter>)
   await screen.findByRole('region', { name: /resumo financeiro/i })

@@ -100,7 +100,7 @@ test('linha sem nada a preencher não oferece campo de acerto', async () => {
 })
 
 test('o filtro separa as duas situações novas', async () => {
-  const user = userEvent.setup()
+  const user = userEvent.setup({ delay: null })
   await abrir()
 
   await screen.findByText('01/3-26')

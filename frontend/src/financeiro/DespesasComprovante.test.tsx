@@ -30,7 +30,7 @@ test('anexa um comprovante e passa a mostrar o link para ver e remover', async (
       return HttpResponse.json(comComprovante)
     }),
   )
-  const user = userEvent.setup()
+  const user = userEvent.setup({ delay: null })
   abrir()
 
   await screen.findByText('Troca de óleo')
@@ -48,7 +48,7 @@ test('abre o link assinado do comprovante numa nova aba', async () => {
   )
   const abrirJanela = vi.fn()
   vi.stubGlobal('open', abrirJanela)
-  const user = userEvent.setup()
+  const user = userEvent.setup({ delay: null })
   abrir()
 
   await user.click(await screen.findByRole('button', { name: /^ver$/i }))
@@ -68,7 +68,7 @@ test('remove o comprovante anexado', async () => {
       return HttpResponse.json(semComprovante)
     }),
   )
-  const user = userEvent.setup()
+  const user = userEvent.setup({ delay: null })
   abrir()
 
   await user.click(await screen.findByRole('button', { name: /remover/i }))

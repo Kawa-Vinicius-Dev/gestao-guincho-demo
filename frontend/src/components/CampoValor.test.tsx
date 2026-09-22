@@ -21,7 +21,7 @@ test('ponto, virgula e letra digitados no meio sao ignorados', () => {
 })
 
 test('digitar so numero preenche a tela e o campo enviado', async () => {
-  const user = userEvent.setup()
+  const user = userEvent.setup({ delay: null })
   render(<form><CampoValor rotulo="Valor" name="valor"/></form>)
   const visivel = screen.getByLabelText('Valor')
   await user.type(visivel, '148090')

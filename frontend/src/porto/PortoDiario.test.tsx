@@ -51,7 +51,7 @@ async function colar(user: ReturnType<typeof userEvent.setup>, texto: string) {
 }
 
 test('colagem de mais de uma quinzena é recusada antes de virar prévia', async () => {
-  const user = userEvent.setup()
+  const user = userEvent.setup({ delay: null })
   render(<PortoDiarioPage />)
 
   await colar(user, [registro('5673329', '01/09/2026'), registro('5677129', '20/09/2026')].join('\n'))
@@ -63,7 +63,7 @@ test('colagem de mais de uma quinzena é recusada antes de virar prévia', async
 test('importa o Diário depois da confirmação e recarrega o mapa', async () => {
   criarPrevia.mockResolvedValue(previaDe(['5673329', '5677129']))
   confirmar.mockResolvedValue({ importados: 2, ignorados: 0 } as Awaited<ReturnType<typeof porto.confirmarImportacaoPorto>>)
-  const user = userEvent.setup()
+  const user = userEvent.setup({ delay: null })
   render(<PortoDiarioPage />)
 
   await colar(user, [registro('5673329', '01/09/2026'), registro('5677129', '03/09/2026')].join('\n'))

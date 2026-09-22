@@ -64,7 +64,7 @@ test('bloquear o acesso pede confirmação e não apaga o cadastro', async () =>
     enviado = await request.json() as Record<string, unknown>
     return new HttpResponse(null, { status: 204 })
   }))
-  const user = userEvent.setup()
+  const user = userEvent.setup({ delay: null })
   await abrir()
 
   await user.click(await screen.findByRole('button', { name: /bloquear acesso/i }))

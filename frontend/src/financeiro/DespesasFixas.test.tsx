@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { expect, test } from 'vitest'
@@ -30,7 +30,7 @@ test('cadastra uma despesa fixa', async () => {
       return HttpResponse.json(aluguel, { status: 201 })
     }),
   )
-  const user = userEvent.setup()
+  const user = userEvent.setup({ delay: null })
   abrir()
 
   await user.type(await screen.findByLabelText(/descrição da despesa fixa/i), 'Aluguel do pátio')
@@ -52,10 +52,12 @@ test('lança o mês e conta o que já existia', async () => {
       return HttpResponse.json({ mes: pedido, lancadas: 1, jaExistiam: 2, valorLancado: 2500, despesas: [] }, { status: 201 })
     }),
   )
-  const user = userEvent.setup()
+  const user = userEvent.setup({ delay: null })
   abrir()
 
-  await user.click(await screen.findByRole('button', { name: /lançar as fixas do mês/i }));await confirmarNaJanela()
+  const lancar = await screen.findByRole('button', { name: /lançar as fixas do mês/i })
+  await waitFor(() => expect(lancar).toBeEnabled())
+  await user.click(lancar);await confirmarNaJanela()
 
   expect(pedido).toMatch(/^\d{4}-\d{2}$/)
   expect(await screen.findByText(/1 despesa fixa lançada/i)).toBeInTheDocument()
