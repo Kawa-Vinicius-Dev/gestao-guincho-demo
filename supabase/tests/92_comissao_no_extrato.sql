@@ -40,8 +40,9 @@ select pg_temp.checar('extrato traz o numero da OP',
 reset role;
 
 \echo '===== Uma despesa comum nao vira comissao ====='
-insert into public.despesas (descricao,categoria_id,valor,data_lancamento,motorista_id,status,natureza)
- values ('Diesel',(select id from public.categorias where nome='Combustível'),50,'2026-09-12',1,'PENDENTE','GERAL');
+insert into public.despesas (descricao,categoria_id,valor,data_lancamento,motorista_id,status,natureza,criado_por)
+ values ('Diesel',(select id from public.categorias where nome='Combustível'),50,'2026-09-12',1,'PENDENTE','GERAL',
+         'aaaaaaaa-0000-0000-0000-000000000001');
 set role authenticated;
 set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';
 select pg_temp.checar('despesa comum sem OP',
