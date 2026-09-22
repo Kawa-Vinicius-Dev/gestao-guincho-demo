@@ -66,10 +66,10 @@ exception when invalid_parameter_value then raise notice 'PASSOU  | padrao acima
 set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000002';
 do $$ begin
   perform public.definir_percentual_da_op(1, 0.10);
-  raise exception 'FALHOU  | socorrista mudou a % da OP';
+  raise exception 'FALHOU  | socorrista mudou a %% da OP';
 exception when insufficient_privilege or raise_exception then
   if sqlerrm like 'FALHOU%' then raise; end if;
-  raise notice 'PASSOU  | socorrista nao muda a % da OP';
+  raise notice 'PASSOU  | socorrista nao muda a %% da OP';
 end $$;
 set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';
 
