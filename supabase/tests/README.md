@@ -30,6 +30,9 @@ Validam as migrations num Postgres local, sem depender de um projeto Supabase.
   está paga numa OP: o dinheiro do socorrista baixa e a despesa de comissão é
   refeita, mas o serviço continua na produção dele e no nome dele. Devolver
   desfaz, e só o administrador tira.
+- `91_percentual_por_socorrista.sql` — 8 asserções de que a comissão é de cada
+  socorrista, com teto de 20%, e de que baixar a taxa de alguém não reescreve o
+  que ele já recebeu: a OP que fechou guarda a taxa dela.
 - `95_copia_dos_dados.sql` — 10 asserções de que a cópia dos dados consegue ler
   todas as colunas que pede. O banco não tem backup automático, então essa cópia
   é a única proteção do dono — e ela ficou quebrada sem ninguém saber.
