@@ -9,6 +9,7 @@ begin
   else raise exception 'FALHOU  | % | esperado=% obtido=%', rotulo, esperado, obtido; end if;
 end $$;
 
+
 -- Executa e devolve o errcode, ou 'OK' se passou. Usado nos testes de portao.
 create or replace function pg_temp.erro_de(sql text) returns text
 language plpgsql as $$
@@ -70,6 +71,13 @@ select pg_temp.checar('os: receita aponta para a conta',
 select pg_temp.checar('socorrista por QRA',
   (select m.nome from public.ordens_servico_porto os join public.motoristas m on m.id=os.motorista_id
     where os.numero='5632135/26'), 'Por QRA');
+-- A INVESTIGAR (22/09/2026): esta vindo AUXILIAR no lugar de "Por viatura". O
+-- fixture cadastra um socorrista ligado a L200 e a OS chega com sigla L200 e sem
+-- QRA, entao o vinculo deveria sair pelo cadastro da viatura. A migration
+-- 20260917090000 trocou esse palpite por "outra OS com a mesma sigla que ja tem
+-- socorrista", que e outra pergunta. Se a capacidade de achar pelo cadastro foi
+-- perdida sem querer, e regressao; se foi de proposito, este teste e que esta
+-- velho. So quem conhece a operacao decide.
 select pg_temp.checar('socorrista por sigla da viatura',
   (select m.nome from public.ordens_servico_porto os join public.motoristas m on m.id=os.motorista_id
     where os.numero='5632136/26'), 'Por viatura');
@@ -132,6 +140,11 @@ select pg_temp.checar('devolvida: pendencia aberta',
 \echo '========== PORTAO DE DIVERGENCIA =========='
 -- A OP-200 vale 900 pela previsao. Um arquivo de 100 diverge e precisa de aval.
 select public.porto_registrar_importacao('div.csv','hash-div','OS_VINCULADAS',1);
+-- A INVESTIGAR (22/09/2026): o portao nao esta barrando. Um arquivo de 100
+-- contra uma OP de 900 deveria exigir confirmacao explicita e justificativa, e
+-- esta passando direto (OK no lugar do erro 22023). Se o portao caiu sem querer,
+-- um arquivo errado reescreve o valor da OP em silencio. Pode tambem ter sido
+-- mudanca deliberada, porque 20260916190000 mexeu em como o valor da OP se forma.
 select pg_temp.checar('divergencia sem confirmacao e recusada',
   pg_temp.erro_de($$select public.porto_confirmar_importacao(
     (select id from public.importacoes_porto where hash_arquivo='hash-div'),

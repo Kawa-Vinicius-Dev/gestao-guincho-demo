@@ -34,6 +34,7 @@ begin
   end if;
 end $$;
 
+
 -- helper: executa e devolve 'NEGADO' quando a policy/regra barra
 -- Um UPDATE barrado por RLS nao levanta erro: ele simplesmente nao encontra a
 -- linha e afeta zero. Por isso o helper mede o EFEITO, nao so a ausencia de
@@ -168,6 +169,11 @@ select pg_temp.checar('reaprovar e permitido, como no Spring',
   pg_temp.tentar('select public.aprovar_despesa(1)'), 'PERMITIU');
 select pg_temp.checar('admin NAO paga despesa nao aprovada',
   pg_temp.tentar('select public.pagar_despesa(2)'), 'NEGADO');
+-- A INVESTIGAR (22/09/2026): o administrador esta sendo NEGADO ao pagar uma
+-- despesa aprovada. Nao e artefato de assinatura — pagar_despesa(bigint) resolve,
+-- os outros dois parametros tem default. Ou alguma migration passou a barrar o
+-- caminho e e regressao no fluxo de caixa, ou a regra mudou e ninguem atualizou
+-- aqui. Precisa da decisao de quem conhece a operacao.
 select pg_temp.checar('admin paga despesa aprovada',
   pg_temp.tentar('select public.pagar_despesa(1)'), 'PERMITIU');
 reset role;
