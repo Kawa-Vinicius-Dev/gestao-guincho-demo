@@ -1,0 +1,10 @@
+/* Desempenho: barras de viatura e socorrista, cada linha abre os servicos dela. */
+.desempenho-controles{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;padding:16px 20px;border-bottom:1px solid var(--line)}
+.desempenho-barras{display:grid;gap:4px;margin:0;padding:14px 12px 18px;list-style:none}
+.desempenho-linha{display:grid;grid-template-columns:minmax(120px,190px) minmax(0,1fr) minmax(110px,auto) minmax(120px,auto);align-items:center;gap:14px;width:100%;padding:9px 10px;border:0;border-radius:7px;color:var(--ink);background:transparent;font:inherit;text-align:left;cursor:pointer}
+.desempenho-linha:hover{background:var(--superficie-2)}.desempenho-linha.aberta{background:var(--blue-50)}
+.desempenho-linha:focus-visible{outline:2px solid var(--blue-600);outline-offset:1px}
+.desempenho-rotulo{overflow:hidden;font-size:13px;font-weight:600;text-overflow:ellipsis;white-space:nowrap}
+.desempenho-linha strong{font-size:13px;font-variant-numeric:tabular-nums;text-align:right}
+.desempenho-linha small{color:var(--muted);font-size:11px;font-variant-numeric:tabular-nums}
+.desempenho-barras .sem-vinculo .desempenho-rotulo{color:#8a6410}
