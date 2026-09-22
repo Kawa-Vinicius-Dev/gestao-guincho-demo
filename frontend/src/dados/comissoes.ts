@@ -166,3 +166,48 @@ export async function registrarAlimentacao(
     observacoes: (d.observacoes as string) ?? undefined,
   }
 }
+
+// ---------------------------------------------------------------- % por OP
+/**
+ * A % de comissao de cada OP do periodo. `percentual` vazio: a OP nao tem % propria
+ * e vale a de cada socorrista (ou o padrao da empresa).
+ */
+export interface PercentualDaOp { id: number; numero: string; percentual: number | null }
+
+export async function listarPercentuaisDasOps(ids: number[]): Promise<PercentualDaOp[]> {
+  if (!ids.length) return []
+  const linhas = ou(
+    await supabase().from('ordens_pagamento_porto').select('id,numero,percentual_comissao')
+      .in('id', ids).order('numero'),
+    'Não foi possível carregar a porcentagem das OPs.',
+  ) as { id: number; numero: string; percentual_comissao: number | string | null }[]
+  return linhas.map(l => ({
+    id: l.id, numero: l.numero,
+    percentual: l.percentual_comissao === null ? null : Number(l.percentual_comissao),
+  }))
+}
+
+/** Define (ou tira, com null) a % da OP. A comissao dela e refeita na hora. */
+export async function definirPercentualDaOp(opId: number, percentual: number | null): Promise<void> {
+  invalidarCacheFinanceiro()
+  ou(
+    await supabase().rpc('definir_percentual_da_op', { p_op_id: opId, p_percentual: percentual }),
+    'Não foi possível salvar a porcentagem da OP.',
+  )
+}
+
+export async function lerPercentualPadrao(): Promise<number> {
+  const linha = ou(
+    await supabase().from('configuracao_comissao').select('percentual_padrao').maybeSingle(),
+    'Não foi possível ler a comissão padrão.',
+  ) as { percentual_padrao: number | string } | null
+  return linha ? Number(linha.percentual_padrao) : 0.2
+}
+
+export async function definirPercentualPadrao(percentual: number): Promise<void> {
+  invalidarCacheFinanceiro()
+  ou(
+    await supabase().rpc('definir_percentual_padrao', { p_percentual: percentual }),
+    'Não foi possível salvar a comissão padrão.',
+  )
+}

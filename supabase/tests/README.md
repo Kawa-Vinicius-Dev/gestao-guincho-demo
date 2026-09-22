@@ -37,6 +37,9 @@ Validam as migrations num Postgres local, sem depender de um projeto Supabase.
 - `92_comissao_no_extrato.sql` — 5 asserções de que a despesa de comissão se
   chama "Fulano — comissão da OP tal", acompanha o nome se ele mudar, e de que o
   extrato entrega o socorrista e a OP para a tela montar o link.
+- `93_comissao_por_op.sql` — 13 asserções de que a % da OP (ex.: 17%) vale para
+  todos daquela OP, passa por cima da % do socorrista, aparece igual na lista de
+  Comissões e na tela de OS, e de que o padrão editável só muda o que não fechou.
 - `95_copia_dos_dados.sql` — 10 asserções de que a cópia dos dados consegue ler
   todas as colunas que pede. O banco não tem backup automático, então essa cópia
   é a única proteção do dono — e ela ficou quebrada sem ninguém saber.
