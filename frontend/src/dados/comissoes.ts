@@ -90,6 +90,23 @@ export interface ComissaoPrevista {
   comissaoPrevista: number
 }
 
+/**
+ * Tira (ou devolve) a comissao de uma OS.
+ *
+ * Vale mesmo depois de a OS ter entrado numa OP: a comissao daquela OP e
+ * refeita na hora e o liquido do socorrista baixa. E o caso de uma OS que caiu
+ * no nome dele sem caber comissao, percebido so depois do pagamento.
+ */
+export async function definirComissaoDaOs(osId: number, semComissao: boolean): Promise<void> {
+  invalidarCacheFinanceiro()
+  ou(
+    await supabase().rpc('porto_definir_comissao_da_os', {
+      p_os_id: osId, p_sem_comissao: semComissao,
+    }),
+    semComissao ? 'Não foi possível tirar a comissão desta OS.' : 'Não foi possível devolver a comissão desta OS.',
+  )
+}
+
 export async function listarComissaoPrevista(
   inicio: string, fim: string, motoristaId?: number,
 ): Promise<ComissaoPrevista[]> {

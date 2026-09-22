@@ -79,6 +79,20 @@ export async function definirAcessoAtivo(perfilId: string, ativo: boolean): Prom
   invalidarCadastro('motoristas')
 }
 
+/**
+ * Encerra o acesso de alguem, para sempre.
+ *
+ * Nao apaga nada: o login e banido e a conta fica desligada. Apagar a linha o
+ * banco recusa de proposito — `despesas.criado_por` e `pagamentos_comissao`
+ * sao `on delete restrict`, para o registro de quem fez o que nunca sumir.
+ * O cadastro do socorrista se solta da conta e continua de pe, com servicos,
+ * comissoes e historico.
+ */
+export async function encerrarAcesso(perfilId: string): Promise<void> {
+  await admin<{ encerrado: boolean }>({ acao: 'encerrar', perfilId })
+  invalidarCadastro('motoristas')
+}
+
 /** Dar acesso cria a conta e a liga ao cadastro do socorrista, no mesmo passo. */
 export async function criarAcessoSocorrista(
   motoristaId: number, email: string,

@@ -4,6 +4,7 @@ import { http, HttpResponse } from 'msw'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { servidor } from '../test/servidor'
+import { confirmarNaJanela } from '../test/confirmar'
 
 /**
  * Criar uma conta de acesso, no modo Supabase (o de producao).
@@ -75,4 +76,27 @@ test('e-mail repetido não cria conta nenhuma: o erro da Edge Function aparece n
 
   expect(await screen.findByText(/already been registered/i)).toBeInTheDocument()
   expect(screen.queryByRole('heading', { name: /senha provisória/i })).not.toBeInTheDocument()
+})
+
+test('encerrar o acesso pede confirmação e não apaga o histórico da pessoa', async () => {
+  let enviado: Record<string, unknown> | null = null
+  servidorBase()
+  servidor.use(
+    http.get(`${SUPA}/rest/v1/perfis`, () => HttpResponse.json([
+      { id: 'a1b2', nome: 'Jeferson', email: 'jeferson@autosocorro.com.br',
+        perfil: 'FUNCIONARIO', ativo: true, senha_provisoria: false },
+    ])),
+    http.post(`${SUPA}/functions/v1/admin-usuarios`, async ({ request }) => {
+      enviado = await request.json() as Record<string, unknown>
+      return HttpResponse.json({ usuarioId: 'a1b2', encerrado: true })
+    }),
+  )
+  const user = userEvent.setup({ delay: null })
+  await abrir()
+
+  await user.click(await screen.findByRole('button', { name: /encerrar acesso/i }))
+  await confirmarNaJanela()
+
+  expect(enviado).toEqual({ acao: 'encerrar', perfilId: 'a1b2' })
+  expect(await screen.findByText(/o acesso de jeferson foi encerrado/i)).toBeInTheDocument()
 })

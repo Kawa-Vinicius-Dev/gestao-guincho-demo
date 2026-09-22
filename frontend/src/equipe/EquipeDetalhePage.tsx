@@ -2,13 +2,14 @@ import { ehAuxiliar } from '../utils/auxiliar'
 import { useEffect,useState } from 'react'
 import { Link,useParams } from 'react-router-dom'
 import { Selecao } from '../components/Campos'
-import { listarComissaoPrevista, listarPeriodosComissao, obterDetalheSocorrista, type ComissaoPrevista } from '../dados/comissoes'
+import { definirComissaoDaOs, listarComissaoPrevista, listarPeriodosComissao, obterDetalheSocorrista, type ComissaoPrevista } from '../dados/comissoes'
 import { Carregando,ErroPagina } from '../components/EstadoPagina'
 import type { DespesaDoSocorrista,DetalheSocorrista } from '../types/modelos'
 import { data,moeda } from '../utils/formatadores'
 import { rotuloPeriodo, type PeriodoPorto } from '../utils/periodos'
 import { globalDoPeriodoPorto, periodoPortoDoGlobal, usePeriodoGlobal } from '../utils/periodoGlobal'
 import { useAoVivo } from '../dados/aoVivo'
+import { ConfirmarAcao, type PedidoConfirmacao } from '../components/ConfirmarAcao'
 
 const statusPagamento={PAGO:'Pago',PAGO_EM_OUTRO_PERIODO:'Pago em outro período',AGUARDANDO_PAGAMENTO:'Aguardando pagamento'} as const
 
@@ -18,6 +19,7 @@ export default function EquipeDetalhePage(){
   const [carregandoPeriodos,setCarregandoPeriodos]=useState(true),[carregandoDetalhe,setCarregandoDetalhe]=useState(false),[erro,setErro]=useState('')
   const [global,setGlobal]=usePeriodoGlobal()
   const [prevista,setPrevista]=useState<ComissaoPrevista|null>(null)
+  const [pedido,setPedido]=useState<PedidoConfirmacao|null>(null)
   const periodoId=periodoPortoDoGlobal(periodos,global)?.id??''
   const setPeriodoId=(id:string)=>{const p=periodos.find(x=>x.id===id);const novo=p&&globalDoPeriodoPorto(p);if(novo)setGlobal(novo)}
   const ids=periodos.find(p=>p.id===periodoId)?.ids??[]
@@ -27,6 +29,20 @@ export default function EquipeDetalhePage(){
   useEffect(()=>{if(!motoristaId||!global.inicio||!global.fim)return
     listarComissaoPrevista(global.inicio,global.fim,motoristaId).then(l=>setPrevista(l[0]??null)).catch(()=>setPrevista(null))},[motoristaId,global.inicio,global.fim])
   useAoVivo(()=>{if(motoristaId&&ids.length)obterDetalheSocorrista(motoristaId,ids).then(setDetalhe).catch(e=>setErro(e.message))})
+  const recarregar=()=>obterDetalheSocorrista(motoristaId,ids).then(setDetalhe)
+  // Tirar a comissao muda o dinheiro da OP inteira, entao a confirmacao diz de
+  // quanto e o servico antes de o administrador decidir.
+  function pedirComissao(servico:{id:number;numeroOs:string;valorServico:number;semComissao?:boolean}){
+    const tirando=!servico.semComissao
+    setPedido({titulo:tirando?'Tirar a comissão desta OS?':'Devolver a comissão desta OS?',
+      efeito:tirando
+        ?<>A OS continua no nome de <strong>{detalhe?.nome}</strong> e na produção dele, mas deixa de gerar comissão. Se ela já estiver paga numa OP, a comissão daquela OP é refeita e o líquido dele baixa.</>
+        :<>A OS volta a gerar comissão e a comissão da OP é refeita, aumentando o líquido de <strong>{detalhe?.nome}</strong>.</>,
+      resumo:[['OS',servico.numeroOs],['Valor do serviço',moeda(servico.valorServico)]],
+      textoConfirmar:tirando?'Tirar comissão':'Devolver comissão',perigo:tirando,
+      aoConfirmar:async()=>{await definirComissaoDaOs(servico.id,tirando);await recarregar()}})
+  }
+
   if(carregandoPeriodos)return <Carregando/>
   if(erro&&!detalhe)return <ErroPagina mensagem={erro}/>
   return <div className="page-enter employee-detail-page">
@@ -56,7 +72,7 @@ export default function EquipeDetalhePage(){
       </section>
 
       <section className="panel employee-services"><header className="panel-title"><div><span className="eyebrow">Histórico do período</span><h2>Serviços prestados</h2></div><span className="service-count">{detalhe.totalServicosPrestados} OS</span></header>
-        <div className="table-scroll"><table><thead><tr><th>OS</th><th>Atendimento</th><th>Especialidade</th><th>Veículo / viatura</th><th>OP</th><th>Valor do serviço</th><th>Pagamento</th><th>Comissão gerada</th></tr></thead><tbody>{detalhe.servicos.map(servico=><tr key={servico.id}><td><strong>{servico.numeroOs}</strong></td><td>{servico.dataAtendimento?data(servico.dataAtendimento):'—'}</td><td>{servico.especialidade||'—'}</td><td><span className="vehicle-chip">{servico.viatura||'Não informada'}</span></td><td>{servico.numeroOp||'—'}</td><td>{moeda(servico.valorServico)}</td><td><span className={`payment-state payment-${servico.statusPagamento.toLowerCase()}`}>{statusPagamento[servico.statusPagamento]}</span></td><td>{servico.comissaoGerada==null?<span className="commission-waiting">Comissão: aguardando pagamento</span>:<strong>{moeda(servico.comissaoGerada)}</strong>}</td></tr>)}</tbody></table></div>
+        <div className="table-scroll"><table><thead><tr><th>OS</th><th>Atendimento</th><th>Especialidade</th><th>Veículo / viatura</th><th>OP</th><th>Valor do serviço</th><th>Pagamento</th><th>Comissão gerada</th><th/></tr></thead><tbody>{detalhe.servicos.map(servico=><tr key={servico.id}><td><strong>{servico.numeroOs}</strong></td><td>{servico.dataAtendimento?data(servico.dataAtendimento):'—'}</td><td>{servico.especialidade||'—'}</td><td><span className="vehicle-chip">{servico.viatura||'Não informada'}</span></td><td>{servico.numeroOp||'—'}</td><td>{moeda(servico.valorServico)}</td><td><span className={`payment-state payment-${servico.statusPagamento.toLowerCase()}`}>{statusPagamento[servico.statusPagamento]}</span></td><td>{servico.semComissao?<span className="commission-waiting">Sem comissão</span>:servico.comissaoGerada==null?<span className="commission-waiting">Comissão: aguardando pagamento</span>:<strong>{moeda(servico.comissaoGerada)}</strong>}</td><td className="col-acoes"><button className={servico.semComissao?'table-action':'table-action table-action-danger'} onClick={()=>pedirComissao(servico)} aria-label={`${servico.semComissao?'Devolver':'Tirar'} a comissão da OS ${servico.numeroOs}`}>{servico.semComissao?'Devolver comissão':'Tirar comissão'}</button></td></tr>)}</tbody></table></div>
         {!detalhe.servicos.length?<p className="empty-inline">Nenhum serviço identificado neste período.</p>:null}
       </section>
 
@@ -67,6 +83,7 @@ export default function EquipeDetalhePage(){
 
       <OutrasDespesas detalhe={detalhe}/>
     </>:null}
+    {pedido?<ConfirmarAcao {...pedido} aoFechar={()=>setPedido(null)}/>:null}
   </div>
 }
 
