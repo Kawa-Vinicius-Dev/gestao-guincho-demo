@@ -26,10 +26,11 @@ Validam as migrations num Postgres local, sem depender de um projeto Supabase.
 - `80_duas_ops.sql` — 5 asserções para o cenário de duas OPs no mesmo mês:
   cada uma fecha a sua produção, e pagar comissão em OPs diferentes e a
   socorristas diferentes não colide mais na categoria.
-- `90_tirar_comissao.sql` — 9 asserções sobre tirar a comissão de uma OS que já
-  está paga numa OP: o dinheiro do socorrista baixa e a despesa de comissão é
-  refeita, mas o serviço continua na produção dele e no nome dele. Devolver
-  desfaz, e só o administrador tira.
+- `90_tirar_comissao.sql` — 12 asserções sobre tirar a comissão de uma OS que já
+  está paga numa OP: a OS fica cancelada, o dinheiro do socorrista baixa e a
+  despesa de comissão é refeita, e o serviço sai da produção mas continua no nome
+  dele. Devolver restaura a situação de antes (a OS que a Porto cancelou volta
+  cancelada), e só o administrador tira.
 - `91_percentual_por_socorrista.sql` — 8 asserções de que a comissão é de cada
   socorrista, com teto de 20%, e de que baixar a taxa de alguém não reescreve o
   que ele já recebeu: a OP que fechou guarda a taxa dela.

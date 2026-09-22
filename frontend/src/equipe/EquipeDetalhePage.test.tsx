@@ -178,7 +178,9 @@ test('a janela de tirar comissão diz que sai a comissão, não o valor do servi
   expect(within(janela).getByText('Sai da comissão dele')).toBeInTheDocument()
   expect(within(janela).getByText('R$ 100,00')).toBeInTheDocument()
   expect(within(janela).getByText(/não é o que sai/i)).toBeInTheDocument()
+  // Tirar a comissao cancela a OS, e a janela diz isso antes do clique.
+  expect(within(janela).getByText('cancelada')).toBeInTheDocument()
 
-  await user.click(within(janela).getByRole('button',{name:/^tirar comissão$/i}))
+  await user.click(within(janela).getByRole('button',{name:/^tirar comissão e cancelar$/i}))
   await waitFor(()=>expect(enviado).toEqual({p_os_id:1,p_sem_comissao:true}))
 })
