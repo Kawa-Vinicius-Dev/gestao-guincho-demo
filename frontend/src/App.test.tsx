@@ -20,8 +20,8 @@ test('administrador começa com a base vazia e cria o primeiro lançamento', asy
 
   await user.clear(await screen.findByLabelText(/e-mail/i))
   await user.type(screen.getByLabelText(/e-mail/i), 'admin@fluxogestao.local')
-  await user.clear(screen.getByLabelText(/senha/i))
-  await user.type(screen.getByLabelText(/senha/i), 'Admin@123')
+  await user.clear(screen.getByLabelText(/^senha$/i))
+  await user.type(screen.getByLabelText(/^senha$/i), 'Admin@123')
   await user.click(screen.getByRole('button', { name: /entrar no sistema/i }))
 
   expect(await screen.findByRole('heading', { name: 'Visão geral', level: 1 })).toBeInTheDocument()
@@ -56,8 +56,8 @@ test('socorrista vê apenas os lançamentos operacionais permitidos', async () =
 
   await user.clear(await screen.findByLabelText(/e-mail/i))
   await user.type(screen.getByLabelText(/e-mail/i), 'socorrista@gestaoguincho.demo')
-  await user.clear(screen.getByLabelText(/senha/i))
-  await user.type(screen.getByLabelText(/senha/i), 'Demo@123')
+  await user.clear(screen.getByLabelText(/^senha$/i))
+  await user.type(screen.getByLabelText(/^senha$/i), 'Demo@123')
   await user.click(screen.getByRole('button', { name: /entrar no sistema/i }))
 
   // O socorrista entra direto no turno do dia; o menu dele continua sem as
@@ -80,8 +80,8 @@ test('mede a transição entre rotas no navegador', async () => {
 
     await user.clear(await screen.findByLabelText(/e-mail/i))
     await user.type(screen.getByLabelText(/e-mail/i), 'admin@fluxogestao.local')
-    await user.clear(screen.getByLabelText(/senha/i))
-    await user.type(screen.getByLabelText(/senha/i), 'Admin@123')
+    await user.clear(screen.getByLabelText(/^senha$/i))
+    await user.type(screen.getByLabelText(/^senha$/i), 'Admin@123')
     await user.click(screen.getByRole('button', { name: /entrar no sistema/i }))
     await screen.findByRole('heading', { name: 'Visão geral', level: 1 })
     medida.mockClear()

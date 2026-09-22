@@ -476,5 +476,5 @@ test('diferença a mais no valor da OP é apontada como provável crédito', asy
 
   expect(await screen.findByText(/divergência financeira encontrada/i)).toBeInTheDocument()
   expect(screen.getAllByText(/R\$\s*468,33/).length).toBeGreaterThan(0)
-  expect(screen.getByRole('link', { name: /créditos/i })).toHaveAttribute('href', '/creditos')
+  expect(screen.getByRole('link', { name: /extrato/i })).toHaveAttribute('href', '/lancamentos')
 })

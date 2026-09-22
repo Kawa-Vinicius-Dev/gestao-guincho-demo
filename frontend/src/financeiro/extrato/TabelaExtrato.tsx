@@ -7,9 +7,12 @@ type Props = {
   itens: LancamentoFinanceiro[]
   carregando: boolean
   aoPagar: (item: LancamentoFinanceiro) => void
+  /** So para receita lancada a mao; a da Porto nao se edita. */
+  aoEditarReceita?: (item: LancamentoFinanceiro) => void
+  aoExcluirReceita?: (item: LancamentoFinanceiro) => void
 }
 
-export function TabelaExtrato({ itens, carregando, aoPagar }: Props) {
+export function TabelaExtrato({ itens, carregando, aoPagar, aoEditarReceita, aoExcluirReceita }: Props) {
   if (carregando) return <Carregando card />
   if (!itens.length) {
     return <Vazio titulo="Nenhum lançamento"
@@ -27,6 +30,7 @@ export function TabelaExtrato({ itens, carregando, aoPagar }: Props) {
           // Despesa ja rejeitada nao volta a ser pagavel: o botao sumiria de
           // qualquer forma no backend, e mostra-lo so gera erro na cara da pessoa.
           const podePagar = !receita && !item.realizado && item.status !== 'REJEITADO'
+          const receitaManual = receita && item.origem === 'MANUAL'
           return <tr key={item.id}>
             <td>{data(item.data)}</td>
             <td>
@@ -46,6 +50,12 @@ export function TabelaExtrato({ itens, carregando, aoPagar }: Props) {
             <td>
               {podePagar
                 ? <button className="table-action" onClick={() => aoPagar(item)}>Registrar pagamento</button>
+                : null}
+              {receitaManual && aoEditarReceita && aoExcluirReceita
+                ? <span className="acoes-da-linha">
+                  <button className="table-action" onClick={() => aoEditarReceita(item)}>Editar</button>
+                  <button className="table-action table-action-danger" onClick={() => aoExcluirReceita(item)}>Excluir</button>
+                </span>
                 : null}
             </td>
           </tr>

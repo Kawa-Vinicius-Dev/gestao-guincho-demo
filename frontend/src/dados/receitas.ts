@@ -99,8 +99,8 @@ function paraBanco(dados: DadosReceita) {
 export const TETO_DA_LISTA = 300
 
 /**
- * `apenasManuais` busca so o que foi lancado a mao (os creditos): com um ano de
- * OS importadas, o teto da lista geral deixaria os creditos antigos de fora.
+ * `apenasManuais` busca so o que foi lancado a mao: com um ano de OS importadas,
+ * o teto da lista geral deixaria as receitas manuais antigas de fora.
  */
 export async function listarReceitas(filtro: { apenasManuais?: boolean } = {}): Promise<Receita[]> {
   if (!moduloNoSupabase('receitas')) return api<Receita[]>('/api/receitas')
@@ -115,6 +115,16 @@ export async function listarReceitas(filtro: { apenasManuais?: boolean } = {}): 
     'Não foi possível carregar as receitas.',
   ) as unknown as LinhaReceita[]
   return linhas.map(paraModelo)
+}
+
+/** Uma receita, para abrir a edicao a partir de uma linha do extrato. */
+export async function lerReceita(id: number): Promise<Receita> {
+  if (!moduloNoSupabase('receitas')) return api<Receita>(`/api/receitas/${id}`)
+  const linha = ou(
+    await supabase().from('receitas').select(COLUNAS).eq('id', id).single(),
+    'Não foi possível abrir a receita.',
+  ) as unknown as LinhaReceita
+  return paraModelo(linha)
 }
 
 export async function criarReceita(dados: DadosReceita): Promise<Receita> {
