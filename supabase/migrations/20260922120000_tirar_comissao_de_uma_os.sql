@@ -79,8 +79,9 @@ begin
     v_def := pg_get_functiondef('public.porto_comissao_prevista(date, date, bigint)'::regprocedure);
     if position('sem_comissao' in v_def) = 0 then
         v_def := public.__trocar_no_corpo(v_def,
-            'os.status_operacional <> ''CANCELADO''',
-            'os.status_operacional <> ''CANCELADO'' and not os.sem_comissao',
+            'and os.ordem_pagamento_id is null',
+            E'and os.ordem_pagamento_id is null
+       and not os.sem_comissao',
             'porto_comissao_prevista');
         execute v_def;
     end if;
