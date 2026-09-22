@@ -44,19 +44,44 @@ const TABELAS: { nome: string; titulo: string; colunas: string }[] = [
       + 'socorrista,qra,motorista_id,data_atendimento,status_operacional,status_financeiro' },
 ]
 
-export async function baixarCopiaDosDados(): Promise<void> {
-  if (!moduloNoSupabase('porto')) return peloRender()
+/**
+ * Uma tabela inteira, pagina por pagina.
+ *
+ * O PostgREST corta em `max_rows` (1000 aqui) e nao avisa. A copia vinha com
+ * exatamente 1000 receitas, 1000 contas a receber e 1000 OS, e parecia
+ * completa — backup que perde o resto em silencio e pior do que backup nenhum,
+ * porque ninguem desconfia dele. A listagem de OS ja tinha levado essa mordida
+ * e pagina de 1000 em 1000; a copia ficou para tras.
+ */
+const PAGINA = 1000
 
-  const cliente = supabase()
-  const partes = await Promise.all(TABELAS.map(async tabela => {
-    const { data, error } = await cliente.from(tabela.nome).select(tabela.colunas).order('id')
+async function lerTudo(
+  cliente: ReturnType<typeof supabase>,
+  tabela: { nome: string; titulo: string; colunas: string },
+): Promise<Record<string, unknown>[]> {
+  const tudo: Record<string, unknown>[] = []
+  for (let pagina = 0; ; pagina++) {
+    const { data, error } = await cliente.from(tabela.nome).select(tabela.colunas)
+      .order('id').range(pagina * PAGINA, (pagina + 1) * PAGINA - 1)
     // Dizer qual tabela e o que o banco respondeu: a copia ficou meses quebrada
     // porque quatro listas pediam coluna que nao existe, e a mensagem generica
     // nao deixava ninguem descobrir onde.
     if (error) throw new Error(`Não foi possível ler ${tabela.titulo.toLowerCase()}: ${error.message}`)
     // A lista de colunas e montada em tempo de execucao, entao o supabase-js
     // nao consegue inferir o formato da linha.
-    const linhas = (data ?? []) as unknown as Record<string, unknown>[]
+    const lote = (data ?? []) as unknown as Record<string, unknown>[]
+    tudo.push(...lote)
+    // Pagina incompleta e o fim: nao ha pagina seguinte para pedir.
+    if (lote.length < PAGINA) return tudo
+  }
+}
+
+export async function baixarCopiaDosDados(): Promise<void> {
+  if (!moduloNoSupabase('porto')) return peloRender()
+
+  const cliente = supabase()
+  const partes = await Promise.all(TABELAS.map(async tabela => {
+    const linhas = await lerTudo(cliente, tabela)
     const colunas = tabela.colunas.split(',')
     return [
       [tabela.titulo],
