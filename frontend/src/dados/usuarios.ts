@@ -93,6 +93,21 @@ export async function encerrarAcesso(perfilId: string): Promise<void> {
   invalidarCadastro('motoristas')
 }
 
+/**
+ * Apaga a conta de vez. So funciona para quem nao deixou rastro no sistema:
+ * conta criada errada, que e o caso de uso. Quem ja lancou algo o banco recusa,
+ * e a Edge Function devolve a explicacao apontando para o encerramento.
+ */
+export async function excluirAcesso(perfilId: string): Promise<void> {
+  await admin<{ excluido: boolean }>({ acao: 'excluir', perfilId })
+  invalidarCadastro('motoristas')
+}
+
+/** Desfaz um encerramento: o login volta a valer e a conta religa. */
+export async function reativarAcesso(perfilId: string): Promise<void> {
+  await admin<{ reativado: boolean }>({ acao: 'reativar', perfilId })
+}
+
 /** Dar acesso cria a conta e a liga ao cadastro do socorrista, no mesmo passo. */
 export async function criarAcessoSocorrista(
   motoristaId: number, email: string,

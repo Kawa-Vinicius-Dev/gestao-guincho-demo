@@ -14,6 +14,8 @@
 //   POST { acao: 'redefinir', perfilId }
 //   POST { acao: 'acesso',   motoristaId, email }
 //   POST { acao: 'encerrar', perfilId }
+//   POST { acao: 'excluir',  perfilId }
+//   POST { acao: 'reativar', perfilId }
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 
@@ -153,6 +155,51 @@ Deno.serve(async (req) => {
       await admin.from('motoristas').update({ perfil_id: null }).eq('perfil_id', id)
 
       return responder({ usuarioId: id, encerrado: true })
+    }
+
+    // Apagar de verdade, para a conta criada errada. So passa quando a pessoa
+    // nao deixou rastro: despesas.criado_por e pagamentos_comissao.pago_por sao
+    // `on delete restrict`, e perfis cai por cascade quando o login vai embora.
+    // Entao o banco recusa sozinho quem ja lancou algo, e ai o caminho e
+    // encerrar — que tira a entrada sem apagar o que a pessoa fez.
+    if (corpo.acao === 'excluir') {
+      const id = String(corpo.perfilId ?? '')
+      if (!id) return responder({ detalhe: 'Informe o usuário.' }, 400)
+      if (id === sessao.user.id) {
+        return responder({ detalhe: 'Você não pode excluir o seu próprio acesso.' }, 400)
+      }
+
+      await admin.from('motoristas').update({ perfil_id: null }).eq('perfil_id', id)
+
+      const { error } = await admin.auth.admin.deleteUser(id)
+      if (error) {
+        // 23503 e a violacao de chave estrangeira; a mensagem crua nao serve
+        // para quem so quer entender por que nao deu.
+        const temHistorico = /foreign key|violates|23503/i.test(error.message)
+        return responder({
+          detalhe: temHistorico
+            ? 'Esta conta já lançou coisas no sistema e não pode ser apagada sem levar junto o registro de quem fez o quê. Use "Encerrar acesso": a pessoa deixa de entrar e o histórico fica.'
+            : error.message,
+        }, 400)
+      }
+
+      return responder({ usuarioId: id, excluido: true })
+    }
+
+    // Desfazer um encerramento. Encerrar sem volta, num sistema com uma pessoa
+    // so administrando, e pegadinha: um clique errado tirava alguem do sistema
+    // para sempre.
+    if (corpo.acao === 'reativar') {
+      const id = String(corpo.perfilId ?? '')
+      if (!id) return responder({ detalhe: 'Informe o usuário.' }, 400)
+
+      const { error } = await admin.auth.admin.updateUserById(id, { ban_duration: 'none' })
+      if (error) return responder({ detalhe: error.message }, 400)
+
+      const { error: ligou } = await admin.from('perfis').update({ ativo: true }).eq('id', id)
+      if (ligou) return responder({ detalhe: ligou.message }, 400)
+
+      return responder({ usuarioId: id, reativado: true })
     }
 
     return responder({ detalhe: 'Ação desconhecida.' }, 400)
