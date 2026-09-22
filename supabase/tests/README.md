@@ -30,6 +30,9 @@ Validam as migrations num Postgres local, sem depender de um projeto Supabase.
   está paga numa OP: o dinheiro do socorrista baixa e a despesa de comissão é
   refeita, mas o serviço continua na produção dele e no nome dele. Devolver
   desfaz, e só o administrador tira.
+- `95_copia_dos_dados.sql` — 10 asserções de que a cópia dos dados consegue ler
+  todas as colunas que pede. O banco não tem backup automático, então essa cópia
+  é a única proteção do dono — e ela ficou quebrada sem ninguém saber.
 - `30_financeiro.sql` — 33 asserções sobre as regras que mexem em dinheiro:
   recorte de periodo e suas bordas, atraso derivado do vencimento, despesa nao
   aprovada fora do resultado, custo do km congelado no registro, producao e
