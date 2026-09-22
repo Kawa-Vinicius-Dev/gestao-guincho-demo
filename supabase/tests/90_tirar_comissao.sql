@@ -76,4 +76,20 @@ set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';
 select pg_temp.checar('e a comissao continua intacta',
   (public.comissao_das_ops(array[1]::bigint[],1) ->> 'comissaoBruta'), '200.00');
 
+\echo '===== Rodar a migration de novo nao quebra nada ====='
+-- Kawa precisou aplicar esta migration na mao, pelo SQL Editor, porque o
+-- historico do `db push` divergiu. Colar um script que morre na segunda
+-- execucao e pedir para alguem travar no meio do caminho: aqui ela roda duas
+-- vezes e o efeito e o mesmo.
+reset role;
+\i migrations/20260922120000_tirar_comissao_de_uma_os.sql
+set role authenticated;
+set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';
+select pg_temp.checar('depois de reaplicar, a comissao continua 200',
+  (public.comissao_das_ops(array[1]::bigint[],1) ->> 'comissaoBruta'), '200.00');
+select public.porto_definir_comissao_da_os(
+  (select id from public.ordens_servico_porto where numero='OS-B'), true);
+select pg_temp.checar('e tirar comissao continua funcionando',
+  (public.comissao_das_ops(array[1]::bigint[],1) ->> 'comissaoBruta'), '100.00');
+
 \echo 'TODOS OS TESTES PASSARAM'
