@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { Carregando, Vazio } from '../../components/EstadoPagina'
 import type { LancamentoFinanceiro } from '../../types/modelos'
 import { data, moeda } from '../../utils/formatadores'
@@ -29,7 +30,7 @@ export function TabelaExtrato({ itens, carregando, aoPagar }: Props) {
           return <tr key={item.id}>
             <td>{data(item.data)}</td>
             <td>
-              <strong>{item.descricao}</strong>
+              <strong><Descricao item={item}/></strong>
               <small>{item.origem}{item.protocolo ? ` · ${item.protocolo}` : ''}</small>
             </td>
             <td>{item.categoria}</td>
@@ -52,4 +53,18 @@ export function TabelaExtrato({ itens, carregando, aoPagar }: Props) {
       </tbody>
     </table>
   </div>
+}
+
+/**
+ * A comissao que o sistema lanca diz de quem e e de qual OP, e o nome leva a
+ * ficha do socorrista, onde a comissao dele esta aberta por servico. Sem isso,
+ * o extrato tinha uma linha "Comissao de socorrista" por pessoa, todas iguais.
+ */
+function Descricao({ item }: { item: LancamentoFinanceiro }) {
+  if (!item.numeroOp || !item.motoristaId) return <>{item.descricao}</>
+  return <>
+    <Link className="extrato-socorrista" to={`/equipe/${item.motoristaId}`}
+      title="Abrir a comissão deste socorrista">{item.motorista ?? 'Socorrista'}</Link>
+    {` — comissão da OP ${item.numeroOp}`}
+  </>
 }
