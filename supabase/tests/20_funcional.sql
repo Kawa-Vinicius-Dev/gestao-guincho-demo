@@ -93,8 +93,8 @@ select pg_temp.checar('socorrista: sem despesa propria',
   (select j->'resultadoPorSocorrista'->0->>'despesas' from d), '0');
 select pg_temp.checar('socorrista: producao',
   (select j->'resultadoPorSocorrista'->0->>'producao' from d), '1000.00');
-select pg_temp.checar('socorrista: custoTotal 200+50',
-  (select j->'resultadoPorSocorrista'->0->>'custoTotal' from d), '250.00');
+select pg_temp.checar('socorrista: custoTotal e so a comissao',
+  (select j->'resultadoPorSocorrista'->0->>'custoTotal' from d), '200.00');
 
 -- Categorias ordenadas pela maior
 select pg_temp.checar('categoria maior primeiro',
