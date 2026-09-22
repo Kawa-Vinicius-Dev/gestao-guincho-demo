@@ -21,10 +21,21 @@ alter table public.motoristas
 comment on column public.motoristas.percentual_comissao is
     'Comissao deste socorrista, de 0 a 0,20. Vazio: vale o padrao de percentual_comissao().';
 
-alter table public.pagamentos_comissao
-    add column if not exists percentual numeric(5, 4);
-comment on column public.pagamentos_comissao.percentual is
-    'A taxa usada quando esta comissao fechou. Congelada: recalculo nao a troca.';
+create table if not exists public.taxa_comissao_congelada (
+    ordem_pagamento_id bigint not null
+        references public.ordens_pagamento_porto (id) on delete cascade,
+    motorista_id bigint not null references public.motoristas (id) on delete cascade,
+    percentual numeric(5, 4) not null,
+    congelada_em timestamptz not null default now(),
+    primary key (ordem_pagamento_id, motorista_id)
+);
+comment on table public.taxa_comissao_congelada is
+    'A taxa que valia quando a comissao daquela OP fechou. Nao mora em '
+    'pagamentos_comissao porque aquela linha e apagada quando a comissao zera, '
+    'e a taxa iria junto — no retorno, o passado seria recalculado pela taxa de hoje.';
+alter table public.taxa_comissao_congelada enable row level security;
+create policy taxa_congelada_leitura on public.taxa_comissao_congelada
+    for select to authenticated using (true);
 
 -- ---------------------------------------------------------------- a taxa
 -- A pergunta "quanto vale a comissao desta pessoa nesta OP" tem uma resposta so,
@@ -43,11 +54,9 @@ security definer
 set search_path = ''
 as $$
     select coalesce(
-        (select pc.percentual from public.pagamentos_comissao pc
-          where pc.motorista_id = p_motorista_id
-            and pc.ordem_pagamento_id is not distinct from p_op_id
-            and pc.percentual is not null
-          limit 1),
+        (select t.percentual from public.taxa_comissao_congelada t
+          where t.motorista_id = p_motorista_id
+            and t.ordem_pagamento_id = p_op_id),
         (select m.percentual_comissao from public.motoristas m where m.id = p_motorista_id),
         public.percentual_comissao())
 $$;
@@ -137,11 +146,14 @@ security definer
 set search_path = ''
 as $$
 begin
-    if new.percentual is null then
-        new.percentual := coalesce(
-            (select m.percentual_comissao from public.motoristas m where m.id = new.motorista_id),
-            public.percentual_comissao());
-    end if;
+    if new.ordem_pagamento_id is null then return new; end if;
+    -- A primeira vez manda. Se a comissao zerar e voltar, a taxa que vale
+    -- continua sendo a de quando aquela OP fechou.
+    insert into public.taxa_comissao_congelada (ordem_pagamento_id, motorista_id, percentual)
+    values (new.ordem_pagamento_id, new.motorista_id, coalesce(
+        (select m.percentual_comissao from public.motoristas m where m.id = new.motorista_id),
+        public.percentual_comissao()))
+    on conflict (ordem_pagamento_id, motorista_id) do nothing;
     return new;
 end;
 $$;
@@ -154,9 +166,11 @@ create trigger pagamentos_comissao_congela_percentual
 
 -- As comissoes que ja existem fecharam sob os 20% da casa, e e essa a taxa que
 -- vale para elas para sempre.
-update public.pagamentos_comissao
-   set percentual = public.percentual_comissao()
- where percentual is null;
+insert into public.taxa_comissao_congelada (ordem_pagamento_id, motorista_id, percentual)
+select pc.ordem_pagamento_id, pc.motorista_id, public.percentual_comissao()
+  from public.pagamentos_comissao pc
+ where pc.ordem_pagamento_id is not null
+on conflict (ordem_pagamento_id, motorista_id) do nothing;
 
 -- ---------------------------------------------------------------- escrita
 create or replace function public.definir_percentual_do_socorrista(

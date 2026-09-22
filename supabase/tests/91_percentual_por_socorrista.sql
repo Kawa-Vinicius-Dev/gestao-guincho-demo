@@ -35,8 +35,8 @@ set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';
 \echo '===== Sem taxa propria, vale o padrao da casa ====='
 select pg_temp.checar('comissao da OP antiga e 200 (20%)',
   (public.comissao_das_ops(array[1]::bigint[],1) ->> 'comissaoBruta'), '200.00');
-select pg_temp.checar('a taxa ficou congelada no pagamento',
-  (select percentual::text from public.pagamentos_comissao where motorista_id=1), '0.2000');
+select pg_temp.checar('a taxa ficou congelada para aquela OP',
+  (select percentual::text from public.taxa_comissao_congelada where motorista_id=1 and ordem_pagamento_id=1), '0.2000');
 
 \echo '===== O teto de 20% e recusado ====='
 do $$
