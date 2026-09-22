@@ -26,6 +26,8 @@ type LinhaExtrato = {
   motorista: string | null
   origem: string
   protocolo: string | null
+  motorista_id: number | null
+  numero_op: string | null
 }
 
 export async function lerExtrato(inicio: string, fim: string): Promise<LancamentoFinanceiro[]> {
@@ -52,5 +54,7 @@ export async function lerExtrato(inicio: string, fim: string): Promise<Lancament
     motorista: l.motorista ?? undefined,
     origem: l.origem,
     protocolo: l.protocolo ?? undefined,
+    motoristaId: l.motorista_id ?? undefined,
+    numeroOp: l.numero_op ?? undefined,
   }))
 }

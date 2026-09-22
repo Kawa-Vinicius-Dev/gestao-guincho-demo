@@ -41,6 +41,8 @@ export interface LancamentoRecorrente { mes:string; lancadas:number; jaExistiam:
 export interface LancamentoFinanceiro {
   id:string; tipo:'RECEITA'|'DESPESA'; referenciaId:number; descricao:string; categoria:string; valor:number;
   data:string; status:string; realizado:boolean; veiculo?:string; veiculoId?:number; motorista?:string; origem:string; protocolo?:string
+  /** Preenchidos quando a linha e a comissao que o sistema lancou para uma OP. */
+  motoristaId?:number; numeroOp?:string
 }
 export interface Quilometragem {
   id:number; data:string; veiculo:string; veiculoId?:number; motorista?:string; motoristaId?:number; protocolo?:string; hodometroInicial:number;

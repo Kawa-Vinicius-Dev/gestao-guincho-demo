@@ -1853,3 +1853,6 @@ tbody tr{transition:background-color .14s ease}
 .despesa-do-turno strong{font-size:14px;overflow-wrap:anywhere}
 .chamada-turno{margin:0;color:#9fc0e4;font-size:13px;line-height:1.5}
 .chamada-turno strong{color:#eaf2fb}
+
+/* Extrato: o nome do socorrista na comissao leva a ficha dele. */
+.extrato-socorrista{color:var(--blue-600);text-decoration:underline;text-underline-offset:2px}.extrato-socorrista:hover{text-decoration-thickness:2px}
