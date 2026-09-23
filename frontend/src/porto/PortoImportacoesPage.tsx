@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
+import { ImportarDiario } from './importacao/ImportarDiario'
+import './importacao/importacao.css'
 import { Link } from 'react-router-dom'
 import { avaliarImportacaoPorto, cancelarImportacaoPorto, confirmarImportacaoPorto, criarPreviaConteudoPorto, criarPreviaPorto } from '../dados/porto'
 import { listarMotoristas } from '../dados/motoristas'
@@ -69,7 +71,7 @@ function AvisoDivergentes({itens}:{itens:OsDivergentePorto[]}){
   </div>
 }
 
-export default function PortoImportacoesPage(){
+function ImportarOrdemDePagamento(){
   const [arquivo,setArquivo]=useState<File|null>(null),[previa,setPrevia]=useState<PreviaPorto|null>(null)
   const [modo,setModo]=useState<'arquivo'|'colagem'>('arquivo'),[conteudo,setConteudo]=useState('')
   const [motoristas,setMotoristas]=useState<Motorista[]>([]),[numeroOp,setNumeroOp]=useState('')
@@ -220,11 +222,12 @@ export default function PortoImportacoesPage(){
   const provavelCredito=(analise?.valorAtual??0)-(analise?.somaArquivo??0)
   const divergenciaConfirmada=(!temDivergenciaFinanceira&&!temDivergenciasDados)||(confirmarDivergencias&&(!temDivergenciaFinanceira||Boolean(motivoDivergencia&&justificativaDivergencia.trim())))
 
-  return <div className="page-enter"><header className="page-heading"><div><span className="eyebrow">Módulo Porto</span><h1>Importar relatórios</h1><p>Cole serviços ou envie CSV/TXT, confira a prévia e confirme somente depois da validação.</p></div></header>
+  return <div>
+    <p className="importacao-explica">Envie o arquivo da OP ou cole a ordem de pagamento copiada do portal. Confira a prévia e confirme depois da validação.</p>
     {carregando?<span role="status">{etapa}</span>:null}{erro?<div className="form-alert" role="alert">{erro}{falhaAoConfirmar&&previa?<button type="button" onClick={()=>void confirmar()}>Tentar novamente</button>:null}</div>:null}{mensagem?<div className="success-notice">{mensagem}</div>:null}{semSocorrista.length?<div className="form-alert" role="alert"><strong>{semSocorrista.length} {semSocorrista.length===1?'ordem de serviço ficou':'ordens de serviço ficaram'} sem socorrista, por terem vindo sem QRA.</strong> Associe o socorrista na tela Ordens de serviço.<NumerosDeOs numeros={semSocorrista}/></div>:null}
     {naoEncontradas.length?<AvisoNaoEncontradas itens={naoEncontradas}/>:null}
     {divergentes.length?<AvisoDivergentes itens={divergentes}/>:null}
-    <section className="panel porto-import-card"><div className="segmented porto-import-modes" role="group" aria-label="Forma de importação"><button className={modo==='arquivo'?'active':''} onClick={()=>{setModo('arquivo');setPrevia(null)}}>Enviar arquivo</button><button className={modo==='colagem'?'active':''} onClick={()=>{setModo('colagem');setPrevia(null)}}>Colar serviços da Porto</button></div>
+    <section className="panel porto-import-card"><div className="segmented porto-import-modes" role="group" aria-label="Forma de importação"><button className={modo==='arquivo'?'active':''} onClick={()=>{setModo('arquivo');setPrevia(null)}}>Enviar arquivo</button><button className={modo==='colagem'?'active':''} onClick={()=>{setModo('colagem');setPrevia(null)}}>Colar ordem de pagamento</button></div>
       {modo==='arquivo'?<div className="porto-upload"><CampoArquivo rotulo="Arquivo CSV ou TXT" chave={inputKey} nome={arquivo?.name}
         accept=".csv,.txt,.tsv,text/csv,text/plain,text/tab-separated-values"
         aoEscolher={escolhido=>{setArquivo(escolhido);setPrevia(null);setMensagem('')}}/><button className="button button-primary" disabled={!arquivo||carregando} onClick={analisar}>{carregando?'Analisando…':'Analisar CSV'}</button></div>:<div className="porto-paste"><label className="field"><span>Conteúdo copiado da Porto</span><textarea aria-label="Conteúdo copiado da Porto" rows={10} value={conteudo} onChange={e=>{setConteudo(e.target.value);setPrevia(null);setMensagem('')}} placeholder="Cole aqui a tabela copiada com Ctrl+C"/></label><div className="porto-paste-actions"><button className="button button-ghost" type="button" onClick={limpar}>Limpar</button><button className="button button-primary" disabled={!conteudo.trim()||carregando} onClick={analisar}>{carregando?'Analisando…':'Analisar conteúdo'}</button></div></div>}
@@ -265,5 +268,29 @@ export default function PortoImportacoesPage(){
       </div>:null}
     </section>
     {pedido?<ConfirmarAcao {...pedido} aoFechar={()=>setPedido(null)}/>:null}
+  </div>
+}
+
+type TipoImportacao = 'diario' | 'op'
+
+/**
+ * Importar relatorios: dois tipos, cada um no seu lugar.
+ *
+ * Kawa, 23/09/2026: "na tela de importacao ficar dois tipos de importacao,
+ * importacao diaria e importacao da ordem de pagamento". A diaria e a colagem da
+ * consulta de servicos (antes no Diario Operacional, que ficou so com o
+ * calendario); a da OP traz os valores. O tipo fica na URL (?tipo=diario).
+ */
+export default function PortoImportacoesPage(){
+  const [tipo,setTipo]=useState<TipoImportacao>(()=>new URLSearchParams(window.location.search).get('tipo')==='diario'?'diario':'op')
+  function trocar(novo:TipoImportacao){setTipo(novo);window.history.replaceState(null,'',`${window.location.pathname}?tipo=${novo}`)}
+  return <div className="page-enter">
+    <header className="page-heading"><div><span className="eyebrow">Porto Seguro</span><h1>Importar relatórios</h1>
+      <p>Importação diária: os serviços do dia, sem valor. Ordem de pagamento: os valores que a Porto pagou.</p></div></header>
+    <nav className="config-abas" role="tablist" aria-label="Tipo de importação">
+      <button type="button" role="tab" aria-selected={tipo==='diario'} className={tipo==='diario'?'ativa':undefined} onClick={()=>trocar('diario')}>Importação diária</button>
+      <button type="button" role="tab" aria-selected={tipo==='op'} className={tipo==='op'?'ativa':undefined} onClick={()=>trocar('op')}>Ordem de pagamento</button>
+    </nav>
+    {tipo==='diario'?<ImportarDiario/>:<ImportarOrdemDePagamento/>}
   </div>
 }

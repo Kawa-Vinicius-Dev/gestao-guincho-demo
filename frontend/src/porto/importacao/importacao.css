@@ -1,0 +1,6 @@
+/* Abas de tipo de importacao (mesmo desenho das abas de Configuracoes). */
+.config-abas{display:flex;gap:4px;margin:0 0 18px;padding:4px;border:1px solid var(--line);border-radius:10px;background:var(--superficie);width:fit-content}
+.config-abas button{padding:10px 18px;border:0;border-radius:7px;color:var(--muted);background:transparent;font:600 14px 'IBM Plex Sans',sans-serif;cursor:pointer}
+.config-abas button:hover{color:var(--ink);background:var(--superficie-2)}
+.config-abas button.ativa{color:#fff;background:var(--blue-600)}
+.importacao-explica{margin:0 0 14px;color:var(--muted);font-size:14px;max-width:760px}

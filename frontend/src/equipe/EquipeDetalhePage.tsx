@@ -36,17 +36,16 @@ export default function EquipeDetalhePage(){
   function pedirComissao(servico:{id:number;numeroOs:string;valorServico:number;comissaoGerada?:number;semComissao?:boolean}){
     const tirando=!servico.semComissao
     const emJogo=servico.comissaoGerada!=null?moeda(servico.comissaoGerada):null
-    setPedido({titulo:tirando?'Tirar a comissão e cancelar esta OS?':'Devolver a comissão e reativar esta OS?',
+    setPedido({titulo:tirando?'Cancelar esta OS?':'Reativar esta OS?',
       efeito:tirando
-        ?<>A OS fica <strong>cancelada</strong>: sai da comissão e da produção de <strong>{detalhe?.nome}</strong> e deixa de contar nos painéis. Se ela já estiver paga numa OP, a comissão daquela OP é refeita e o líquido dele baixa. O que a Porto pagou continua nas receitas.</>
-        :<>A OS volta à situação que tinha antes de ser cancelada, volta a gerar comissão e a comissão da OP é refeita, aumentando o líquido de <strong>{detalhe?.nome}</strong>.</>,
+        ?<>A OS deixa de contar para <strong>{detalhe?.nome}</strong> e não gera comissão. Se ela já foi paga, a comissão é recalculada.</>
+        :<>A OS volta a contar para <strong>{detalhe?.nome}</strong> e gera comissão de novo.</>,
       resumo:[
-        [tirando?'Sai da comissão dele':'Volta para a comissão dele',
-          emJogo??'Ainda sem valor: a OS não foi paga numa OP'],
+        [tirando?'Comissão que sai':'Comissão que volta',emJogo??'Ainda sem valor'],
         ['OS',servico.numeroOs],
-        ['Valor do serviço (não é o que sai)',moeda(servico.valorServico)],
+        ['Valor do serviço',moeda(servico.valorServico)],
       ],
-      textoConfirmar:tirando?'Tirar comissão e cancelar':'Devolver comissão',perigo:tirando,
+      textoConfirmar:tirando?'Cancelar OS':'Reativar OS',perigo:tirando,
       aoConfirmar:async()=>{await definirComissaoDaOs(servico.id,tirando);await recarregar()}})
   }
 
@@ -79,7 +78,7 @@ export default function EquipeDetalhePage(){
       </section>
 
       <section className="panel employee-services"><header className="panel-title"><div><span className="eyebrow">Histórico do período</span><h2>Serviços prestados</h2></div><span className="service-count">{detalhe.totalServicosPrestados} OS</span></header>
-        <div className="table-scroll"><table><thead><tr><th>OS</th><th>Atendimento</th><th>Especialidade</th><th>Veículo / viatura</th><th>OP</th><th>Valor do serviço</th><th>Pagamento</th><th>Comissão gerada</th><th/></tr></thead><tbody>{detalhe.servicos.map(servico=><tr key={servico.id}><td><strong><LinkOs numero={servico.numeroOs}/></strong></td><td>{servico.dataAtendimento?data(servico.dataAtendimento):'—'}</td><td>{servico.especialidade||'—'}</td><td>{servico.viatura?<LinkViatura sigla={servico.viatura} chip/>:<span className="vehicle-chip">Não informada</span>}</td><td><LinkOp numero={servico.numeroOp}/></td><td>{moeda(servico.valorServico)}</td><td><span className={`payment-state payment-${servico.statusPagamento.toLowerCase()}`}>{statusPagamento[servico.statusPagamento]}</span></td><td>{servico.semComissao?<span className="commission-waiting">OS cancelada · sem comissão</span>:servico.comissaoGerada==null?<span className="commission-waiting">Comissão: aguardando pagamento</span>:<strong>{moeda(servico.comissaoGerada)}</strong>}</td><td className="col-acoes"><button className={servico.semComissao?'table-action':'table-action table-action-danger'} onClick={()=>pedirComissao(servico)} aria-label={`${servico.semComissao?'Devolver':'Tirar'} a comissão da OS ${servico.numeroOs}`}>{servico.semComissao?'Devolver comissão':'Tirar comissão'}</button></td></tr>)}</tbody></table></div>
+        <div className="table-scroll"><table><thead><tr><th>OS</th><th>Atendimento</th><th>Especialidade</th><th>Veículo / viatura</th><th>OP</th><th>Valor do serviço</th><th>Pagamento</th><th>Comissão gerada</th><th/></tr></thead><tbody>{detalhe.servicos.map(servico=><tr key={servico.id}><td><strong><LinkOs numero={servico.numeroOs}/></strong></td><td>{servico.dataAtendimento?data(servico.dataAtendimento):'—'}</td><td>{servico.especialidade||'—'}</td><td>{servico.viatura?<LinkViatura sigla={servico.viatura} chip/>:<span className="vehicle-chip">Não informada</span>}</td><td><LinkOp numero={servico.numeroOp}/></td><td>{moeda(servico.valorServico)}</td><td><span className={`payment-state payment-${servico.statusPagamento.toLowerCase()}`}>{statusPagamento[servico.statusPagamento]}</span></td><td>{servico.semComissao?<span className="commission-waiting">Cancelada</span>:servico.comissaoGerada==null?<span className="commission-waiting">Comissão: aguardando pagamento</span>:<strong>{moeda(servico.comissaoGerada)}</strong>}</td><td className="col-acoes"><button className={servico.semComissao?'table-action':'table-action table-action-danger'} onClick={()=>pedirComissao(servico)} aria-label={`${servico.semComissao?'Reativar':'Cancelar'} a OS ${servico.numeroOs}`}>{servico.semComissao?'Reativar':'Cancelar OS'}</button></td></tr>)}</tbody></table></div>
         {!detalhe.servicos.length?<p className="empty-inline">Nenhum serviço identificado neste período.</p>:null}
       </section>
 

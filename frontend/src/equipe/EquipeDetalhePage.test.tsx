@@ -154,7 +154,7 @@ test('mostrar as outras despesas não mexe no líquido da comissão',async()=>{
 // O que sai do bolso do socorrista e a comissao, nunca o valor do servico. A
 // janela mostrava so "Valor do servico R$ 500,00" e dava a entender que eram os
 // 500 que saiam. Kawa apontou isso olhando a tela.
-test('a janela de tirar comissão diz que sai a comissão, não o valor do serviço',async()=>{
+test('a janela de cancelar a OS diz a comissão que sai, e o valor do serviço à parte',async()=>{
   const consultaMotoristas=configurarAdmin()
   let enviado:Record<string,unknown>|null=null
   servidor.use(http.post(`${URL_SUPABASE}/rest/v1/rpc/porto_definir_comissao_da_os`,async({request})=>{
@@ -171,16 +171,16 @@ test('a janela de tirar comissão diz que sai a comissão, não o valor do servi
   await screen.findByRole('heading',{name:'Ana Motorista'})
 
   const linha=(await screen.findByText('OS-PAGA')).closest('tr')!
-  await user.click(within(linha).getByRole('button',{name:/tirar a comissão da os/i}))
+  await user.click(within(linha).getByRole('button',{name:/cancelar a os/i}))
 
   const janela=await screen.findByRole('dialog')
   // A OS vale 500 e gerou 100 de comissao: o que sai sao os 100.
-  expect(within(janela).getByText('Sai da comissão dele')).toBeInTheDocument()
+  expect(within(janela).getByText('Comissão que sai')).toBeInTheDocument()
   expect(within(janela).getByText('R$ 100,00')).toBeInTheDocument()
-  expect(within(janela).getByText(/não é o que sai/i)).toBeInTheDocument()
-  // Tirar a comissao cancela a OS, e a janela diz isso antes do clique.
-  expect(within(janela).getByText('cancelada')).toBeInTheDocument()
+  expect(within(janela).getByText('Valor do serviço')).toBeInTheDocument()
+  // Cancelar a OS tira a comissao, e a janela diz isso antes do clique.
+  expect(within(janela).getByText(/não gera comissão/i)).toBeInTheDocument()
 
-  await user.click(within(janela).getByRole('button',{name:/^tirar comissão e cancelar$/i}))
+  await user.click(within(janela).getByRole('button',{name:/^cancelar os$/i}))
   await waitFor(()=>expect(enviado).toEqual({p_os_id:1,p_sem_comissao:true}))
 })

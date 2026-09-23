@@ -43,22 +43,20 @@ export function DetalheDaOs({ os, veiculoId, aoCorrigir, aoInformarValor, aoMuda
   function pedirComissao() {
     const tirando = !semComissao
     setPedido({
-      titulo: tirando ? 'Tirar a comissão e cancelar esta OS?' : 'Devolver a comissão e reativar esta OS?',
+      titulo: tirando ? 'Cancelar esta OS?' : 'Reativar esta OS?',
       efeito: tirando
-        ? <>A OS fica <strong>cancelada</strong>: sai da comissão e da produção de <strong>{os.motorista ?? 'quem rodou'}</strong> e
-            deixa de contar nos painéis. Se ela já estiver paga numa OP, a comissão daquela OP é refeita. O que a Porto pagou
-            continua nas receitas.</>
-        : <>A OS volta à situação que tinha antes de ser cancelada, volta a gerar comissão, e a comissão da OP é refeita.</>,
+        ? <>A OS deixa de contar para <strong>{os.motorista ?? 'o socorrista'}</strong> e não gera comissão. Se ela já foi paga, a comissão é recalculada.</>
+        : <>A OS volta a contar para <strong>{os.motorista ?? 'o socorrista'}</strong> e gera comissão de novo.</>,
       resumo: [
         ['OS', os.numero],
         ['Socorrista', os.motorista ?? '—'],
-        [tirando ? 'Sai da comissão' : 'Volta para a comissão', os.comissao !== undefined ? moeda(os.comissao) : 'Ainda sem valor: a OS não foi paga numa OP'],
+        [tirando ? 'Comissão que sai' : 'Comissão que volta', os.comissao !== undefined ? moeda(os.comissao) : 'Ainda sem valor'],
       ],
-      textoConfirmar: tirando ? 'Tirar comissão e cancelar' : 'Devolver comissão',
+      textoConfirmar: tirando ? 'Cancelar OS' : 'Reativar OS',
       perigo: tirando,
       aoConfirmar: async () => {
         await definirComissaoDaOs(os.id, tirando)
-        aoMudar(tirando ? `OS ${os.numero} cancelada, sem comissão.` : `OS ${os.numero} reativada, com comissão.`)
+        aoMudar(tirando ? `OS ${os.numero} cancelada.` : `OS ${os.numero} reativada.`)
       },
     })
   }
@@ -66,7 +64,7 @@ export function DetalheDaOs({ os, veiculoId, aoCorrigir, aoInformarValor, aoMuda
   return <Modal etiqueta="Ordem de serviço" titulo={os.numero} className="detalhe-os" fecharAoClicarFora aoFechar={aoFechar}>
     <div className="detalhe-os-situacao">
       <span className={`vehicle-status ${etiqueta.classe}`}>{etiqueta.texto}</span>
-      {semComissao ? <span className="vehicle-status status-erro_leitura">Cancelada · sem comissão</span> : null}
+      {semComissao ? <span className="vehicle-status status-erro_leitura">Cancelada</span> : null}
     </div>
 
     <dl className="detalhe-os-dados">
@@ -99,7 +97,7 @@ export function DetalheDaOs({ os, veiculoId, aoCorrigir, aoInformarValor, aoMuda
             {os.valorManual !== undefined ? 'Alterar valor informado' : 'Informar valor'}</button>}
       <button type="button" className={semComissao ? 'button button-primary' : 'button button-ghost botao-perigo'}
         disabled={!marcas} onClick={pedirComissao}>
-        {semComissao ? 'Devolver comissão' : 'Tirar comissão e cancelar'}</button>
+        {semComissao ? 'Reativar OS' : 'Cancelar OS'}</button>
     </div>
     {os.ordemPagamentoId
       ? <p className="nota-fora-do-fechamento">O valor desta OS veio da OP e não se edita: é o que a Porto pagou.</p>

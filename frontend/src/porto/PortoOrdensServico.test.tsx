@@ -221,9 +221,9 @@ test('o detalhe da OS mostra tudo e tira a comissão, com confirmação', async 
   expect(within(detalhe).getByText('16/06 a 30/06/2026')).toBeInTheDocument()
   expect(within(detalhe).getByRole('link', { name: '06416626' })).toHaveAttribute('href', '/porto/ordens-pagamento?numero=06416626')
 
-  await user.click(await within(detalhe).findByRole('button', { name: /tirar comissão e cancelar/i }))
-  const confirmacao = await screen.findByRole('dialog', { name: /tirar a comissão e cancelar/i })
-  await user.click(within(confirmacao).getByRole('button', { name: /tirar comissão e cancelar/i }))
+  await user.click(await within(detalhe).findByRole('button', { name: /^cancelar os$/i }))
+  const confirmacao = await screen.findByRole('dialog', { name: /cancelar esta os/i })
+  await user.click(within(confirmacao).getByRole('button', { name: /^cancelar os$/i }))
   await waitFor(() => expect(enviado).toEqual({ p_os_id: 7, p_sem_comissao: true }))
 })
 

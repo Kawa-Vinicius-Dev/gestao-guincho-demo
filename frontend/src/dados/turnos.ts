@@ -266,6 +266,37 @@ export async function devolverTurno(turnoId: number, motivo: string): Promise<vo
   )
 }
 
+/**
+ * Baixa a foto para o computador de quem esta aprovando.
+ *
+ * Kawa, 23/09/2026: a foto so serve para conferir, e e apagada depois da
+ * aprovacao; mas, se houver divergencia de valor, quem aprova precisa guardar
+ * a foto para cobrar o socorrista pela digitacao errada. O link assinado com
+ * `download` faz o navegador salvar o arquivo, em vez de abrir.
+ */
+export async function baixarFoto(caminho: string, nomeDoArquivo: string): Promise<void> {
+  const { data, error } = await supabase().storage.from(BUCKET)
+    .createSignedUrl(caminho, VALIDADE_LINK_SEGUNDOS, { download: nomeDoArquivo })
+  if (error || !data?.signedUrl) {
+    throw erroDoBanco({ message: error?.message }, 'Não foi possível baixar a foto.')
+  }
+  const link = document.createElement('a')
+  link.href = data.signedUrl
+  link.download = nomeDoArquivo
+  document.body.appendChild(link); link.click(); link.remove()
+}
+
+/**
+ * Apaga as fotos do turno depois da aprovacao: elas so existem para conferir o
+ * odometro, e guarda-las ocupa espaco sem servir para mais nada. Falha aqui nao
+ * desfaz a aprovacao — no pior caso a foto fica, e nada se perde.
+ */
+export async function apagarFotosDoTurno(caminhos: (string | null | undefined)[]): Promise<void> {
+  const validos = caminhos.filter((c): c is string => Boolean(c))
+  if (!validos.length) return
+  await supabase().storage.from(BUCKET).remove(validos).catch(() => {})
+}
+
 /** Link temporario para ver a foto: o bucket e privado, nao ha URL publica. */
 export async function linkDaFoto(caminho: string): Promise<string> {
   const { data, error } = await supabase().storage.from(BUCKET)
