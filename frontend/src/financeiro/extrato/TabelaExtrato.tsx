@@ -13,6 +13,8 @@ type Props = {
   /** So para receita lancada a mao; a da Porto nao se edita. */
   aoEditarReceita?: (item: LancamentoFinanceiro) => void
   aoExcluirReceita?: (item: LancamentoFinanceiro) => void
+  /** Dia de hoje (AAAA-MM-DD), para marcar a despesa vencida. */
+  hoje?: string
 }
 
 const ORIGENS: Record<string, string> = {
@@ -22,6 +24,22 @@ const ORIGENS: Record<string, string> = {
 
 /** Com sinal: receita soma, despesa subtrai. */
 const comSinal = (item: LancamentoFinanceiro) => item.tipo === 'RECEITA' ? item.valor : -item.valor
+
+const hojeLocal = () => {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+/**
+ * Despesa em aberto com data anterior a hoje. A data da linha e o vencimento:
+ * a despesa pendente e lancada com vencimento igual a data (ou sem vencimento),
+ * entao nao precisa de coluna nova no extrato do banco.
+ */
+export const estaVencida = (item: LancamentoFinanceiro, hoje: string) =>
+  item.tipo === 'DESPESA' && !item.realizado && item.status !== 'REJEITADO' && item.data < hoje
+
+const diasEntre = (de: string, ate: string) =>
+  Math.round((new Date(`${ate}T12:00:00`).getTime() - new Date(`${de}T12:00:00`).getTime()) / 86_400_000)
 
 const diaDaSemana = (dia: string) =>
   new Intl.DateTimeFormat('pt-BR', { weekday: 'short' }).format(new Date(`${dia}T12:00:00`)).replace('.', '')
@@ -35,7 +53,7 @@ const diaDaSemana = (dia: string) =>
  * da linha, que abre com um clique. Na linha fica o que se le de relance — o
  * que foi, se ja foi pago e quanto.
  */
-export function TabelaExtrato({ itens, carregando, aoPagar, aoEditarReceita, aoExcluirReceita }: Props) {
+export function TabelaExtrato({ itens, carregando, aoPagar, aoEditarReceita, aoExcluirReceita, hoje = hojeLocal() }: Props) {
   const [aberto, setAberto] = useState<string | null>(null)
   if (carregando) return <Carregando card />
   if (!itens.length) {
@@ -70,7 +88,7 @@ export function TabelaExtrato({ itens, carregando, aoPagar, aoEditarReceita, aoE
                 {previsto ? <small>{previsto > 0 ? '+' : '−'} {moeda(Math.abs(previsto))} previsto</small> : null}
               </td>
             </tr>
-            {doDia.map(item => <Linha key={item.id} item={item} aberta={aberto === item.id}
+            {doDia.map(item => <Linha key={item.id} item={item} hoje={hoje} aberta={aberto === item.id}
               aoAlternar={() => setAberto(a => a === item.id ? null : item.id)}
               aoPagar={aoPagar} aoEditarReceita={aoEditarReceita} aoExcluirReceita={aoExcluirReceita}/>)}
           </Fragment>
@@ -80,22 +98,25 @@ export function TabelaExtrato({ itens, carregando, aoPagar, aoEditarReceita, aoE
   </div>
 }
 
-type LinhaProps = Omit<Props, 'itens' | 'carregando'> & {
+type LinhaProps = Omit<Props, 'itens' | 'carregando' | 'hoje'> & {
   item: LancamentoFinanceiro
+  hoje: string
   aberta: boolean
   aoAlternar: () => void
 }
 
-function Linha({ item, aberta, aoAlternar, aoPagar, aoEditarReceita, aoExcluirReceita }: LinhaProps) {
+function Linha({ item, hoje, aberta, aoAlternar, aoPagar, aoEditarReceita, aoExcluirReceita }: LinhaProps) {
   const receita = item.tipo === 'RECEITA'
   // Despesa ja rejeitada nao volta a ser pagavel: o botao sumiria de
   // qualquer forma no backend, e mostra-lo so gera erro na cara da pessoa.
   const podePagar = !receita && !item.realizado && item.status !== 'REJEITADO'
   const receitaManual = receita && item.origem === 'MANUAL'
+  const vencida = estaVencida(item, hoje)
+  const atraso = vencida ? diasEntre(item.data, hoje) : 0
   const detalhe = `extrato-detalhe-${item.id}`
   return <>
     {/* Clicar na linha abre o detalhe; links e botoes dentro dela seguem o proprio caminho. */}
-    <tr className={`linha-clicavel${aberta ? ' extrato-aberta' : ''}`}
+    <tr className={`linha-clicavel${aberta ? ' extrato-aberta' : ''}${vencida ? ' extrato-vencida' : ''}`}
       onClick={e => { if (!(e.target as HTMLElement).closest('a,button')) aoAlternar() }}>
       <td>
         <button type="button" className="extrato-abrir" aria-expanded={aberta} aria-controls={detalhe}
@@ -104,9 +125,12 @@ function Linha({ item, aberta, aoAlternar, aoPagar, aoEditarReceita, aoExcluirRe
         <small>{item.categoria}</small>
       </td>
       <td>
-        <span className={`ledger-status ${item.realizado ? 'ledger-recebido' : 'ledger-pendente'}`}>
-          {item.realizado ? (receita ? 'Recebido' : 'Pago') : 'Previsto'}
-        </span>
+        {vencida
+          ? <span className="ledger-status ledger-vencida"
+              title={`Venceu em ${data(item.data)}`}>Vencida há {atraso} {atraso === 1 ? 'dia' : 'dias'}</span>
+          : <span className={`ledger-status ${item.realizado ? 'ledger-recebido' : 'ledger-pendente'}`}>
+              {item.realizado ? (receita ? 'Recebido' : 'Pago') : 'Previsto'}
+            </span>}
       </td>
       <td className={`col-valor ${receita ? 'positive' : 'negative'}`}>
         <strong>{receita ? '+' : '−'} {moeda(item.valor)}</strong>

@@ -1992,3 +1992,22 @@ tbody tr{transition:background-color .14s ease}
 .faturamento-grupo-resumo strong{grid-area:valor}
 .faturamento-grupo-resumo small{grid-area:detalhe}
 .faturamento-grupo-detalhe{padding:6px 6px 10px}
+
+/* --- Marca no menu ----------------------------------------------------------
+   Vira link para o inicio. "J M S" era escrito com espacos, que o leitor de tela
+   soletrava; o respiro entre as letras agora vem do letter-spacing. */
+a.brand{color:inherit;text-decoration:none;border-radius:10px;transition:background .16s ease}
+a.brand:hover{background:rgba(255,255,255,.05)}
+a.brand:hover .brand-mark{transform:translateY(-1px) rotate(-3deg)}
+a.brand:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+.brand .brand-mark{filter:drop-shadow(0 6px 14px rgba(46,144,250,.35));transition:transform .2s cubic-bezier(.22,1,.36,1)}
+.brand-texto{display:grid;gap:5px}
+.brand .brand-texto strong{color:#fff;letter-spacing:.14em}
+.brand-texto small{color:#8fa6bd;font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap}
+@media(prefers-reduced-motion:reduce){a.brand,.brand .brand-mark{transition:none}a.brand:hover .brand-mark{transform:none}}
+
+/* --- Cursor de texto --------------------------------------------------------
+   Com a navegacao por cursor do navegador ligada (F7), clicar num texto comum
+   deixava um "|" piscando no meio dele. O cursor so aparece onde se digita. */
+body{caret-color:transparent}
+input,textarea,select,[contenteditable]:not([contenteditable=false]){caret-color:auto}

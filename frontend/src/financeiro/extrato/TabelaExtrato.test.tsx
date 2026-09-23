@@ -67,3 +67,15 @@ test('categoria, viatura e origem ficam no detalhe, que abre com um clique', asy
   await user.click(screen.getByRole('button', { name: /fechar detalhes de diesel/i }))
   expect(screen.queryByText('Despesa fixa')).toBeNull()
 })
+
+test('despesa em aberto com data passada aparece como vencida, com os dias de atraso', () => {
+  render(<MemoryRouter><TabelaExtrato hoje="2026-09-18" carregando={false} aoPagar={() => {}} itens={[
+    { ...base, id: 'D1', descricao: 'Aluguel', valor: 2500, realizado: false, status: 'PENDENTE', origem: 'MANUAL', numeroOp: undefined },
+    { ...base, id: 'D2', descricao: 'Seguro', valor: 900, data: '2026-09-18', realizado: false, status: 'PENDENTE', origem: 'MANUAL', numeroOp: undefined },
+    { ...base, id: 'D3', descricao: 'Multa', valor: 100, realizado: false, status: 'REJEITADO', origem: 'MANUAL', numeroOp: undefined },
+  ]}/></MemoryRouter>)
+  expect(screen.getByText('Vencida há 3 dias')).toBeTruthy()
+  // Vence hoje ainda nao esta vencida; rejeitada nao se paga.
+  expect(screen.getAllByText(/vencida/i)).toHaveLength(1)
+  expect(screen.getByText('Vencida há 3 dias').closest('tr')?.textContent).toContain('Aluguel')
+})
