@@ -1669,7 +1669,7 @@ tbody tr{transition:background-color .14s ease}
 .diario-dia-os{color:var(--muted);font-size:12px;line-height:1}
 .diario-dia-ok{border-color:var(--ok-texto);background:var(--ok-fundo);color:var(--ok-texto)}
 .diario-dia-falta{border-color:var(--aviso-texto);background:var(--aviso-fundo);color:var(--aviso-texto)}
-.diario-dia-futuro{opacity:.45}
+.diario-dia-futuro,.diario-dia-antes{opacity:.45}
 .diario-dia-vazio{height:var(--diario-celula)}
 .diario-mapa-navegacao{display:flex;align-items:center;gap:12px;font-size:14px}
 

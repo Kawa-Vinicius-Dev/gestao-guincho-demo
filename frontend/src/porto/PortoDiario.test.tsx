@@ -92,3 +92,27 @@ test('o Diário é só o calendário, com o botão que leva à importação diá
   expect(await screen.findByRole('link', { name: /importar diário/i })).toHaveAttribute('href', '/porto/importacoes?tipo=diario')
   expect(screen.queryByLabelText(/consulta de serviços copiada da porto/i)).toBeNull()
 })
+
+// Marco de 2026 so tem 30 e 31 no sistema: o mes aparece inteiro, cada dia na
+// coluna certa, e o que vem antes do inicio fica apagado e sem clique.
+test('o mês do início mostra todos os dias, com os anteriores apagados', async () => {
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date('2026-03-31T15:00:00'))
+  mapa.mockResolvedValue([
+    { dia: '2026-03-30', importado: true, os: 3, semValor: 3 },
+    { dia: '2026-03-31', importado: false, os: 0, semValor: 0 },
+  ])
+  try {
+    const { container } = render(<MemoryRouter><PortoDiarioPage /></MemoryRouter>)
+    await screen.findByText(/anteriores a 30\/03\/2026/i)
+    const dias = container.querySelectorAll('.diario-mapa-dias > li:not(.diario-dia-vazio)')
+    expect(dias).toHaveLength(31)
+    expect(container.querySelectorAll('.diario-dia-antes')).toHaveLength(29)
+    // 1/3/2026 e domingo: nenhuma celula vazia antes dele.
+    expect(container.querySelectorAll('.diario-dia-vazio')).toHaveLength(0)
+    expect(within(dias[0] as HTMLElement).queryByRole('button')).toBeNull()
+    expect(within(dias[29] as HTMLElement).getByRole('button')).toBeInTheDocument()
+  } finally {
+    vi.useRealTimers()
+  }
+})
