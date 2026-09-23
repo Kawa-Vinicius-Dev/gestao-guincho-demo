@@ -16,7 +16,21 @@ import { data, moeda } from '../utils/formatadores'
 import { FormReceita } from './extrato/FormReceita'
 import { TabelaExtrato } from './extrato/TabelaExtrato'
 
-type TipoLancamento = 'RECEITA' | 'DESPESA'
+/**
+ * Atalhos no lugar do filtro de tipo: sao as tres perguntas que se faz ao
+ * extrato — o que entrou, o que saiu e o que falta pagar.
+ */
+type Atalho = '' | 'RECEITAS' | 'DESPESAS' | 'A_PAGAR'
+const ATALHOS: { valor: Atalho; texto: string }[] = [
+  { valor: '', texto: 'Tudo' }, { valor: 'RECEITAS', texto: 'Receitas' },
+  { valor: 'DESPESAS', texto: 'Despesas' }, { valor: 'A_PAGAR', texto: 'A pagar' },
+]
+const aPagar = (item: LancamentoFinanceiro) => item.tipo === 'DESPESA' && !item.realizado && item.status !== 'REJEITADO'
+const noAtalho = (atalho: Atalho, item: LancamentoFinanceiro) =>
+  atalho === 'RECEITAS' ? item.tipo === 'RECEITA'
+  : atalho === 'DESPESAS' ? item.tipo === 'DESPESA'
+  : atalho === 'A_PAGAR' ? aPagar(item)
+  : true
 
 /** Mesma lista em Lancamentos e em Despesas; ficava escrita nas duas telas. */
 export const FORMAS_PAGAMENTO = [
@@ -40,7 +54,7 @@ export default function LancamentosPage() {
   // `true` para uma nova, a propria receita para editar.
   const [receitaAberta,setReceitaAberta]=useState<Receita|true|null>(null)
   const [excluindoReceita,setExcluindoReceita]=useState<LancamentoFinanceiro|null>(null)
-  const [tipoFiltro,setTipoFiltro]=useState<''|TipoLancamento>('')
+  const [atalho,setAtalho]=useState<Atalho>('')
   const [pesquisa,setPesquisa]=useState('')
   const [veiculoFiltro,setVeiculoFiltro]=useState('')
   const [mensagem,setMensagem]=useState('')
@@ -65,11 +79,19 @@ export default function LancamentosPage() {
   },[])
 
   const filtrados=useMemo(()=>lista
-    .filter(item=>!tipoFiltro||item.tipo===tipoFiltro)
+    .filter(item=>noAtalho(atalho,item))
     .filter(item=>!veiculoFiltro||item.veiculoId===Number(veiculoFiltro))
     .filter(item=>!pesquisa||`${item.descricao} ${item.categoria} ${item.protocolo??''}`.toLowerCase().includes(pesquisa.toLowerCase())),
-    [lista,pesquisa,tipoFiltro,veiculoFiltro])
-  const realizado=filtrados.reduce((total,item)=>total+(item.realizado?(item.tipo==='RECEITA'?item.valor:-item.valor):0),0)
+    [lista,pesquisa,atalho,veiculoFiltro])
+  // Os totais do topo sao do realizado, como o saldo sempre foi; o previsto
+  // aparece embaixo de cada um. A soma dos saldos de cada dia bate com o saldo.
+  const soma=(filtro:(item:LancamentoFinanceiro)=>boolean)=>filtrados.filter(filtro).reduce((t,item)=>t+item.valor,0)
+  const entradas=soma(i=>i.tipo==='RECEITA'&&i.realizado)
+  const saidas=soma(i=>i.tipo==='DESPESA'&&i.realizado)
+  const aReceber=soma(i=>i.tipo==='RECEITA'&&!i.realizado&&i.status!=='REJEITADO')
+  const faltaPagar=soma(aPagar)
+  const realizado=entradas-saidas
+  const quantosAPagar=lista.filter(aPagar).length
   const categoriasDespesa=categorias.filter(c=>c.tipo==='DESPESA'&&c.ativo)
 
   async function salvar(evento:FormEvent<HTMLFormElement>){
@@ -100,16 +122,24 @@ export default function LancamentosPage() {
   }
 
   return <div className="page-enter">
-    <header className="page-heading"><div><span className="eyebrow">Financeiro operacional</span><h1>Extrato</h1><p>Tudo o que entrou e saiu no período: receitas, despesas e comissões.</p></div>
-      <div className="heading-total-with-action"><span><small>Saldo realizado filtrado</small><strong className={realizado>=0?'positive':'negative'}>{moeda(realizado)}</strong></span><button className="button button-ghost" onClick={()=>setReceitaAberta(true)}>+ Registrar receita</button><button className="button button-primary" onClick={()=>setModal(true)}>+ Nova despesa</button></div></header>
+    <header className="page-heading"><div><span className="eyebrow">Financeiro operacional</span><h1>Extrato</h1><p>Tudo o que entrou e saiu no período: receitas, despesas e comissões. Clique num lançamento para ver categoria, viatura e origem.</p></div>
+      <div className="heading-actions"><button className="button button-ghost" onClick={()=>setReceitaAberta(true)}>+ Registrar receita</button><button className="button button-primary" onClick={()=>setModal(true)}>+ Nova despesa</button></div></header>
     {mensagem?<div className="success-notice">{mensagem}</div>:null}
+    {/* Fica preso no topo enquanto a lista rola: os tres numeros seguem os filtros. */}
+    <section className="extrato-totais" aria-label="Totais do extrato">
+      <div><small>Entradas</small><strong className="positive">{moeda(entradas)}</strong>{aReceber?<span>{moeda(aReceber)} a receber</span>:null}</div>
+      <div><small>Saídas</small><strong className="negative">{moeda(saidas)}</strong>{faltaPagar?<span>{moeda(faltaPagar)} a pagar</span>:null}</div>
+      <div><small>Saldo realizado</small><strong className={realizado>=0?'positive':'negative'}>{moeda(realizado)}</strong><span>{filtrados.length} {filtrados.length===1?'lançamento':'lançamentos'}</span></div>
+    </section>
     <section className="panel"><div className="ledger-filters">
       <SeletorPeriodo periodo={periodo} aoMudar={setPeriodo}/>
-      <Selecao rotulo="Tipo" vazio="Todos" value={tipoFiltro} onChange={e=>setTipoFiltro(e.target.value as ''|TipoLancamento)}
-        opcoes={[{valor:'RECEITA',texto:'Receitas'},{valor:'DESPESA',texto:'Despesas'}]}/>
       <Selecao rotulo="Veículo" vazio="Todos" value={veiculoFiltro} onChange={e=>setVeiculoFiltro(e.target.value)}
         opcoes={veiculos.map(v=>({valor:v.id,texto:v.identificacao}))}/>
       <Campo rotulo="Buscar" className="filter-grow"><input type="search" inputMode="search" autoCorrect="off" autoCapitalize="none" value={pesquisa} onChange={e=>setPesquisa(e.target.value)} placeholder="Descrição, categoria ou protocolo"/></Campo>
+    </div>
+    <div className="extrato-atalhos segmented" role="group" aria-label="Mostrar">
+      {ATALHOS.map(a=><button key={a.valor} type="button" className={atalho===a.valor?'active':undefined} aria-pressed={atalho===a.valor}
+        onClick={()=>setAtalho(a.valor)}>{a.texto}{a.valor==='A_PAGAR'&&quantosAPagar?` (${quantosAPagar})`:''}</button>)}
     </div>
     <TabelaExtrato itens={filtrados} carregando={carregando} aoPagar={item=>void pagar(item)}
       aoEditarReceita={item=>void editarReceita(item)} aoExcluirReceita={setExcluindoReceita}/>

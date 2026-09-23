@@ -6,9 +6,6 @@ import { usePeriodoGlobal } from '../utils/periodoGlobal'
 import { moeda } from '../utils/formatadores'
 import { Link } from 'react-router-dom'
 import { listarVeiculos } from '../dados/veiculos'
-import { listarTodasAsOs, type LinhaOs } from '../dados/porto/listaOs'
-import { ServicosPorGrupo, contarServicos } from '../components/ServicosPorGrupo'
-import { porCompetencia } from '../utils/modoDoPeriodo'
 import './equipe.css'
 import { alternarAtivoMotorista, atualizarMotorista, criarMotorista, definirPercentualDoSocorrista, excluirMotorista, listarMotoristas } from '../dados/motoristas'
 import { ConfirmarExclusao } from '../components/ConfirmarExclusao'
@@ -36,13 +33,6 @@ export default function EquipePage(){
   const carregar=()=>{setCarregando(true);setErro('');listarMotoristas().then(setMotoristas).catch(e=>setErro(e.message)).finally(()=>setCarregando(false))}
   useEffect(carregar,[])
   useEffect(()=>{listarVeiculos().then(setVeiculos).catch(()=>setVeiculos([]))},[])
-  // Servicos de cada socorrista no periodo, com o total (Kawa, 23/09/2026).
-  const [servicos,setServicos]=useState<LinhaOs[]|null>(null)
-  useEffect(()=>{if(!periodo.inicio||!periodo.fim||periodo.inicio>periodo.fim)return
-    let valeu=true
-    listarTodasAsOs({inicio:periodo.inicio,fim:periodo.fim,porCompetencia:porCompetencia(periodo)})
-      .then(p=>{if(valeu)setServicos(p.itens)}).catch(()=>{if(valeu)setServicos(null)})
-    return()=>{valeu=false}},[periodo.inicio,periodo.fim,periodo.op])
   const carregarContas=()=>{listarUsuarios().then(setContas).catch(()=>setContas([]))}
   useEffect(carregarContas,[])
   // Producao da competencia: o que cada um rodou e ainda espera a OP.
@@ -118,8 +108,10 @@ export default function EquipePage(){
     {erro?<div className="form-alert" role="alert">{erro}</div>:null}
     <section className="panel painel-filtros"><form className="ledger-filters" onSubmit={e=>e.preventDefault()}>
       <SeletorPeriodo periodo={periodo} aoMudar={setPeriodo}/>
+      {/* Servicos por socorrista no periodo moram no Desempenho, a aba ao lado; aqui
+          a lista repetia o mesmo numero. */}
+      <Link className="button button-ghost" to="/desempenho?visao=socorristas">Ver desempenho do período</Link>
     </form></section>
-    {servicos?.length?<section className="panel panel-respiro" aria-label="Serviços por socorrista"><ServicosPorGrupo tipo="socorrista" titulo="Serviços por socorrista no período" linhas={contarServicos(servicos,'socorrista')}/></section>:null}
     {motoristas.length?<section className="team-grid" aria-label="Socorristas cadastrados">{motoristas.map(motorista=><article className="panel team-card team-card-real" key={motorista.id}>
       <header><span className="team-avatar">{motorista.nome.split(' ').map(parte=>parte[0]).slice(0,2).join('')}</span><span><strong><Link className="team-card-link" to={`/equipe/${motorista.id}`} title={`Abrir ${motorista.nome}`}>{motorista.nome}</Link></strong><small>{ehAuxiliar(motorista.nome)?'Recebe as OS que chegam sem socorrista':<>{motorista.qra||'QRA não informado'}{motorista.veiculo?` · ${motorista.veiculo}`:' · sem viatura'}{motorista.percentualComissao!=null?` · ${Math.round(motorista.percentualComissao*1000)/10}% de comissão`:''}</>}</small></span><span className={`staff-status ${motorista.ativo?'staff-disponivel':'staff-folga'}`}>{motorista.ativo?'Ativo':'Inativo'}</span></header>
       <div className="team-contact"><span>Telefone<strong>{motorista.telefone||(ehAuxiliar(motorista.nome)?'—':'Não informado')}</strong></span>
