@@ -57,7 +57,7 @@ export function ServicosDoPeriodo({ inicio, fim, porCompetencia = false, servico
     </header>
     {!servicos.length ? <p className="empty-inline">Nenhum serviço feito neste período.</p> : <>
       <p className="nota-fora-do-fechamento">
-        Pela data do atendimento. O valor entra nas receitas quando a OP chega. Clique num socorrista para ver as OS dele.
+        {porCompetencia ? 'Pela OP em que o serviço entrou.' : 'Pela data do atendimento.'} O valor entra nas receitas quando a OP chega. Clique num socorrista para ver as OS dele.
       </p>
       <ol className="sem-valor-ranking">
         {grupos.map(g => <li key={g.nome}>

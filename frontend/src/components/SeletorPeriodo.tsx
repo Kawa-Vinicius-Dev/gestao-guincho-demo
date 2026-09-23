@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { listarPeriodosPorto } from '../dados/porto'
 import { globalDoPeriodoPorto, intervaloDoMes, type PeriodoGlobal } from '../utils/periodoGlobal'
-import { LIMITE_DIAS_POR_DATA, passouDoLimite } from '../utils/modoDoPeriodo'
 import { rotuloPeriodo, type PeriodoPorto } from '../utils/periodos'
 import { Campo, Selecao } from './Campos'
 
@@ -30,7 +29,7 @@ export function SeletorPeriodo({ periodo, aoMudar }: { periodo: PeriodoGlobal; a
   // pediu. So aparece marcado quando as datas sao exatamente as do mes.
   const mesEscolhido = meses.find(m => {
     const { inicio, fim } = intervaloDoMes(m.valor)
-    return periodo.inicio === inicio && periodo.fim === fim
+    return periodo.mes === m.valor && periodo.inicio === inicio && periodo.fim === fim
   })?.valor ?? ''
   useEffect(() => {
     listarPeriodosPorto().then(setPeriodos).catch(() => setPeriodos([]))
@@ -42,7 +41,7 @@ export function SeletorPeriodo({ periodo, aoMudar }: { periodo: PeriodoGlobal; a
     <Selecao rotulo="Período" vazio="Período personalizado" value={escolhido?.id ?? ''}
       onChange={e => {
         const novo = periodos.find(p => p.id === e.target.value)
-        aoMudar((novo && globalDoPeriodoPorto(novo)) || { ...periodo, op: '' })
+        aoMudar((novo && globalDoPeriodoPorto(novo)) || { ...periodo, op: '', mes: '' })
       }}
       opcoes={periodos.map(p => ({ valor: p.id, texto: rotuloPeriodo(p) }))}/>
     <Selecao rotulo="Mês" vazio="Sem mês fechado" value={mesEscolhido}
@@ -50,16 +49,11 @@ export function SeletorPeriodo({ periodo, aoMudar }: { periodo: PeriodoGlobal; a
       opcoes={meses}/>
     <Campo rotulo="De">
       <input aria-label="Data inicial" type="date" value={periodo.inicio} max={periodo.fim || undefined}
-        onChange={e => aoMudar({ ...periodo, op: '', inicio: e.target.value })}/>
+        onChange={e => aoMudar({ ...periodo, op: '', mes: '', inicio: e.target.value })}/>
     </Campo>
     <Campo rotulo="Até">
       <input aria-label="Data final" type="date" value={periodo.fim} min={periodo.inicio || undefined}
-        onChange={e => aoMudar({ ...periodo, op: '', fim: e.target.value })}/>
+        onChange={e => aoMudar({ ...periodo, op: '', mes: '', fim: e.target.value })}/>
     </Campo>
-    {passouDoLimite(periodo, Boolean(mesEscolhido))
-      ? <p className="aviso-periodo" role="status">
-          Acima de {LIMITE_DIAS_POR_DATA} dias, os serviços contam pela OP em que entraram, e não pela data do atendimento.
-        </p>
-      : null}
   </>
 }

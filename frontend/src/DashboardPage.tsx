@@ -37,8 +37,8 @@ export default function DashboardPage(){
   // de novo, mantendo os numeros de agora ate os novos chegarem.
   const [versao,setVersao]=useState(0)
   // Servicos, receita e despesas no mesmo recorte (utils/modoDoPeriodo): periodo
-  // da OP, mes e intervalo longo pela competencia; De-ate de ate 8 dias pela data
-  // do servico. Filtrando um dia, aparecem os servicos e o dinheiro daquele dia.
+  // da OP e mes pela competencia; De-ate pela data do servico. Filtrando um dia,
+  // aparecem os servicos e o dinheiro daquele dia.
   const competencia=porCompetencia(periodo)
   const [servicos,setServicos]=useState<LinhaOs[]|null>(null)
   const [lancamentos,setLancamentos]=useState<LancamentoFinanceiro[]>([])
@@ -130,9 +130,9 @@ export default function DashboardPage(){
       : null}
 
     <p className="calculation-note">
-      <strong>Como calculamos:</strong> lucro = receitas − despesas pagas. No período da OP,
-      no mês e em intervalos acima de 8 dias, o serviço conta na OP em que entrou; até 8 dias,
-      conta na data do atendimento. Comissão vira despesa quando é paga.
+      <strong>Como calculamos:</strong> lucro = receitas − despesas pagas. No período da OP
+      e no mês, o serviço conta na OP em que entrou; no De–até, conta na data do atendimento.
+      Comissão vira despesa quando é paga.
     </p>
   </div>
 }
