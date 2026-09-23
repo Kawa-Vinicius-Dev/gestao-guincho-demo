@@ -1,7 +1,6 @@
-import { ApiError, api } from '../api/http'
+import { ApiError } from './erros'
 import type { Despesa } from '../types/modelos'
 import { erroDoBanco, ou, supabase } from './cliente'
-import { moduloNoSupabase } from './modo'
 
 /**
  * Comprovantes de despesa.
@@ -50,12 +49,6 @@ function nomeSeguro(nome: string) {
 }
 
 export async function anexarComprovante(despesa: Despesa, arquivo: File): Promise<void> {
-  if (!moduloNoSupabase('despesas')) {
-    const dados = new FormData()
-    dados.append('arquivo', arquivo)
-    await api(`/api/despesas/${despesa.id}/comprovante`, { method: 'POST', body: dados })
-    return
-  }
 
   // As mesmas validacoes do backend, agora em tres lugares: aqui (para a pessoa
   // receber o aviso antes de subir 10 MB), no bucket e na constraint da tabela.
@@ -102,10 +95,6 @@ export async function anexarComprovante(despesa: Despesa, arquivo: File): Promis
  * alheio falha aqui, no servidor, nao na tela.
  */
 export async function abrirComprovante(despesa: Despesa): Promise<string> {
-  if (!moduloNoSupabase('despesas')) {
-    const { url } = await api<{ url: string }>(`/api/despesas/${despesa.id}/comprovante`)
-    return url
-  }
   if (!despesa.comprovante) {
     throw new ApiError('Esta despesa não tem comprovante anexado.', 404)
   }
@@ -118,10 +107,6 @@ export async function abrirComprovante(despesa: Despesa): Promise<string> {
 }
 
 export async function removerComprovante(despesa: Despesa): Promise<void> {
-  if (!moduloNoSupabase('despesas')) {
-    await api(`/api/despesas/${despesa.id}/comprovante`, { method: 'DELETE' })
-    return
-  }
   // A tabela primeiro: se o objeto sumisse antes e a RPC recusasse, a despesa
   // ficaria apontando para um arquivo que nao existe mais.
   ou(

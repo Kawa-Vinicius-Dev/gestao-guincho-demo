@@ -4,7 +4,7 @@ import { cleanup, configure } from '@testing-library/react'
 
 import { limparCacheCurto } from '../dados/cacheCurto'
 import { invalidarCacheFinanceiro } from '../dados/dashboard'
-import { restaurarEstadoTeste, servidor } from './servidor'
+import { servidor } from './servidor'
 
 // O padrao do findBy* e 1s. Com a suite inteira em paralelo a maquina fica carregada e testes
 // corretos falhavam por tempo, cada rodada num arquivo diferente. 5s ainda estourava com 68
@@ -16,7 +16,6 @@ beforeAll(() => servidor.listen({ onUnhandledRequest: 'error' }))
 afterEach(() => {
   cleanup()
   servidor.resetHandlers()
-  restaurarEstadoTeste()
   // O cache de cadastros vive no modulo e sobreviveria de um caso para o outro,
   // servindo a um teste a resposta que outro montou.
   limparCacheCurto()

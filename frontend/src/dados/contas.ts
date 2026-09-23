@@ -1,8 +1,6 @@
-import { api } from '../api/http'
 import type { ContaReceber } from '../types/modelos'
 import { invalidarCacheFinanceiro } from './dashboard'
 import { ou, supabase } from './cliente'
-import { moduloNoSupabase } from './modo'
 
 /**
  * Contas a receber.
@@ -80,13 +78,6 @@ function paraModelo(l: LinhaConta): ContaReceber {
 export interface FiltroContas { status?: string; pesquisa?: string; sinal?: AbortSignal }
 
 export async function listarContas(filtro: FiltroContas = {}): Promise<ContaReceber[]> {
-  if (!moduloNoSupabase('dashboard')) {
-    const params = new URLSearchParams({
-      ...(filtro.status && { status: filtro.status }),
-      ...(filtro.pesquisa && { pesquisa: filtro.pesquisa }),
-    })
-    return api<ContaReceber[]>(`/api/contas-receber?${params}`, { signal: filtro.sinal })
-  }
 
   let consulta = supabase().from('contas_receber').select(COLUNAS)
   if (filtro.status) consulta = consulta.eq('status', filtro.status)
@@ -109,12 +100,6 @@ export async function receberConta(
   id: number, valorRecebido: number, dataRecebimento: string,
 ): Promise<void> {
   invalidarCacheFinanceiro()
-  if (!moduloNoSupabase('dashboard')) {
-    await api(`/api/contas-receber/${id}/receber`, {
-      method: 'PATCH', body: JSON.stringify({ valorRecebido, dataRecebimento }),
-    })
-    return
-  }
   ou(
     await supabase().rpc('receber_conta', {
       p_conta_id: id, p_valor_recebido: valorRecebido, p_data_recebimento: dataRecebimento,
@@ -137,9 +122,6 @@ export interface DadosConta {
 
 export async function criarConta(dados: DadosConta): Promise<ContaReceber> {
   invalidarCacheFinanceiro()
-  if (!moduloNoSupabase('dashboard')) {
-    return api<ContaReceber>('/api/contas-receber', { method: 'POST', body: JSON.stringify(dados) })
-  }
   const linha = ou(
     await supabase().from('contas_receber').insert({
       contratante_id: dados.contratanteId,

@@ -41,13 +41,6 @@ const LINHA = {
   motoristas: { nome: 'Anderson' }, perfis: { nome: 'Ana' },
 }
 
-test('sem o modulo ligado, continua no backend antigo', async () => {
-  servidor.use(http.get('/api/despesas', () => HttpResponse.json([{ id: 1, descricao: 'Antiga' }])))
-  const { listarDespesas } = await carregar('')
-
-  expect((await listarDespesas())[0].descricao).toBe('Antiga')
-})
-
 test('a linha chega no formato que a tabela ja usa, com os nomes resolvidos', async () => {
   servidor.use(http.get(`${URL_SUPABASE}/rest/v1/despesas`, () => HttpResponse.json([LINHA])))
   const { listarDespesas } = await carregar('auth,despesas')

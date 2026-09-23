@@ -1,6 +1,4 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { tokenStorage } from '../api/http'
-import { autenticacaoNoSupabase } from '../dados/modo'
 import { entrar, limparCachesDaSessao, observarSessao, sair, usuarioAtual } from '../dados/sessao'
 import type { Usuario } from '../types/modelos'
 
@@ -12,25 +10,15 @@ interface AuthValue {
 }
 const AuthContext=createContext<AuthValue|null>(null)
 
-/**
- * Se ha sessao para restaurar. No modo antigo, um token em sessionStorage; no
- * Supabase, o cliente guarda a sessao dele e so sabemos consultando — entao
- * comeca carregando e a resposta chega logo depois.
- */
-function podeTerSessao(){
-  return autenticacaoNoSupabase()?true:Boolean(tokenStorage.get())
-}
-
 export function AuthProvider({children}:{children:ReactNode}) {
   const [usuario,setUsuario]=useState<Usuario|null>(null)
-  const [carregando,setCarregando]=useState(podeTerSessao)
+  const [carregando,setCarregando]=useState(true)
 
   const limpar=useCallback(()=>{
-    limparCachesDaSessao();tokenStorage.clear();setUsuario(null);setCarregando(false)
+    limparCachesDaSessao();setUsuario(null);setCarregando(false)
   },[])
 
   useEffect(()=>{
-    if(!podeTerSessao()){setCarregando(false);return}
     let valeu=true
     usuarioAtual()
       .then(u=>{if(valeu)setUsuario(u)})

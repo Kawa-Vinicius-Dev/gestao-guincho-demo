@@ -137,7 +137,7 @@ function ImportarOrdemDePagamento(){
     const controller=new AbortController(),temporizador=window.setTimeout(async()=>{
       setValidando(true);setErro('')
       try{
-        const resposta=await avaliarImportacaoPorto(previa as PreviaPorto,{numeroOrdemPagamento:numeroNormalizado},controller.signal)
+        const resposta=await avaliarImportacaoPorto(previa as PreviaPorto,{numeroOrdemPagamento:numeroNormalizado})
         if(!controller.signal.aborted){setPrevia(resposta);setChaveValidada(chaveAvaliacao)}
       }catch(e){if(!controller.signal.aborted)setErro((e as Error).message)}
       finally{if(!controller.signal.aborted)setValidando(false)}

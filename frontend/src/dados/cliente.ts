@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
-import { ApiError } from '../api/http'
+import { ApiError } from './erros'
 
 /**
  * Cliente do Supabase.

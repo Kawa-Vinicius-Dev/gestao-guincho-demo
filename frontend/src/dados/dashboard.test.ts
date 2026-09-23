@@ -50,38 +50,6 @@ test('no Supabase, os indicadores vem numa chamada so', async () => {
   expect(corpo).toEqual({ p_inicio: '2026-09-01', p_fim: '2026-09-30', p_por_competencia: true })
   expect(resumo.financeiro.saldoRealizado).toBe(550)
   expect(resumo.financeiro.despesasAcumuladasPorDia?.at(-1)?.acumulado).toBe(450)
-  // O resumo Porto saiu da chamada: a Visao geral nunca o usou.
-  expect(resumo.porto).toBeNull()
-})
-
-test('sem o modulo ligado, continua nas duas chamadas do backend antigo', async () => {
-  let dashboard = 0, porto = 0
-  servidor.use(
-    http.get('/api/dashboard', () => { dashboard++; return HttpResponse.json(FINANCEIRO) }),
-    http.get('/api/porto/ordens-pagamento/resumo', () => { porto++; return HttpResponse.json(PORTO) }),
-  )
-  const { lerDashboard } = await carregar('')
-
-  const resumo = await lerDashboard('2026-09-01', '2026-09-30')
-
-  expect(dashboard).toBe(1)
-  expect(porto).toBe(1)
-  expect(resumo.financeiro.saldoRealizado).toBe(550)
-})
-
-// O Porto podia falhar sozinho sem derrubar os indicadores; isso se mantem.
-test('no modo antigo, falha do Porto nao derruba os indicadores', async () => {
-  servidor.use(
-    http.get('/api/dashboard', () => HttpResponse.json(FINANCEIRO)),
-    http.get('/api/porto/ordens-pagamento/resumo', () =>
-      HttpResponse.json({ detalhe: 'fora do ar' }, { status: 503 })),
-  )
-  const { lerDashboard } = await carregar('')
-
-  const resumo = await lerDashboard('2026-09-01', '2026-09-30')
-
-  expect(resumo.financeiro.saldoRealizado).toBe(550)
-  expect(resumo.porto).toBeNull()
 })
 
 test('o mesmo periodo pedido de novo nao repete a consulta', async () => {

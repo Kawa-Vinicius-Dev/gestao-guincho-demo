@@ -1,6 +1,3 @@
-import { baixarRelatorioCsv as csvPeloRender } from '../api/relatorios'
-import { baixarRelatorioComissoes as comissoesPeloRender } from '../api/comissoes'
-import { moduloNoSupabase } from './modo'
 import { lerIndicadores } from './dashboard'
 import { resumirComissoes } from './comissoes'
 import { moeda } from '../utils/formatadores'
@@ -46,7 +43,6 @@ export function baixarArquivoCsv(conteudo: string, nomeArquivo: string) {
  * despesa paga dentro da categoria.
  */
 export async function baixarDre(inicio: string, fim: string, formato: Formato, porCompetencia = true, opId?: string): Promise<void> {
-  if (!moduloNoSupabase('dashboard')) return csvPeloRender('dre', inicio, fim, `dre-${inicio}-a-${fim}.csv`)
   const [financeiro, extrato, servicos, veiculos] = await Promise.all([
     lerIndicadores(inicio, fim, porCompetencia),
     lerExtrato(inicio, fim),
@@ -62,7 +58,6 @@ export async function baixarDre(inicio: string, fim: string, formato: Formato, p
 }
 
 export async function baixarRelatorioComissoes(ordensPagamento: number[], periodo: string, formato: Formato): Promise<void> {
-  if (!moduloNoSupabase('comissoes')) return comissoesPeloRender(ordensPagamento[0])
 
   const resumo = await resumirComissoes(ordensPagamento)
   const soma = (f: (r: typeof resumo[number]) => number) => resumo.reduce((s, r) => s + f(r), 0)
