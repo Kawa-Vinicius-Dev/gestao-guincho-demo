@@ -22,3 +22,23 @@
 .tabela-mes-a-mes .sem-vinculo td:first-child{color:#8a6410}
 .tabela-mes-a-mes tfoot td{border-top:2px solid var(--line);border-bottom:0}
 .tabela-mes-a-mes td:last-child,.tabela-mes-a-mes th:last-child{background:var(--superficie-2)}
+
+/* Grafico mes a mes. Paleta categorica de referencia, validada nos dois temas
+   (validate_palette: PASS); o tema escuro tem os proprios passos, nao um inverso. */
+:root{--serie-1:#2a78d6;--serie-2:#eb6834;--serie-3:#1baf7a;--serie-4:#eda100;--serie-5:#e87ba4;--serie-6:#008300;--serie-7:#4a3aa7;--serie-8:#e34948;--serie-neutra:#98a2b3}
+:root[data-tema="escuro"]{--serie-1:#3987e5;--serie-2:#d95926;--serie-3:#199e70;--serie-4:#c98500;--serie-5:#d55181;--serie-6:#008300;--serie-7:#9085e9;--serie-8:#e66767;--serie-neutra:#6b7a90}
+.grafico-mes-a-mes{margin:0;padding:16px 20px 6px}
+.grafico-mes-legenda{display:flex;flex-wrap:wrap;gap:6px 16px;margin:0 0 10px;padding:0;list-style:none;color:var(--ink);font-size:12px}
+.grafico-mes-legenda li{display:inline-flex;align-items:center;gap:6px}
+.grafico-mes-legenda i,.grafico-mes-dica i{display:inline-block;width:10px;height:10px;border-radius:3px}
+.grafico-mes-area{position:relative}
+.grafico-mes-area svg{display:block;width:100%;height:auto;overflow:visible}
+.grafico-mes-area path{transition:opacity .15s ease}
+.grafico-mes-a-mes .eixo-grade{stroke:var(--linha-suave);stroke-width:1}
+.grafico-mes-a-mes .eixo-base{stroke:var(--line);stroke-width:1.5}
+.grafico-mes-a-mes .eixo-texto{fill:var(--muted);font-size:11px;font-variant-numeric:tabular-nums}
+.grafico-mes-dica{position:absolute;z-index:2;display:grid;gap:2px;min-width:120px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--superficie);box-shadow:var(--shadow);color:var(--ink);font-size:12px;transform:translate(-50%,calc(-100% - 10px));pointer-events:none;white-space:nowrap}
+.grafico-mes-dica span{display:inline-flex;align-items:center;gap:6px;color:var(--muted)}
+.grafico-mes-dica strong{font-size:14px;font-variant-numeric:tabular-nums}
+.grafico-mes-dica small{color:var(--muted)}
+@media(prefers-reduced-motion:reduce){.grafico-mes-area path{transition:none}}
