@@ -9,8 +9,9 @@ import { aprovarDespesa, excluirDespesa } from '../dados/despesas'
 import { ConfirmarExclusao } from '../components/ConfirmarExclusao'
 import type { Despesa } from '../types/modelos'
 import {
-  apagarFotosDoTurno, aprovarTurno, baixarFoto, devolverTurno, filaDeAprovacoes, linkDaFoto,
-  type FilaDeAprovacoes, type ItemDaFila,
+  apagarFotosDoTurno, aprovarTurno, baixarFoto, checklistsDosTurnos, devolverTurno, filaDeAprovacoes,
+  limparChecklistsAntigos, linkDaFoto, FOTOS_DO_CHECKLIST,
+  type Checklist, type FilaDeAprovacoes, type ItemDaFila,
 } from '../dados/turnos'
 
 /**
@@ -85,7 +86,50 @@ function VerFoto({ caminho, rotulo, nomeDoArquivo }: { caminho: string; rotulo: 
   </>
 }
 
-function LinhaTurno({ item, aoResolver }: { item: ItemDaFila; aoResolver: () => void }) {
+/**
+ * Checklist da viatura: um botao abre todas as fotos juntas, para bater o olho e
+ * ver se esta tudo ok (Kawa, 23/09/2026). As fotos somem na aprovacao ou em 7
+ * dias; dano vem destacado com o que o socorrista escreveu.
+ */
+function ChecklistDoTurno({ checklist, titulo }: { checklist: Checklist; titulo: string }) {
+  const [fotos, setFotos] = useState<{ rotulo: string; url: string; dano?: boolean }[] | null>(null)
+  const [erro, setErro] = useState('')
+  const danos = checklist.danos ?? []
+
+  async function abrir() {
+    setErro('')
+    const lista = [
+      ...FOTOS_DO_CHECKLIST.filter(f => checklist.fotos[f.chave])
+        .map(f => ({ rotulo: f.rotulo, caminho: checklist.fotos[f.chave] as string, dano: false })),
+      ...danos.map((d, i) => ({ rotulo: `Dano ${i + 1}: ${d.descricao}`, caminho: d.caminho, dano: true })),
+    ]
+    try {
+      setFotos(await Promise.all(lista.map(async f => ({ rotulo: f.rotulo, dano: f.dano, url: await linkDaFoto(f.caminho) }))))
+    } catch (e) { setErro((e as Error).message) }
+  }
+
+  return <>
+    <button type="button" className={`aprovacao-foto-link${danos.length ? ' com-dano' : ''}`} onClick={() => void abrir()}>
+      <IconeFoto/>Checklist{danos.length ? ` · ${danos.length} ${danos.length === 1 ? 'dano' : 'danos'}` : ''}
+    </button>
+    {erro ? <span className="form-alert">{erro}</span> : null}
+    {fotos
+      ? <Modal etiqueta="Checklist da viatura" titulo={titulo} largo fecharAoClicarFora aoFechar={() => setFotos(null)}>
+          <div className="checklist-admin">
+            {fotos.map(f =>
+              <figure key={f.rotulo} className={f.dano ? 'com-dano' : undefined}>
+                <a href={f.url} target="_blank" rel="noreferrer"><img src={f.url} alt={f.rotulo} /></a>
+                <figcaption>{f.rotulo}</figcaption>
+              </figure>)}
+          </div>
+        </Modal>
+      : null}
+  </>
+}
+
+function LinhaTurno({ item, checklist, aoResolver }: {
+  item: ItemDaFila; checklist?: Checklist; aoResolver: () => void
+}) {
   const rodado = item.kmRodado ?? 0
   const [kmProdutivo, setKmProdutivo] = useState('0')
   const [confirmar, setConfirmar] = useState(false)
@@ -130,6 +174,8 @@ function LinhaTurno({ item, aoResolver }: { item: ItemDaFila; aoResolver: () => 
           nomeDoArquivo={`turno-${item.data}-${item.socorrista}-saida.jpg`} /> : null}
         {item.fotoFechamento ? <VerFoto caminho={item.fotoFechamento} rotulo="Foto do fim"
           nomeDoArquivo={`turno-${item.data}-${item.socorrista}-chegada.jpg`} /> : null}
+        {checklist ? <ChecklistDoTurno checklist={checklist}
+          titulo={`${item.veiculo ?? 'Viatura'} · ${item.socorrista} · ${dataCurta(item.data)}`} /> : null}
       </span>
       <button type="button" className="button button-ghost acao-recusar" onClick={() => setDevolvendo(true)}>
         Devolver
@@ -160,6 +206,7 @@ function LinhaTurno({ item, aoResolver }: { item: ItemDaFila; aoResolver: () => 
           aoConfirmar={async () => {
             await aprovarTurno(item.id, produtivo)
             await apagarFotosDoTurno([item.fotoAbertura, item.fotoFechamento])
+            await limparChecklistsAntigos()
             aoResolver()
           }}
           aoFechar={() => setConfirmar(false)}
@@ -259,13 +306,20 @@ function LinhaDespesa({ item, aoResolver }: { item: ItemDaFila; aoResolver: () =
 export default function AprovacoesPage() {
   const [fila, setFila] = useState<FilaDeAprovacoes | null>(null)
   const [erro, setErro] = useState('')
+  const [checklists, setChecklists] = useState<Map<number, Checklist>>(new Map())
 
   const carregar = useCallback(() => {
     setErro('')
-    filaDeAprovacoes().then(setFila).catch(e => setErro((e as Error).message))
+    filaDeAprovacoes().then(f => {
+      setFila(f)
+      const ids = f.itens.filter(i => i.tipo === 'TURNO').map(i => i.id)
+      checklistsDosTurnos(ids).then(setChecklists).catch(() => setChecklists(new Map()))
+    }).catch(e => setErro((e as Error).message))
   }, [])
 
   useEffect(carregar, [carregar])
+  // Fotos de checklist com mais de 7 dias (ou de turno ja aprovado) saem do Storage.
+  useEffect(() => { void limparChecklistsAntigos() }, [])
 
   if (erro) return <ErroPagina mensagem={erro} tentarNovamente={carregar} />
   if (!fila) return <Carregando />
@@ -301,7 +355,7 @@ export default function AprovacoesPage() {
     {turnos.length
       ? <Painel titulo="Turnos" etiqueta="Quilometragem">
           <div className="aprovacoes-lista">
-            {turnos.map(i => <LinhaTurno key={`t${i.id}`} item={i} aoResolver={carregar} />)}
+            {turnos.map(i => <LinhaTurno key={`t${i.id}`} item={i} checklist={checklists.get(i.id)} aoResolver={carregar} />)}
           </div>
         </Painel>
       : null}

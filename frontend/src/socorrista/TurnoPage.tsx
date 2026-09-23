@@ -2,8 +2,8 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { ConfirmarAcao } from '../components/ConfirmarAcao'
 import { Carregando, ErroPagina } from '../components/EstadoPagina'
 import {
-  abrirTurno, enviarFotoAbertura, fecharTurno, meuTurnoDoDia,
-  type MeuTurnoDoDia, type ViaturaDoTurno,
+  abrirTurno, enviarChecklist, enviarFotoAbertura, fecharTurno, meuTurnoDoDia, FOTOS_DO_CHECKLIST,
+  type ChaveDoChecklist, type MeuTurnoDoDia, type ViaturaDoTurno,
 } from '../dados/turnos'
 
 /**
@@ -17,6 +17,7 @@ import {
  * O estado manda no que aparece:
  *   sem turno aberto   -> abrir turno (viatura + odometro + foto, tudo obrigatorio)
  *   aberto sem foto    -> enviar a foto da saida, que falhou no envio
+ *   aberto sem checklist -> enviar as fotos da viatura, que falharam no envio
  *   turno aberto       -> fechar turno (odometro + foto obrigatoria)
  *   turno devolvido    -> corrigir e reenviar, com o motivo do administrador
  *
@@ -144,9 +145,124 @@ function Passo({ numero, children }: { numero: number; children: ReactNode }) {
   </div>
 }
 
+/**
+ * Checklist da viatura: as 8 fotos em volta dela e, se houver, o dano.
+ *
+ * Kawa, 23/09/2026: e para ver se a viatura esta ok, nao para guardar — as fotos
+ * vao comprimidas para o Storage e somem na aprovacao ou em 7 dias. A tela e de
+ * celular: blocos grandes e redondos, um toque abre a camera.
+ */
+interface EstadoChecklist {
+  fotos: Partial<Record<ChaveDoChecklist, File>>
+  temDano: boolean | null
+  danos: { foto: File | null; descricao: string }[]
+}
+
+const CHECKLIST_VAZIO: EstadoChecklist = { fotos: {}, temDano: null, danos: [] }
+const MAXIMO_DE_DANOS = 3
+
+function checklistCompleto(c: EstadoChecklist) {
+  return FOTOS_DO_CHECKLIST.every(f => c.fotos[f.chave])
+    && c.temDano !== null
+    && (!c.temDano || (c.danos.length > 0 && c.danos.every(d => d.foto && d.descricao.trim())))
+}
+
+function faltaNoChecklist(c: EstadoChecklist) {
+  const faltam = FOTOS_DO_CHECKLIST.filter(f => !c.fotos[f.chave]).length
+  if (faltam) return `Faltam ${faltam} ${faltam === 1 ? 'foto' : 'fotos'} da viatura.`
+  if (c.temDano === null) return 'Diga se viu algum dano.'
+  if (c.temDano && !c.danos.every(d => d.foto && d.descricao.trim())) return 'Tire a foto do dano e diga onde é.'
+  return ''
+}
+
+/** Um bloco de foto: toque abre a camera; pronto, mostra a miniatura com ✓. */
+function BlocoFoto({ id, rotulo, arquivo, aoEscolher }: {
+  id: string; rotulo: string; arquivo: File | null | undefined; aoEscolher: (f: File) => void
+}) {
+  const entrada = useRef<HTMLInputElement>(null)
+  const [previa, setPrevia] = useState('')
+  useEffect(() => {
+    if (!arquivo) { setPrevia(''); return }
+    const url = URL.createObjectURL(arquivo)
+    setPrevia(url)
+    return () => URL.revokeObjectURL(url)
+  }, [arquivo])
+
+  return <>
+    <input ref={entrada} id={id} type="file" accept="image/*" capture="environment"
+      className="socorrista-arquivo" aria-label={rotulo}
+      onChange={e => { const f = e.target.files?.[0]; if (f) aoEscolher(f); e.target.value = '' }} />
+    <button type="button" className={`checklist-bloco${previa ? ' esta-pronto' : ''}`}
+      onClick={() => entrada.current?.click()}>
+      {previa ? <img src={previa} alt="" /> : <span className="checklist-camera" aria-hidden="true">📷</span>}
+      <span className="checklist-rotulo">{previa ? '✓ ' : ''}{rotulo}</span>
+    </button>
+  </>
+}
+
+function ChecklistDaViatura({ estado, aoMudar }: {
+  estado: EstadoChecklist; aoMudar: (c: EstadoChecklist) => void
+}) {
+  const prontas = FOTOS_DO_CHECKLIST.filter(f => estado.fotos[f.chave]).length
+  const mudarDano = (i: number, dano: Partial<EstadoChecklist['danos'][number]>) =>
+    aoMudar({ ...estado, danos: estado.danos.map((d, j) => j === i ? { ...d, ...dano } : d) })
+
+  return <div className="checklist">
+    <div className="checklist-topo">
+      <span className="socorrista-rotulo">Fotos da viatura</span>
+      <span className={`checklist-contagem${prontas === FOTOS_DO_CHECKLIST.length ? ' completa' : ''}`}>
+        {prontas} de {FOTOS_DO_CHECKLIST.length}
+      </span>
+    </div>
+    <div className="checklist-grade">
+      {FOTOS_DO_CHECKLIST.map(f =>
+        <BlocoFoto key={f.chave} id={`checklist-${f.chave}`} rotulo={f.rotulo} arquivo={estado.fotos[f.chave]}
+          aoEscolher={arquivo => aoMudar({ ...estado, fotos: { ...estado.fotos, [f.chave]: arquivo } })} />)}
+    </div>
+
+    <span className="socorrista-rotulo">Viu algum dano?</span>
+    <div className="checklist-escolha" role="radiogroup" aria-label="Viu algum dano?">
+      <button type="button" role="radio" aria-checked={estado.temDano === false}
+        className={`checklist-opcao${estado.temDano === false ? ' esta-marcada' : ''}`}
+        onClick={() => aoMudar({ ...estado, temDano: false, danos: [] })}>Não, está tudo ok</button>
+      <button type="button" role="radio" aria-checked={estado.temDano === true}
+        className={`checklist-opcao${estado.temDano === true ? ' esta-marcada perigo' : ''}`}
+        onClick={() => aoMudar({ ...estado, temDano: true,
+          danos: estado.danos.length ? estado.danos : [{ foto: null, descricao: '' }] })}>Sim, tem dano</button>
+    </div>
+
+    {estado.temDano ? <>
+      {estado.danos.map((d, i) =>
+        <div key={i} className="checklist-dano">
+          <BlocoFoto id={`checklist-dano-${i}`} rotulo={`Foto do dano ${i + 1}`} arquivo={d.foto}
+            aoEscolher={foto => mudarDano(i, { foto })} />
+          <input className="checklist-dano-texto" placeholder="Onde é o dano? Ex.: porta"
+            aria-label={`Onde é o dano ${i + 1}`} value={d.descricao} autoCapitalize="sentences"
+            onChange={e => mudarDano(i, { descricao: e.target.value })} />
+        </div>)}
+      {estado.danos.length < MAXIMO_DE_DANOS
+        ? <button type="button" className="checklist-mais"
+            onClick={() => aoMudar({ ...estado, danos: [...estado.danos, { foto: null, descricao: '' }] })}>
+            + Outro dano
+          </button>
+        : null}
+    </> : null}
+  </div>
+}
+
+function arquivosDoChecklist(c: EstadoChecklist) {
+  return {
+    fotos: c.fotos as Record<ChaveDoChecklist, File>,
+    danos: c.temDano ? c.danos.map(d => ({ foto: d.foto as File, descricao: d.descricao })) : [],
+  }
+}
+
 function AbrirTurno({
-  dados, aoAbrir,
-}: { dados: MeuTurnoDoDia; aoAbrir: () => void }) {
+  dados, aoAbrir, checklist, aoMudarChecklist,
+}: {
+  dados: MeuTurnoDoDia; aoAbrir: () => void
+  checklist: EstadoChecklist; aoMudarChecklist: (c: EstadoChecklist) => void
+}) {
   const [veiculoId, setVeiculoId] = useState<number | null>(dados.veiculoSugerido)
   const [hodometro, setHodometro] = useState('')
   const [foto, setFoto] = useState<File | null>(null)
@@ -154,17 +270,18 @@ function AbrirTurno({
   const [erro, setErro] = useState('')
 
   const viatura = dados.viaturas.find(v => v.id === veiculoId) ?? null
-  const pronto = veiculoId !== null && hodometro.length > 0 && foto !== null
+  const pronto = veiculoId !== null && hodometro.length > 0 && foto !== null && checklistCompleto(checklist)
 
   const digitado = hodometro ? Number(hodometro) : null
   const aviso = avisoDoOdometro(digitado, viatura?.ultimoHodometro)
   const falta = veiculoId === null ? 'Escolha a viatura para abrir o turno.'
     : !hodometro ? 'Informe o odômetro para abrir o turno.'
-    : !foto ? 'Tire a foto do painel para abrir o turno.' : ''
+    : !foto ? 'Tire a foto do painel para abrir o turno.'
+    : faltaNoChecklist(checklist)
 
   return <section className="socorrista-cartao">
     <h2>Abrir turno</h2>
-    <p className="socorrista-intro">Antes de sair, em três passos.</p>
+    <p className="socorrista-intro">Antes de sair, em quatro passos.</p>
 
     <Passo numero={1}>
       <span className="socorrista-rotulo">Viatura</span>
@@ -196,6 +313,10 @@ function AbrirTurno({
       <BotaoFoto id="foto-abertura" rotulo="Foto do painel" arquivo={foto} aoEscolher={setFoto} obrigatoria />
     </Passo>
 
+    <Passo numero={4}>
+      <ChecklistDaViatura estado={checklist} aoMudar={aoMudarChecklist} />
+    </Passo>
+
     {erro ? <div className="form-alert" role="alert">{erro}</div> : null}
 
     <div className="socorrista-rodape-acao">
@@ -215,6 +336,8 @@ function AbrirTurno({
             ['Viatura', viatura?.identificacao ?? '—'],
             ['Odômetro na saída', formatarKm(Number(hodometro))],
             ['Foto do painel', 'Vai junto'],
+            ['Fotos da viatura', checklist.temDano
+              ? `8 fotos + ${checklist.danos.length} de dano` : '8 fotos, sem dano'],
           ]}
           avisos={[aviso]}
           textoConfirmar="Abrir turno"
@@ -222,7 +345,14 @@ function AbrirTurno({
             if (!foto) return
             // Recarrega mesmo se a foto falhar: o turno ja existe, e a tela passa
             // a mostrar o pedido da foto da saida em vez deste formulario.
-            try { await abrirTurno({ veiculoId, hodometro: Number(hodometro), foto }) }
+            // Se o checklist falhar, as fotos continuam na memoria da tela e o
+            // socorrista so reenvia, sem tirar tudo de novo.
+            try {
+              const id = await abrirTurno({ veiculoId, hodometro: Number(hodometro), foto })
+              const { fotos, danos } = arquivosDoChecklist(checklist)
+              await enviarChecklist(id, fotos, danos)
+              aoMudarChecklist(CHECKLIST_VAZIO)
+            }
             finally { aoAbrir() }
           }}
           aoFechar={() => setConfirmar(false)}
@@ -344,9 +474,50 @@ function FaltaFotoAbertura({
   </section>
 }
 
+/**
+ * Turno aberto sem o checklist — as fotos da viatura nao subiram. Sem elas o
+ * turno nao fecha; as que ele ja tirou continuam aqui.
+ */
+function FaltaChecklist({ turno, checklist, aoMudarChecklist, aoEnviar }: {
+  turno: { id: number; veiculo: string }
+  checklist: EstadoChecklist; aoMudarChecklist: (c: EstadoChecklist) => void; aoEnviar: () => void
+}) {
+  const [enviando, setEnviando] = useState(false)
+  const [erro, setErro] = useState('')
+  const falta = faltaNoChecklist(checklist)
+
+  return <section className="socorrista-cartao">
+    <h2>Faltam as fotos da viatura</h2>
+    <p className="socorrista-alerta" role="alert">
+      O turno na {turno.veiculo} está aberto, mas as fotos do checklist não chegaram. Sem elas o turno não fecha.
+    </p>
+    <ChecklistDaViatura estado={checklist} aoMudar={aoMudarChecklist} />
+    {erro ? <div className="form-alert" role="alert">{erro}</div> : null}
+    <div className="socorrista-rodape-acao">
+      <button type="button" className="socorrista-acao" disabled={Boolean(falta) || enviando}
+        onClick={async () => {
+          setEnviando(true); setErro('')
+          try {
+            const { fotos, danos } = arquivosDoChecklist(checklist)
+            await enviarChecklist(turno.id, fotos, danos)
+            aoMudarChecklist(CHECKLIST_VAZIO); aoEnviar()
+          }
+          catch (e) { setErro((e as Error).message) }
+          finally { setEnviando(false) }
+        }}>
+        {enviando ? 'Enviando…' : 'Enviar fotos'}
+      </button>
+      {falta ? <p className="socorrista-apoio">{falta}</p> : null}
+    </div>
+  </section>
+}
+
 export default function TurnoPage() {
   const [dados, setDados] = useState<MeuTurnoDoDia | null>(null)
   const [erro, setErro] = useState('')
+  // Fica aqui, acima das telas, para as fotos sobreviverem a recarga quando o
+  // envio do checklist falha depois do turno aberto.
+  const [checklist, setChecklist] = useState<EstadoChecklist>(CHECKLIST_VAZIO)
 
   const carregar = useCallback(() => {
     setErro('')
@@ -389,9 +560,11 @@ export default function TurnoPage() {
         </section>
       : aberto && !aberto.temFotoAbertura
         ? <FaltaFotoAbertura turno={aberto} aoEnviar={carregar} />
+      : aberto && aberto.faltaChecklist
+        ? <FaltaChecklist turno={aberto} checklist={checklist} aoMudarChecklist={setChecklist} aoEnviar={carregar} />
       : aberto
         ? <FecharTurno turno={aberto} aoFechar={carregar} />
-        : <AbrirTurno dados={dados} aoAbrir={carregar} />}
+        : <AbrirTurno dados={dados} aoAbrir={carregar} checklist={checklist} aoMudarChecklist={setChecklist} />}
 
     {dados.ultimosTurnos.length
       ? <section className="socorrista-cartao">
