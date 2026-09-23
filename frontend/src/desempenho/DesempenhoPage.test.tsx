@@ -43,3 +43,33 @@ test('socorristas por produção, com link para a ficha dele', async () => {
   await user.click(primeira)
   expect(screen.getByRole('link', { name: /abrir ficha e comissão/i }).getAttribute('href')).toBe('/equipe/7')
 })
+
+// Pedido do cliente (23/09/2026): varios meses no De-ate mostram cada viatura mes
+// a mes, com o total de cada uma e o total de cada mes.
+test('De–até de dois meses mostra cada viatura mês a mês, com os totais', async () => {
+  sessionStorage.setItem('filtro:periodo', JSON.stringify({ inicio: '2026-08-01', fim: '2026-09-30' }))
+  lista.push({ ...os(4, 'L168', 'Djalma', 200), dataAtendimento: '2026-08-05' })
+  try {
+    render(<MemoryRouter><DesempenhoPage/></MemoryRouter>)
+    const tabela = await screen.findByRole('table', { name: /desempenho mês a mês/i })
+    const cabecalho = within(tabela).getAllByRole('columnheader').map(c => c.textContent)
+    expect(cabecalho).toHaveLength(4)
+    expect(cabecalho.at(-1)).toBe('Total')
+    // L168: 1 servico em agosto, 2 em setembro, 3 no total.
+    const l168 = within(tabela).getByRole('row', { name: /^L168/ })
+    expect(within(l168).getAllByRole('cell').map(c => c.textContent)).toEqual(['L168', '1', '2', '3'])
+    const total = within(tabela).getByRole('row', { name: /^Total/ })
+    expect(within(total).getAllByRole('cell').map(c => c.textContent)).toEqual(['Total', '1', '3', '4'])
+  } finally {
+    lista.pop()
+    sessionStorage.clear()
+  }
+})
+
+test('um mês só não mostra a tabela mês a mês', async () => {
+  sessionStorage.setItem('filtro:periodo', JSON.stringify({ inicio: '2026-09-01', fim: '2026-09-30' }))
+  render(<MemoryRouter><DesempenhoPage/></MemoryRouter>)
+  await screen.findByRole('list', { name: /viaturas por serviços/i })
+  expect(screen.queryByRole('table', { name: /desempenho mês a mês/i })).not.toBeInTheDocument()
+  sessionStorage.clear()
+})

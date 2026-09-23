@@ -12,3 +12,13 @@
 .desempenho-total{display:grid;grid-template-columns:minmax(120px,190px) minmax(0,1fr) minmax(110px,auto) minmax(120px,auto);align-items:center;gap:14px;margin-top:6px;padding:12px 10px 4px;border-top:2px solid var(--line);font-weight:700}
 .desempenho-total strong{text-align:right;font-size:17px;font-variant-numeric:tabular-nums}
 .desempenho-total small{color:var(--muted);font-size:12px}
+
+/* Mes a mes: uma linha por viatura ou socorrista, uma coluna por mes, e o total. */
+.tabela-mes-a-mes{width:100%;border-collapse:collapse;font-size:13px}
+.tabela-mes-a-mes th,.tabela-mes-a-mes td{padding:9px 14px;border-bottom:1px solid var(--linha-suave);white-space:nowrap}
+.tabela-mes-a-mes th{color:var(--muted);font-size:11px;font-weight:600;text-align:left;text-transform:uppercase;letter-spacing:.06em}
+.tabela-mes-a-mes .th-numero,.tabela-mes-a-mes .col-numero{text-align:right;font-variant-numeric:tabular-nums}
+.tabela-mes-a-mes tbody tr:hover td{background:var(--superficie-2)}
+.tabela-mes-a-mes .sem-vinculo td:first-child{color:#8a6410}
+.tabela-mes-a-mes tfoot td{border-top:2px solid var(--line);border-bottom:0}
+.tabela-mes-a-mes td:last-child,.tabela-mes-a-mes th:last-child{background:var(--superficie-2)}

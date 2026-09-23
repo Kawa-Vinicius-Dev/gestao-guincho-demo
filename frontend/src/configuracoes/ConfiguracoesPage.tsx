@@ -1,14 +1,15 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { EntradaSenha } from '../components/EntradaSenha'
 import { useSessaoOpcional } from '../auth/AuthContext'
-import { criarUsuario, encerrarAcesso, excluirAcesso, listarUsuarios, reativarAcesso, redefinirSenha } from '../dados/usuarios'
+import { criarAcessoSocorrista, criarUsuario, encerrarAcesso, excluirAcesso, listarUsuarios, reativarAcesso, redefinirSenha } from '../dados/usuarios'
 import { atualizarCategoria, definirCategoriaDoSocorrista, criarCategoria, excluirCategoria, listarCategorias } from '../dados/cadastros'
 import { ConfirmarExclusao } from '../components/ConfirmarExclusao'
 import { ConfirmarAcao, type PedidoConfirmacao } from '../components/ConfirmarAcao'
 import { trocarSenha } from '../dados/sessao'
 import { baixarCopiaDosDados } from '../dados/backup'
 import { aplicarTema, temaAtual, type Tema } from '../tema'
-import type { Categoria, SenhaRedefinida, Usuario } from '../types/modelos'
+import type { Categoria, Motorista, SenhaRedefinida, Usuario } from '../types/modelos'
+import { ligarAcessoAoSocorrista, listarMotoristas } from '../dados/motoristas'
 import { Carregando } from '../components/EstadoPagina'
 import { Campo, Selecao } from '../components/Campos'
 import { Modal } from '../components/Modal'
@@ -26,6 +27,11 @@ export default function ConfiguracoesPage(){
   const [aba,setAba]=useState<Aba>(()=>{const a=new URLSearchParams(window.location.search).get('aba');return ABAS.some(([id])=>id===a)?a as Aba:'financeiro'})
   function trocarAba(nova:Aba){setAba(nova);window.history.replaceState(null,'',`${window.location.pathname}?aba=${nova}`)}
   const [categorias,setCategorias]=useState<Categoria[]>([]),[usuarios,setUsuarios]=useState<Usuario[]>([])
+  // Socorristas do cadastro: para criar o acesso ja ligado a um deles, e para
+  // ligar uma conta que nasceu solta.
+  const [motoristas,setMotoristas]=useState<Motorista[]>([])
+  const [perfilNovo,setPerfilNovo]=useState<Usuario['perfil']>('FUNCIONARIO')
+  const [ligando,setLigando]=useState<Usuario|null>(null)
   const [tema,setTema]=useState<Tema>(temaAtual)
   const [pedido,setPedido]=useState<PedidoConfirmacao|null>(null)
   // Categoria aberta para editar ou excluir.
@@ -33,8 +39,8 @@ export default function ConfiguracoesPage(){
   const [excluindoCadastro,setExcluindoCadastro]=useState<{tipo:'categoria',item:Categoria}|null>(null)
   function trocarTema(novo:Tema){setTema(novo);aplicarTema(novo)}
   const [mensagem,setMensagem]=useState(''),[erro,setErro]=useState(''),[gerada,setGerada]=useState<SenhaRedefinida|null>(null),[copiada,setCopiada]=useState(false),[baixando,setBaixando]=useState(false)
-  const carregar=()=>Promise.all([listarCategorias(),listarUsuarios()])
-    .then(([c,u])=>{setCategorias(c);setUsuarios(u)}).catch(x=>setErro((x as Error).message))
+  const carregar=()=>Promise.all([listarCategorias(),listarUsuarios(),listarMotoristas().catch(()=>[] as Motorista[])])
+    .then(([c,u,m])=>{setCategorias(c);setUsuarios(u);setMotoristas(m)}).catch(x=>setErro((x as Error).message))
   const [carregando,setCarregando]=useState(true)
   useEffect(()=>{void carregar().finally(()=>setCarregando(false))},[])
   async function cadastrar(e:FormEvent<HTMLFormElement>){e.preventDefault();const formulario=e.currentTarget;const f=new FormData(formulario)
@@ -56,9 +62,21 @@ export default function ConfiguracoesPage(){
   async function criarAcesso(e:FormEvent<HTMLFormElement>){e.preventDefault();const formulario=e.currentTarget;const f=new FormData(formulario)
     setErro('');setMensagem('');setCopiada(false)
     try{
-      const criado=await criarUsuario(String(f.get('nome')),String(f.get('email')),f.get('perfil') as Usuario['perfil'])
+      // Socorrista: a conta nasce ligada ao cadastro dele (e o nome vem de la).
+      const criado=perfilNovo==='FUNCIONARIO'
+        ?await criarAcessoSocorrista(Number(f.get('motoristaId')),String(f.get('email')),motoristas.find(m=>m.id===Number(f.get('motoristaId')))?.nome)
+        :await criarUsuario(String(f.get('nome')),String(f.get('email')),'ADMINISTRADOR')
       formulario.reset();setGerada(criado);await carregar()
     }catch(x){setErro((x as Error).message)}
+  }
+  async function ligar(e:FormEvent<HTMLFormElement>){e.preventDefault();if(!ligando)return
+    const motoristaId=Number(new FormData(e.currentTarget).get('motoristaId'))
+    const quem=motoristas.find(m=>m.id===motoristaId)
+    setErro('');setMensagem('')
+    try{await ligarAcessoAoSocorrista(motoristaId,String(ligando.id))
+      setMensagem(`A conta ${ligando.email} agora é de ${quem?.nome??'o socorrista'}: ele passa a ver os próprios serviços, turnos e comissão.`)
+      setLigando(null);await carregar()}
+    catch(x){setErro((x as Error).message)}
   }
   // Encerrar nao apaga: o login e banido e o cadastro do socorrista se solta.
   // O historico dele continua, porque depende do motorista e nao do login.
@@ -152,17 +170,23 @@ export default function ConfiguracoesPage(){
             <td><strong>{u.nome}</strong></td>
             <td className="col-email" title={u.email}>{u.email}</td>
             <td>{u.perfil==='ADMINISTRADOR'?'Administrador':'Socorrista'}</td>
-            <td>{!u.ativo?<span className="etiqueta-situacao situacao-encerrado">Encerrado</span>:u.senhaProvisoria?<span className="etiqueta-situacao situacao-pendente">Senha provisória</span>:<span className="etiqueta-situacao situacao-ativo">Ativo</span>}</td>
-            <td className="col-acoes"><button className="table-action" onClick={()=>setPedido({titulo:'Redefinir senha?',efeito:<>A senha atual de <strong>{u.nome}</strong> para de funcionar na hora. O sistema gera uma senha provisória para você repassar, e a pessoa troca no primeiro acesso.</>,resumo:[['Usuário',u.nome],['E-mail',u.email]],textoConfirmar:'Redefinir senha',perigo:true,aoConfirmar:()=>redefinir(u)})}>Redefinir senha</button>{u.ativo?<button className="table-action table-action-danger" onClick={()=>pedirEncerramento(u)}>Encerrar acesso</button>:<button className="table-action" onClick={()=>pedirReativacao(u)}>Reativar acesso</button>}<button className="table-action table-action-danger" onClick={()=>pedirExclusao(u)}>Excluir</button></td>
+            <td>{!u.ativo?<span className="etiqueta-situacao situacao-encerrado">Encerrado</span>:u.perfil==='FUNCIONARIO'&&!motoristas.some(m=>m.usuarioId===String(u.id))?<span className="etiqueta-situacao situacao-pendente" title="A pessoa entra, mas não vê os próprios serviços e comissão">Sem cadastro ligado</span>:u.senhaProvisoria?<span className="etiqueta-situacao situacao-pendente">Senha provisória</span>:<span className="etiqueta-situacao situacao-ativo">Ativo</span>}</td>
+            <td className="col-acoes">{u.ativo&&u.perfil==='FUNCIONARIO'&&!motoristas.some(m=>m.usuarioId===String(u.id))?<button className="table-action" onClick={()=>setLigando(u)}>Ligar ao socorrista</button>:null}<button className="table-action" onClick={()=>setPedido({titulo:'Redefinir senha?',efeito:<>A senha atual de <strong>{u.nome}</strong> para de funcionar na hora. O sistema gera uma senha provisória para você repassar, e a pessoa troca no primeiro acesso.</>,resumo:[['Usuário',u.nome],['E-mail',u.email]],textoConfirmar:'Redefinir senha',perigo:true,aoConfirmar:()=>redefinir(u)})}>Redefinir senha</button>{u.ativo?<button className="table-action table-action-danger" onClick={()=>pedirEncerramento(u)}>Encerrar acesso</button>:<button className="table-action" onClick={()=>pedirReativacao(u)}>Reativar acesso</button>}<button className="table-action table-action-danger" onClick={()=>pedirExclusao(u)}>Excluir</button></td>
           </tr>)}</tbody>
         </table></div>
         <h3 className="subtitulo-config">Novo acesso</h3>
+        {/* Acesso de socorrista em um passo (Kawa, 23/09/2026): escolhe quem e da o
+            e-mail; a conta ja nasce ligada ao cadastro dele. */}
         <form onSubmit={criarAcesso} className="inline-form form-novo-acesso">
-          <Campo rotulo="Nome"><input name="nome" required autoCapitalize="words" autoComplete="off"/></Campo>
+          <Selecao rotulo="Perfil" name="perfil" value={perfilNovo} onChange={e=>setPerfilNovo(e.target.value as Usuario['perfil'])}
+            opcoes={[{valor:'FUNCIONARIO',texto:'Socorrista'},{valor:'ADMINISTRADOR',texto:'Administrador'}]}/>
+          {perfilNovo==='FUNCIONARIO'
+            ?<Selecao rotulo="Socorrista" name="motoristaId" required vazio={motoristas.filter(m=>m.ativo&&!m.usuarioId).length?'Selecione':'Todos já têm acesso'}
+                opcoes={motoristas.filter(m=>m.ativo&&!m.usuarioId).map(m=>({valor:m.id,texto:m.nome}))}/>
+            :<Campo rotulo="Nome"><input name="nome" required autoCapitalize="words" autoComplete="off"/></Campo>}
           <Campo rotulo="E-mail de acesso"><input name="email" type="email" inputMode="email" autoComplete="off" autoCapitalize="none" autoCorrect="off" spellCheck={false} required/></Campo>
-          <Selecao rotulo="Perfil" name="perfil" opcoes={[{valor:'FUNCIONARIO',texto:'Socorrista'},{valor:'ADMINISTRADOR',texto:'Administrador'}]}/>
           <button className="button button-primary">Criar acesso</button></form>
-        <p className="empty-inline">Administrador vê e mexe em tudo: financeiro, Porto, equipe e os acessos das outras pessoas. Socorrista só registra as próprias despesas e vê a comissão dele. Para dar acesso a um socorrista já cadastrado, use o botão na tela de Socorristas — lá a conta já nasce ligada ao cadastro dele.</p></section>
+        <p className="empty-inline">Socorrista: escolha a pessoa do cadastro e informe o e-mail. A conta já nasce ligada a ela, e ela vê só os próprios serviços, turnos e comissão. Administrador vê e mexe em tudo: financeiro, Porto, equipe e os acessos das outras pessoas.</p></section>
       </div>:null}
       {aba==='sistema'?<div className="settings-grid">
       {/* A senha de quem esta usando o sistema agora. Ficava ao lado da lista de
@@ -179,6 +203,15 @@ export default function ConfiguracoesPage(){
         <p className="empty-inline">Um arquivo do Excel com ordens de pagamento, ordens de serviço, receitas, despesas, contas a receber, socorristas, veículos, quilometragem, calendário e despesas fixas.</p>
         <button className="button button-primary" disabled={baixando} onClick={()=>void baixarCopia()}>{baixando?'Preparando cópia…':'Baixar cópia de tudo'}</button></section>
       </div>:null}
+    {ligando?<Modal etiqueta={ligando.email} titulo="Ligar a conta ao socorrista" aoFechar={()=>setLigando(null)}>
+      <form onSubmit={ligar} className="form-grid">
+        <p>A conta <strong>{ligando.email}</strong> entra no sistema, mas não está ligada a nenhum socorrista do cadastro, então a pessoa não vê os próprios serviços, turnos e comissão. Escolha de quem ela é.</p>
+        <Selecao rotulo="Socorrista" name="motoristaId" required vazio="Selecione"
+          defaultValue={motoristas.find(m=>m.ativo&&!m.usuarioId&&m.nome.toUpperCase()===ligando.nome.toUpperCase())?.id??''}
+          opcoes={motoristas.filter(m=>m.ativo&&!m.usuarioId).map(m=>({valor:m.id,texto:m.nome}))}/>
+        <div className="modal-actions"><button type="button" className="button button-ghost" onClick={()=>setLigando(null)}>Cancelar</button><button className="button button-primary">Ligar conta</button></div>
+      </form>
+    </Modal>:null}
     {gerada?<Modal etiqueta={gerada.nome} titulo="Senha provisória" aoFechar={()=>setGerada(null)}>
       <p>Passe esta senha para {gerada.nome}. Ela aparece <strong>uma única vez</strong> e só serve para o próximo acesso: o sistema vai obrigar a troca antes de liberar qualquer tela.</p>
       <p className="senha-provisoria"><code>{gerada.email}</code></p>
