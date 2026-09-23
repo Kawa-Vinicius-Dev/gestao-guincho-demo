@@ -22,6 +22,8 @@ async function abrir() {
   const { esquecerCliente } = await import('../dados/cliente')
   esquecerCliente()
   const { default: Pagina } = await import('./ConfiguracoesPage')
+  // Contas ficam na aba Acessos.
+  window.history.replaceState({}, '', '/configuracoes?aba=acessos')
   render(<MemoryRouter><Pagina/></MemoryRouter>)
 }
 

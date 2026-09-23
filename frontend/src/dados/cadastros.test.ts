@@ -67,21 +67,21 @@ test('pede colunas nomeadas, nao a linha inteira', async () => {
 
   await listarCategorias()
 
-  expect(colunas).toBe('id,nome,tipo,ativo')
+  expect(colunas).toBe('id,nome,tipo,ativo,socorrista_pode')
 })
 
 test('cadastrar categoria devolve a linha salva', async () => {
   let corpo: unknown = null
   servidor.use(http.post(`${URL_SUPABASE}/rest/v1/categorias`, async ({ request }) => {
     corpo = await request.json()
-    return responder(request, [{ id: 9, nome: 'Pedágio', tipo: 'DESPESA', ativo: true }])
+    return responder(request, [{ id: 9, nome: 'Pedágio', tipo: 'DESPESA', ativo: true, socorrista_pode: true }])
   }))
   const { criarCategoria } = await carregar('auth,categorias')
 
   const salva = await criarCategoria('Pedágio', 'DESPESA')
 
   expect(corpo).toEqual({ nome: 'Pedágio', tipo: 'DESPESA' })
-  expect(salva).toEqual({ id: 9, nome: 'Pedágio', tipo: 'DESPESA', ativo: true })
+  expect(salva).toEqual({ id: 9, nome: 'Pedágio', tipo: 'DESPESA', ativo: true, socorristaPode: true })
 })
 
 test('categoria repetida vira frase que a pessoa entende', async () => {

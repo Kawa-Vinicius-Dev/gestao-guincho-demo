@@ -1923,3 +1923,18 @@ tbody tr{transition:background-color .14s ease}
    mouse (sublinhado discreto), inclusive "Sem viatura" e "Sem socorrista". */
 .faturamento-grupo-link{text-decoration:underline;text-decoration-color:color-mix(in srgb,currentColor 35%,transparent);text-underline-offset:3px}
 .faturamento-grupo-link:hover{text-decoration-color:currentColor}
+
+/* Configuracoes em abas: Financeiro, Cadastros, Acessos, Sistema. */
+.config-abas{display:flex;gap:4px;margin:0 0 18px;padding:4px;border:1px solid var(--line);border-radius:10px;background:var(--superficie);width:fit-content}
+.config-abas button{padding:10px 18px;border:0;border-radius:7px;color:var(--muted);background:transparent;font:600 14px 'IBM Plex Sans',sans-serif;cursor:pointer}
+.config-abas button:hover{color:var(--ink);background:var(--superficie-2)}
+.config-abas button.ativa{color:#fff;background:var(--blue-600)}
+.settings-card-largo{grid-column:1/-1}
+.settings-card-cabecalho{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:14px}
+.settings-card-cabecalho p{max-width:720px}
+.fixas-total{margin:0 0 10px;color:var(--muted);font-size:13px}.fixas-total strong{color:var(--ink)}
+.linha-inativa td{opacity:.55}
+.col-numero,.th-numero{text-align:right;font-variant-numeric:tabular-nums}
+.categoria-socorrista{display:inline-flex;align-items:center;gap:6px;margin-left:10px;color:var(--muted);font-size:12px;cursor:pointer}
+.categoria-socorrista input{width:16px;height:16px;margin:0;accent-color:var(--blue-600)}
+.settings-card-cabecalho>.button{flex:0 0 auto;white-space:nowrap}

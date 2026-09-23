@@ -20,7 +20,7 @@ test('a tela de configurações é alcançável e troca a senha pelo backend', a
     return new HttpResponse(null, { status: 204 })
   }))
   const user = userEvent.setup({ delay: null })
-  abrir('/configuracoes')
+  abrir('/configuracoes?aba=acessos')
 
   expect(await screen.findByRole('heading', { name: /configurações/i })).toBeInTheDocument()
   await user.type(screen.getByLabelText(/senha atual/i), 'Admin@123')
@@ -35,7 +35,7 @@ test('erro do backend ao trocar a senha aparece na tela', async () => {
   servidor.use(http.put('/api/auth/senha', () => HttpResponse.json(
     { detalhe: 'A senha atual não confere.' }, { status: 400 })))
   const user = userEvent.setup({ delay: null })
-  abrir('/configuracoes')
+  abrir('/configuracoes?aba=acessos')
 
   await screen.findByRole('heading', { name: /configurações/i })
   await user.type(screen.getByLabelText(/senha atual/i), 'ErradaDemais')

@@ -1,25 +1,37 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { expect, test } from 'vitest'
 import App from '../App'
 import { servidor } from '../test/servidor'
-import { confirmarNaJanela } from '../test/confirmar'
 
 const TOKEN_KEY = 'fluxo-gestao:token:v1'
 
 function abrir() {
   sessionStorage.setItem(TOKEN_KEY, 'token-admin-teste')
-  window.history.replaceState({}, '', '/despesas')
+  window.history.replaceState({}, '', '/configuracoes?aba=financeiro')
   return render(<App />)
 }
 
+/**
+ * Despesas fixas moram em Configuracoes > Financeiro: cadastra uma vez e ela
+ * entra sozinha, ja paga, no vencimento de cada mes (o banco lanca).
+ */
 const aluguel = {
   id: 1, descricao: 'Aluguel do pátio', categoria: 'Combustível', categoriaId: 2,
   valor: 2500, diaVencimento: 10, ativo: true,
 }
 
-test('cadastra uma despesa fixa', async () => {
+async function cadastrar(user: ReturnType<typeof userEvent.setup>, campos: Record<string, string>) {
+  await user.click(await screen.findByRole('button', { name: /nova despesa fixa/i }))
+  const janela = await screen.findByRole('dialog', { name: /nova despesa fixa/i })
+  for (const [rotulo, valor] of Object.entries(campos)) {
+    await user.type(within(janela).getByLabelText(new RegExp(rotulo, 'i')), valor)
+  }
+  await user.click(within(janela).getByRole('button', { name: /cadastrar despesa fixa/i }))
+}
+
+test('cadastra uma despesa fixa e avisa que ela entra sozinha', async () => {
   let enviado: Record<string, unknown> | null = null
   let fixas: Record<string, unknown>[] = []
   servidor.use(
@@ -32,51 +44,18 @@ test('cadastra uma despesa fixa', async () => {
   )
   const user = userEvent.setup({ delay: null })
   abrir()
-
-  await user.type(await screen.findByLabelText(/descrição da despesa fixa/i), 'Aluguel do pátio')
   // Mascara de centavos: 250000 digitado vira R$ 2.500,00.
-  await user.type(screen.getByLabelText(/valor da despesa fixa/i), '250000')
-  await user.type(screen.getByLabelText(/dia do vencimento/i), '10')
-  await user.click(screen.getByRole('button', { name: /adicionar/i }))
+  await cadastrar(user, { '^descrição': 'Aluguel do pátio', 'valor por mês': '250000', 'dia do vencimento': '10' })
 
-  expect(enviado).toMatchObject({ descricao: 'Aluguel do pátio', valor: 2500, diaVencimento: 10 })
+  expect(enviado).toMatchObject({ descricao: 'Aluguel do pátio', valor: 2500, diaVencimento: 10, totalParcelas: null })
+  expect(await screen.findByText(/entra sozinha, já paga, todo dia 10/i)).toBeInTheDocument()
   expect(await screen.findByText('Aluguel do pátio')).toBeInTheDocument()
 })
 
-test('lança o mês e conta o que já existia', async () => {
-  let pedido = ''
-  servidor.use(
-    http.get('/api/despesas-recorrentes', () => HttpResponse.json([aluguel])),
-    http.post('/api/despesas-recorrentes/lancamentos', ({ request }) => {
-      pedido = new URL(request.url).searchParams.get('mes') ?? ''
-      return HttpResponse.json({ mes: pedido, lancadas: 1, jaExistiam: 2, valorLancado: 2500, despesas: [] }, { status: 201 })
-    }),
-  )
-  const user = userEvent.setup({ delay: null })
-  abrir()
-
-  const lancar = await screen.findByRole('button', { name: /lançar as fixas do mês/i })
-  await waitFor(() => expect(lancar).toBeEnabled())
-  await user.click(lancar);await confirmarNaJanela()
-
-  expect(pedido).toMatch(/^\d{4}-\d{2}$/)
-  expect(await screen.findByText(/1 despesa fixa lançada/i)).toBeInTheDocument()
-  expect(screen.getByText(/2 já estavam lançadas/i)).toBeInTheDocument()
-})
-
-test('sem despesa fixa ativa não há o que lançar', async () => {
-  servidor.use(http.get('/api/despesas-recorrentes', () => HttpResponse.json([{ ...aluguel, ativo: false }])))
-  abrir()
-
-  // espera a lista chegar: com a lista ainda vazia o botao ja estaria desabilitado por outro motivo
-  expect(await screen.findByRole('button', { name: /reativar/i })).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /lançar as fixas do mês/i })).toBeDisabled()
-})
-
-test('cadastra seguro em 3 de 10 e a lista mostra a próxima parcela', async () => {
+test('cadastra 10 parcelas com 3 já pagas, e a lista mostra a próxima', async () => {
   let enviado: Record<string, unknown> | null = null
   const seguro = { ...aluguel, id: 2, descricao: 'Seguro dos caminhões', valor: 5716.4,
-    totalParcelas: 10, parcelaInicial: 3, proximaParcela: 3 }
+    totalParcelas: 10, parcelaInicial: 4, proximaParcela: 4 }
   let fixas: Record<string, unknown>[] = []
   servidor.use(
     http.get('/api/despesas-recorrentes', () => HttpResponse.json(fixas)),
@@ -88,14 +67,10 @@ test('cadastra seguro em 3 de 10 e a lista mostra a próxima parcela', async () 
   )
   const user = userEvent.setup({ delay: null })
   abrir()
+  await cadastrar(user, { '^descrição': 'Seguro dos caminhões', 'valor por mês': '571640', 'dia do vencimento': '18',
+    'total de parcelas': '10', 'parcelas já pagas': '3' })
 
-  await user.type(await screen.findByLabelText(/descrição da despesa fixa/i), 'Seguro dos caminhões')
-  await user.type(screen.getByLabelText(/valor da despesa fixa/i), '571640')
-  await user.type(screen.getByLabelText(/dia do vencimento/i), '18')
-  await user.type(screen.getByLabelText(/parcela atual/i), '3')
-  await user.type(screen.getByLabelText(/total de parcelas/i), '10')
-  await user.click(screen.getByRole('button', { name: /adicionar/i }))
-
-  expect(enviado).toMatchObject({ parcelaInicial: 3, totalParcelas: 10 })
-  expect(await screen.findByText(/próxima parcela 3\/10/)).toBeInTheDocument()
+  // 10 parcelas com 3 ja pagas: a proxima a entrar e a 4a.
+  expect(enviado).toMatchObject({ parcelaInicial: 4, totalParcelas: 10 })
+  expect(await screen.findByText('3 de 10 pagas · próxima 4ª')).toBeInTheDocument()
 })

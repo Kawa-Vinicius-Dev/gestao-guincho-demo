@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { EntradaSenha } from '../components/EntradaSenha'
 import { criarUsuario, encerrarAcesso, excluirAcesso, listarUsuarios, reativarAcesso, redefinirSenha } from '../dados/usuarios'
-import { atualizarCategoria, atualizarContratante, criarCategoria, criarContratante, excluirCategoria, excluirContratante, listarCategorias, listarContratantes } from '../dados/cadastros'
+import { atualizarCategoria, definirCategoriaDoSocorrista, atualizarContratante, criarCategoria, criarContratante, excluirCategoria, excluirContratante, listarCategorias, listarContratantes } from '../dados/cadastros'
 import { ConfirmarExclusao } from '../components/ConfirmarExclusao'
 import { ConfirmarAcao, type PedidoConfirmacao } from '../components/ConfirmarAcao'
 import { trocarSenha } from '../dados/sessao'
@@ -13,8 +13,15 @@ import { CampoDocumento } from '../components/CamposMascarados'
 import { Campo, Selecao } from '../components/Campos'
 import { Modal } from '../components/Modal'
 import { ComissaoPadrao } from './ComissaoPadrao'
+import { DespesasFixas } from './DespesasFixas'
+
+type Aba='financeiro'|'cadastros'|'acessos'|'sistema'
+const ABAS:[Aba,string][]=[['financeiro','Financeiro'],['cadastros','Cadastros'],['acessos','Acessos'],['sistema','Sistema']]
 
 export default function ConfiguracoesPage(){
+  // A aba fica na URL (?aba=acessos): um link de outra tela abre direto nela.
+  const [aba,setAba]=useState<Aba>(()=>{const a=new URLSearchParams(window.location.search).get('aba');return ABAS.some(([id])=>id===a)?a as Aba:'financeiro'})
+  function trocarAba(nova:Aba){setAba(nova);window.history.replaceState(null,'',`${window.location.pathname}?aba=${nova}`)}
   const [categorias,setCategorias]=useState<Categoria[]>([]),[contratantes,setContratantes]=useState<Contratante[]>([]),[usuarios,setUsuarios]=useState<Usuario[]>([])
   const [tema,setTema]=useState<Tema>(temaAtual)
   const [pedido,setPedido]=useState<PedidoConfirmacao|null>(null)
@@ -91,6 +98,11 @@ export default function ConfiguracoesPage(){
     catch(x){setErro((x as Error).message)}
   }
   // o banco esta num plano sem backup automatico: esta copia e o que fica na mao do dono
+  async function alternarSocorrista(c:Categoria){setErro('');setMensagem('')
+    try{await definirCategoriaDoSocorrista(c.id,!c.socorristaPode)
+      setMensagem(c.socorristaPode?`${c.nome} não aparece mais para o socorrista.`:`${c.nome} liberada para o socorrista.`)
+      await carregar()}
+    catch(x){setErro((x as Error).message)}}
   async function baixarCopia(){setErro('');setMensagem('');setBaixando(true)
     // a copia percorre o banco inteiro: sem sinal na tela, parece que o clique nao pegou
     try{await baixarCopiaDosDados();setMensagem('Cópia gerada. Guarde o arquivo fora do sistema.')}
@@ -104,21 +116,31 @@ export default function ConfiguracoesPage(){
       formulario.reset();setMensagem('Senha alterada. Os acessos abertos em outros dispositivos foram encerrados.')}
     catch(x){setErro((x as Error).message)}
   }
-  return <div className="page-enter"><header className="page-heading"><div><span className="eyebrow">Base financeira</span><h1>Configurações</h1><p>Contratantes, categorias e segurança da conta.</p></div></header>
-    {erro?<div className="form-alert">{erro}</div>:null}{carregando?<Carregando/>:null}{mensagem?<div className="success-notice">{mensagem}</div>:null}<div className="settings-grid">
-      <section className="panel settings-card"><header><h2>Aparência</h2><p>Vale só neste computador e neste navegador.</p></header><div className="segmented tema-escolha" role="group" aria-label="Tema visual"><button className={tema==='claro'?'active':''} aria-pressed={tema==='claro'} onClick={()=>trocarTema('claro')}>Claro</button><button className={tema==='escuro'?'active':''} aria-pressed={tema==='escuro'} onClick={()=>trocarTema('escuro')}>Escuro</button></div><p className="empty-inline">O sistema não segue o tema do computador: a cor só muda quando você escolhe aqui.</p></section>
+  return <div className="page-enter"><header className="page-heading"><div><span className="eyebrow">Base financeira</span><h1>Configurações</h1><p>Comissão, despesas fixas e categorias; cadastros; acessos; e o sistema.</p></div></header>
+    {erro?<div className="form-alert">{erro}</div>:null}{carregando?<Carregando/>:null}{mensagem?<div className="success-notice">{mensagem}</div>:null}
+      {/* Abas: cada assunto no seu lugar, em vez de uma parede de cartoes. */}
+      <nav className="config-abas" role="tablist" aria-label="Seções das configurações">
+        {ABAS.map(([id,rotulo])=><button key={id} type="button" role="tab" aria-selected={aba===id}
+          className={aba===id?'ativa':undefined} onClick={()=>trocarAba(id)}>{rotulo}</button>)}
+      </nav>
+      {aba==='financeiro'?<div className="settings-grid">
       <ComissaoPadrao/>
+      <DespesasFixas/>
+      <section className="panel settings-card"><header><h2>Categorias</h2><p>Classifique para entender para onde o dinheiro vai. Marque as que o <strong>socorrista pode usar</strong> ao lançar uma despesa: as outras nem aparecem para ele.</p></header><ul className="simple-list">{categorias.map(c=><li key={c.id}><strong>{c.nome}</strong><small>{c.tipo==='RECEITA'?'Receita':'Despesa'}</small>{c.tipo==='DESPESA'?<label className="categoria-socorrista"><input type="checkbox" checked={Boolean(c.socorristaPode)} onChange={()=>void alternarSocorrista(c)}/><span>Socorrista pode lançar</span></label>:null}<span className="acoes-da-linha"><button className="table-action" onClick={()=>setEditandoCadastro({tipo:'categoria',item:c})}>Editar</button><button className="table-action table-action-danger" onClick={()=>setExcluindoCadastro({tipo:'categoria',item:c})}>Excluir</button></span></li>)}</ul>
+        <form onSubmit={e=>cadastrar(e,'categorias')} className="inline-form">
+          <Campo rotulo="Nome da categoria"><input name="nome" required autoCapitalize="words" autoComplete="off"/></Campo>
+          <Selecao rotulo="Tipo da categoria" name="tipo" opcoes={[{valor:'DESPESA',texto:'Despesa'},{valor:'RECEITA',texto:'Receita'}]}/>
+          <button className="button button-ghost">Adicionar</button></form></section>
+      </div>:null}
+      {aba==='cadastros'?<div className="settings-grid">
       <section className="panel settings-card"><header><h2>Contratantes</h2><p>Porto Seguro e demais clientes pagadores.</p></header><ul className="simple-list">{contratantes.map(c=><li key={c.id}><strong>{c.nome}</strong><small>{c.documento||'Sem documento'}</small><span className="acoes-da-linha"><button className="table-action" onClick={()=>setEditandoCadastro({tipo:'contratante',item:c})}>Editar</button><button className="table-action table-action-danger" onClick={()=>setExcluindoCadastro({tipo:'contratante',item:c})}>Excluir</button></span></li>)}</ul>
         <form onSubmit={e=>cadastrar(e,'contratantes')} className="inline-form">
           <Campo rotulo="Nome do contratante"><input name="nome" required autoCapitalize="words" autoComplete="off"/></Campo>
           <CampoDocumento rotulo="CNPJ ou CPF" name="documento"/>
           <button className="button button-ghost">Adicionar</button></form></section>
-      <section className="panel settings-card"><header><h2>Categorias</h2><p>Classifique para entender para onde o dinheiro vai.</p></header><ul className="simple-list">{categorias.map(c=><li key={c.id}><strong>{c.nome}</strong><small>{c.tipo==='RECEITA'?'Receita':'Despesa'}</small><span className="acoes-da-linha"><button className="table-action" onClick={()=>setEditandoCadastro({tipo:'categoria',item:c})}>Editar</button><button className="table-action table-action-danger" onClick={()=>setExcluindoCadastro({tipo:'categoria',item:c})}>Excluir</button></span></li>)}</ul>
-        <form onSubmit={e=>cadastrar(e,'categorias')} className="inline-form">
-          <Campo rotulo="Nome da categoria"><input name="nome" required autoCapitalize="words" autoComplete="off"/></Campo>
-          <Selecao rotulo="Tipo da categoria" name="tipo" opcoes={[{valor:'DESPESA',texto:'Despesa'},{valor:'RECEITA',texto:'Receita'}]}/>
-          <button className="button button-ghost">Adicionar</button></form></section>
-      <section className="panel settings-card"><header><h2>Trocar senha</h2><p>A nova senha deve ter pelo menos oito caracteres.</p></header><form onSubmit={senha} className="form-grid"><label className="field"><span>Senha atual</span><EntradaSenha name="senhaAtual" autoComplete="current-password" required/></label><label className="field"><span>Nova senha</span><EntradaSenha name="novaSenha" autoComplete="new-password" minLength={8} required/></label><button className="button button-primary">Alterar senha</button></form></section>
+      <section className="panel settings-card"><header><h2>Custos da frota</h2><p>O custo por km é configurado em cada veículo e aplicado ao km morto no momento do registro.</p></header><a className="button button-ghost" href="/veiculos">Configurar veículos</a></section>
+      </div>:null}
+      {aba==='acessos'?<div className="settings-grid">
       <section className="panel settings-card"><header><h2>Acessos</h2><p>Quem entra no sistema. Crie uma conta nova, ou redefina a senha de quem esqueceu e passe a provisória para a pessoa.</p></header><ul className="simple-list">{usuarios.map(u=><li key={u.id}><strong>{u.nome}</strong><small>{u.email} · {u.perfil==='ADMINISTRADOR'?'Administrador':'Socorrista'}{u.ativo?'':' · encerrado'}{u.senhaProvisoria?' · senha provisória pendente':''}</small><button className="table-action" onClick={()=>setPedido({titulo:'Redefinir senha?',efeito:<>A senha atual de <strong>{u.nome}</strong> para de funcionar na hora. O sistema gera uma senha provisória para você repassar, e a pessoa troca no primeiro acesso.</>,resumo:[['Usuário',u.nome],['E-mail',u.email]],textoConfirmar:'Redefinir senha',perigo:true,aoConfirmar:()=>redefinir(u)})}>Redefinir senha</button>{u.ativo?<button className="table-action table-action-danger" onClick={()=>pedirEncerramento(u)}>Encerrar acesso</button>:<button className="table-action" onClick={()=>pedirReativacao(u)}>Reativar acesso</button>}<button className="table-action table-action-danger" onClick={()=>pedirExclusao(u)}>Excluir</button></li>)}</ul>
         <form onSubmit={criarAcesso} className="inline-form">
           <Campo rotulo="Nome"><input name="nome" required autoCapitalize="words" autoComplete="off"/></Campo>
@@ -126,11 +148,14 @@ export default function ConfiguracoesPage(){
           <Selecao rotulo="Perfil" name="perfil" opcoes={[{valor:'FUNCIONARIO',texto:'Socorrista'},{valor:'ADMINISTRADOR',texto:'Administrador'}]}/>
           <button className="button button-ghost">Criar acesso</button></form>
         <p className="empty-inline">Administrador vê e mexe em tudo: financeiro, Porto, equipe e os acessos das outras pessoas. Socorrista só registra as próprias despesas e vê a comissão dele. Para dar acesso a um socorrista já cadastrado, use o botão na tela de Socorristas — lá a conta já nasce ligada ao cadastro dele.</p></section>
+      <section className="panel settings-card"><header><h2>Trocar senha</h2><p>A nova senha deve ter pelo menos oito caracteres.</p></header><form onSubmit={senha} className="form-grid"><label className="field"><span>Senha atual</span><EntradaSenha name="senhaAtual" autoComplete="current-password" required/></label><label className="field"><span>Nova senha</span><EntradaSenha name="novaSenha" autoComplete="new-password" minLength={8} required/></label><button className="button button-primary">Alterar senha</button></form></section>
+      </div>:null}
+      {aba==='sistema'?<div className="settings-grid">
+      <section className="panel settings-card"><header><h2>Aparência</h2><p>Vale só neste computador e neste navegador.</p></header><div className="segmented tema-escolha" role="group" aria-label="Tema visual"><button className={tema==='claro'?'active':''} aria-pressed={tema==='claro'} onClick={()=>trocarTema('claro')}>Claro</button><button className={tema==='escuro'?'active':''} aria-pressed={tema==='escuro'} onClick={()=>trocarTema('escuro')}>Escuro</button></div><p className="empty-inline">O sistema não segue o tema do computador: a cor só muda quando você escolhe aqui.</p></section>
       <section className="panel settings-card"><header><h2>Cópia dos dados</h2><p>O banco não tem backup automático. Baixe de tempos em tempos e guarde fora do sistema.</p></header>
         <p className="empty-inline">Um arquivo do Excel com ordens de pagamento, ordens de serviço, receitas, despesas, contas a receber, socorristas, veículos, quilometragem, calendário e despesas fixas.</p>
         <button className="button button-primary" disabled={baixando} onClick={()=>void baixarCopia()}>{baixando?'Preparando cópia…':'Baixar cópia de tudo'}</button></section>
-      <section className="panel settings-card"><header><h2>Custos da frota</h2><p>O custo por km é configurado em cada veículo e aplicado ao km morto no momento do registro.</p></header><a className="button button-ghost" href="/veiculos">Configurar veículos</a></section>
-    </div>
+      </div>:null}
     {gerada?<Modal etiqueta={gerada.nome} titulo="Senha provisória" aoFechar={()=>setGerada(null)}>
       <p>Passe esta senha para {gerada.nome}. Ela aparece <strong>uma única vez</strong> e só serve para o próximo acesso: o sistema vai obrigar a troca antes de liberar qualquer tela.</p>
       <p className="senha-provisoria"><code>{gerada.email}</code></p>

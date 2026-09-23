@@ -43,6 +43,9 @@ Validam as migrations num Postgres local, sem depender de um projeto Supabase.
 - `94_despesa_fixa_com_parcelas.sql` — 9 asserções de que a despesa fixa com
   parcelas (ex.: 9/10) grava o número em cada lançamento, não duplica o mês, se
   encerra sozinha na última e não pula número quando um lançamento é apagado.
+- `96_fixas_automaticas_e_categorias.sql` — asserções de que a despesa fixa entra
+  sozinha, já paga, no vencimento (com parcela e sem duplicar), de que o socorrista
+  só lança em categoria liberada e de que a comissão padrão é legível logado.
 - `95_copia_dos_dados.sql` — 10 asserções de que a cópia dos dados consegue ler
   todas as colunas que pede. O banco não tem backup automático, então essa cópia
   é a única proteção do dono — e ela ficou quebrada sem ninguém saber.

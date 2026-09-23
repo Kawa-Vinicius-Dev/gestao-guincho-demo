@@ -26,7 +26,7 @@ test('o dono redefine a senha e vê a provisória uma vez', async () => {
     }),
   )
   const user = userEvent.setup({ delay: null })
-  abrir('/configuracoes')
+  abrir('/configuracoes?aba=acessos')
 
   await user.click(await screen.findByRole('button', { name: /redefinir senha/i }));await confirmarNaJanela()
 
