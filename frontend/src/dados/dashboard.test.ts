@@ -34,13 +34,13 @@ const PORTO = {
 }
 
 // O caminho antigo abria a tela com duas requisicoes; a nova faz uma.
-test('no Supabase, os dois blocos vem numa chamada so', async () => {
+test('no Supabase, os indicadores vem numa chamada so', async () => {
   let chamadas = 0
   let corpo: unknown = null
   servidor.use(http.post(`${URL_SUPABASE}/rest/v1/rpc/dashboard_resumo`, async ({ request }) => {
     chamadas++
     corpo = await request.json()
-    return HttpResponse.json({ financeiro: FINANCEIRO, porto: PORTO })
+    return HttpResponse.json({ financeiro: FINANCEIRO })
   }))
   const { lerDashboard } = await carregar('auth,dashboard')
 
@@ -50,7 +50,8 @@ test('no Supabase, os dois blocos vem numa chamada so', async () => {
   expect(corpo).toEqual({ p_inicio: '2026-09-01', p_fim: '2026-09-30', p_por_competencia: true })
   expect(resumo.financeiro.saldoRealizado).toBe(550)
   expect(resumo.financeiro.despesasAcumuladasPorDia?.at(-1)?.acumulado).toBe(450)
-  expect(resumo.porto?.valorRecebido).toBe(980)
+  // O resumo Porto saiu da chamada: a Visao geral nunca o usou.
+  expect(resumo.porto).toBeNull()
 })
 
 test('sem o modulo ligado, continua nas duas chamadas do backend antigo', async () => {

@@ -86,8 +86,10 @@ async function peloSupabase(inicio: string, fim: string, porCompetencia: boolean
   const resposta = ou(
     await supabase().rpc('dashboard_resumo', { p_inicio: inicio, p_fim: fim, p_por_competencia: porCompetencia }),
     'Não foi possível carregar os indicadores.',
-  ) as { financeiro: Dashboard; porto: ResumoPortoDashboard }
-  return { financeiro: resposta.financeiro, porto: resposta.porto }
+  ) as { financeiro: Dashboard }
+  // O resumo Porto saiu da chamada: a Visao geral nunca o usou (a aba Graficos
+  // tem o dela). Continua no tipo so pelo caminho antigo do Render.
+  return { financeiro: resposta.financeiro, porto: null }
 }
 
 /**

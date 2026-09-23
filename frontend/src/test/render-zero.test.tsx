@@ -57,8 +57,6 @@ function montarInterceptadores() {
       HttpResponse.json({ financeiro: DASHBOARD, porto: null })),
     http.post(`${URL_SUPABASE}/rest/v1/rpc/dashboard_financeiro`, () => HttpResponse.json(DASHBOARD)),
     http.post(`${URL_SUPABASE}/rest/v1/rpc/extrato_financeiro`, () => HttpResponse.json([])),
-    http.post(`${URL_SUPABASE}/rest/v1/rpc/comissao_do_ciclo`, () =>
-      HttpResponse.json({ servicos: [], alimentacoes: [], liquido: 0 })),
     http.get(`${URL_SUPABASE}/rest/v1/*`, () => HttpResponse.json([])),
     http.post(`${URL_SUPABASE}/rest/v1/rpc/*`, () => HttpResponse.json(null)),
     http.all(`${URL_SUPABASE}/auth/v1/*`, () => HttpResponse.json({ user: { id: ID } })),

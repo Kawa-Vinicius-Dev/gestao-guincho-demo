@@ -108,31 +108,8 @@ select pg_temp.checar('participacao da maior (400/450)',
 select pg_temp.checar('extrato traz receitas e despesas',
   (select count(*)::text from public.extrato_financeiro('2026-09-01','2026-09-30')), '5');
 
-\echo '========== COMISSAO =========='
-select pg_temp.checar('comissao bruta 20% de 1000',
-  (public.comissao_do_ciclo(1,1) ->> 'comissaoBruta'), '200.00');
-select pg_temp.checar('alimentacao aprovada desconta',
-  (public.comissao_do_ciclo(1,1) ->> 'alimentacaoAprovada'), '50.00');
-select pg_temp.checar('liquido 200-50',
-  (public.comissao_do_ciclo(1,1) ->> 'liquido'), '150.00');
-select pg_temp.checar('servicos do ciclo',
-  jsonb_array_length((public.comissao_do_ciclo(1,1)) -> 'servicos')::text, '2');
-reset role;
-
-\echo '========== PAGAMENTO DE COMISSAO =========='
-set role authenticated;
-set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000003';
-select pg_temp.checar('pagar comissao cria o repasse',
-  (select valor_pago::text from public.pagar_comissao(1,1,'2026-09-21')), '150.00');
-select pg_temp.checar('repasse virou despesa paga',
-  (select status::text from public.despesas
-    where protocolo = 'COMISSAO-1-1'), 'PAGO');
-do $$
-begin
-  perform public.pagar_comissao(1,1,'2026-09-22');
-  raise exception 'FALHOU  | pagou o mesmo ciclo duas vezes';
-exception
-  when unique_violation then raise notice 'PASSOU  | nao paga o mesmo ciclo duas vezes';
-end $$;
+-- A comissao por ciclo (comissao_do_ciclo) e o repasse manual (pagar_comissao)
+-- sairam em 20260923200000: a comissao fecha por OP e vira despesa sozinha,
+-- coberta pelas suites 80, 90, 93 e 99.
 reset role;
 \echo '========== FUNCIONAL OK =========='
