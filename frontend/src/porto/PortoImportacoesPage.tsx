@@ -4,12 +4,13 @@ import './importacao/importacao.css'
 import { Link } from 'react-router-dom'
 import { avaliarImportacaoPorto, cancelarImportacaoPorto, confirmarImportacaoPorto, criarPreviaConteudoPorto, criarPreviaPorto } from '../dados/porto'
 import { listarMotoristas } from '../dados/motoristas'
-import type { Motorista, OsDivergentePorto, OsNaoEncontradaPorto, PreviaPorto } from '../types/modelos'
+import type { ConfirmacaoPorto, Motorista, OsDivergentePorto, OsNaoEncontradaPorto, PreviaPorto } from '../types/modelos'
 import { moeda } from '../utils/formatadores'
 import { Campo, Selecao } from '../components/Campos'
 import { MOTIVOS_COMPOSICAO } from './ops/opcoes'
 import { CampoArquivo } from '../components/CampoArquivo'
 import { ConfirmarAcao, type PedidoConfirmacao } from '../components/ConfirmarAcao'
+import { ResumoDaImportacao } from './importacao/ResumoDaImportacao'
 
 const rotulos={PREVISAO_RECEBER:'Previsão a receber',OS_VINCULADAS:'OS vinculadas à OP',SERVICOS_DEVOLVIDOS:'Serviços devolvidos',SERVICOS_GERAIS:'Serviços gerais da Porto',SERVICOS_AGUARDANDO_LANCAMENTO:'Serviços aguardando lançamento',PAINEL_DIARIO:'Painel do dia (todas as seguradoras)'}
 const dataBr=(valor?:string)=>valor?new Date(`${valor}T12:00:00`).toLocaleDateString('pt-BR'):''
@@ -77,6 +78,8 @@ function ImportarOrdemDePagamento(){
   const [motoristas,setMotoristas]=useState<Motorista[]>([]),[numeroOp,setNumeroOp]=useState('')
   const [semSocorrista,setSemSocorrista]=useState<string[]>([])
   const [naoEncontradas,setNaoEncontradas]=useState<OsNaoEncontradaPorto[]>([])
+  // O resumo da ultima importacao, com os links do que pede acao.
+  const [resumo,setResumo]=useState<{r:ConfirmacaoPorto;numeroOp?:string}|null>(null)
   const [divergentes,setDivergentes]=useState<OsDivergentePorto[]>([])
   const [mensagem,setMensagem]=useState(''),[erro,setErro]=useState(''),[carregando,setCarregando]=useState(false),[etapa,setEtapa]=useState(''),[validando,setValidando]=useState(false),[inputKey,setInputKey]=useState(0)
   const [chaveValidada,setChaveValidada]=useState('')
@@ -157,7 +160,7 @@ function ImportarOrdemDePagamento(){
     try{setPrevia(modo==='arquivo'?await criarPreviaPorto(arquivo as File):await criarPreviaConteudoPorto(conteudo))}catch(e){setErro((e as Error).message)}finally{setEtapa('');setCarregando(false)}
   }
   function alterarNumero(valor:string){setNumeroOp(valor);setChaveValidada('');limparConfirmacoes()}
-  async function confirmar(){setSemSocorrista([]);setNaoEncontradas([]);setDivergentes([])
+  async function confirmar(){setSemSocorrista([]);setNaoEncontradas([]);setDivergentes([]);setResumo(null)
     if(confirmacaoEmCurso.current||!previa||previa.requerOrdemPagamento&&(!numeroNormalizado||chaveValidada!==chaveAvaliacao))return
     confirmacaoEmCurso.current=true
     setCarregando(true);setEtapa('Confirmando importação…');setErro('');setFalhaAoConfirmar(false)
@@ -165,8 +168,7 @@ function ImportarOrdemDePagamento(){
       const r=previa.requerOrdemPagamento
         ?await confirmarImportacaoPorto(previa,{numeroOrdemPagamento:numeroNormalizado,confirmarDivergencias,confirmarReassociacoes,motivoDivergencia:motivoDivergencia||undefined,justificativaDivergencia:justificativaDivergencia.trim()||undefined})
         :await confirmarImportacaoPorto(previa,{confirmarDivergencias})
-      const financeiro=r.tipo==='OS_VINCULADAS'||r.tipo==='SERVICOS_GERAIS'?` · ${r.receitasCriadas} ${r.receitasCriadas===1?'receita criada':'receitas criadas'} · ${r.receitasAtualizadas} ${r.receitasAtualizadas===1?'receita atualizada':'receitas atualizadas'} · ${moeda(r.valorTotalRecebido)} recebidos${r.quinzena?` · período ${r.quinzena}`:''}${r.dataPagamento?` · pagamento em ${dataBr(r.dataPagamento)}`:''}`:''
-      setMensagem(`${r.importados} ${r.importados===1?'registro importado':'registros importados'}${r.ignorados?` · ${r.ignorados} ignorados por duplicidade`:''}${financeiro}${r.viaturasNovas?.length?` · ${r.viaturasNovas.length===1?'viatura nova cadastrada':'viaturas novas cadastradas'}: ${r.viaturasNovas.join(', ')}`:''}.`)
+      setMensagem('');setResumo({r,numeroOp:previa.requerOrdemPagamento?numeroNormalizado:undefined})
       setSemSocorrista(r.osSemSocorrista??[])
       // Conciliacao do periodo: a OP e a fonte oficial, mas o Diario ja sabia o
       // que aconteceu. O que nao casou vira aviso com lista, nao silencio.
@@ -224,7 +226,7 @@ function ImportarOrdemDePagamento(){
 
   return <div>
     <p className="importacao-explica">Envie o arquivo da OP ou cole a ordem de pagamento copiada do portal. Confira a prévia e confirme depois da validação.</p>
-    {carregando?<span role="status">{etapa}</span>:null}{erro?<div className="form-alert" role="alert">{erro}{falhaAoConfirmar&&previa?<button type="button" onClick={()=>void confirmar()}>Tentar novamente</button>:null}</div>:null}{mensagem?<div className="success-notice">{mensagem}</div>:null}{semSocorrista.length?<div className="form-alert" role="alert"><strong>{semSocorrista.length} {semSocorrista.length===1?'ordem de serviço ficou':'ordens de serviço ficaram'} sem socorrista, por terem vindo sem QRA.</strong> Associe o socorrista na tela Ordens de serviço.<NumerosDeOs numeros={semSocorrista}/></div>:null}
+    {carregando?<span role="status">{etapa}</span>:null}{erro?<div className="form-alert" role="alert">{erro}{falhaAoConfirmar&&previa?<button type="button" onClick={()=>void confirmar()}>Tentar novamente</button>:null}</div>:null}{mensagem?<div className="success-notice">{mensagem}</div>:null}{resumo?<ResumoDaImportacao r={resumo.r} numeroOp={resumo.numeroOp}/>:null}{semSocorrista.length?<div className="form-alert" role="alert"><strong>{semSocorrista.length} {semSocorrista.length===1?'ordem de serviço ficou':'ordens de serviço ficaram'} sem socorrista, por terem vindo sem QRA.</strong> Associe o socorrista na tela Ordens de serviço.<NumerosDeOs numeros={semSocorrista}/></div>:null}
     {naoEncontradas.length?<AvisoNaoEncontradas itens={naoEncontradas}/>:null}
     {divergentes.length?<AvisoDivergentes itens={divergentes}/>:null}
     <section className="panel porto-import-card"><div className="segmented porto-import-modes" role="group" aria-label="Forma de importação"><button className={modo==='arquivo'?'active':''} onClick={()=>{setModo('arquivo');setPrevia(null)}}>Enviar arquivo</button><button className={modo==='colagem'?'active':''} onClick={()=>{setModo('colagem');setPrevia(null)}}>Colar ordem de pagamento</button></div>

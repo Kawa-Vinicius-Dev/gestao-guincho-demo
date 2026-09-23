@@ -2011,3 +2011,31 @@ a.brand:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
    deixava um "|" piscando no meio dele. O cursor so aparece onde se digita. */
 body{caret-color:transparent}
 input,textarea,select,[contenteditable]:not([contenteditable=false]){caret-color:auto}
+
+/* Seletor de periodo: qual regra esta valendo. */
+.modo-do-periodo{align-self:center;justify-self:start;width:max-content;display:inline-flex;align-items:center;height:26px;padding:0 10px;border-radius:99px;background:var(--info-fundo);color:var(--info-texto);font-size:12px;font-weight:600;white-space:nowrap}
+
+/* Menu: quantas coisas pedem acao. */
+.nav-contador{margin-left:auto;min-width:20px;height:20px;padding:0 6px;border-radius:99px;background:#e0a530;color:#1f1400;font-size:11px;font-weight:700;line-height:20px;text-align:center}
+.nav-grupo-ponto{width:7px;height:7px;margin-left:auto;margin-right:6px;border-radius:50%;background:#e0a530}
+
+/* Tabelas longas: o cabecalho fica visivel enquanto a lista rola. */
+.tabela-rolagem{max-height:calc(100vh - 220px);overflow:auto}
+.tabela-rolagem thead th{position:sticky;top:0;z-index:1;background:var(--superficie);box-shadow:inset 0 -1px 0 var(--line)}
+
+/* Visao geral: gasto por gasto dentro da categoria. */
+.gastos-da-categoria{margin-top:14px;border-top:1px solid var(--linha-suave);padding-top:10px}
+.gastos-da-categoria h4{margin:0 0 6px;color:var(--muted);font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+.gastos-da-categoria summary{display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:center;padding:7px 4px;border-radius:6px;cursor:pointer;list-style:none;font-size:13px}
+.gastos-da-categoria summary::-webkit-details-marker{display:none}
+.gastos-da-categoria summary span::before{content:'▸ ';color:var(--muted)}
+.gastos-da-categoria details[open] summary span::before{content:'▾ '}
+.gastos-da-categoria summary:hover{background:var(--superficie-2)}
+.gastos-da-categoria summary small{color:var(--muted)}
+.gastos-da-categoria ul{margin:0 0 6px;padding:0 4px 0 18px;list-style:none;font-size:12px}
+.gastos-da-categoria li{display:grid;grid-template-columns:80px 1fr auto;gap:10px;padding:5px 0;border-bottom:1px dashed var(--linha-suave);color:var(--muted)}
+.gastos-da-categoria li strong{color:var(--ink);font-weight:600}
+
+/* Visao geral: receita de OS canceladas, fora das barras. */
+.nota-os-canceladas{margin:-6px 0 18px;padding:9px 14px;border-radius:8px;background:var(--superficie-2);color:var(--muted);font-size:13px}
+.nota-os-canceladas strong{color:var(--ink)}

@@ -71,3 +71,26 @@ test('sem turno aberto não dá para lançar: a tela manda abrir o turno', async
   expect(screen.queryByRole('button', { name: /registrar um gasto/i })).not.toBeInTheDocument()
   expect(screen.getByRole('link', { name: /abrir turno/i })).toBeInTheDocument()
 })
+
+// O seguro de 10/09/2026 entrou duas vezes. Uma despesa igual a outra ja lancada
+// (descricao, valor e data) pede confirmacao antes de gravar.
+test('despesa igual a uma já lançada pede confirmação antes de gravar', async () => {
+  let gravou = false
+  await abrir(turnoAberto)
+  servidor.use(
+    // A categoria liberada para o socorrista, que e a unica que ele ve.
+    http.get(`${SUPA}/rest/v1/categorias`, () => HttpResponse.json([{ id: 1, nome: 'Alimentação', tipo: 'DESPESA', ativo: true, socorrista_pode: true }])),
+    http.head(`${SUPA}/rest/v1/despesas`, () => new HttpResponse(null, { headers: { 'Content-Range': '*/1' } })),
+    http.post(`${SUPA}/rest/v1/despesas`, () => { gravou = true; return HttpResponse.json([{ id: 2, status: 'PENDENTE' }]) }),
+  )
+  const user = userEvent.setup({ delay: null })
+  await user.click(await screen.findByRole('button', { name: /registrar um gasto/i }))
+  await user.selectOptions(screen.getByLabelText(/categoria/i), '1')
+  await user.type(screen.getByLabelText(/^valor/i), '4000')
+  await user.click(screen.getByRole('button', { name: /salvar despesa/i }))
+
+  expect(await screen.findByText(/lançar esta despesa de novo/i)).toBeInTheDocument()
+  // Nada foi gravado: a despesa so vai se a pessoa confirmar.
+  expect(gravou).toBe(false)
+  expect(screen.getByRole('button', { name: /lançar mesmo assim/i })).toBeInTheDocument()
+})

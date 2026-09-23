@@ -2,6 +2,7 @@ import { ehAuxiliar } from '../utils/auxiliar'
 import { LinkOp, LinkOs, LinkViatura } from '../components/LinksDeDado'
 import { useEffect,useState } from 'react'
 import { Link,useParams } from 'react-router-dom'
+import { SeisMesesDoSocorrista } from './SeisMesesDoSocorrista'
 import { Selecao } from '../components/Campos'
 import { definirComissaoDaOs, listarComissaoPrevista, listarPeriodosComissao, obterDetalheSocorrista, type ComissaoPrevista } from '../dados/comissoes'
 import { Carregando,ErroPagina } from '../components/EstadoPagina'
@@ -78,6 +79,8 @@ export default function EquipeDetalhePage(){
         <a className={`metric metric-link ${detalhe.comissao.liquido<0?'metric-alert':'metric-net'}`} href="#descontos-da-comissao"><span>Líquido</span><strong>{moeda(detalhe.comissao.liquido)}</strong><small>Comissão menos descontos</small></a>
       </section>
 
+      {/* Os ultimos 6 meses dele, acima dos servicos da quinzena (Kawa, 23/09/2026). */}
+      <SeisMesesDoSocorrista motoristaId={motoristaId} nome={detalhe.nome}/>
       <section className="panel employee-services" id="servicos-do-periodo"><header className="panel-title"><div><span className="eyebrow">Histórico do período</span><h2>Serviços prestados</h2></div><span className="service-count">{detalhe.totalServicosPrestados} OS</span></header>
         <div className="table-scroll"><table><thead><tr><th>OS</th><th>Atendimento</th><th>Especialidade</th><th>Veículo / viatura</th><th>OP</th><th>Valor do serviço</th><th>Pagamento</th><th>Comissão gerada</th><th/></tr></thead><tbody>{detalhe.servicos.map(servico=><tr key={servico.id}><td><strong><LinkOs numero={servico.numeroOs}/></strong></td><td>{servico.dataAtendimento?data(servico.dataAtendimento):'—'}</td><td>{servico.especialidade||'—'}</td><td>{servico.viatura?<LinkViatura sigla={servico.viatura} chip/>:<span className="vehicle-chip">Não informada</span>}</td><td><LinkOp numero={servico.numeroOp}/></td><td>{moeda(servico.valorServico)}</td><td><span className={`payment-state payment-${servico.statusPagamento.toLowerCase()}`}>{statusPagamento[servico.statusPagamento]}</span></td><td>{servico.semComissao?<span className="commission-waiting">Cancelada</span>:servico.comissaoGerada==null?<span className="commission-waiting">Comissão: aguardando pagamento</span>:<strong>{moeda(servico.comissaoGerada)}</strong>}</td><td className="col-acoes"><button className={servico.semComissao?'table-action':'table-action table-action-danger'} onClick={()=>pedirComissao(servico)} aria-label={`${servico.semComissao?'Reativar':'Cancelar'} a OS ${servico.numeroOs}`}>{servico.semComissao?'Reativar':'Cancelar OS'}</button></td></tr>)}</tbody></table></div>
         {!detalhe.servicos.length?<p className="empty-inline">Nenhum serviço identificado neste período.</p>:null}

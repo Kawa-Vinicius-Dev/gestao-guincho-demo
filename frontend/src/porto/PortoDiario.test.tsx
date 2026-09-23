@@ -77,7 +77,7 @@ test('importa o Diário depois da confirmação', async () => {
   expect(within(janela).getByText(/sem valor/i)).toBeInTheDocument()
   await confirmarNaJanela()
 
-  expect(await screen.findByText(/2 serviços importados/i)).toBeInTheDocument()
+  expect(await screen.findByText(/2 OS novas/i)).toBeInTheDocument()
   expect(confirmar).toHaveBeenCalledOnce()
 })
 
