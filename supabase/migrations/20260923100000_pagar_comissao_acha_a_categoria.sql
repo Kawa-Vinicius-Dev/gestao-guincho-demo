@@ -8,7 +8,9 @@ do $$
 declare
     v_def text := pg_get_functiondef('public.pagar_comissao(bigint,bigint,date,text,text)'::regprocedure);
     v_antes constant text := 'where lower(btrim(nome)) = ''comissao de socorrista'' and tipo = ''DESPESA''';
-    v_depois constant text := 'where lower(btrim(nome)) in (''comissão de socorrista'', ''comissao de socorrista'') and tipo = ''DESPESA''';
+    -- Sem acento na comparacao: casa "Comissao" e "Comissao" com til, venha o
+    -- til em que bytes vier.
+    v_depois constant text := 'where lower(btrim(nome)) like ''comiss%o de socorrista'' and tipo = ''DESPESA''';
 begin
     if position(v_depois in v_def) > 0 then return; end if;
     if position(v_antes in v_def) = 0 then
