@@ -1,0 +1,5 @@
+/* Icone de baixar no topo da foto aberta, do tamanho do x de fechar. */
+.botao-icone{display:inline-grid;place-items:center;width:36px;height:36px;padding:0;border:1px solid var(--line);border-radius:8px;color:var(--ink);background:var(--superficie);cursor:pointer}
+.botao-icone:hover{color:var(--blue-600);border-color:var(--blue-600)}
+.botao-icone:focus-visible{outline:2px solid var(--blue-600);outline-offset:2px}
+.modal>header .heading-actions{display:flex;align-items:center;gap:8px}

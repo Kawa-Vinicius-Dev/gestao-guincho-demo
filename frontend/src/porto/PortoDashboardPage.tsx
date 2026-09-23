@@ -140,7 +140,6 @@ export default function PortoDashboardPage() {
       descricao="O que a equipe produziu, o que a Porto já pagou e o que ainda aguarda uma OP."
       contexto={<>Período selecionado: <strong>{data(inicio)}</strong> → <strong>{data(fim)}</strong></>}
       acoes={<>
-        <Link className="button button-ghost" to="/porto/relatorios">Relatórios</Link>
         <button className="button button-ghost" disabled={baixando !== ''} onClick={() => void exportar('pdf')}>
           {baixando === 'pdf' ? 'Gerando PDF…' : 'Exportar PDF'}
         </button>

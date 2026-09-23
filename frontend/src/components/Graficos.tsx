@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { moeda, moedaCurta, numero, percentual } from '../utils/formatadores'
+import './servicosPorGrupo.css'
 
 /**
  * Graficos do dashboard. Sao desenhados com grid e divs, nao com uma biblioteca:
@@ -44,6 +45,12 @@ export function FaturamentoPorGrupo({descricao,linhas,vazio}:{descricao:string;l
       <strong>{moeda(l.valor)}</strong>
       <small>{l.detalhe??(l.quantidade==null?'':`${l.quantidade} ${l.quantidade===1?'serviço':'serviços'}`)}</small>
     </li>)}
+    {/* A soma das linhas, sempre embaixo (Kawa, 23/09/2026): fecha com o total do periodo. */}
+    <li className="faturamento-grupo-total">
+      <span className="faturamento-grupo-rotulo">Total</span>
+      <strong>{moeda(ordenadas.reduce((t,l)=>t+l.valor,0))}</strong>
+      <small>{ordenadas.some(l=>l.quantidade!=null)?(()=>{const q=ordenadas.reduce((t,l)=>t+(l.quantidade??0),0);return `${q} ${q===1?'serviço':'serviços'}`})():''}</small>
+    </li>
   </ul>
 }
 

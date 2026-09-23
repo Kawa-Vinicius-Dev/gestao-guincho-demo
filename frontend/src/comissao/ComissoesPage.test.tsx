@@ -179,7 +179,9 @@ test('comissão prevista da competência aparece separada da confirmada', async 
 
   const titulo = await screen.findByRole('heading', { name: 'Comissão prevista' })
   const tabela = titulo.closest('section')!
-  expect(within(tabela).getByText('R$ 240,00')).toBeInTheDocument()
+  expect(within(tabela.querySelector('tbody')!).getByText('R$ 240,00')).toBeInTheDocument()
+  // O rodape soma a coluna.
+  expect(within(tabela.querySelector('tfoot')!).getByText('Total')).toBeInTheDocument()
   expect(within(tabela).getByText(/não entra em despesas/i)).toBeInTheDocument()
   // Prevista sai do período, não das OPs: o que não tem OP não está em nenhuma delas.
   expect(corpo).toEqual(expect.objectContaining({ p_motorista_id: null }))

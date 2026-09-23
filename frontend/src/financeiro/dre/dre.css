@@ -11,3 +11,7 @@
 .sem-valor-os{margin:6px 0 10px 8px;padding-left:22px;display:grid;gap:4px;color:var(--muted);font-size:13px}
 .sem-valor-os li{display:grid;grid-template-columns:130px 100px 1fr 100px;gap:10px}
 .sem-valor-os li a{color:var(--ink)}
+.servicos-resumo{margin:0;color:var(--muted);font-size:14px}.servicos-resumo strong{color:var(--ink)}
+/* Total embaixo do ranking: a soma dos socorristas. */
+.sem-valor-total{display:grid;grid-template-columns:minmax(0,260px) minmax(80px,1fr) 110px;align-items:center;gap:14px;margin-top:6px;padding:12px 8px 0;border-top:2px solid var(--line);font-weight:700}
+.sem-valor-total strong{text-align:right;font-variant-numeric:tabular-nums}

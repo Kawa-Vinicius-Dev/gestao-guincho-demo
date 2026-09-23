@@ -43,7 +43,7 @@ test('administrador começa com a base vazia e cria o primeiro lançamento', asy
   await escolher(user, /categoria/i, 'Combustível', dialogo)
   await user.click(within(dialogo).getByRole('button', { name: /salvar lançamento/i }))
 
-  expect(await screen.findByText(/totais oficiais foram atualizados/i)).toBeInTheDocument()
+  expect(await screen.findByText(/lançamento salvo/i)).toBeInTheDocument()
   expect(screen.getByText('Serviço particular de teste')).toBeInTheDocument()
 
   await user.click(screen.getByRole('link', { name: /visão geral/i }))

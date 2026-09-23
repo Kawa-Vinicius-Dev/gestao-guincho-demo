@@ -283,7 +283,19 @@ const daVisao = tela === 'visao'
 if (tela === 'os') sessionStorage.setItem('filtro:periodo', JSON.stringify({ inicio: '2026-09-16', fim: '2026-09-30' }))
 if (daVisao) sessionStorage.setItem('filtro:periodo', JSON.stringify({ inicio: '2026-03-30', fim: '2026-04-29', op: '1' }))
 
-const Pagina = tela === 'config'
+const Pagina = tela === 'frota'
+  ? (await import('./frota/FrotasPage')).default
+  : tela === 'km'
+  ? (await import('./frota/QuilometragemPage')).default
+  : tela === 'dre'
+  ? (await import('./financeiro/DrePage')).default
+  : tela === 'desempenho'
+  ? (await import('./desempenho/DesempenhoPage')).default
+  : tela === 'extrato'
+  ? (await import('./financeiro/LancamentosPage')).default
+  : tela === 'equipe'
+  ? (await import('./equipe/EquipePage')).default
+  : tela === 'config'
   ? (await import('./configuracoes/ConfiguracoesPage')).default
   : tela === 'senha'
   ? (await import('./configuracoes/TrocarSenhaPage')).default
