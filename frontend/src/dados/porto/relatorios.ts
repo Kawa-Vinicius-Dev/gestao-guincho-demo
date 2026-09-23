@@ -1,7 +1,10 @@
-import type { OrdemPagamentoPorto, OrdemServicoPorto } from '../../types/modelos'
+import type { OrdemPagamentoPorto } from '../../types/modelos'
 import { baixarRelatorio, type Formato, type Relatorio } from '../exportar'
 import { data as formatarData, moeda } from '../../utils/formatadores'
-import { detalharOrdemPagamentoPorto, listarOrdensPagamentoPorto, listarOrdensServicoPorto } from '../porto'
+import { detalharOrdemPagamentoPorto, listarOrdensPagamentoPorto } from '../porto'
+import { ou, supabase } from '../cliente'
+import { listarTodasAsOs, valorDaOs, type LinhaOs } from './listaOs'
+import { nomesCurtos } from '../../utils/nomes'
 import {
   baixarOrdensServicoPorto as ossPeloRender,
   baixarRelatorioOpPorto as opPeloRender,
@@ -102,26 +105,42 @@ export async function baixarRelatorioOpPorto(id: number, formato: Formato): Prom
  * na viatura e quanto cada servico vale, somado por socorrista e por
  * especialidade.
  *
- * O valor pode nao existir ainda: o painel do dia nao traz preco, e a Porto so
- * precifica na OP. Servico sem valor aparece como "a precificar", e nao como
- * R$ 0,00 — zero seria uma afirmacao errada.
+ * Os servicos, o valor e o "sem valor" vem da mesma lista das outras telas
+ * (porto_listar_os): o valor e o da OP, ou o informado a mao antes dela. Servico
+ * sem valor aparece como "a precificar", e nao como R$ 0,00 — zero seria uma
+ * afirmacao errada. A lista antiga lia so o valor da OP e mostrava "a precificar"
+ * ate no servico com valor informado.
  */
 export async function relatorioDiarioPorto(dia: string): Promise<Relatorio> {
-  const servicos = await listarOrdensServicoPorto(new URLSearchParams({ dataInicio: dia, dataFim: dia }))
-  const validos = servicos.filter(os => os.statusOperacional !== 'CANCELADO')
-  const cancelados = servicos.length - validos.length
-  const soma = (lista: OrdemServicoPorto[]) => lista.reduce((total, os) => total + (os.valorTotal ?? 0), 0)
-  const valorOuPendente = (total: number) => (total > 0 ? total : 'a precificar')
+  const [pagina, extras] = await Promise.all([
+    listarTodasAsOs({ inicio: dia, fim: dia }),
+    // A hora e os cancelados nao vem na lista: uma leitura curta, so disso.
+    supabase().from('ordens_servico_porto').select('id,data_hora_atendimento,status_operacional').eq('data_atendimento', dia),
+  ])
+  const linhasExtras = (ou(extras, 'Não foi possível carregar o dia.') ?? []) as
+    { id: number; data_hora_atendimento: string | null; status_operacional: string }[]
+  const horaPorId = new Map(linhasExtras.map(l => [l.id, l.data_hora_atendimento]))
+  const cancelados = linhasExtras.filter(l => l.status_operacional === 'CANCELADO').length
+  const validos = [...pagina.itens].sort((a, b) =>
+    (horaPorId.get(a.id) ?? '').localeCompare(horaPorId.get(b.id) ?? '') || a.numero.localeCompare(b.numero))
+  const soma = (lista: LinhaOs[]) => lista.reduce((total, os) => total + valorDaOs(os), 0)
+  const valorOuPendente = (os: LinhaOs) => (os.semValor ? 'a precificar' : valorDaOs(os))
+  const totalOuPendente = (total: number) => (total > 0 ? total : 'a precificar')
+  // Hora de Brasilia: o banco devolve o instante em UTC.
+  const hora = (instante?: string | null) => instante
+    ? new Date(instante).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })
+    : ''
+  const curtos = nomesCurtos(validos.map(os => os.motorista))
 
-  const agrupar = (chave: (os: OrdemServicoPorto) => string) => {
-    const grupos = new Map<string, OrdemServicoPorto[]>()
+  const agrupar = (chave: (os: LinhaOs) => string) => {
+    const grupos = new Map<string, LinhaOs[]>()
     for (const os of validos) {
       const nome = chave(os) || 'Não informado'
       grupos.set(nome, [...(grupos.get(nome) ?? []), os])
     }
     return [...grupos.entries()]
       .sort((a, b) => soma(b[1]) - soma(a[1]) || b[1].length - a[1].length)
-      .map(([nome, lista]) => [nome, lista.length, valorOuPendente(soma(lista))])
+      .map(([nome, lista]) => [nome, lista.length, totalOuPendente(soma(lista))])
   }
 
   return {
@@ -129,7 +148,7 @@ export async function relatorioDiarioPorto(dia: string): Promise<Relatorio> {
     resumo: [
       ['Serviços', String(validos.length)],
       ['Valor conhecido', soma(validos) > 0 ? moeda(soma(validos)) : 'a precificar'],
-      ['Sem valor ainda', String(validos.filter(os => os.valorTotal <= 0).length)],
+      ['Sem valor ainda', String(validos.filter(os => os.semValor).length)],
       ...(cancelados ? [['Cancelados', String(cancelados)] as [string, string]] : []),
     ],
     secoes: [
@@ -137,16 +156,17 @@ export async function relatorioDiarioPorto(dia: string): Promise<Relatorio> {
         titulo: 'Serviços',
         colunas: [
           { titulo: 'OS', largura: 16 }, { titulo: 'Hora', largura: 8 }, { titulo: 'Especialidade', largura: 20 },
-          { titulo: 'Viatura', largura: 11 }, { titulo: 'Socorrista', largura: 32 }, { titulo: 'Valor', tipo: 'moeda', largura: 14 },
+          { titulo: 'Viatura', largura: 11 }, { titulo: 'Socorrista', largura: 22 }, { titulo: 'Valor', tipo: 'moeda', largura: 14 },
         ],
-        linhas: validos.map(os => [os.numero, os.dataHoraAtendimento ? os.dataHoraAtendimento.slice(11, 16) : '',
-          os.especialidade, os.viatura, os.motorista ?? os.socorrista, valorOuPendente(os.valorTotal)]),
+        linhas: validos.map(os => [os.numero, hora(horaPorId.get(os.id)), os.especialidade, os.viatura ?? 'Sem viatura',
+          curtos.get(os.motorista ?? '') ?? os.motorista ?? os.socorristaNoArquivo ?? 'Sem socorrista', valorOuPendente(os)]),
+        totais: ['Total', null, null, null, `${validos.length} serviços`, soma(validos)],
         vazio: 'Nenhum serviço neste dia.',
       },
       {
         titulo: 'Por socorrista',
-        colunas: [{ titulo: 'Socorrista', largura: 32 }, { titulo: 'Serviços', tipo: 'numero' }, { titulo: 'Valor', tipo: 'moeda', largura: 14 }],
-        linhas: agrupar(os => os.motorista ?? os.socorrista ?? ''),
+        colunas: [{ titulo: 'Socorrista', largura: 22 }, { titulo: 'Serviços', tipo: 'numero' }, { titulo: 'Valor', tipo: 'moeda', largura: 14 }],
+        linhas: agrupar(os => curtos.get(os.motorista ?? '') ?? os.motorista ?? os.socorristaNoArquivo ?? ''),
       },
       {
         titulo: 'Por especialidade',
