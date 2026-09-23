@@ -38,6 +38,16 @@ const grupos = { financeiro: 'Financeiro', operacao: 'Operação', equipe: 'Equi
  * "Ordens de servico" sem parar para ler o texto. Cada string e um unico path com
  * varios subcaminhos (M...), que o stroke desenha como se fossem varios tracos.
  */
+/**
+ * Telas que so fazem sentido para o socorrista: sao sobre o turno e os servicos
+ * DELE. No menu do administrador apareciam vazias (Kawa, 23/09/2026: "se nao
+ * aparecer nada pode tirar"); o que o administrador precisa delas esta em
+ * Aprovacoes e na ficha de cada socorrista.
+ */
+const SO_DO_SOCORRISTA = new Set(['/turno', '/minha-comissao'])
+const vePeloPerfil = (rota: string, somenteAdmin: boolean, admin: boolean) =>
+  admin ? !SO_DO_SOCORRISTA.has(rota) : !somenteAdmin
+
 const icones: Record<string,string> = {
   '/':'M3 3h7v7H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 14h7v7H3z',
   '/lancamentos':'M4 8h12M12 4l4 4-4 4M20 16H8M12 12l-4 4 4 4',
@@ -153,7 +163,7 @@ export function Layout() {
 
   // Favorito de um item que o perfil nao enxerga, ou de uma rota que saiu do
   // sistema, e ignorado aqui em vez de virar um link quebrado no topo do menu.
-  const permitidos=itens.filter(([, ,somenteAdmin])=>admin||!somenteAdmin)
+  const permitidos=itens.filter(([rota, ,somenteAdmin])=>vePeloPerfil(rota,somenteAdmin,admin))
   const fixados=new Set(favoritos??[])
   const atalhos=(favoritos??[])
     .map(rota=>permitidos.find(([to])=>to===rota))
@@ -184,7 +194,7 @@ export function Layout() {
             </div>
           : null}
         {(Object.keys(grupos) as Array<keyof typeof grupos>).map(grupo => {
-          const disponiveis=itens.filter(([, ,somenteAdmin,itemGrupo])=>itemGrupo===grupo&&(admin||!somenteAdmin))
+          const disponiveis=itens.filter(([rota, ,somenteAdmin,itemGrupo])=>itemGrupo===grupo&&vePeloPerfil(rota,somenteAdmin,admin))
           if(!disponiveis.length)return null
           const expandido=grupoAberto===grupo
           return <div className="nav-group" key={grupo}>

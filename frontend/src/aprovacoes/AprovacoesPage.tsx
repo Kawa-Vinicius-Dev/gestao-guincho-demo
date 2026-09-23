@@ -8,7 +8,7 @@ import { aprovarDespesa, excluirDespesa } from '../dados/despesas'
 import { ConfirmarExclusao } from '../components/ConfirmarExclusao'
 import type { Despesa } from '../types/modelos'
 import {
-  aprovarTurno, devolverTurno, filaDeAprovacoes, linkDaFoto,
+  apagarFotosDoTurno, aprovarTurno, baixarFoto, devolverTurno, filaDeAprovacoes, linkDaFoto,
   type FilaDeAprovacoes, type ItemDaFila,
 } from '../dados/turnos'
 
@@ -29,11 +29,16 @@ import {
 const dinheiro = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
 const numero = new Intl.NumberFormat('pt-BR')
 
+/** "07:42", do horario em que o socorrista abriu ou fechou o turno. */
+function hora(iso?: string) {
+  return iso ? new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '—'
+}
+
 function dataCurta(iso: string) {
   return new Date(`${iso}T12:00`).toLocaleDateString('pt-BR')
 }
 
-function VerFoto({ caminho, rotulo }: { caminho: string; rotulo: string }) {
+function VerFoto({ caminho, rotulo, nomeDoArquivo }: { caminho: string; rotulo: string; nomeDoArquivo?: string }) {
   const [url, setUrl] = useState('')
   const [erro, setErro] = useState('')
   return <>
@@ -41,6 +46,14 @@ function VerFoto({ caminho, rotulo }: { caminho: string; rotulo: string }) {
       onClick={() => linkDaFoto(caminho).then(setUrl).catch(e => setErro((e as Error).message))}>
       {rotulo}
     </button>
+    {/* Baixar para o computador: a foto e apagada depois da aprovacao, e numa
+        divergencia quem aprova precisa guardar a prova. */}
+    {nomeDoArquivo
+      ? <button type="button" className="button button-ghost button-sm" title="Salvar a foto no computador"
+          onClick={() => baixarFoto(caminho, nomeDoArquivo).catch(e => setErro((e as Error).message))}>
+          Baixar
+        </button>
+      : null}
     {erro ? <span className="form-alert">{erro}</span> : null}
     {url
       ? <Modal etiqueta="Comprovação" titulo={rotulo} fecharAoClicarFora aoFechar={() => setUrl('')}>
@@ -69,6 +82,8 @@ function LinhaTurno({ item, aoResolver }: { item: ItemDaFila; aoResolver: () => 
     </header>
 
     <dl className="aprovacao-numeros">
+      <div><dt>Início do turno</dt><dd>{hora(item.abertoEm)}</dd></div>
+      <div><dt>Fim do turno</dt><dd>{hora(item.fechadoEm)}</dd></div>
       <div><dt>Odômetro saída</dt><dd>{numero.format(item.hodometroInicial ?? 0)}</dd></div>
       <div><dt>Odômetro chegada</dt><dd>{numero.format(item.hodometroFinal ?? 0)}</dd></div>
       <div><dt>Km rodado</dt><dd className="aprovacao-destaque">{numero.format(rodado)} km</dd></div>
@@ -88,8 +103,10 @@ function LinhaTurno({ item, aoResolver }: { item: ItemDaFila; aoResolver: () => 
     {item.observacoes ? <p className="aprovacao-observacao">“{item.observacoes}”</p> : null}
 
     <footer className="aprovacao-acoes">
-      {item.fotoAbertura ? <VerFoto caminho={item.fotoAbertura} rotulo="Foto da saída" /> : null}
-      {item.fotoFechamento ? <VerFoto caminho={item.fotoFechamento} rotulo="Foto da chegada" /> : null}
+      {item.fotoAbertura ? <VerFoto caminho={item.fotoAbertura} rotulo="Foto da saída"
+        nomeDoArquivo={`turno-${item.data}-${item.socorrista}-saida.jpg`} /> : null}
+      {item.fotoFechamento ? <VerFoto caminho={item.fotoFechamento} rotulo="Foto da chegada"
+        nomeDoArquivo={`turno-${item.data}-${item.socorrista}-chegada.jpg`} /> : null}
       <button type="button" className="button button-ghost" onClick={() => setDevolvendo(true)}>
         Devolver
       </button>
@@ -112,9 +129,15 @@ function LinhaTurno({ item, aoResolver }: { item: ItemDaFila; aoResolver: () => 
             ['Km morto', `${numero.format(Math.max(morto, 0))} km`],
           ]}
           avisos={[produtivo === 0 && rodado > 0
-            ? 'Sem km produtivo informado, o turno inteiro vira km morto.' : null]}
+            ? 'Sem km produtivo informado, o turno inteiro vira km morto.' : null,
+            item.fotoAbertura || item.fotoFechamento
+              ? 'As fotos do odômetro são apagadas depois da aprovação. Se houver divergência, use "Baixar" antes.' : null]}
           textoConfirmar="Aprovar turno"
-          aoConfirmar={async () => { await aprovarTurno(item.id, produtivo); aoResolver() }}
+          aoConfirmar={async () => {
+            await aprovarTurno(item.id, produtivo)
+            await apagarFotosDoTurno([item.fotoAbertura, item.fotoFechamento])
+            aoResolver()
+          }}
           aoFechar={() => setConfirmar(false)}
         />
       : null}

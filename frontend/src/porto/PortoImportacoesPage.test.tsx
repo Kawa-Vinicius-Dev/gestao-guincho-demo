@@ -212,7 +212,7 @@ test('cola serviços, mostra resumo da prévia e confirma somente depois da aná
     http.post('/api/porto/importacoes/44/confirmar',async({request})=>{confirmacao=await request.json() as Record<string,unknown>;return HttpResponse.json({importacaoId:44,tipo:'SERVICOS_GERAIS',importados:2,ignorados:0,novos:2,atualizados:0,receitasCriadas:2,receitasAtualizadas:0,valorTotalRecebido:300.75,quinzena:'01/08/2026 a 15/08/2026',dataPagamento:'2026-08-14',erros:[]})}),
   )
   const user=userEvent.setup({ delay: null });render(<PortoImportacoesPage/>)
-  await user.click(screen.getByRole('button',{name:/colar serviços da porto/i}))
+  await user.click(screen.getByRole('button',{name:/colar ordem de pagamento/i}))
   const area=screen.getByLabelText(/conteúdo copiado da porto/i)
   await user.type(area,'Número da Ordem de Serviço\tValor Total\nOS 01/0000001-26\t100,50')
   await user.click(screen.getByRole('button',{name:/analisar conteúdo/i}))
@@ -376,7 +376,7 @@ test('importação colada que falha ao confirmar mantém o texto', async () => {
   )
   const user = userEvent.setup({ delay: null })
   render(<PortoImportacoesPage />)
-  await user.click(screen.getByRole('button', { name: /colar serviços da porto/i }))
+  await user.click(screen.getByRole('button', { name: /colar ordem de pagamento/i }))
   await user.type(screen.getByLabelText(/conteúdo copiado da porto/i), 'OP-FALHA-1\t100.00')
   await user.click(screen.getByRole('button', { name: /analisar conteúdo/i }))
   await screen.findByText('OP-FALHA-1')

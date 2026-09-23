@@ -3,6 +3,7 @@ import { MemoryRouter } from 'react-router-dom'
 import userEvent from '@testing-library/user-event'
 import { expect, test, vi, beforeEach } from 'vitest'
 import PortoDiarioPage from './PortoDiarioPage'
+import { ImportarDiario } from './importacao/ImportarDiario'
 import { confirmarNaJanela } from '../test/confirmar'
 import * as diario from '../dados/porto/diario'
 import * as porto from '../dados/porto'
@@ -51,9 +52,10 @@ async function colar(user: ReturnType<typeof userEvent.setup>, texto: string) {
   await user.click(screen.getByRole('button', { name: /analisar diário/i }))
 }
 
+// A colagem mora em Importar relatorios > Importacao diaria; o Diario e so o calendario.
 test('colagem de mais de uma quinzena é recusada antes de virar prévia', async () => {
   const user = userEvent.setup({ delay: null })
-  render(<MemoryRouter><PortoDiarioPage /></MemoryRouter>)
+  render(<MemoryRouter><ImportarDiario /></MemoryRouter>)
 
   await colar(user, [registro('5673329', '01/09/2026'), registro('5677129', '20/09/2026')].join('\n'))
 
@@ -61,11 +63,11 @@ test('colagem de mais de uma quinzena é recusada antes de virar prévia', async
   expect(criarPrevia).not.toHaveBeenCalled()
 })
 
-test('importa o Diário depois da confirmação e recarrega o mapa', async () => {
+test('importa o Diário depois da confirmação', async () => {
   criarPrevia.mockResolvedValue(previaDe(['5673329', '5677129']))
   confirmar.mockResolvedValue({ importados: 2, ignorados: 0 } as Awaited<ReturnType<typeof porto.confirmarImportacaoPorto>>)
   const user = userEvent.setup({ delay: null })
-  render(<MemoryRouter><PortoDiarioPage /></MemoryRouter>)
+  render(<MemoryRouter><ImportarDiario /></MemoryRouter>)
 
   await colar(user, [registro('5673329', '01/09/2026'), registro('5677129', '03/09/2026')].join('\n'))
 
@@ -77,12 +79,16 @@ test('importa o Diário depois da confirmação e recarrega o mapa', async () =>
 
   expect(await screen.findByText(/2 serviços importados/i)).toBeInTheDocument()
   expect(confirmar).toHaveBeenCalledOnce()
-  // O mapa recarrega para o dia importado deixar de aparecer como falta.
-  expect(mapa).toHaveBeenCalledTimes(2)
 })
 
 test('o mapa mostra quantos dias ainda estão sem Diário', async () => {
   render(<MemoryRouter><PortoDiarioPage /></MemoryRouter>)
 
   expect(await screen.findByText(/1 dia ainda sem diário importado/i)).toBeInTheDocument()
+})
+
+test('o Diário é só o calendário, com o botão que leva à importação diária', async () => {
+  render(<MemoryRouter><PortoDiarioPage /></MemoryRouter>)
+  expect(await screen.findByRole('link', { name: /importar diário/i })).toHaveAttribute('href', '/porto/importacoes?tipo=diario')
+  expect(screen.queryByLabelText(/consulta de serviços copiada da porto/i)).toBeNull()
 })
