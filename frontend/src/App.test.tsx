@@ -46,7 +46,9 @@ test('administrador começa com a base vazia e cria o primeiro lançamento', asy
   expect(await screen.findByText(/lançamento salvo/i)).toBeInTheDocument()
   expect(screen.getByText('Serviço particular de teste')).toBeInTheDocument()
 
-  await user.click(screen.getByRole('link', { name: /visão geral/i }))
+  // A marca no menu tambem leva a Visao geral.
+  expect(screen.getByRole('link', { name: /jms, ir para a visão geral/i })).toHaveAttribute('href', '/')
+  await user.click(screen.getByRole('link', { name: /^visão geral$/i }))
   expect(await screen.findByRole('heading', { name: 'Visão geral', level: 1 })).toBeInTheDocument()
   expect(await screen.findByRole('region', { name: /resultado do período/i })).toBeInTheDocument()
 })

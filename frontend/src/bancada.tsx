@@ -222,6 +222,44 @@ const listaDeOs = {
   ],
 }
 
+// Extrato do periodo da OP 06389821, montado com os numeros reais que ja estao
+// nesta bancada (visaoGeral, abaixo): 74.770 recebidos, a alimentacao de 26/04
+// e a comissao de 29/04 aberta pelos quatro socorristas. Descricao e categoria
+// da receita sao aproximadas. A despesa pendente e a unica linha inventada:
+// existe para ver na tela como a despesa vencida aparece.
+const linhaExtrato = (id: string, tipo: 'RECEITA' | 'DESPESA', descricao: string, categoria: string,
+  valor: number, data: string, realizado: boolean, origem: string, extra: Record<string, unknown> = {}) => ({
+  id, tipo, referencia_id: Number(id.slice(1)), descricao, categoria, valor, data,
+  status: realizado ? (tipo === 'RECEITA' ? 'RECEBIDA' : 'PAGO') : 'PENDENTE', realizado,
+  veiculo: null, veiculo_id: null, motorista: null, origem, protocolo: null,
+  motorista_id: null, numero_op: null, ...extra,
+})
+const comissaoDe = (id: string, nome: string, motoristaId: number, valor: number) =>
+  linhaExtrato(id, 'DESPESA', `${nome.split(' ')[0]} — comissão da OP 06389821`, 'Comissão de socorrista',
+    valor, '2026-04-29', true, 'COMISSAO',
+    { motorista: nome, motorista_id: motoristaId, numero_op: '06389821', protocolo: `COMISSAO-OP-19-${motoristaId}` })
+const extrato = [
+  linhaExtrato('R1', 'RECEITA', 'OP 06389821', 'Serviços Porto', 74770, '2026-04-29', true, 'IMPORTADA'),
+  comissaoDe('D1', 'JEFERSON MARTINS DA SILVA', 1, 4770.62),
+  comissaoDe('D2', 'ANDERSON JORGE RIBEIRO', 9, 3972.82),
+  comissaoDe('D3', 'QEBSON RAMOS DA SILVA', 2, 3757.59),
+  comissaoDe('D4', 'NATANAEL JOSE DE FREITAS NETO', 4, 1665.24),
+  linhaExtrato('D5', 'DESPESA', 'Alimentação', 'Alimentação', 200, '2026-04-26', true, 'MANUAL',
+    { veiculo: 'L168', veiculo_id: 2 }),
+  linhaExtrato('D6', 'DESPESA', 'Exemplo: conta em aberto', 'Aluguel', 1500, '2026-04-27', false, 'MANUAL'),
+]
+
+// Resumo da tela de OPs somado das OPs acima. A copia do banco nao trouxe a
+// conciliacao (OS vinculadas, soma das OS), entao essas colunas saem zeradas.
+const resumoOps = {
+  quantidadeTotalOps: 0, valorTotalPrevisto: 0, quantidadeSemComposicao: 0, valorSemComposicao: 0,
+  quantidadeConciliadas: 0, valorConciliadas: 0, quantidadeValorAbaixo: 0, diferencaTotalAbaixo: 0,
+  quantidadeValorAcima: 0, diferencaTotalAcima: 0, quantidadeComDivergencia: 0, valorTotalDivergencias: 0,
+  quantidadePagamentoProgramado: 0, valorProgramado: 0, quantidadeRecebidas: 0, valorRecebido: 0,
+  quantidadeAguardandoRecebimento: 0, valorAguardandoRecebimento: 0, quantidadeVencidasNaoRecebidas: 0,
+  valorVencidoNaoRecebido: 0, valorMedioPorOp: 0, quantidadeOrdensServico: 0,
+}
+
 /** Responde as chamadas do Supabase com o exemplo acima, sem rede. */
 const original = window.fetch
 window.fetch = (async (entrada: RequestInfo | URL, init?: RequestInit) => {
@@ -229,6 +267,12 @@ window.fetch = (async (entrada: RequestInfo | URL, init?: RequestInit) => {
   const responder = (corpo: unknown) =>
     new Response(JSON.stringify(corpo), { headers: { 'Content-Type': 'application/json' } })
 
+  if (url.includes('extrato_financeiro')) return responder(extrato)
+  if (url.includes('porto_resumo_ops')) {
+    const total = ops.reduce((t, op) => t + op.valor_total, 0)
+    return responder({ ...resumoOps, quantidadeTotalOps: ops.length, valorTotalPrevisto: total,
+      quantidadeRecebidas: ops.length, valorRecebido: total, valorMedioPorOp: total / ops.length })
+  }
   if (url.includes('porto_listar_os')) return responder(listaDeOs)
   if (url.includes('meu_turno_do_dia')) return responder(turnoDoDia)
   if (url.includes('fila_de_aprovacoes')) return responder(filaAprovacoes)
@@ -279,9 +323,9 @@ const visaoGeral = {
 
 const tela = new URLSearchParams(location.search).get('tela')
 const daVisao = tela === 'visao'
-// A Visao geral abre no periodo da OP real, para os graficos terem o que mostrar.
+// A Visao geral e o Extrato abrem no periodo da OP real, para terem o que mostrar.
 if (tela === 'os') sessionStorage.setItem('filtro:periodo', JSON.stringify({ inicio: '2026-09-16', fim: '2026-09-30' }))
-if (daVisao) sessionStorage.setItem('filtro:periodo', JSON.stringify({ inicio: '2026-03-30', fim: '2026-04-29', op: '1' }))
+if (daVisao || tela === 'extrato') sessionStorage.setItem('filtro:periodo', JSON.stringify({ inicio: '2026-03-30', fim: '2026-04-29', op: '1' }))
 
 const Pagina = tela === 'frota'
   ? (await import('./frota/FrotasPage')).default
@@ -293,6 +337,8 @@ const Pagina = tela === 'frota'
   ? (await import('./desempenho/DesempenhoPage')).default
   : tela === 'extrato'
   ? (await import('./financeiro/LancamentosPage')).default
+  : tela === 'ops'
+  ? (await import('./porto/PortoOrdensPagamentoPage')).default
   : tela === 'equipe'
   ? (await import('./equipe/EquipePage')).default
   : tela === 'config'
