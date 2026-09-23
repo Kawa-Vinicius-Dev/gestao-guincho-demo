@@ -171,13 +171,12 @@ select pg_temp.checar('reaprovar e permitido, como no Spring',
   pg_temp.tentar('select public.aprovar_despesa(1)'), 'PERMITIU');
 select pg_temp.checar('admin NAO paga despesa nao aprovada',
   pg_temp.tentar('select public.pagar_despesa(2)'), 'NEGADO');
--- A INVESTIGAR (22/09/2026): o administrador esta sendo NEGADO ao pagar uma
--- despesa aprovada. Nao e artefato de assinatura — pagar_despesa(bigint) resolve,
--- os outros dois parametros tem default. Ou alguma migration passou a barrar o
--- caminho e e regressao no fluxo de caixa, ou a regra mudou e ninguem atualizou
--- aqui. Precisa da decisao de quem conhece a operacao.
-select pg_temp.checar('admin paga despesa aprovada',
-  pg_temp.tentar('select public.pagar_despesa(1)'), 'PERMITIU');
+-- Decidido (Kawa, 16/09/2026): nao existe segundo passo de "registrar pagamento".
+-- Aprovar ja lanca a despesa como paga, entao pagar de novo e recusado.
+select pg_temp.checar('aprovada ja nasce paga',
+  (select status::text from public.despesas where id = 1), 'PAGO');
+select pg_temp.checar('pagar de novo e recusado',
+  pg_temp.tentar('select public.pagar_despesa(1)'), 'NEGADO');
 reset role;
 
 -- ============ SEGREGACAO DE FUNCOES ============
