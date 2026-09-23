@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { atualizarOrdemPagamentoPorto, definirQuinzenaOp, baixarRelatorioOpPorto, baixarRelatorioPorto, confirmarImportacaoPorto, criarPreviaComposicaoPorto, criarOrdemPagamentoPorto, detalharOrdemPagamentoPorto, idDaOpPeloNumero, justificarOrdemPagamentoPorto, listarOrdensPagamentoPorto, resumirOrdensPagamentoPorto } from '../dados/porto'
+import { atualizarOrdemPagamentoPorto, definirQuinzenaOp, baixarRelatorioOpPorto, baixarRelatorioPorto, confirmarImportacaoPorto, criarPreviaComposicaoPorto, criarOrdemPagamentoPorto, detalharOrdemPagamentoPorto, idDaOpPeloNumero, justificarOrdemPagamentoPorto, renomearOp, listarOrdensPagamentoPorto, resumirOrdensPagamentoPorto } from '../dados/porto'
 import { Campo, Selecao } from '../components/Campos'
 import type { DetalheOpPorto, OrdemPagamentoPorto, PreviaPorto, ResumoOpsPorto } from '../types/modelos'
 import { data, moeda } from '../utils/formatadores'
@@ -42,6 +42,7 @@ export default function PortoOrdensPagamentoPage() {
   const [carregando, setCarregando] = useState(false)
   const [parametros, setParametros] = useState(new URLSearchParams())
   const [baixando, setBaixando] = useState('')
+  const [novoNumero, setNovoNumero] = useState<{ id: number; de: string; para: string } | null>(null)
 
   async function carregar(params: URLSearchParams) {
     setCarregando(true); setErro('')
@@ -238,6 +239,20 @@ export default function PortoOrdensPagamentoPage() {
           aoConfirmar={() => gravarOp(quinzenaPendente)}
           aoFechar={() => setQuinzenaPendente(null)}/>
       : null}
+    {novoNumero
+      ? <ConfirmarAcao
+          titulo="Trocar o número da OP?"
+          efeito={<>A OP <strong>{novoNumero.de}</strong> passa a ser <strong>{novoNumero.para}</strong>. As comissões
+            que ela lançou no Extrato passam a mostrar o número novo.</>}
+          resumo={[['Número atual', novoNumero.de], ['Número novo', novoNumero.para]]}
+          textoConfirmar="Trocar número"
+          aoConfirmar={async () => {
+            await renomearOp(novoNumero.id, novoNumero.para)
+            setDetalhe(await detalharOrdemPagamentoPorto(novoNumero.id))
+            await carregar(parametros)
+          }}
+          aoFechar={() => setNovoNumero(null)}/>
+      : null}
     {editando ? <FormularioOp edicao={editando} aoEnviar={salvarOp} aoFechar={() => setEditando(null)}/> : null}
     {detalhe
       ? <ModalDetalheOp detalhe={detalhe} previa={previaComposicao}
@@ -246,6 +261,7 @@ export default function PortoOrdensPagamentoPage() {
           aoAnalisar={() => void analisarComposicao()} aoConfirmarComposicao={confirmarComposicao}
           aoJustificar={justificar} aoExportar={formato => void exportarOp(formato)} baixando={baixando}
           aoEditar={() => { setEditando(detalhe.ordemPagamento); setDetalhe(null) }}
+          aoRenomear={para => setNovoNumero({ id: detalhe.ordemPagamento.id, de: detalhe.ordemPagamento.numero, para })}
           aoFechar={() => { setDetalhe(null); setPreviaComposicao(null); setArquivoComposicao(null) }}/>
       : null}
   </div>

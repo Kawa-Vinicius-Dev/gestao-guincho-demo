@@ -1,4 +1,4 @@
-import type { FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
 import { LinkOs } from '../../components/LinksDeDado'
 import { Campo, Selecao } from '../../components/Campos'
 import { Modal } from '../../components/Modal'
@@ -6,6 +6,7 @@ import type { DetalheOpPorto, PreviaPorto } from '../../types/modelos'
 import { moeda } from '../../utils/formatadores'
 import { MOTIVOS_COMPOSICAO, MOTIVOS_DIVERGENCIA, data, rotulo } from './opcoes'
 import { CampoArquivo } from '../../components/CampoArquivo'
+import './ops.css'
 
 type Props = {
   detalhe: DetalheOpPorto
@@ -18,6 +19,8 @@ type Props = {
   aoConfirmarComposicao: (evento: FormEvent<HTMLFormElement>) => void
   aoJustificar: (evento: FormEvent<HTMLFormElement>) => void
   aoEditar: () => void
+  /** Pede a troca do numero; quem chama confirma antes de gravar. */
+  aoRenomear: (numero: string) => void
   aoExportar: (formato: 'excel' | 'pdf') => void
   baixando: string
   aoFechar: () => void
@@ -26,10 +29,17 @@ type Props = {
 export function ModalDetalheOp(props: Props) {
   const { detalhe, previa, aoEscolherArquivo,
     arquivoEscolhido, nomeArquivo, aoAnalisar, aoConfirmarComposicao, aoJustificar, aoEditar,
-    aoExportar, baixando, aoFechar } = props
+    aoRenomear, aoExportar, baixando, aoFechar } = props
   const op = detalhe.ordemPagamento
+  // Editar o numero vale ate para OP recebida: um numero digitado errado nao
+  // deixa de ser erro porque a Porto ja pagou (Kawa, 23/09/2026).
+  const [editandoNumero, setEditandoNumero] = useState(false)
 
   const acoes = <>
+    {editandoNumero ? null
+      : <button type="button" className="button button-ghost button-sm" onClick={() => setEditandoNumero(true)}>
+          Editar número
+        </button>}
     <button type="button" className="button button-ghost button-sm" disabled={baixando !== ''}
       onClick={() => aoExportar('excel')}>
       {baixando === 'op-excel' ? 'Gerando Excel…' : 'Baixar Excel da OP'}
@@ -45,6 +55,21 @@ export function ModalDetalheOp(props: Props) {
 
   return <Modal etiqueta="Detalhes da OP" titulo={op.numero} className="porto-op-detail"
     acoes={acoes} aoFechar={aoFechar}>
+    {editandoNumero
+      ? <form className="op-editar-numero" onSubmit={evento => {
+          evento.preventDefault()
+          const numero = String(new FormData(evento.currentTarget).get('numero') ?? '').trim()
+          if (!numero || numero === op.numero) { setEditandoNumero(false); return }
+          aoRenomear(numero)
+          setEditandoNumero(false)
+        }}>
+          <Campo rotulo="Número da OP">
+            <input name="numero" defaultValue={op.numero} required autoFocus inputMode="numeric" autoComplete="off"/>
+          </Campo>
+          <button className="button button-primary">Salvar número</button>
+          <button type="button" className="button button-ghost" onClick={() => setEditandoNumero(false)}>Cancelar</button>
+        </form>
+      : null}
     <div className="porto-detail-summary">
       <span>Previsto<strong>{moeda(op.valorTotal)}</strong></span>
       <span>Soma das OS<strong>{moeda(op.valorOrdensServico)}</strong></span>

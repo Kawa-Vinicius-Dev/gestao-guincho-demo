@@ -119,6 +119,7 @@ export function erroDoBanco(erro: ErroSupabase, contexto: string): ApiError {
     if (detalhe.includes('qra')) return new ApiError('Já existe um socorrista com este QRA.', 409)
     if (detalhe.includes('categorias_nome')) return new ApiError('Já existe uma categoria com este nome.', 409)
     if (detalhe.includes('contratantes_nome')) return new ApiError('Já existe um contratante com este nome.', 409)
+    if (detalhe.includes('ops_porto_numero')) return new ApiError('Já existe uma OP com este número.', 409)
     return new ApiError('Este registro já existe.', 409)
   }
   // 23503 foreign_key_violation — apagar algo que ainda e referido.
