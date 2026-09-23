@@ -134,10 +134,7 @@ set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';
 -- O repasse manual (pagar_comissao) saiu com o fluxo antigo: a comissao hoje
 -- entra sozinha quando a OP fecha (Kawa, 16/09/2026). As checagens abaixo so
 -- precisam da despesa de comissao paga, com o protocolo de comissao.
-reset role;
-insert into public.categorias (nome, tipo) values ('Comissão de socorrista', 'DESPESA');
-set role authenticated;
-set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';
+-- A categoria de comissao ja existe: as migrations a criam.
 select public.registrar_despesa_aprovada('Comissão do ciclo',
   (select id from public.categorias where nome = 'Comissão de socorrista'), 150, '2026-09-21',
   p_motorista_id => 1, p_protocolo => 'COMISSAO-1-1', p_paga => true, p_data_pagamento => '2026-09-21');
