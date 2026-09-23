@@ -285,7 +285,7 @@ export default function PortoImportacoesPage(){
   const [tipo,setTipo]=useState<TipoImportacao>(()=>new URLSearchParams(window.location.search).get('tipo')==='diario'?'diario':'op')
   function trocar(novo:TipoImportacao){setTipo(novo);window.history.replaceState(null,'',`${window.location.pathname}?tipo=${novo}`)}
   return <div className="page-enter">
-    <header className="page-heading"><div><span className="eyebrow">Porto Seguro</span><h1>Importar relatórios</h1>
+    <header className="page-heading"><div><span className="eyebrow">Porto Seguro</span><h1>Importar</h1>
       <p>Importação diária: os serviços do dia, sem valor. Ordem de pagamento: os valores que a Porto pagou.</p></div></header>
     <nav className="config-abas" role="tablist" aria-label="Tipo de importação">
       <button type="button" role="tab" aria-selected={tipo==='diario'} className={tipo==='diario'?'ativa':undefined} onClick={()=>trocar('diario')}>Importação diária</button>

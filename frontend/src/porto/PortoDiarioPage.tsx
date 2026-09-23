@@ -91,7 +91,7 @@ export default function PortoDiarioPage() {
   const faltando = dias.filter(d => !d.importado && d.dia <= new Date().toISOString().slice(0, 10)).length
 
   return <div className="page-enter">
-    <CabecalhoPagina modulo="Porto Seguro" titulo="Diário Operacional"
+    <CabecalhoPagina modulo="Porto Seguro" titulo="Diário"
       descricao="Os dias já importados. Clique num dia para ver as OS dele."
       acoes={<Link className="button button-primary" to="/porto/importacoes?tipo=diario">Importar diário</Link>}/>
 

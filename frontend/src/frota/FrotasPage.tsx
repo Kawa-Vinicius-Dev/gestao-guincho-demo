@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { SeletorPeriodo } from '../components/SeletorPeriodo'
 import { usePeriodoGlobal } from '../utils/periodoGlobal'
 import { lerIndicadores } from '../dados/dashboard'
-import { listarOs } from '../dados/porto/listaOs'
+import { listarOs, listarTodasAsOs } from '../dados/porto/listaOs'
 import { lerExtrato } from '../dados/extrato'
 import { atualizarVeiculo, criarVeiculo, excluirVeiculo, listarVeiculos } from '../dados/veiculos'
 import { ConfirmarExclusao } from '../components/ConfirmarExclusao'
@@ -28,6 +28,19 @@ export default function FrotasPage(){
   const [carregando,setCarregando]=useState(true)
   // O que esta viatura rodou nesta competencia e a Porto ainda nao pagou.
   const veiculoDaSigla=veiculos.find(v=>v.id===selecionado)
+  // Quantos servicos cada viatura fez no periodo, pela sigla da Porto (Kawa,
+  // 23/09/2026: "de forma minimalista o numero dos servicos feitos por cada viatura").
+  const [servicosPorSigla,setServicosPorSigla]=useState<Map<string,number>>(new Map())
+  useEffect(()=>{if(!periodo.inicio||!periodo.fim)return
+    let valeu=true
+    listarTodasAsOs({inicio:periodo.inicio,fim:periodo.fim})
+      .then(p=>{if(!valeu)return
+        const mapa=new Map<string,number>()
+        for(const os of p.itens){const s=os.viatura?.toUpperCase();if(s)mapa.set(s,(mapa.get(s)??0)+1)}
+        setServicosPorSigla(mapa)})
+      .catch(()=>{if(valeu)setServicosPorSigla(new Map())})
+    return()=>{valeu=false}},[periodo.inicio,periodo.fim])
+  const servicosDa=(v:Veiculo)=>servicosPorSigla.get((v.siglaPorto||v.identificacao).toUpperCase())??0
   const [aguardando,setAguardando]=useState<{total:number;previsto:number;semValor:number}|null>(null)
   useEffect(()=>{const sigla=(veiculoDaSigla?.siglaPorto||veiculoDaSigla?.identificacao||'').toUpperCase()
     if(!sigla||!periodo.inicio||!periodo.fim){setAguardando(null);return}
@@ -56,11 +69,11 @@ export default function FrotasPage(){
       setModal(false);setEditando(null);setMensagem('Veículo salvo no cadastro real.');await carregar()
     }catch(x){setErro((x as Error).message)}finally{setSalvando(false)}}
 
-  return <div className="page-enter"><header className="page-heading"><div><span className="eyebrow">Ativos operacionais</span><h1>Veículos e custos</h1><p>Receitas, despesas e eficiência calculadas a partir dos vínculos reais do PostgreSQL.</p></div><div className="heading-actions"><div className="periodo-no-cabecalho"><SeletorPeriodo periodo={periodo} aoMudar={setPeriodo}/></div><button className="button button-primary" onClick={()=>setModal(true)}>+ Cadastrar veículo</button></div></header>
+  return <div className="page-enter"><header className="page-heading"><div><span className="eyebrow">Ativos operacionais</span><h1>Viaturas</h1><p>Receitas, despesas e eficiência calculadas a partir dos vínculos reais do PostgreSQL.</p></div><div className="heading-actions"><div className="periodo-no-cabecalho"><SeletorPeriodo periodo={periodo} aoMudar={setPeriodo}/></div><button className="button button-primary" onClick={()=>setModal(true)}>+ Cadastrar veículo</button></div></header>
     {erro&&!modal?<div className="form-alert" role="alert">{erro}</div>:null}{mensagem?<div className="success-notice">{mensagem}</div>:null}
     {carregando?<Carregando/>:<>
     <section className="fleet-summary"><div><span>Gasto total dos veículos</span><strong>{moeda(gastoFrota)}</strong><small>Despesas pagas vinculadas</small></div><div><span>Veículos disponíveis</span><strong>{veiculos.filter(v=>v.ativo).length}/{veiculos.length}</strong><small>Cadastro oficial</small></div><div><span>Melhor margem</span><strong>{Math.max(...margens,0).toFixed(1)}%</strong><small>Entre veículos com receita</small></div></section>
-    {veiculos.length?<section className="fleet-layout"><aside className="fleet-list" aria-label="Lista de veículos">{veiculos.map(v=>{const r=financeiro?.resultadoPorVeiculo.find(item=>item.veiculoId===v.id),saldo=r?.resultado??0;return <button key={v.id} className={v.id===selecionado?'active':''} onClick={()=>setSelecionado(v.id)}><span className="vehicle-monogram">{v.identificacao}</span><span><strong>{v.modelo||v.identificacao}</strong><small>{ehAuxiliar(v.identificacao)?'Viatura auxiliar':v.placa??'Placa pendente'} · {v.ativo?'Ativo':'Inativo'}</small></span><span><strong className={saldo>=0?'positive':'negative'}>{moeda(saldo)}</strong><small>Resultado real</small></span></button>})}</aside>
+    {veiculos.length?<section className="fleet-layout"><aside className="fleet-list" aria-label="Lista de veículos">{veiculos.map(v=>{const r=financeiro?.resultadoPorVeiculo.find(item=>item.veiculoId===v.id),saldo=r?.resultado??0;return <button key={v.id} className={v.id===selecionado?'active':''} onClick={()=>setSelecionado(v.id)}><span className="vehicle-monogram">{v.identificacao}</span><span><strong>{v.modelo||v.identificacao}</strong><small>{ehAuxiliar(v.identificacao)?'Viatura auxiliar':v.placa??'Placa pendente'} · {v.ativo?'Ativo':'Inativo'} · <b className="fleet-servicos">{servicosDa(v)} {servicosDa(v)===1?'serviço':'serviços'}</b></small></span><span><strong className={saldo>=0?'positive':'negative'}>{moeda(saldo)}</strong><small>Resultado real</small></span></button>})}</aside>
       {veiculo?<div className="fleet-detail"><article className="vehicle-hero"><div><span className="eyebrow">{ehAuxiliar(veiculo.identificacao)?'Viatura auxiliar':veiculo.placa??'Placa pendente'}</span><h2>{veiculo.identificacao} · {ehAuxiliar(veiculo.identificacao)?'Recebe as OS que chegam sem viatura':veiculo.modelo||'Modelo não informado'}</h2><p>Custo operacional informado: {moeda(veiculo.custoPorKm)} por km.</p>
         <p>{veiculo.siglaPorto?<>Aparece como <strong>{veiculo.siglaPorto}</strong> no painel da Porto.</>:<>Sem sigla da Porto — serviços desta viatura não se vinculam sozinhos.</>}</p></div>
       <div><span className={`vehicle-status ${veiculo.ativo?'status-saudavel':'status-monitorar'}`}>{veiculo.ativo?'Ativo':'Inativo'}</span><button className="table-action" onClick={()=>{setEditando(veiculo);setModal(true)}}>Editar</button>{ehAuxiliar(veiculo.identificacao)?null:<button className="table-action table-action-danger" onClick={()=>setExcluindo(veiculo)}>Excluir</button>}</div></article>
