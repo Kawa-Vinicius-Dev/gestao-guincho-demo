@@ -12,7 +12,6 @@ import { faturamentoPorGrupo } from './dados/porto/faturamento'
 import { listarVeiculos } from './dados/veiculos'
 import { FaturamentoPorGrupo } from './components/Graficos'
 import { lerExtrato } from './dados/extrato'
-import { ServicosDoPeriodo } from './financeiro/dre/ServicosDoPeriodo'
 import { DespesasDoPeriodo } from './financeiro/dre/DespesasDoPeriodo'
 import { data } from './utils/formatadores'
 import { usePeriodoGlobal } from './utils/periodoGlobal'
@@ -139,7 +138,6 @@ export default function DashboardPage(){
                 linhas={faturamentoPorGrupo(servicos,'viatura',veiculos)}/>
             </Painel>
           </div>:null}
-          {periodo.inicio&&periodo.fim?<ServicosDoPeriodo inicio={periodo.inicio} fim={periodo.fim} porCompetencia={competencia} servicos={servicos}/>:null}
           <DespesasDoPeriodo lancamentos={lancamentos}/>
         </>
       : null}
