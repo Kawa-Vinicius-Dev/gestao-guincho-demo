@@ -3,7 +3,6 @@ import { usePeriodoGlobal } from '../utils/periodoGlobal'
 import { porCompetencia } from '../utils/modoDoPeriodo'
 import { useEffect, useMemo, useState } from 'react'
 import { Carregando } from '../components/EstadoPagina'
-import { FaturamentoPorGrupo } from '../components/Graficos'
 import { LinkSocorrista, LinkViatura } from '../components/LinksDeDado'
 import { lerIndicadores } from '../dados/dashboard'
 import { lerExtrato } from '../dados/extrato'
@@ -13,7 +12,6 @@ import { baixarDre } from '../dados/relatorios'
 import { listarVeiculos } from '../dados/veiculos'
 import type { Dashboard, LancamentoFinanceiro, Veiculo } from '../types/modelos'
 import { data, moeda, percentual } from '../utils/formatadores'
-import { ServicosDoPeriodo } from './dre/ServicosDoPeriodo'
 import './dre/dre.css'
 
 function Linha({ titulo, valor, nivel = 0, total = false, negativo = false }: { titulo: string; valor: number; nivel?: number; total?: boolean; negativo?: boolean }) {
@@ -81,22 +79,15 @@ export default function DrePage() {
       <aside className="dre-explainer">
         <span className="eyebrow">Leitura da DRE</span><h2>Faturar não é lucrar.</h2>
         <p>A receita mostra os valores recebidos. As despesas entram quando estão pagas. Serviço sem valor aparece na lista, mas só vira receita quando a OP chega.</p>
-        <div><span>1</span><p><strong>Até {DIAS_PARA_DETALHAR} dias</strong>Os serviços aparecem um a um, como no relatório diário.</p></div>
-        <div><span>2</span><p><strong>Períodos maiores</strong>Os serviços aparecem resumidos por socorrista e por viatura.</p></div>
+        {/* Os servicos feitos no periodo vao no arquivo da DRE, nao na tela (Kawa, 23/09/2026). */}
+        <div><span>1</span><p><strong>Serviços no arquivo</strong>O Excel e o PDF trazem os serviços feitos no período, por socorrista.</p></div>
+        <div><span>2</span><p><strong>Até {DIAS_PARA_DETALHAR} dias, um a um</strong>Em períodos maiores, resumidos por socorrista e por viatura.</p></div>
         <button className="button button-primary" disabled={exportando!==''} onClick={()=>void exportar('excel')}>{exportando==='excel'?'Gerando Excel…':'Exportar Excel'}</button>
         <button className="button button-ghost" disabled={exportando!==''} onClick={()=>void exportar('pdf')}>{exportando==='pdf'?'Gerando PDF…':'Exportar PDF'}</button>
         <button className="button button-ghost" onClick={() => window.print()}>Imprimir DRE</button>
       </aside>
     </section>
 
-    {/* Os socorristas com os servicos que cada um fez no periodo (Kawa,
-        23/09/2026). Ate 8 dias ja abre as OS de cada um; acima, abre no clique,
-        e a viatura aparece resumida ao lado. */}
-    {inicio&&fim?<ServicosDoPeriodo inicio={inicio} fim={fim} porCompetencia={competencia} servicos={servicos} abertos={dre.servicos.detalhado}/>:null}
-    {!dre.servicos.detalhado&&dre.servicos.total?<section className="panel dre-servicos" aria-label="Serviços por viatura">
-      <header className="panel-title"><div><span className="eyebrow">Serviços prestados</span><h2>Por viatura</h2></div></header>
-      <FaturamentoPorGrupo descricao="Serviços por viatura" vazio="Nenhum serviço." linhas={dre.servicos.porViatura}/>
-    </section>:null}
     </>}
   </div>
 }
