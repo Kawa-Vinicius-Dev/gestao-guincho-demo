@@ -21,7 +21,7 @@ export function OsDoDia({ dia, aoFechar }: { dia: string; aoFechar: () => void }
     listarTodasAsOs({ inicio: dia, fim: dia }).then(setPagina).catch((e: Error) => setErro(e.message))
   }, [dia])
 
-  return <Modal etiqueta="Diário Operacional" titulo={`OS de ${data(dia)}`} largo fecharAoClicarFora aoFechar={aoFechar}>
+  return <Modal etiqueta="Diário" titulo={`OS de ${data(dia)}`} largo fecharAoClicarFora aoFechar={aoFechar}>
     {erro ? <div className="form-alert" role="alert">{erro}</div> : null}
     {!pagina && !erro ? <Carregando/> : null}
     {pagina ? <>

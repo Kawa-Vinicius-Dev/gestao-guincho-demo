@@ -136,7 +136,7 @@ export default function PortoDashboardPage() {
   return <div className="page-enter painel-porto">
     <CabecalhoPagina
       modulo="Porto Seguro"
-      titulo="Dashboard Porto"
+      titulo="Painel Porto"
       descricao="O que a equipe produziu, o que a Porto já pagou e o que ainda aguarda uma OP."
       contexto={<>Período selecionado: <strong>{data(inicio)}</strong> → <strong>{data(fim)}</strong></>}
       acoes={<>

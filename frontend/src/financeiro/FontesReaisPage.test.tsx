@@ -64,7 +64,7 @@ test('/veiculos consulta cadastro e resultado reais', async () => {
 
   abrir('/veiculos')
 
-  expect(await screen.findByRole('heading', { name: /veículos e custos/i })).toBeInTheDocument()
+  expect(await screen.findByRole('heading', { name: /^viaturas$/i })).toBeInTheDocument()
   expect(consultou).toHaveBeenCalledOnce()
 })
 
@@ -74,6 +74,6 @@ test('/quilometragem consulta os registros reais', async () => {
 
   abrir('/quilometragem')
 
-  expect(await screen.findByRole('heading', { name: /km rodado e km morto/i })).toBeInTheDocument()
+  expect(await screen.findByRole('heading', { name: /^quilometragem$/i })).toBeInTheDocument()
   expect(consultou).toHaveBeenCalledOnce()
 })

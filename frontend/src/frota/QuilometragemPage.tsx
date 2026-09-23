@@ -98,7 +98,7 @@ export default function QuilometragemPage() {
   }
 
   return <div className="page-enter">
-    <header className="page-heading"><div><span className="eyebrow">Eficiência operacional</span><h1>Km rodado e km morto</h1><p>Distâncias e custos registrados no banco oficial da operação.</p></div>
+    <header className="page-heading"><div><span className="eyebrow">Eficiência operacional</span><h1>Quilometragem</h1><p>Distâncias e custos registrados no banco oficial da operação.</p></div>
       <div className="heading-actions"><div className="periodo-no-cabecalho"><SeletorPeriodo periodo={periodo} aoMudar={setPeriodo}/></div><button className="button button-primary" onClick={() => { setEditando(null); setModal(true) }}>+ Registrar quilometragem</button></div></header>
     {erro && !modal ? <div className="form-alert" role="alert">{erro}</div> : null}
     {mensagem ? <div className="success-notice">{mensagem}</div> : null}
