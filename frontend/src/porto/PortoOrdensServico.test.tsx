@@ -141,8 +141,8 @@ test('abre filtrada pela OS do link, procurando fora do período', async () => {
   expect(screen.getByText(/procura em todo o histórico/i)).toBeInTheDocument()
 })
 
-// O modo sai do seletor, como em toda tela (Kawa, 23/09/2026): ate 8 dias
-// pela data do servico; periodo da OP, mes ou intervalo maior pela competencia.
+// O modo sai do seletor, como em toda tela (Kawa, 23/09/2026): De-ate pela
+// data do servico, de qualquer tamanho; periodo da OP e mes pela competencia.
 test('um dia filtra pela data do serviço', async () => {
   sessionStorage.setItem('filtro:periodo', JSON.stringify({ inicio: '2026-09-07', fim: '2026-09-07' }))
   const pedidos: Record<string, unknown>[] = []
@@ -153,8 +153,18 @@ test('um dia filtra pela data do serviço', async () => {
   expect(pedidos[0]).toMatchObject({ p_inicio: '2026-09-07', p_fim: '2026-09-07', p_por_competencia: false })
 })
 
-test('o mês e o período da OP filtram pela competência', async () => {
-  sessionStorage.setItem('filtro:periodo', JSON.stringify({ inicio: '2026-09-01', fim: '2026-09-30' }))
+test('um De–até longo continua pela data do serviço', async () => {
+  sessionStorage.setItem('filtro:periodo', JSON.stringify({ inicio: '2026-01-01', fim: '2026-09-30' }))
+  const pedidos: Record<string, unknown>[] = []
+  servidorBase(corpo => pedidos.push(corpo))
+  await abrir()
+
+  await screen.findByText('01/4312215-26')
+  expect(pedidos[0]).toMatchObject({ p_inicio: '2026-01-01', p_por_competencia: false })
+})
+
+test('o mês escolhido e o período da OP filtram pela competência', async () => {
+  sessionStorage.setItem('filtro:periodo', JSON.stringify({ inicio: '2026-09-01', fim: '2026-09-30', mes: '2026-09' }))
   const pedidos: Record<string, unknown>[] = []
   servidorBase(corpo => pedidos.push(corpo))
   await abrir()

@@ -84,8 +84,10 @@ export default function PortoOrdensServicoPage() {
   // uma OS so, e nao adianta encontrar "nada" porque ela e de outra quinzena.
   const buscandoNumero = Boolean(numeroOsAdiado.trim())
   // O modo sai do seletor, como em toda tela (utils/modoDoPeriodo): periodo da
-  // OP, mes e intervalo longo pela competencia; ate 8 dias pela data do servico.
-  const porCompetencia = !buscandoNumero && porCompetenciaDoPeriodo(periodo)
+  // OP e mes pela competencia; De-ate pela data do servico. Um cartao que conta
+  // pela competencia (?competencia=1) abre a lista no mesmo recorte, para o
+  // numero do cartao e o da lista baterem.
+  const porCompetencia = !buscandoNumero && (busca.get('competencia') === '1' || porCompetenciaDoPeriodo(periodo))
   const hoje = new Date().toISOString().slice(0, 10)
   const filtro: FiltroOs = useMemo(() => ({
     inicio: buscandoNumero ? INICIO_DO_HISTORICO : periodo.inicio,

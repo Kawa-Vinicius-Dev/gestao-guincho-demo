@@ -13,7 +13,14 @@ import { periodoCorrente, type PeriodoPorto } from './periodos'
  * `op` guarda qual periodo da Porto foi escolhido na lista, para a lista mostrar
  * o nome dele; mexer numa data apaga, e a tela volta a "Periodo personalizado".
  */
-export interface PeriodoGlobal { inicio: string; fim: string; op?: string }
+export interface PeriodoGlobal {
+  inicio: string
+  fim: string
+  /** Periodo da Porto escolhido na lista (conta pela competencia). */
+  op?: string
+  /** Mes escolhido na lista de meses, "2026-09" (conta pela competencia). */
+  mes?: string
+}
 
 const CHAVE = 'periodo'
 const EVENTO = 'fluxo:periodo'
@@ -21,7 +28,7 @@ const dois = (n: number) => String(n).padStart(2, '0')
 
 export function intervaloDoMes(mes: string): PeriodoGlobal {
   const [ano, numero] = mes.split('-').map(Number)
-  return { inicio: `${mes}-01`, fim: `${mes}-${dois(new Date(ano, numero, 0).getDate())}` }
+  return { inicio: `${mes}-01`, fim: `${mes}-${dois(new Date(ano, numero, 0).getDate())}`, mes }
 }
 
 function mesCorrente(): PeriodoGlobal {
@@ -30,7 +37,9 @@ function mesCorrente(): PeriodoGlobal {
 }
 
 export function lerPeriodoGlobal(): PeriodoGlobal {
-  const salvo = lerFiltro<PeriodoGlobal>(CHAVE, mesCorrente())
+  // Le sem mesclar com o mes corrente: o `mes` do padrao nao pode vazar para um
+  // De–ate salvo, senao ele passaria a contar pela competencia.
+  const salvo = lerFiltro<PeriodoGlobal>(CHAVE, { inicio: '', fim: '' })
   return salvo.inicio && salvo.fim ? salvo : mesCorrente()
 }
 

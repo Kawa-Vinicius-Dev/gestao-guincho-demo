@@ -1945,5 +1945,3 @@ tbody tr{transition:background-color .14s ease}
 .categoria-socorrista input{width:16px;height:16px;margin:0;accent-color:var(--blue-600)}
 .settings-card-cabecalho>.button{flex:0 0 auto;white-space:nowrap}
 
-/* Aviso do seletor de periodo: De-ate acima do limite passa a contar pela OP. */
-.aviso-periodo{flex-basis:100%;grid-column:1/-1;margin:0;padding:8px 12px;border-radius:var(--controle-raio,7px);background:var(--info-fundo);color:var(--info-texto);font-size:var(--t-apoio)}

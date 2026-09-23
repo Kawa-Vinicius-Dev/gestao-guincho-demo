@@ -104,6 +104,6 @@ test('sem resumo Porto duplicado e com a regra de período certa',async()=>{
 
   await screen.findByText('Serviços')
   expect(screen.queryByText(/faturamento separado do caixa/i)).not.toBeInTheDocument()
-  expect(screen.getByText(/conta na OP em que entrou; até 8 dias,\s+conta na data do atendimento/)).toBeInTheDocument()
+  expect(screen.getByText(/conta na OP em que entrou; no De–até, conta na data do atendimento/)).toBeInTheDocument()
   expect(screen.queryByText(/vem do recebimento/)).not.toBeInTheDocument()
 })
