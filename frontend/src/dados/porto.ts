@@ -279,9 +279,10 @@ export async function atualizarOrdemPagamentoPorto(
       method: 'PUT', body: JSON.stringify(dados),
     })
   }
+  // O numero passa pela funcao que tambem acerta as comissoes no Extrato.
+  if (typeof dados.numero === 'string') await renomearOp(id, dados.numero)
   ou(
     await supabase().from('ordens_pagamento_porto').update(somenteInformados({
-      numero: dados.numero,
       valor_total: valorDoFormulario(dados),
       nome_codigo: dados.nomeCodigo,
       data_pagamento_programada: dataDoFormulario(dados),
@@ -292,6 +293,22 @@ export async function atualizarOrdemPagamentoPorto(
     'Não foi possível salvar a ordem de pagamento.',
   )
   return (await detalharOrdemPagamentoPorto(id)).ordemPagamento
+}
+
+/**
+ * Troca o numero da OP (Kawa, 23/09/2026). O banco recusa numero repetido e
+ * atualiza junto a descricao das comissoes lancadas pela OP ("comissao da OP X").
+ */
+export async function renomearOp(id: number, numero: string): Promise<void> {
+  invalidarCacheFinanceiro()
+  if (!moduloNoSupabase('porto')) {
+    await api(`/api/porto/ordens-pagamento/${id}`, { method: 'PUT', body: JSON.stringify({ numero: numero.trim() }) })
+    return
+  }
+  ou(
+    await supabase().rpc('porto_renomear_op', { p_id: id, p_numero: numero.trim() }),
+    'Não foi possível trocar o número da OP.',
+  )
 }
 
 export async function justificarOrdemPagamentoPorto(

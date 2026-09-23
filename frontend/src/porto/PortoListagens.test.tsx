@@ -90,3 +90,27 @@ test('abre a composição da OP e registra justificativa',async()=>{
 // aqui conta como producao pendente — receita so quando a Porto pagar.
 // Servico ja pago tem valor oficial vindo da OP: editar a mao desencontraria o
 // caixa do extrato da Porto.
+// Kawa, 23/09/2026: editar o numero da OP nos detalhes, ate em OP ja recebida,
+// com confirmacao antes de gravar.
+test('troca o número de uma OP recebida pelos detalhes, com confirmação',async()=>{
+  let payload:Record<string,unknown>|null=null
+  const op={id:51,numero:'06438807',valorTotal:900,dataPagamentoProgramada:'2026-09-16',situacao:'RECEBIDO',statusPorto:'PAGO',quantidadeOrdensServico:0,valorOrdensServico:0,divergencia:0,statusConciliacao:'CONCILIADA'}
+  servidor.use(
+    http.get('/api/porto/ordens-pagamento',()=>HttpResponse.json([op])),
+    http.get('/api/porto/ordens-pagamento/51',()=>HttpResponse.json({ordemPagamento:{...op,numero:payload?String(payload.numero):op.numero},ordensServico:[],justificativas:[],historico:[]})),
+    http.put('/api/porto/ordens-pagamento/51',async({request})=>{payload=await request.json() as Record<string,unknown>;return HttpResponse.json({...op,numero:payload.numero})}),
+  )
+  const user=userEvent.setup({ delay: null });render(<MemoryRouter><PortoOrdensPagamentoPage/></MemoryRouter>)
+  await user.click(await screen.findByRole('button',{name:'06438807'}))
+  // OP recebida nao mostra "Editar OP", mas o numero continua editavel.
+  expect(await screen.findByRole('button',{name:'Editar número'})).toBeInTheDocument()
+  expect(screen.queryByRole('button',{name:/editar op/i})).not.toBeInTheDocument()
+  await user.click(screen.getByRole('button',{name:'Editar número'}))
+  const campo=within(screen.getByRole('dialog')).getByLabelText(/número da op/i);await user.clear(campo);await user.type(campo,'06438899')
+  await user.click(screen.getByRole('button',{name:'Salvar número'}))
+  expect(payload).toBeNull()
+  const confirmacao=await screen.findByRole('dialog',{name:/trocar o número da op/i})
+  expect(confirmacao).toHaveTextContent('06438899')
+  await user.click(within(confirmacao).getByRole('button',{name:'Trocar número'}))
+  expect(payload).toEqual({numero:'06438899'})
+})
