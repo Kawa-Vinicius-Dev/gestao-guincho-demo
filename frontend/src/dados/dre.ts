@@ -139,7 +139,10 @@ export function relatorioDaDre(m: MontagemDre, inicio: string, fim: string): Rel
         ],
         totais: ['Lucro operacional', m.lucro],
       },
+      // Os servicos feitos no periodo vivem no arquivo da DRE, nao na tela (Kawa,
+      // 23/09/2026): por socorrista e por viatura sempre; ate 8 dias, um a um.
       resumoPor('Serviços por socorrista', m.servicos.porSocorrista),
+      resumoPor('Serviços por viatura', m.servicos.porViatura),
       ...(m.servicos.detalhado
         ? [{
             titulo: 'Serviços prestados, por socorrista',
@@ -157,7 +160,7 @@ export function relatorioDaDre(m: MontagemDre, inicio: string, fim: string): Rel
             totais: ['Total', null, `${m.servicos.total} serviços`, null, null, null, m.servicos.valor],
             vazio: 'Nenhum serviço no período.',
           }]
-        : [resumoPor('Serviços por viatura', m.servicos.porViatura)]),
+        : []),
       {
         titulo: 'Despesas pagas, gasto por gasto',
         colunas: [

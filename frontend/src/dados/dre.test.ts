@@ -47,7 +47,7 @@ test('até 8 dias, os serviços um a um; acima, resumidos', () => {
   const dia = montarDre(financeiro, extrato, servicos, diasDoPeriodo('2026-09-01', '2026-09-08'))
   expect(dia.servicos).toMatchObject({ detalhado: true, total: 3, semValor: 1, valor: 1000 })
   expect(relatorioDaDre(dia, '2026-09-01', '2026-09-08').secoes.map(s => s.titulo))
-    .toEqual(['Resultado', 'Serviços por socorrista', 'Serviços prestados, por socorrista', 'Despesas pagas, gasto por gasto'])
+    .toEqual(['Resultado', 'Serviços por socorrista', 'Serviços por viatura', 'Serviços prestados, por socorrista', 'Despesas pagas, gasto por gasto'])
 
   const mes = montarDre(financeiro, extrato, servicos, diasDoPeriodo('2026-09-01', '2026-09-30'))
   expect(mes.servicos.detalhado).toBe(false)
@@ -56,7 +56,7 @@ test('até 8 dias, os serviços um a um; acima, resumidos', () => {
 })
 
 test('no relatório do dia, o serviço sem valor aparece como "Sem valor", não como R$ 0,00', () => {
-  const secao = relatorioDaDre(montarDre(financeiro, extrato, servicos, 1), '2026-09-07', '2026-09-07').secoes[2]!
+  const secao = relatorioDaDre(montarDre(financeiro, extrato, servicos, 1), '2026-09-07', '2026-09-07').secoes[3]!
   expect(secao.linhas.map(l => l.at(-1))).toContain('Sem valor')
   // Agrupado por socorrista, com o nome curto na primeira coluna.
   expect(secao.linhas[0]![0]).toBe('DJALMA')
