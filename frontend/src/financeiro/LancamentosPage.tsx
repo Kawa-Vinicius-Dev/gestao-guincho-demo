@@ -14,7 +14,7 @@ import { ConfirmarExclusao } from '../components/ConfirmarExclusao'
 import type { Categoria, Despesa, LancamentoFinanceiro, Motorista, Receita, Veiculo } from '../types/modelos'
 import { data, moeda } from '../utils/formatadores'
 import { FormReceita } from './extrato/FormReceita'
-import { TabelaExtrato } from './extrato/TabelaExtrato'
+import { estaVencida, TabelaExtrato } from './extrato/TabelaExtrato'
 
 /**
  * Atalhos no lugar do filtro de tipo: sao as tres perguntas que se faz ao
@@ -78,11 +78,14 @@ export default function LancamentosPage() {
     return()=>{ativo=false}
   },[])
 
-  const filtrados=useMemo(()=>lista
-    .filter(item=>noAtalho(atalho,item))
-    .filter(item=>!veiculoFiltro||item.veiculoId===Number(veiculoFiltro))
-    .filter(item=>!pesquisa||`${item.descricao} ${item.categoria} ${item.protocolo??''}`.toLowerCase().includes(pesquisa.toLowerCase())),
-    [lista,pesquisa,atalho,veiculoFiltro])
+  const filtrados=useMemo(()=>{
+    const visiveis=lista
+      .filter(item=>noAtalho(atalho,item))
+      .filter(item=>!veiculoFiltro||item.veiculoId===Number(veiculoFiltro))
+      .filter(item=>!pesquisa||`${item.descricao} ${item.categoria} ${item.protocolo??''}`.toLowerCase().includes(pesquisa.toLowerCase()))
+    // Em "A pagar" a ordem e a de pagar: a vencida mais antiga primeiro.
+    return atalho==='A_PAGAR'?[...visiveis].sort((a,b)=>a.data.localeCompare(b.data)):visiveis
+  },[lista,pesquisa,atalho,veiculoFiltro])
   // Os totais do topo sao do realizado, como o saldo sempre foi; o previsto
   // aparece embaixo de cada um. A soma dos saldos de cada dia bate com o saldo.
   const soma=(filtro:(item:LancamentoFinanceiro)=>boolean)=>filtrados.filter(filtro).reduce((t,item)=>t+item.valor,0)
@@ -92,6 +95,9 @@ export default function LancamentosPage() {
   const faltaPagar=soma(aPagar)
   const realizado=entradas-saidas
   const quantosAPagar=lista.filter(aPagar).length
+  const hojeDia=hoje()
+  const vencidas=lista.filter(item=>estaVencida(item,hojeDia))
+  const vencidoFiltrado=soma(item=>estaVencida(item,hojeDia))
   const categoriasDespesa=categorias.filter(c=>c.tipo==='DESPESA'&&c.ativo)
 
   async function salvar(evento:FormEvent<HTMLFormElement>){
@@ -128,7 +134,7 @@ export default function LancamentosPage() {
     {/* Fica preso no topo enquanto a lista rola: os tres numeros seguem os filtros. */}
     <section className="extrato-totais" aria-label="Totais do extrato">
       <div><small>Entradas</small><strong className="positive">{moeda(entradas)}</strong>{aReceber?<span>{moeda(aReceber)} a receber</span>:null}</div>
-      <div><small>Saídas</small><strong className="negative">{moeda(saidas)}</strong>{faltaPagar?<span>{moeda(faltaPagar)} a pagar</span>:null}</div>
+      <div><small>Saídas</small><strong className="negative">{moeda(saidas)}</strong>{faltaPagar?<span>{moeda(faltaPagar)} a pagar{vencidoFiltrado?<> · <b className="extrato-vencido">{moeda(vencidoFiltrado)} vencido</b></>:null}</span>:null}</div>
       <div><small>Saldo realizado</small><strong className={realizado>=0?'positive':'negative'}>{moeda(realizado)}</strong><span>{filtrados.length} {filtrados.length===1?'lançamento':'lançamentos'}</span></div>
     </section>
     <section className="panel"><div className="ledger-filters">
@@ -139,9 +145,9 @@ export default function LancamentosPage() {
     </div>
     <div className="extrato-atalhos segmented" role="group" aria-label="Mostrar">
       {ATALHOS.map(a=><button key={a.valor} type="button" className={atalho===a.valor?'active':undefined} aria-pressed={atalho===a.valor}
-        onClick={()=>setAtalho(a.valor)}>{a.texto}{a.valor==='A_PAGAR'&&quantosAPagar?` (${quantosAPagar})`:''}</button>)}
+        onClick={()=>setAtalho(a.valor)}>{a.texto}{a.valor==='A_PAGAR'&&quantosAPagar?` (${quantosAPagar}${vencidas.length?` · ${vencidas.length} ${vencidas.length===1?'vencida':'vencidas'}`:''})`:''}</button>)}
     </div>
-    <TabelaExtrato itens={filtrados} carregando={carregando} aoPagar={item=>void pagar(item)}
+    <TabelaExtrato itens={filtrados} carregando={carregando} hoje={hojeDia} aoPagar={item=>void pagar(item)}
       aoEditarReceita={item=>void editarReceita(item)} aoExcluirReceita={setExcluindoReceita}/>
     </section>
     {modal?<Modal etiqueta="Persistência real" titulo="Novo lançamento" className="modal-financial"

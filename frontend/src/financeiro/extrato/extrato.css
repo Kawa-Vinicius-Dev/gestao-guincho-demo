@@ -41,3 +41,8 @@
 .extrato-detalhe dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px 18px;margin:0}
 .extrato-detalhe dt{margin-bottom:3px;color:var(--muted);font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase}
 .extrato-detalhe dd{margin:0;font-size:13px;overflow-wrap:anywhere}
+
+/* Despesa vencida: selo vermelho e uma faixa na borda da linha. */
+.ledger-vencida{color:var(--erro-texto);background:var(--erro-fundo);text-transform:none;white-space:nowrap}
+.tabela-extrato tr.extrato-vencida>td:first-child{box-shadow:inset 3px 0 0 var(--erro-texto)}
+.extrato-totais .extrato-vencido{color:var(--erro-texto);font-weight:600}

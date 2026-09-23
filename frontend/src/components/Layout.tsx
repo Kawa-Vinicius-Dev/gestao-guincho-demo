@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { listarFavoritos, salvarFavoritos } from '../dados/favoritos'
 import { useAuth } from '../auth/AuthContext'
 import { MarcaJms } from './MarcaJms'
@@ -182,10 +182,12 @@ export function Layout() {
   const alternarGrupo=(grupo: string)=>setGrupoAberto(atual=>atual===grupo?'':grupo)
   return <div className="app-shell">
     <aside className={`sidebar ${aberto?'sidebar-open':''}`}>
-      <div className="brand">
+      {/* A marca leva ao inicio: a Visao geral do dono, o turno do socorrista. */}
+      <Link className="brand" to={admin?'/':'/turno'} onClick={()=>setAberto(false)}
+        aria-label={admin?'JMS, ir para a Visão geral':'JMS, ir para o início'} title={admin?'Visão geral':'Início'}>
         <MarcaJms className="brand-mark"/>
-        <div><strong>J M S</strong></div>
-      </div>
+        <span className="brand-texto"><strong>JMS</strong><small>Sistema de gestão</small></span>
+      </Link>
       <nav className="primary-nav" aria-label="Navegação principal">
         {atalhos.length
           ? <div className="nav-group nav-atalhos">
