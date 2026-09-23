@@ -14,6 +14,7 @@ import { usePeriodoGlobal } from '../utils/periodoGlobal'
 import { ETIQUETAS_SITUACAO } from '../porto/situacaoOs'
 import { nomesCurtos } from '../utils/nomes'
 import { GraficoMesAMes } from './GraficoMesAMes'
+import { mesesDoPeriodo, nomeDoMes } from '../utils/meses'
 import './desempenho.css'
 
 /**
@@ -65,24 +66,6 @@ function agrupar(oss: LinhaOs[], chave: (os: LinhaOs) => string | undefined, sem
     grupos.set(k, g)
   }
   return grupos
-}
-
-/** Os meses que o periodo cobre, "2026-07", "2026-08"... */
-export function mesesDoPeriodo(inicio: string, fim: string): string[] {
-  const meses: string[] = []
-  let [ano, mes] = inicio.slice(0, 7).split('-').map(Number)
-  const [anoFim, mesFim] = fim.slice(0, 7).split('-').map(Number)
-  while (ano! < anoFim! || (ano === anoFim && mes! <= mesFim!)) {
-    meses.push(`${ano}-${String(mes).padStart(2, '0')}`)
-    if (mes === 12) { ano = ano! + 1; mes = 1 } else { mes = mes! + 1 }
-  }
-  return meses
-}
-
-const nomeDoMes = (mes: string) => {
-  const [ano, numero] = mes.split('-').map(Number)
-  const texto = new Date(ano!, numero! - 1, 1).toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' }).replace('.', '')
-  return texto.charAt(0).toUpperCase() + texto.slice(1)
 }
 
 export default function DesempenhoPage() {

@@ -81,9 +81,9 @@ export function GraficoMesAMes({ meses, series, formatar, formatarEixo = formata
   const ativo = foco ? { s: todas[foco.serie]!, v: todas[foco.serie]!.valores[foco.mes] ?? 0 } : null
 
   return <figure className="grafico-mes-a-mes">
-    <ul className="grafico-mes-legenda" aria-label="Legenda">
+    {todas.length > 1 ? <ul className="grafico-mes-legenda" aria-label="Legenda">
       {todas.map(s => <li key={s.chave}><i style={{ background: cor(s) }} aria-hidden="true"/>{s.rotulo}</li>)}
-    </ul>
+    </ul> : null}
     <div className="grafico-mes-area" ref={area}>
       <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} role="img" aria-label={descricao} onMouseLeave={() => setFoco(null)}>
         {ticks.map(t => <g key={t}>
