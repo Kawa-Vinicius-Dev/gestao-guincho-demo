@@ -151,7 +151,7 @@ export default function PortoPendenciasOsPage() {
     <Painel semRespiro>
       {!carregando && !itens.length
         ? <p className="empty-inline">Nada pendente neste período. O fechamento está limpo.</p>
-        : <div className="table-scroll"><table>
+        : <div className="table-scroll tabela-rolagem"><table>
           <thead><tr>
             <th>OS</th><th>Atendimento</th><th>Seguradora</th><th>OP</th><th>Situação</th>
             <th>Valor</th><th>Socorrista</th><th>Viatura</th>

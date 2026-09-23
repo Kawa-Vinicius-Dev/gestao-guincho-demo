@@ -63,7 +63,7 @@ export function TabelaExtrato({ itens, carregando, aoPagar, aoEditarReceita, aoE
   const dias = new Map<string, LancamentoFinanceiro[]>()
   for (const item of itens) dias.set(item.data, [...(dias.get(item.data) ?? []), item])
 
-  return <div className="table-scroll">
+  return <div className="table-scroll tabela-rolagem">
     <table className="tabela-extrato">
       <thead><tr>
         <th>Descrição</th><th>Situação</th><th className="th-numero">Valor</th><th/>
