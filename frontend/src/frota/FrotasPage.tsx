@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { SeletorPeriodo } from '../components/SeletorPeriodo'
-import { ServicosPorGrupo, contarServicos } from '../components/ServicosPorGrupo'
 import './frota.css'
 import { usePeriodoGlobal } from '../utils/periodoGlobal'
 import { lerIndicadores } from '../dados/dashboard'
-import { listarOs, listarTodasAsOs, type LinhaOs } from '../dados/porto/listaOs'
+import { listarOs, listarTodasAsOs } from '../dados/porto/listaOs'
 import { porCompetencia } from '../utils/modoDoPeriodo'
 import { lerExtrato } from '../dados/extrato'
 import { atualizarVeiculo, criarVeiculo, excluirVeiculo, listarVeiculos } from '../dados/veiculos'
@@ -36,15 +35,14 @@ export default function FrotasPage(){
   const [servicosPorSigla,setServicosPorSigla]=useState<Map<string,number>>(new Map())
   // Todos os servicos do periodo, com ou sem viatura: o numero da analise do dia.
   const [totalServicos,setTotalServicos]=useState<number|null>(null)
-  const [servicosDoPeriodo,setServicosDoPeriodo]=useState<LinhaOs[]>([])
   useEffect(()=>{if(!periodo.inicio||!periodo.fim)return
     let valeu=true
     listarTodasAsOs({inicio:periodo.inicio,fim:periodo.fim,porCompetencia:porCompetencia(periodo)})
       .then(p=>{if(!valeu)return
         const mapa=new Map<string,number>()
         for(const os of p.itens){const s=os.viatura?.toUpperCase();if(s)mapa.set(s,(mapa.get(s)??0)+1)}
-        setServicosPorSigla(mapa);setTotalServicos(p.itens.length);setServicosDoPeriodo(p.itens)})
-      .catch(()=>{if(valeu){setServicosPorSigla(new Map());setTotalServicos(null);setServicosDoPeriodo([])}})
+        setServicosPorSigla(mapa);setTotalServicos(p.itens.length)})
+      .catch(()=>{if(valeu){setServicosPorSigla(new Map());setTotalServicos(null)}})
     return()=>{valeu=false}},[periodo.inicio,periodo.fim,periodo.op])
   const servicosDa=(v:Veiculo)=>servicosPorSigla.get((v.siglaPorto||v.identificacao).toUpperCase())??0
   const [aguardando,setAguardando]=useState<{total:number;previsto:number;semValor:number}|null>(null)
@@ -79,7 +77,6 @@ export default function FrotasPage(){
     {erro&&!modal?<div className="form-alert" role="alert">{erro}</div>:null}{mensagem?<div className="success-notice">{mensagem}</div>:null}
     {carregando?<Carregando/>:<>
     <section className="fleet-summary fleet-summary-4"><div><span>Serviços no período</span><strong>{totalServicos===null?'—':numero(totalServicos)}</strong><small>Todos os atendimentos, de todas as viaturas</small></div><div><span>Gasto total dos veículos</span><strong>{moeda(gastoFrota)}</strong><small>Despesas pagas vinculadas</small></div><div><span>Veículos disponíveis</span><strong>{veiculos.filter(v=>v.ativo).length}/{veiculos.length}</strong><small>Cadastro oficial</small></div><div><span>Melhor margem</span><strong>{Math.max(...margens,0).toFixed(1)}%</strong><small>Entre veículos com receita</small></div></section>
-    {totalServicos?<section className="panel panel-respiro" aria-label="Serviços por viatura"><ServicosPorGrupo tipo="viatura" titulo="Serviços por viatura no período" linhas={contarServicos(servicosDoPeriodo,'viatura').map(l=>({...l,id:veiculos.find(v=>(v.siglaPorto||v.identificacao).toUpperCase()===l.chave)?.id}))}/></section>:null}
     {veiculos.length?<section className="fleet-layout"><aside className="fleet-list" aria-label="Lista de veículos">{veiculos.map(v=>{const r=financeiro?.resultadoPorVeiculo?.find(item=>item.veiculoId===v.id),saldo=r?.resultado??0;return <button key={v.id} className={v.id===selecionado?'active':''} onClick={()=>setSelecionado(v.id)}><span className="vehicle-monogram">{v.identificacao}</span><span><strong>{v.modelo||v.identificacao}</strong><small>{ehAuxiliar(v.identificacao)?'Viatura auxiliar':v.placa??'Placa pendente'} · {v.ativo?'Ativo':'Inativo'} · <b className="fleet-servicos">{servicosDa(v)} {servicosDa(v)===1?'serviço':'serviços'}</b></small></span><span><strong className={saldo>=0?'positive':'negative'}>{moeda(saldo)}</strong><small>Resultado real</small></span></button>})}</aside>
       {veiculo?<div className="fleet-detail"><article className="vehicle-hero"><div><span className="eyebrow">{ehAuxiliar(veiculo.identificacao)?'Viatura auxiliar':veiculo.placa??'Placa pendente'}</span><h2>{veiculo.identificacao} · {ehAuxiliar(veiculo.identificacao)?'Recebe as OS que chegam sem viatura':veiculo.modelo||'Modelo não informado'}</h2><p>Custo operacional informado: {moeda(veiculo.custoPorKm)} por km.</p>
         <p>{veiculo.siglaPorto?<>Aparece como <strong>{veiculo.siglaPorto}</strong> no painel da Porto.</>:<>Sem sigla da Porto — serviços desta viatura não se vinculam sozinhos.</>}</p></div>

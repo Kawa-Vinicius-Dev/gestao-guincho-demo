@@ -52,7 +52,6 @@ export const GRUPOS: Grupo[] = [
   ] },
   { menu: '/porto/ordens-pagamento', titulo: 'OPs', abas: [
     { rota: '/porto/ordens-pagamento', rotulo: 'Ordens de pagamento' },
-    { rota: '/porto/importacoes', rotulo: 'Importar' },
     { rota: '/porto/relatorios', rotulo: 'Relatórios' },
   ] },
 ]

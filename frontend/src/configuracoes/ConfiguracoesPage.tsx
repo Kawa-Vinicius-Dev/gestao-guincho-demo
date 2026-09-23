@@ -1,53 +1,51 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { EntradaSenha } from '../components/EntradaSenha'
 import { criarUsuario, encerrarAcesso, excluirAcesso, listarUsuarios, reativarAcesso, redefinirSenha } from '../dados/usuarios'
-import { atualizarCategoria, definirCategoriaDoSocorrista, atualizarContratante, criarCategoria, criarContratante, excluirCategoria, excluirContratante, listarCategorias, listarContratantes } from '../dados/cadastros'
+import { atualizarCategoria, definirCategoriaDoSocorrista, criarCategoria, excluirCategoria, listarCategorias } from '../dados/cadastros'
 import { ConfirmarExclusao } from '../components/ConfirmarExclusao'
 import { ConfirmarAcao, type PedidoConfirmacao } from '../components/ConfirmarAcao'
 import { trocarSenha } from '../dados/sessao'
 import { baixarCopiaDosDados } from '../dados/backup'
 import { aplicarTema, temaAtual, type Tema } from '../tema'
-import type { Categoria, Contratante, SenhaRedefinida, Usuario } from '../types/modelos'
+import type { Categoria, SenhaRedefinida, Usuario } from '../types/modelos'
 import { Carregando } from '../components/EstadoPagina'
-import { CampoDocumento } from '../components/CamposMascarados'
 import { Campo, Selecao } from '../components/Campos'
 import { Modal } from '../components/Modal'
 import { ComissaoPadrao } from './ComissaoPadrao'
 import { DespesasFixas } from './DespesasFixas'
 
-type Aba='financeiro'|'cadastros'|'acessos'|'sistema'
-const ABAS:[Aba,string][]=[['financeiro','Financeiro'],['cadastros','Cadastros'],['acessos','Acessos'],['sistema','Sistema']]
+// A aba Cadastros saiu (Kawa, 23/09/2026): o contratante vem sozinho na
+// importacao e nunca e editado aqui, e o custo por km ja fica na viatura.
+type Aba='financeiro'|'acessos'|'sistema'
+const ABAS:[Aba,string][]=[['financeiro','Financeiro'],['acessos','Acessos'],['sistema','Sistema']]
 
 export default function ConfiguracoesPage(){
   // A aba fica na URL (?aba=acessos): um link de outra tela abre direto nela.
   const [aba,setAba]=useState<Aba>(()=>{const a=new URLSearchParams(window.location.search).get('aba');return ABAS.some(([id])=>id===a)?a as Aba:'financeiro'})
   function trocarAba(nova:Aba){setAba(nova);window.history.replaceState(null,'',`${window.location.pathname}?aba=${nova}`)}
-  const [categorias,setCategorias]=useState<Categoria[]>([]),[contratantes,setContratantes]=useState<Contratante[]>([]),[usuarios,setUsuarios]=useState<Usuario[]>([])
+  const [categorias,setCategorias]=useState<Categoria[]>([]),[usuarios,setUsuarios]=useState<Usuario[]>([])
   const [tema,setTema]=useState<Tema>(temaAtual)
   const [pedido,setPedido]=useState<PedidoConfirmacao|null>(null)
-  // Categoria ou contratante aberto para editar ou excluir.
-  const [editandoCadastro,setEditandoCadastro]=useState<{tipo:'categoria',item:Categoria}|{tipo:'contratante',item:Contratante}|null>(null)
-  const [excluindoCadastro,setExcluindoCadastro]=useState<{tipo:'categoria',item:Categoria}|{tipo:'contratante',item:Contratante}|null>(null)
+  // Categoria aberta para editar ou excluir.
+  const [editandoCadastro,setEditandoCadastro]=useState<{tipo:'categoria',item:Categoria}|null>(null)
+  const [excluindoCadastro,setExcluindoCadastro]=useState<{tipo:'categoria',item:Categoria}|null>(null)
   function trocarTema(novo:Tema){setTema(novo);aplicarTema(novo)}
   const [mensagem,setMensagem]=useState(''),[erro,setErro]=useState(''),[gerada,setGerada]=useState<SenhaRedefinida|null>(null),[copiada,setCopiada]=useState(false),[baixando,setBaixando]=useState(false)
-  const carregar=()=>Promise.all([listarCategorias(),listarContratantes(),listarUsuarios()])
-    .then(([c,o,u])=>{setCategorias(c);setContratantes(o);setUsuarios(u)}).catch(x=>setErro((x as Error).message))
+  const carregar=()=>Promise.all([listarCategorias(),listarUsuarios()])
+    .then(([c,u])=>{setCategorias(c);setUsuarios(u)}).catch(x=>setErro((x as Error).message))
   const [carregando,setCarregando]=useState(true)
   useEffect(()=>{void carregar().finally(()=>setCarregando(false))},[])
-  async function cadastrar(e:FormEvent<HTMLFormElement>,alvo:'categorias'|'contratantes'){e.preventDefault();const formulario=e.currentTarget;const f=new FormData(formulario)
-    const body=alvo==='categorias'?{nome:f.get('nome'),tipo:f.get('tipo')}:{nome:f.get('nome'),documento:f.get('documento')||null}
+  async function cadastrar(e:FormEvent<HTMLFormElement>){e.preventDefault();const formulario=e.currentTarget;const f=new FormData(formulario)
     setErro('');setMensagem('')
     try{
-      if(alvo==='categorias')await criarCategoria(String(body.nome),body.tipo as 'RECEITA'|'DESPESA')
-      else await criarContratante(String(body.nome),body.documento as string|null)
+      await criarCategoria(String(f.get('nome')),f.get('tipo') as 'RECEITA'|'DESPESA')
       formulario.reset();await carregar()
     }catch(x){setErro((x as Error).message)}
   }
   async function salvarCadastro(e:FormEvent<HTMLFormElement>){e.preventDefault();if(!editandoCadastro)return;const f=new FormData(e.currentTarget)
     setErro('');setMensagem('')
     try{
-      if(editandoCadastro.tipo==='categoria')await atualizarCategoria(editandoCadastro.item.id,String(f.get('nome')))
-      else await atualizarContratante(editandoCadastro.item.id,String(f.get('nome')),String(f.get('documento')||'')||null)
+      await atualizarCategoria(editandoCadastro.item.id,String(f.get('nome')))
       setEditandoCadastro(null);setMensagem('Cadastro atualizado.');await carregar()
     }catch(x){setErro((x as Error).message)}
   }
@@ -127,18 +125,10 @@ export default function ConfiguracoesPage(){
       <ComissaoPadrao/>
       <DespesasFixas/>
       <section className="panel settings-card"><header><h2>Categorias</h2><p>Classifique para entender para onde o dinheiro vai. Marque as que o <strong>socorrista pode usar</strong> ao lançar uma despesa: as outras nem aparecem para ele.</p></header><ul className="simple-list">{categorias.map(c=><li key={c.id}><strong>{c.nome}</strong><small>{c.tipo==='RECEITA'?'Receita':'Despesa'}</small>{c.tipo==='DESPESA'?<label className="categoria-socorrista"><input type="checkbox" checked={Boolean(c.socorristaPode)} onChange={()=>void alternarSocorrista(c)}/><span>Socorrista pode lançar</span></label>:null}<span className="acoes-da-linha"><button className="table-action" onClick={()=>setEditandoCadastro({tipo:'categoria',item:c})}>Editar</button><button className="table-action table-action-danger" onClick={()=>setExcluindoCadastro({tipo:'categoria',item:c})}>Excluir</button></span></li>)}</ul>
-        <form onSubmit={e=>cadastrar(e,'categorias')} className="inline-form">
+        <form onSubmit={cadastrar} className="inline-form">
           <Campo rotulo="Nome da categoria"><input name="nome" required autoCapitalize="words" autoComplete="off"/></Campo>
           <Selecao rotulo="Tipo da categoria" name="tipo" opcoes={[{valor:'DESPESA',texto:'Despesa'},{valor:'RECEITA',texto:'Receita'}]}/>
           <button className="button button-ghost">Adicionar</button></form></section>
-      </div>:null}
-      {aba==='cadastros'?<div className="settings-grid">
-      <section className="panel settings-card"><header><h2>Contratantes</h2><p>Porto Seguro e demais clientes pagadores.</p></header><ul className="simple-list">{contratantes.map(c=><li key={c.id}><strong>{c.nome}</strong><small>{c.documento||'Sem documento'}</small><span className="acoes-da-linha"><button className="table-action" onClick={()=>setEditandoCadastro({tipo:'contratante',item:c})}>Editar</button><button className="table-action table-action-danger" onClick={()=>setExcluindoCadastro({tipo:'contratante',item:c})}>Excluir</button></span></li>)}</ul>
-        <form onSubmit={e=>cadastrar(e,'contratantes')} className="inline-form">
-          <Campo rotulo="Nome do contratante"><input name="nome" required autoCapitalize="words" autoComplete="off"/></Campo>
-          <CampoDocumento rotulo="CNPJ ou CPF" name="documento"/>
-          <button className="button button-ghost">Adicionar</button></form></section>
-      <section className="panel settings-card"><header><h2>Custos da frota</h2><p>O custo por km é configurado em cada veículo e aplicado ao km morto no momento do registro.</p></header><a className="button button-ghost" href="/veiculos">Configurar veículos</a></section>
       </div>:null}
       {aba==='acessos'?<div className="settings-grid">
       <section className="panel settings-card"><header><h2>Acessos</h2><p>Quem entra no sistema. Crie uma conta nova, ou redefina a senha de quem esqueceu e passe a provisória para a pessoa.</p></header><ul className="simple-list">{usuarios.map(u=><li key={u.id}><strong>{u.nome}</strong><small>{u.email} · {u.perfil==='ADMINISTRADOR'?'Administrador':'Socorrista'}{u.ativo?'':' · encerrado'}{u.senhaProvisoria?' · senha provisória pendente':''}</small><button className="table-action" onClick={()=>setPedido({titulo:'Redefinir senha?',efeito:<>A senha atual de <strong>{u.nome}</strong> para de funcionar na hora. O sistema gera uma senha provisória para você repassar, e a pessoa troca no primeiro acesso.</>,resumo:[['Usuário',u.nome],['E-mail',u.email]],textoConfirmar:'Redefinir senha',perigo:true,aoConfirmar:()=>redefinir(u)})}>Redefinir senha</button>{u.ativo?<button className="table-action table-action-danger" onClick={()=>pedirEncerramento(u)}>Encerrar acesso</button>:<button className="table-action" onClick={()=>pedirReativacao(u)}>Reativar acesso</button>}<button className="table-action table-action-danger" onClick={()=>pedirExclusao(u)}>Excluir</button></li>)}</ul>
@@ -163,17 +153,16 @@ export default function ConfiguracoesPage(){
       {copiada?<div className="success-notice">Senha copiada.</div>:null}
       <div className="modal-actions"><button className="button button-ghost" onClick={()=>void copiar(gerada.senhaProvisoria)}>Copiar</button><button className="button button-primary" onClick={()=>setGerada(null)}>Já anotei</button></div>
     </Modal>:null}
-    {editandoCadastro?<Modal etiqueta="Cadastro" titulo={editandoCadastro.tipo==='categoria'?'Editar categoria':'Editar contratante'} aoFechar={()=>setEditandoCadastro(null)}>
+    {editandoCadastro?<Modal etiqueta="Cadastro" titulo="Editar categoria" aoFechar={()=>setEditandoCadastro(null)}>
       <form onSubmit={salvarCadastro} className="form-grid">
         <Campo rotulo="Nome"><input name="nome" defaultValue={editandoCadastro.item.nome} required autoCapitalize="words" autoComplete="off"/></Campo>
-        {editandoCadastro.tipo==='contratante'?<CampoDocumento rotulo="CNPJ ou CPF" name="documento" defaultValue={editandoCadastro.item.documento}/>:null}
         <div className="modal-actions"><button type="button" className="button button-ghost" onClick={()=>setEditandoCadastro(null)}>Cancelar</button><button className="button button-primary">Salvar alterações</button></div>
       </form>
     </Modal>:null}
     {excluindoCadastro?<ConfirmarExclusao coisa={excluindoCadastro.tipo} nome={excluindoCadastro.item.nome}
-      aviso={excluindoCadastro.tipo==='categoria'?'A categoria sai da lista. Se já tiver lançamento nela, o sistema não deixa excluir.':'O contratante sai da lista. Se já tiver receita ligada, o sistema não deixa excluir.'}
+      aviso="A categoria sai da lista. Se já tiver lançamento nela, o sistema não deixa excluir."
       resumo={[['Nome',excluindoCadastro.item.nome]]}
-      aoConfirmar={async()=>{if(excluindoCadastro.tipo==='categoria')await excluirCategoria(excluindoCadastro.item.id);else await excluirContratante(excluindoCadastro.item.id);setMensagem('Cadastro excluído.');await carregar()}}
+      aoConfirmar={async()=>{await excluirCategoria(excluindoCadastro.item.id);setMensagem('Categoria excluída.');await carregar()}}
       aoFechar={()=>setExcluindoCadastro(null)}/>:null}
     {pedido?<ConfirmarAcao {...pedido} aoFechar={()=>setPedido(null)}/>:null}
   </div>

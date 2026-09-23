@@ -2,7 +2,6 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { LinkSocorrista, LinkViatura } from '../components/LinksDeDado'
 import './tipoCusto.css'
 import { lancarFixasVencidas } from '../dados/despesasFixas'
-import { ConfirmarExclusao } from '../components/ConfirmarExclusao'
 import { ConfirmarAcao, type PedidoConfirmacao } from '../components/ConfirmarAcao'
 import { SeletorPeriodo } from '../components/SeletorPeriodo'
 import { usePeriodoGlobal } from '../utils/periodoGlobal'
@@ -14,12 +13,11 @@ import { listarVeiculos } from '../dados/veiculos'
 import { useAuth } from '../auth/AuthContext'
 import { meuTurnoDoDia, type MeuTurnoDoDia } from '../dados/turnos'
 import { useAoVivo } from '../dados/aoVivo'
-import { CampoNumero } from '../components/CamposMascarados'
 import { StatusBadge } from '../components/StatusBadge'
 import { Carregando, Vazio } from '../components/EstadoPagina'
 import type { Categoria, Despesa, Motorista, Veiculo } from '../types/modelos'
 import { data, hojeIso, moeda } from '../utils/formatadores'
-import { Campo, Selecao } from '../components/Campos'
+import { Selecao } from '../components/Campos'
 import { FORMAS_PAGAMENTO } from './LancamentosPage'
 import { CampoValor } from '../components/CampoValor'
 import { AcoesModal, Modal } from '../components/Modal'
@@ -31,6 +29,9 @@ export default function DespesasPage(){
   const {usuario}=useAuth(),admin=usuario?.perfil==='ADMINISTRADOR'
   const [lista,setLista]=useState<Despesa[]>([]),[categorias,setCategorias]=useState<Categoria[]>([]),[veiculos,setVeiculos]=useState<Veiculo[]>([]),[motoristas,setMotoristas]=useState<Motorista[]>([])
   const [form,setForm]=useState(false),[mensagem,setMensagem]=useState(''),[erro,setErro]=useState('')
+  // Trava o salvar enquanto grava: um clique duplo lancava a mesma despesa duas
+  // vezes (o seguro de 10/09 entrou em dobro, com menos de 1 segundo entre os dois).
+  const [salvando,setSalvando]=useState(false)
   // O socorrista escolhido decide se a marca de desconto aparece: sem ele nao ha
   // de quem descontar.
   const [socorristaDoForm,setSocorristaDoForm]=useState('')
@@ -78,7 +79,9 @@ export default function DespesasPage(){
     const alvo=lista.find(d=>d.id===paraEditar);if(!alvo)return
     abrirEdicao(alvo);setParaEditar(0)
     window.history.replaceState(null,'',window.location.pathname)},[lista,paraEditar])
-  async function salvar(e:FormEvent<HTMLFormElement>){e.preventDefault();const f=new FormData(e.currentTarget)
+  async function salvar(e:FormEvent<HTMLFormElement>){e.preventDefault();if(salvando)return;setSalvando(true)
+    try{await gravar(new FormData(e.currentTarget))}finally{setSalvando(false)}}
+  async function gravar(f:FormData){
     const texto=(campo:string)=>String(f.get(campo)||'')||null
     const categoriaId=Number(f.get('categoriaId'))
     // Descricao e opcional: sem ela, o nome da categoria ja diz o que foi.
@@ -206,7 +209,7 @@ export default function DespesasPage(){
         <AcoesModal aoCancelar={()=>{setForm(false);setEditando(null)}}>
           {editando&&admin?<button type="button" className="button button-ghost acao-excluir-no-editar"
             onClick={()=>{setExcluindo(editando);setForm(false);setEditando(null)}}>Excluir despesa</button>:null}
-          <button className="button button-primary">{editando?'Salvar alterações':'Salvar despesa'}</button>
+          <button className="button button-primary" disabled={salvando}>{salvando?'Salvando…':editando?'Salvar alterações':'Salvar despesa'}</button>
         </AcoesModal>
       </form>
     </Modal>:null}

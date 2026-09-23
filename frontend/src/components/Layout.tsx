@@ -20,6 +20,9 @@ const itens = [
   ['/minha-comissao', 'Meus serviços', false, 'equipe'],
   ['/porto/ordens-servico', 'Serviços', true, 'porto'],
   ['/porto/ordens-pagamento', 'OPs', true, 'porto'],
+  // A importacao e a porta de entrada dos dados da Porto: tem item proprio
+  // (Kawa, 23/09/2026: "importar tem por obrigacao ter uma tela so para ela").
+  ['/porto/importacoes', 'Importar', true, 'porto'],
   ['/configuracoes', 'Configurações', true, 'sistema'],
 ] as const
 /** Mesmo teto do backend (FavoritoMenuController.MAXIMO): o topo do menu tem de continuar curto. */
