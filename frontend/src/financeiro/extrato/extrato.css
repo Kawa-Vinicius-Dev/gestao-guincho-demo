@@ -1,0 +1,43 @@
+/* Extrato: totais presos no topo, atalhos, lancamentos agrupados por dia e o
+   detalhe da linha, que guarda o que saiu das colunas. */
+.extrato-totais{position:sticky;top:0;z-index:20;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;margin-bottom:var(--espaco-3);overflow:hidden;border:1px solid var(--line);border-radius:12px;background:var(--line);box-shadow:0 8px 22px rgba(7,20,38,.08)}
+.extrato-totais>div{padding:14px 18px;background:var(--superficie)}
+.extrato-totais small,.extrato-totais strong,.extrato-totais span{display:block}
+.extrato-totais small{color:var(--muted);font-size:12px;font-weight:600}
+.extrato-totais strong{margin:4px 0 2px;font:600 28px/1.1 'Barlow Condensed',sans-serif;font-variant-numeric:tabular-nums}
+.extrato-totais span{color:var(--muted);font-size:var(--t-apoio);font-variant-numeric:tabular-nums}
+@media(max-width:620px){.extrato-totais{grid-template-columns:1fr}}
+
+.extrato-atalhos{margin:var(--espaco-2) var(--painel-pad)}
+
+.tabela-extrato tr.linha-clicavel{cursor:pointer}
+.tabela-extrato th,.tabela-extrato td{vertical-align:middle}
+.tabela-extrato tbody td:first-child{position:relative;padding-left:40px}
+.tabela-extrato td:first-child strong,.tabela-extrato td:first-child small{display:block}
+.tabela-extrato td:first-child small{margin-top:3px;color:var(--muted);font-size:12px}
+.tabela-extrato .col-valor{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.tabela-extrato .extrato-acoes{text-align:right;white-space:nowrap}
+
+/* Seta que abre o detalhe: gira quando aberto. */
+.extrato-abrir{position:absolute;left:12px;top:50%;width:20px;height:20px;margin-top:-10px;padding:0;border:0;border-radius:5px;background:none;cursor:pointer}
+.extrato-abrir::before{content:'';position:absolute;left:6px;top:5px;width:6px;height:6px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(-45deg);transition:transform .15s ease}
+.extrato-abrir[aria-expanded=true]::before{left:7px;top:4px;transform:rotate(45deg)}
+.extrato-abrir:hover{background:var(--superficie-hover)}
+.extrato-abrir:focus-visible{outline:2px solid var(--blue-600);outline-offset:1px}
+@media(prefers-reduced-motion:reduce){.extrato-abrir::before{transition:none}}
+
+/* Cabecalho do dia: data a esquerda, saldo do dia a direita. */
+.tabela-extrato tr.extrato-dia>*{padding-top:10px;padding-bottom:10px;border-top:1px solid var(--line);background:var(--superficie-2);font-size:13px}
+.tabela-extrato tr.extrato-dia th{position:static;padding-left:16px;text-align:left;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
+.tabela-extrato tr.extrato-dia th span{color:var(--muted);text-transform:capitalize}
+.tabela-extrato tr.extrato-dia th small{margin-left:10px;color:var(--muted);font-weight:400}
+.tabela-extrato .extrato-subtotal{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.tabela-extrato .extrato-previsto{text-align:right;white-space:nowrap}
+.tabela-extrato .extrato-previsto small{color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}
+.tabela-extrato tr.extrato-dia th small{letter-spacing:0;text-transform:none;font-size:12px}
+
+.tabela-extrato tr.extrato-aberta>td{background:var(--superficie-hover)}
+.tabela-extrato tr.extrato-detalhe>td{padding:4px 16px 14px 40px;background:var(--superficie-hover)}
+.extrato-detalhe dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px 18px;margin:0}
+.extrato-detalhe dt{margin-bottom:3px;color:var(--muted);font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+.extrato-detalhe dd{margin:0;font-size:13px;overflow-wrap:anywhere}

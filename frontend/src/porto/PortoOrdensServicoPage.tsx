@@ -56,6 +56,10 @@ export default function PortoOrdensServicoPage() {
   const [sigla, setSigla] = useState(() => (busca.get('sigla') ?? '').toUpperCase())
   const [situacao, setSituacao] = useState<SituacaoOs>(() => (busca.get('situacao') ?? '') as SituacaoOs)
   const [semViatura, setSemViatura] = useState(() => busca.get('semViatura') === '1')
+  // Os filtros de todo dia ficam a vista; numero de OS e OP, especialidade e
+  // "so sem viatura" ficam em "Mais filtros". Um link que ja traz um deles
+  // (?os=, ?op=, ?semViatura=1) abre a faixa, para o filtro nao ficar escondido.
+  const [maisFiltros, setMaisFiltros] = useState(() => Boolean(busca.get('os') || busca.get('op') || busca.get('semViatura') === '1'))
   const [informando, setInformando] = useState<LinhaOs | null>(null)
   const [emLote, setEmLote] = useState(false)
   const [pedido, setPedido] = useState<PedidoConfirmacao | null>(null)
@@ -123,7 +127,8 @@ export default function PortoOrdensServicoPage() {
   }, [])
 
   const paginas = dados ? Math.max(1, Math.ceil(dados.total / TAMANHO_DA_PAGINA)) : 1
-  const temFiltro = Boolean(numeroOs || numeroOp || especialidade || motoristaId || sigla || situacao || semViatura)
+  const extrasAtivos = [numeroOs, numeroOp, especialidade, semViatura].filter(Boolean).length
+  const temFiltro = Boolean(extrasAtivos || motoristaId || sigla || situacao)
   const veiculoPorSigla = useMemo(() => new Map(veiculos.map(v => [siglaDe(v), v])), [veiculos])
 
   function limparFiltros() {
@@ -267,18 +272,26 @@ export default function PortoOrdensServicoPage() {
     {mensagem ? <div className="success-notice">{mensagem}</div> : null}
 
     <Painel className="painel-filtros">
-      <form className="ledger-filters" onSubmit={e => e.preventDefault()}>
+      <form className="ledger-filters filtros-os" onSubmit={e => e.preventDefault()}>
         <SeletorPeriodo periodo={periodo} aoMudar={setPeriodo}/>
-        <Campo rotulo="Número da OS" ajuda={buscandoNumero ? "Busca por número procura em todo o histórico." : undefined}><input value={numeroOs} onChange={e => setNumeroOs(e.target.value)} autoCorrect="off" spellCheck={false} autoComplete="off"/></Campo>
-        <Campo rotulo="Número da OP"><input value={numeroOp} onChange={e => setNumeroOp(e.target.value)} inputMode="numeric" autoComplete="off"/></Campo>
         <Selecao rotulo="Socorrista" vazio="Todos" value={motoristaId || ''} onChange={e => setMotoristaId(Number(e.target.value))}
           opcoes={motoristas.map(m => ({ valor: m.id, texto: m.nome }))}/>
         <Selecao rotulo="Viatura" vazio="Todas" value={sigla} onChange={e => setSigla(e.target.value)}
           opcoes={veiculos.map(v => ({ valor: siglaDe(v), texto: v.identificacao }))}/>
-        <Campo rotulo="Especialidade"><input value={especialidade} onChange={e => setEspecialidade(e.target.value)} autoComplete="off"/></Campo>
         <Selecao rotulo="Situação" vazio="Todas" value={situacao} onChange={e => setSituacao(e.target.value as SituacaoOs)} opcoes={SITUACOES}/>
-        <label className="check-field"><input type="checkbox" checked={semViatura} onChange={e => setSemViatura(e.target.checked)}/><span>Só sem viatura</span></label>
-        {temFiltro ? <button type="button" className="button button-ghost" onClick={limparFiltros}>Limpar filtros</button> : null}
+        <div className="filtros-botoes">
+          <button type="button" className="button button-ghost" aria-expanded={maisFiltros} aria-controls="os-mais-filtros"
+            onClick={() => setMaisFiltros(v => !v)}>
+            {maisFiltros ? 'Menos filtros' : 'Mais filtros'}{extrasAtivos ? ` (${extrasAtivos})` : ''}
+          </button>
+          {temFiltro ? <button type="button" className="button button-ghost" onClick={limparFiltros}>Limpar filtros</button> : null}
+        </div>
+        {maisFiltros ? <div className="filtros-extras" id="os-mais-filtros">
+          <Campo rotulo="Número da OS" ajuda={buscandoNumero ? "Busca por número procura em todo o histórico." : undefined}><input value={numeroOs} onChange={e => setNumeroOs(e.target.value)} autoCorrect="off" spellCheck={false} autoComplete="off"/></Campo>
+          <Campo rotulo="Número da OP"><input value={numeroOp} onChange={e => setNumeroOp(e.target.value)} inputMode="numeric" autoComplete="off"/></Campo>
+          <Campo rotulo="Especialidade"><input value={especialidade} onChange={e => setEspecialidade(e.target.value)} autoComplete="off"/></Campo>
+          <label className="check-field"><input type="checkbox" checked={semViatura} onChange={e => setSemViatura(e.target.checked)}/><span>Só sem viatura</span></label>
+        </div> : null}
       </form>
     </Painel>
 

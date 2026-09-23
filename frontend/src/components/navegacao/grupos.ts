@@ -48,7 +48,9 @@ export const GRUPOS: Grupo[] = [
     { rota: '/porto/pendencias', rotulo: 'Pendências' },
     { rota: '/contas-receber', rotulo: 'A receber' },
     { rota: '/porto/diario', rotulo: 'Calendário' },
-    { rota: '/porto/devolvidos', rotulo: 'Devolvidos' },
+    // Devolvidos saiu do menu (Kawa, 23/09/2026): era a pendencia antiga de
+    // servico devolvido, que nenhuma importacao cria mais. O endereco
+    // /porto/devolvidos continua abrindo para quem tiver o link.
   ] },
   { menu: '/porto/ordens-pagamento', titulo: 'OPs', abas: [
     { rota: '/porto/ordens-pagamento', rotulo: 'Ordens de pagamento' },

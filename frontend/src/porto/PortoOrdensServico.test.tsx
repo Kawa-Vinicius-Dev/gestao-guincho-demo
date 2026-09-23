@@ -116,6 +116,8 @@ test('define a viatura das OS filtradas em lote, só depois de confirmar', async
   const user = userEvent.setup({ delay: null })
   await abrir()
 
+  // "So sem viatura" mora em "Mais filtros".
+  await user.click(await screen.findByRole('button', { name: /mais filtros/i }))
   await user.click(await screen.findByLabelText(/só sem viatura/i))
   await user.click(await screen.findByRole('button', { name: /definir viatura das os filtradas/i }))
   const janela = screen.getByRole('dialog')
@@ -267,4 +269,20 @@ test('link do painel abre a tela já filtrada só nas OS sem viatura', async () 
 
   expect(await screen.findByLabelText(/só sem viatura/i)).toBeChecked()
   expect(pedidos.at(-1)).toEqual(expect.objectContaining({ p_sem_viatura: true }))
+})
+
+test('período, socorrista, viatura e situação ficam à vista; o resto abre em "Mais filtros"', async () => {
+  servidorBase()
+  const user = userEvent.setup({ delay: null })
+  await abrir()
+
+  expect(await screen.findByLabelText(/^socorrista$/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^situação$/i)).toBeInTheDocument()
+  expect(screen.queryByLabelText(/número da os/i)).toBeNull()
+  expect(screen.queryByLabelText(/só sem viatura/i)).toBeNull()
+
+  await user.click(screen.getByRole('button', { name: /mais filtros/i }))
+  await user.type(screen.getByLabelText(/número da op/i), '123')
+  // O botao conta os filtros escondidos que estao valendo.
+  expect(screen.getByRole('button', { name: /menos filtros \(1\)/i })).toHaveAttribute('aria-expanded', 'true')
 })

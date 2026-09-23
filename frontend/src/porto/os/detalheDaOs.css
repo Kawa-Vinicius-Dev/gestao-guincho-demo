@@ -18,3 +18,13 @@
 .tabela-os .os-abrir{padding:0;border:0;color:inherit;background:none;font:600 14px 'IBM Plex Mono',monospace;text-decoration:underline;text-decoration-color:color-mix(in srgb,currentColor 35%,transparent);text-underline-offset:3px;cursor:pointer}
 .tabela-os .os-abrir:hover{color:var(--blue-600)}.tabela-os .os-abrir:focus-visible{outline:2px solid var(--blue-600);outline-offset:2px}
 .tabela-os tr.linha-clicavel{cursor:pointer}
+/* Filtros: periodo, socorrista, viatura e situacao a vista; o resto numa
+   segunda faixa que abre em "Mais filtros", com a mesma grade dos campos.
+   Em 1920 os de todo dia cabem numa linha; em 1366, com o menu lateral, nao
+   cabem, e ficam na grade de duas linhas do painel de filtros. */
+@media(min-width:1600px){
+  .painel-filtros .ledger-filters.filtros-os{grid-template-columns:minmax(180px,1.3fr) repeat(3,minmax(118px,.8fr)) repeat(3,minmax(120px,1fr)) auto}
+}
+.filtros-botoes{display:flex;gap:var(--espaco-2);align-self:end}
+.filtros-botoes .button{white-space:nowrap}
+.filtros-extras{grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:var(--espaco-2);align-items:end;padding-top:var(--espaco-2);border-top:1px dashed var(--line)}

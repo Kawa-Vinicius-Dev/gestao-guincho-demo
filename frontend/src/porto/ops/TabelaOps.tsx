@@ -1,7 +1,7 @@
 import { Vazio } from '../../components/EstadoPagina'
 import type { OrdemPagamentoPorto } from '../../types/modelos'
 import { moeda } from '../../utils/formatadores'
-import { data, rotulo } from './opcoes'
+import { rotulo } from './opcoes'
 
 /**
  * A OP chega paga.
@@ -9,7 +9,9 @@ import { data, rotulo } from './opcoes'
  * O relatorio da Porto so e emitido depois do pagamento, entao "confirmar
  * recebimento" era um passo que nunca dizia nao — e um botao que so tem um
  * caminho nao e uma decisao, e sim trabalho. Corrigir valor ou data continua
- * possivel pelo detalhe da OP, para o caso de erro.
+ * possivel pelo detalhe da OP, para o caso de erro. Pelo mesmo motivo a
+ * tabela nao tem "valor recebido" nem "recebida em": repetiam o valor e a
+ * data da propria OP.
  */
 type Props = {
   itens: OrdemPagamentoPorto[]
@@ -25,7 +27,6 @@ export function TabelaOps({ itens, aoAbrirDetalhe }: Props) {
       <thead><tr>
         <th>Número da OP</th><th>Período</th><th>OS vinculadas</th>
         <th>Valor previsto</th><th>Soma das OS</th><th>Diferença</th><th>Conciliação</th>
-        <th>Valor recebido</th><th>Recebida em</th>
       </tr></thead>
       <tbody>
         {itens.map(op => <tr key={op.id}>
@@ -40,8 +41,6 @@ export function TabelaOps({ itens, aoAbrirDetalhe }: Props) {
           <td>{moeda(op.valorOrdensServico ?? 0)}</td>
           <td>{moeda(op.divergencia ?? 0)}</td>
           <td><span className="ledger-status ledger-pendente">{rotulo(op.statusConciliacao)}</span></td>
-          <td>{op.valorRecebido == null ? '—' : moeda(op.valorRecebido)}</td>
-          <td>{data(op.dataRecebimento)}</td>
         </tr>)}
       </tbody>
     </table>
