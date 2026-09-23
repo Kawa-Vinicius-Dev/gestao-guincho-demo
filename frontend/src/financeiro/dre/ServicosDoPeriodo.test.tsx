@@ -7,11 +7,12 @@ import { ServicosDoPeriodo } from './ServicosDoPeriodo'
 import { DespesasDoPeriodo } from './DespesasDoPeriodo'
 
 const listar = vi.hoisted(() => vi.fn())
-vi.mock('../../dados/porto/listaOs', () => ({ listarTodasAsOs: (...a: unknown[]) => listar(...a) }))
+vi.mock('../../dados/porto/listaOs', async orig => ({ ...await orig<object>(), listarTodasAsOs: (...a: unknown[]) => listar(...a) }))
 
 const os = (i: number, motorista: string, extra: Partial<LinhaOs> = {}): LinhaOs => ({
   id: i, numero: `OS-${i}`, valorTotal: 0, situacao: 'AGUARDANDO_ANALISE', motorista,
-  motoristaId: motorista === 'ANDERSON' ? 7 : 8, especialidade: 'SOCORRO', dataAtendimento: '2026-09-08', ...extra,
+  motoristaId: motorista === 'ANDERSON' ? 7 : 8, especialidade: 'SOCORRO', dataAtendimento: '2026-09-08',
+  semValor: extra.valorPrevisto === undefined, ...extra,
 })
 const desenhar = () => render(<MemoryRouter><ServicosDoPeriodo inicio="2026-09-08" fim="2026-09-08"/></MemoryRouter>)
 

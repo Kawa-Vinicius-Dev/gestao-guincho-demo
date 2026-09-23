@@ -9,6 +9,7 @@ import { data, moeda } from '../utils/formatadores'
 import { Selecao } from '../components/Campos'
 import { SeletorPeriodo } from '../components/SeletorPeriodo'
 import { usePeriodoGlobal } from '../utils/periodoGlobal'
+import { porCompetencia } from '../utils/modoDoPeriodo'
 import { Carregando } from '../components/EstadoPagina'
 import { CabecalhoPagina, GradeIndicadores, Indicador, Painel } from '../components/ui/Pagina'
 import { CampoValor } from '../components/CampoValor'
@@ -40,6 +41,8 @@ const FILTROS = [
 export default function PortoPendenciasOsPage() {
   const [periodo, setPeriodo] = usePeriodoGlobal()
   const { inicio, fim } = periodo
+  // Mesmo recorte das outras telas: OP e mes pela competencia, De-ate pela data.
+  const competencia = porCompetencia(periodo)
   // Link de outra tela (?filtro=SOCORRISTA) ja abre filtrado.
   const [filtro, setFiltro] = useState(() => new URLSearchParams(window.location.search).get('filtro') ?? 'TODAS')
   const [itens, setItens] = useState<PendenciaOsPorto[]>([])
@@ -52,10 +55,10 @@ export default function PortoPendenciasOsPage() {
 
   const carregar = useCallback(async (de: string, ate: string) => {
     setCarregando(true); setErro(''); setAcertos({})
-    try { setItens(await listarPendenciasOsPorto(de, ate)) }
+    try { setItens(await listarPendenciasOsPorto(de, ate, competencia)) }
     catch (e) { setErro((e as Error).message) }
     finally { setCarregando(false) }
-  }, [])
+  }, [competencia])
 
   useEffect(() => { if (inicio && fim && inicio <= fim) void carregar(inicio, fim) }, [carregar, inicio, fim])
   // Recarrega sozinha, mas nunca por cima do que esta sendo preenchido e ainda nao foi salvo.

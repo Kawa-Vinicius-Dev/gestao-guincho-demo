@@ -48,6 +48,8 @@ export interface LinhaOs {
   /** So existe quando a OS ja foi paga numa OP. */
   comissao?: number
   situacao: SituacaoDaOs
+  /** Sem OP e sem valor informado (`porto_os_situacao.sem_valor`). */
+  semValor: boolean
   competenciaInicio?: string
   competenciaFim?: string
   /** Informado a mao antes da OP; continua guardado depois dela, para conferir. */
@@ -76,6 +78,13 @@ export interface PaginaOs {
 export const TAMANHO_DA_PAGINA = 100
 
 const numero = (v: unknown) => (v === null || v === undefined ? undefined : Number(v))
+
+/**
+ * O valor da OS em toda tela: o oficial da OP quando ha; senao o informado a
+ * mao; senao zero. Vem pronto do banco (`valorPrevisto`); aqui so nao repete a
+ * conta em cada tela.
+ */
+export const valorDaOs = (os: LinhaOs) => os.valorPrevisto ?? 0
 
 /**
  * Valor informado a mao para uma OS que ainda nao entrou em OP. Vale como
@@ -117,6 +126,7 @@ export async function listarOs(filtro: FiltroOs, pagina = 0, tamanho = TAMANHO_D
     comissaoTotal: Number(bruto.comissaoTotal),
     itens: bruto.itens.map(i => ({
       ...i,
+      semValor: Boolean(i.semValor),
       valorTotal: Number(i.valorTotal),
       comissao: numero(i.comissao),
       valorManual: numero(i.valorManual),
