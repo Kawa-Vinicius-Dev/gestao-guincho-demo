@@ -52,10 +52,10 @@ test('cadastra uma despesa fixa e avisa que ela entra sozinha', async () => {
   expect(await screen.findByText('Aluguel do pátio')).toBeInTheDocument()
 })
 
-test('cadastra seguro em 3 de 10 e a lista mostra a próxima parcela', async () => {
+test('cadastra 10 parcelas com 3 já pagas, e a lista mostra a próxima', async () => {
   let enviado: Record<string, unknown> | null = null
   const seguro = { ...aluguel, id: 2, descricao: 'Seguro dos caminhões', valor: 5716.4,
-    totalParcelas: 10, parcelaInicial: 3, proximaParcela: 3 }
+    totalParcelas: 10, parcelaInicial: 4, proximaParcela: 4 }
   let fixas: Record<string, unknown>[] = []
   servidor.use(
     http.get('/api/despesas-recorrentes', () => HttpResponse.json(fixas)),
@@ -68,8 +68,9 @@ test('cadastra seguro em 3 de 10 e a lista mostra a próxima parcela', async () 
   const user = userEvent.setup({ delay: null })
   abrir()
   await cadastrar(user, { '^descrição': 'Seguro dos caminhões', 'valor por mês': '571640', 'dia do vencimento': '18',
-    'parcela atual': '3', 'total de parcelas': '10' })
+    'total de parcelas': '10', 'parcelas já pagas': '3' })
 
-  expect(enviado).toMatchObject({ parcelaInicial: 3, totalParcelas: 10 })
-  expect(await screen.findByText('Próxima 3/10')).toBeInTheDocument()
+  // 10 parcelas com 3 ja pagas: a proxima a entrar e a 4a.
+  expect(enviado).toMatchObject({ parcelaInicial: 4, totalParcelas: 10 })
+  expect(await screen.findByText('3 de 10 pagas · próxima 4ª')).toBeInTheDocument()
 })

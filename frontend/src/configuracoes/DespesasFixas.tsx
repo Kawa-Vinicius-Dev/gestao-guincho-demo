@@ -48,6 +48,9 @@ export function DespesasFixas() {
     evento.preventDefault()
     const f = new FormData(evento.currentTarget)
     const total = Number(f.get('totalParcelas')) || null
+    // "10 parcelas, 3 ja pagas": a proxima a entrar e a 4a.
+    const pagas = Number(f.get('parcelasPagas')) || 0
+    if (total && pagas >= total) { setErro('Se todas as parcelas já foram pagas, não há o que lançar.'); return }
     const dados: DadosDespesaFixa = {
       descricao: String(f.get('descricao')).trim(),
       categoriaId: Number(f.get('categoriaId')),
@@ -56,7 +59,7 @@ export function DespesasFixas() {
       veiculoId: f.get('veiculoId') ? Number(f.get('veiculoId')) : null,
       observacoes: String(f.get('observacoes') || '') || null,
       totalParcelas: total,
-      parcelaInicial: total ? (Number(f.get('parcelaInicial')) || 1) : null,
+      parcelaInicial: total ? pagas + 1 : null,
     }
     setErro('')
     try {
@@ -80,9 +83,12 @@ export function DespesasFixas() {
           efeito: <><strong>{fixa.descricao}</strong> volta a entrar sozinha, já paga, todo dia {fixa.diaVencimento}.</> })
   }
 
-  const parcelas = (f: DespesaRecorrente) => !f.totalParcelas ? 'Sem fim'
-    : f.proximaParcela && f.proximaParcela <= f.totalParcelas ? `Próxima ${f.proximaParcela}/${f.totalParcelas}`
-    : `${f.totalParcelas}/${f.totalParcelas} pagas`
+  const parcelas = (f: DespesaRecorrente) => {
+    if (!f.totalParcelas) return 'Sem fim'
+    const pagas = Math.min((f.proximaParcela ?? f.parcelaInicial ?? 1) - 1, f.totalParcelas)
+    return pagas >= f.totalParcelas ? `${f.totalParcelas} de ${f.totalParcelas} pagas · encerrada`
+      : `${pagas} de ${f.totalParcelas} pagas · próxima ${pagas + 1}ª`
+  }
 
   return <section className="panel settings-card settings-card-largo" aria-label="Despesas fixas">
     <header className="settings-card-cabecalho">
@@ -129,11 +135,12 @@ export function DespesasFixas() {
           opcoes={categorias.filter(c => c.ativo).map(c => ({ valor: c.id, texto: c.nome }))}/>
         <Selecao rotulo="Viatura" name="veiculoId" vazio="Sem viatura" defaultValue={aberta?.veiculoId ?? ''}
           opcoes={veiculos.map(v => ({ valor: v.id, texto: v.identificacao }))}/>
-        <CampoNumero rotulo="Parcela atual" name="parcelaInicial" decimais={0} min={1} placeholder="Ex.: 3"
-          defaultValue={aberta?.parcelaInicial ? String(aberta.parcelaInicial) : ''}
-          ajuda="A do próximo lançamento. Depois, a contagem segue sozinha."/>
         <CampoNumero rotulo="Total de parcelas" name="totalParcelas" decimais={0} min={1} placeholder="Vazio: sem fim"
-          defaultValue={aberta?.totalParcelas ? String(aberta.totalParcelas) : ''} ajuda="Na última, a fixa acaba sozinha."/>
+          defaultValue={aberta?.totalParcelas ? String(aberta.totalParcelas) : ''}
+          ajuda="Para o que tem fim, como o financiamento de um caminhão. Na última, a fixa acaba sozinha."/>
+        <CampoNumero rotulo="Parcelas já pagas" name="parcelasPagas" decimais={0} min={0} placeholder="Ex.: 3"
+          defaultValue={aberta?.parcelaInicial ? String(aberta.parcelaInicial - 1) : ''}
+          ajuda="10 parcelas com 3 já pagas: a próxima a entrar é a 4ª."/>
         <Campo rotulo="Observações" className="field-wide">
           <input name="observacoes" defaultValue={aberta?.observacoes} autoCapitalize="sentences" autoComplete="off"/>
         </Campo>

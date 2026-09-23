@@ -20,8 +20,8 @@ insert into public.categorias (nome,tipo,socorrista_pode) values
 insert into public.veiculos (identificacao,placa,custo_por_km) values ('L168','AAA1A11',2.00);
 insert into public.motoristas (nome,perfil_id,veiculo_id) values ('Anderson','aaaaaaaa-0000-0000-0000-000000000002',1);
 insert into public.despesas_recorrentes (descricao,categoria_id,valor,dia_vencimento,total_parcelas,parcela_inicial)
- values ('Seguro dos caminhoes',2,5716.40,18,10,3),
-        ('Internet',2,127.51,25,null,null);
+ values ('Seguro dos caminhoes',(select id from public.categorias where nome='Seguro'),5716.40,18,10,3),
+        ('Internet',(select id from public.categorias where nome='Seguro'),127.51,25,null,null);
 
 \echo '===== Comissao padrao legivel por quem esta logado ====='
 set role authenticated;
@@ -55,7 +55,7 @@ set role authenticated;
 set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000002';
 do $$ begin
   insert into public.despesas (descricao,categoria_id,valor,data_lancamento,motorista_id,veiculo_id,criado_por,status,aprovada)
-   values ('Seguro',2,50,'2026-09-12',1,1,'aaaaaaaa-0000-0000-0000-000000000002','PENDENTE',false);
+   values ('Seguro',(select id from public.categorias where nome='Seguro'),50,'2026-09-12',1,1,'aaaaaaaa-0000-0000-0000-000000000002','PENDENTE',false);
   raise exception 'FALHOU  | socorrista lancou em categoria nao liberada';
 exception when insufficient_privilege or raise_exception then
   if sqlerrm like 'FALHOU%' then raise; end if;
@@ -63,7 +63,7 @@ exception when insufficient_privilege or raise_exception then
 end $$;
 select pg_temp.checar('na categoria liberada, lanca',
   (with ins as (insert into public.despesas (descricao,categoria_id,valor,data_lancamento,motorista_id,veiculo_id,criado_por,status,aprovada)
-     values ('Diesel',1,80,'2026-09-12',1,1,'aaaaaaaa-0000-0000-0000-000000000002','PENDENTE',false) returning 1)
+     values ('Diesel',(select id from public.categorias where nome='Combustível'),80,'2026-09-12',1,1,'aaaaaaaa-0000-0000-0000-000000000002','PENDENTE',false) returning 1)
    select count(*)::text from ins), '1');
 reset role;
 
