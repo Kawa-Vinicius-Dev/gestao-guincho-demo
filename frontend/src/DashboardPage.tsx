@@ -2,12 +2,15 @@ import { useEffect,useRef,useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Carregando } from './components/EstadoPagina'
 import { SeletorPeriodo } from './components/SeletorPeriodo'
-import { CabecalhoPagina } from './components/ui/Pagina'
+import { CabecalhoPagina, Painel } from './components/ui/Pagina'
 import { useAoVivo } from './dados/aoVivo'
 import { dashboardEmCache, lerDashboard } from './dados/dashboard'
 import { IndicadoresDaOperacao, PainelDeGastos, PainelDeKm, ResultadoDoPeriodo } from './dashboard/PaineisDoResultado'
-import type { Dashboard, LancamentoFinanceiro } from './types/modelos'
+import type { Dashboard, LancamentoFinanceiro, Veiculo } from './types/modelos'
 import { listarTodasAsOs, type LinhaOs } from './dados/porto/listaOs'
+import { faturamentoPorGrupo } from './dados/porto/faturamento'
+import { listarVeiculos } from './dados/veiculos'
+import { FaturamentoPorGrupo } from './components/Graficos'
 import { lerExtrato } from './dados/extrato'
 import { ServicosDoPeriodo } from './financeiro/dre/ServicosDoPeriodo'
 import { DespesasDoPeriodo } from './financeiro/dre/DespesasDoPeriodo'
@@ -42,6 +45,8 @@ export default function DashboardPage(){
   const competencia=porCompetencia(periodo)
   const [servicos,setServicos]=useState<LinhaOs[]|null>(null)
   const [lancamentos,setLancamentos]=useState<LancamentoFinanceiro[]>([])
+  const [veiculos,setVeiculos]=useState<Veiculo[]>([])
+  useEffect(()=>{listarVeiculos().then(setVeiculos).catch(()=>setVeiculos([]))},[])
   useEffect(()=>{const {inicio,fim}=periodo;if(!inicio||!fim||inicio>fim)return
     let valeu=true;setServicos(null)
     Promise.all([listarTodasAsOs({inicio,fim,porCompetencia:competencia}).then(p=>p.itens as LinhaOs[]|null).catch(()=>null),lerExtrato(inicio,fim).catch(()=>[] as LancamentoFinanceiro[])])
@@ -121,9 +126,19 @@ export default function DashboardPage(){
               </div>
             : <PainelDeGastos dados={financeiro} inicio={inicio} fim={fim}/>}
 
-          {/* No lugar do faturamento por socorrista e viatura (que ja esta no Painel
-              Porto e em Desempenho): os servicos e as despesas do periodo, para a
-              analise do dia. */}
+          {/* Faturamento por socorrista e por viatura no formato do antigo Painel
+              Porto (Kawa, 23/09/2026), sobre a mesma lista de OS dos servicos
+              abaixo: as barras, o total e a lista sao o mesmo numero. */}
+          {servicos?<div className="painel-faturamento">
+            <Painel etiqueta="Por pessoa" titulo="Faturamento por socorrista" aoLado={<Link to="/equipe">Ver socorristas</Link>}>
+              <FaturamentoPorGrupo descricao="Faturamento por socorrista no período" vazio="Nenhum serviço neste período."
+                linhas={faturamentoPorGrupo(servicos,'socorrista')}/>
+            </Painel>
+            <Painel etiqueta="Por viatura" titulo="Faturamento por viatura" aoLado={<Link to="/veiculos">Ver viaturas</Link>}>
+              <FaturamentoPorGrupo descricao="Faturamento por viatura no período" vazio="Nenhum serviço neste período."
+                linhas={faturamentoPorGrupo(servicos,'viatura',veiculos)}/>
+            </Painel>
+          </div>:null}
           {periodo.inicio&&periodo.fim?<ServicosDoPeriodo inicio={periodo.inicio} fim={periodo.fim} porCompetencia={competencia} servicos={servicos}/>:null}
           <DespesasDoPeriodo lancamentos={lancamentos}/>
         </>

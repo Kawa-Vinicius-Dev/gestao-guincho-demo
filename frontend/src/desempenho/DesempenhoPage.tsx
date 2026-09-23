@@ -12,6 +12,7 @@ import type { Quilometragem, Veiculo } from '../types/modelos'
 import { data, moeda, numero } from '../utils/formatadores'
 import { usePeriodoGlobal } from '../utils/periodoGlobal'
 import { ETIQUETAS_SITUACAO } from '../porto/situacaoOs'
+import { nomesCurtos } from '../utils/nomes'
 import './desempenho.css'
 
 /**
@@ -94,9 +95,13 @@ export default function DesempenhoPage() {
   const grupos = useMemo<Grupo[]>(() => {
     if (!oss) return []
     if (visao === 'socorristas') {
-      return [...agrupar(oss, os => os.motorista, 'Sem socorrista').values()].map(g => {
+      const porNome = [...agrupar(oss, os => os.motorista, 'Sem socorrista').values()]
+      // Nome curto: primeiro nome, e o ultimo sobrenome se repetir.
+      const curtos = nomesCurtos(porNome.filter(g => g.chave !== 'sem').map(g => g.rotulo))
+      return porNome.map(g => {
         const id = g.os[0]?.motoristaId
-        return id ? { ...g, link: `/equipe/${id}` } : g
+        const rotulo = curtos.get(g.rotulo) ?? g.rotulo
+        return id ? { ...g, rotulo, link: `/equipe/${id}` } : { ...g, rotulo }
       })
     }
     const porSigla = agrupar(oss, os => os.viatura?.toUpperCase(), 'Sem viatura')

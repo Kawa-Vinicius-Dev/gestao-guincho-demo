@@ -174,11 +174,11 @@ export async function obterDashboardPorto(params?: URLSearchParams): Promise<Das
  * tres consultas seria tres esperas para desenhar uma tela.
  */
 export async function obterDashboardAltoNivelPorto(
-  inicio: string, fim: string, grao: 'DIA' | 'SEMANA' | 'MES' = 'DIA',
+  inicio: string, fim: string, grao: 'DIA' | 'SEMANA' | 'MES' = 'DIA', porCompetencia = true,
 ): Promise<DashboardAltoNivelPorto> {
   const bruto = ou(
     await supabase().rpc('porto_dashboard_alto_nivel', {
-      p_inicio: inicio, p_fim: fim, p_grao: grao,
+      p_inicio: inicio, p_fim: fim, p_grao: grao, p_por_competencia: porCompetencia,
     }),
     'Não foi possível carregar o painel da Porto.',
   ) as Omit<DashboardAltoNivelPorto, 'opsDestaque'> & { opsDestaque: LinhaOp[] }

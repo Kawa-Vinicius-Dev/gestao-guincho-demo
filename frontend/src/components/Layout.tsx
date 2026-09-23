@@ -18,7 +18,6 @@ const itens = [
   ['/veiculos', 'Viaturas', true, 'operacao'],
   ['/equipe', 'Socorristas', true, 'equipe'],
   ['/minha-comissao', 'Meus serviços', false, 'equipe'],
-  ['/porto/dashboard', 'Painel Porto', true, 'porto'],
   ['/porto/ordens-servico', 'Serviços', true, 'porto'],
   ['/porto/ordens-pagamento', 'OPs', true, 'porto'],
   ['/configuracoes', 'Configurações', true, 'sistema'],

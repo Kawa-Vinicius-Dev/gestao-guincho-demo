@@ -3,30 +3,33 @@ import { LinkOp } from '../components/LinksDeDado'
 import { Link } from 'react-router-dom'
 import { baixarRelatorioPorto, obterDashboardAltoNivelPorto } from '../dados/porto'
 import type {
-  DashboardAltoNivelPorto, LinhaFaturamentoPorto, OpDestaquePorto, PendenciasVinculoPorto,
+  DashboardAltoNivelPorto, OpDestaquePorto, PendenciasVinculoPorto,
 } from '../types/modelos'
 
 /**
- * Lista de OS filtrada pela situacao, dentro da competencia do painel.
- *
- * O painel fala em competencia — o que vai ser pago nesta janela —, entao a
- * lista que ele abre tem de olhar pelo mesmo lado, e nao pela data do servico.
+ * Lista de OS filtrada pela situacao, no mesmo recorte do cartao: pela
+ * competencia no periodo da OP e no mes, pela data no De–ate.
  */
-const listaDeOs = (situacao: string) => `/porto/ordens-servico?situacao=${situacao}&competencia=1`
+const listaDeOs = (situacao: string, competencia: boolean) =>
+  `/porto/ordens-servico?situacao=${situacao}${competencia ? '&competencia=1' : ''}`
 import { data, moeda, percentual } from '../utils/formatadores'
 import { Carregando } from '../components/EstadoPagina'
-import { EvolucaoAcumulada, FaturamentoPorGrupo } from '../components/Graficos'
+import { EvolucaoAcumulada } from '../components/Graficos'
 import { CabecalhoPagina, Etiqueta, GradeIndicadores, Indicador, Painel } from '../components/ui/Pagina'
 import { usePeriodoGlobal } from '../utils/periodoGlobal'
+import { porCompetencia } from '../utils/modoDoPeriodo'
 import { SeletorPeriodo } from '../components/SeletorPeriodo'
 import { gravarFiltro, lerFiltro } from '../utils/filtroLembrado'
 import { useAoVivo } from '../dados/aoVivo'
 
 /**
- * Painel Porto.
+ * Graficos: a aba da Visao geral com o que era o Painel Porto (Kawa, 23/09/2026:
+ * "se deixar os dois, duvide muito o valor"). O faturamento por socorrista e por
+ * viatura foi para a Visao geral; aqui ficam producao x recebido, a conciliacao,
+ * as OS sem dono e as OPs, no mesmo recorte das outras telas (utils/modoDoPeriodo).
  *
  * A tela responde, nesta ordem: quanto entrou, quais OS ainda estao sem dono, o
- * que precisa de acao, quem faturou quanto e quais OPs olhar. A ordem nao e estetica — e a
+ * que precisa de acao e quais OPs olhar. A ordem nao e estetica — e a
  * sequencia em que quem administra pergunta, e por isso o dinheiro vem primeiro
  * e o detalhe por ultimo.
  *
@@ -74,15 +77,6 @@ function detalheDoVinculo(p: PendenciasVinculoPorto) {
   ].filter(Boolean).join(' · ')
 }
 
-/**
- * Barra do faturamento: a quantidade inclui o servico sem valor, que foi feito
- * do mesmo jeito. Quando ha algum, o detalhe diz quantos ainda nao tem preco.
- */
-function detalhar(l: LinhaFaturamentoPorto) {
-  const servicos = `${l.quantidade} ${l.quantidade === 1 ? 'serviço' : 'serviços'}`
-  return { ...l, detalhe: l.semValor ? `${servicos} · ${l.semValor} sem valor` : servicos }
-}
-
 /** Um cartao so fica colorido quando ha o que resolver: zero e uma boa noticia. */
 const tom = (valor: number, cor: 'alerta' | 'atencao') => (valor > 0 ? cor : 'neutro')
 
@@ -90,6 +84,7 @@ export default function PortoDashboardPage() {
   const [dados, setDados] = useState<DashboardAltoNivelPorto | null>(null)
   const [periodo, setPeriodo] = usePeriodoGlobal()
   const { inicio, fim } = periodo
+  const competencia = porCompetencia(periodo)
   const [grao, setGrao] = useState<Grao>(() => lerFiltro<{ grao: Grao }>('porto-painel', { grao: 'DIA' }).grao)
   const [carregando, setCarregando] = useState(true)
   const [baixando, setBaixando] = useState('')
@@ -97,10 +92,10 @@ export default function PortoDashboardPage() {
 
   const carregar = useCallback(async (de: string, ate: string, g: 'DIA' | 'SEMANA' | 'MES') => {
     setCarregando(true); setErro('')
-    try { setDados(await obterDashboardAltoNivelPorto(de, ate, g)) }
+    try { setDados(await obterDashboardAltoNivelPorto(de, ate, g, competencia)) }
     catch (e) { setErro((e as Error).message) }
     finally { setCarregando(false) }
-  }, [])
+  }, [competencia])
 
   useEffect(() => { if (inicio && fim && inicio <= fim) void carregar(inicio, fim, grao) }, [carregar, inicio, fim, grao])
   // Grava depois de cada mudanca, e nao dentro de cada handler: assim nenhum
@@ -135,9 +130,9 @@ export default function PortoDashboardPage() {
 
   return <div className="page-enter painel-porto">
     <CabecalhoPagina
-      modulo="Porto Seguro"
-      titulo="Painel Porto"
-      descricao="O que a equipe produziu, o que a Porto já pagou e o que ainda aguarda uma OP."
+      modulo="Visão geral"
+      titulo="Gráficos"
+      descricao="Produção e recebimento ao longo do período, a conciliação com as OPs e o que ainda falta resolver."
       contexto={<>Período selecionado: <strong>{data(inicio)}</strong> → <strong>{data(fim)}</strong></>}
       acoes={<>
         <button className="button button-ghost" disabled={baixando !== ''} onClick={() => void exportar('pdf')}>
@@ -220,7 +215,7 @@ export default function PortoDashboardPage() {
       <GradeIndicadores>
         <Indicador rotulo="Serviços realizados" valor={dados.quantidadeTotalServicos} link="/porto/ordens-servico"
           apoio={`${moeda(dados.valorTotalRealizado)} no período`}/>
-        <Indicador rotulo="Aguardando OP" valor={dados.quantidadeAguardandoOp} link="/porto/ordens-servico?situacao=AGUARDANDO"
+        <Indicador rotulo="Aguardando OP" valor={dados.quantidadeAguardandoOp} link={listaDeOs('AGUARDANDO', competencia)}
           tom={tom(dados.quantidadeAguardandoOp, 'atencao')}
           apoio={dados.valorAguardandoOp
             ? `${moeda(dados.valorAguardandoOp)} sem cobrança`
@@ -235,18 +230,18 @@ export default function PortoDashboardPage() {
           valor; o card diz quanto falta fechar e abre a lista. */}
       {conciliacao ? <GradeIndicadores>
         <Indicador rotulo="Serviços sem valor" valor={conciliacao.semValor}
-          tom={tom(conciliacao.semValor, 'atencao')} link={listaDeOs('AGUARDANDO_ANALISE')}
+          tom={tom(conciliacao.semValor, 'atencao')} link={listaDeOs('AGUARDANDO_ANALISE', competencia)}
           apoio={conciliacao.semValor ? 'Aguardando a análise da Porto' : 'Todos com valor'}/>
         <Indicador rotulo="Com valor informado" valor={conciliacao.comValorManual}
-          link={listaDeOs('VALOR_MANUAL')}
+          link={listaDeOs('VALOR_MANUAL', competencia)}
           apoio={conciliacao.comValorManual ? `${moeda(conciliacao.valorManual)} previstos, sem comissão` : 'Nenhum valor informado à mão'}/>
         <Indicador rotulo="Aguardando próxima OP" valor={conciliacao.aguardandoProximaOp}
-          tom={tom(conciliacao.aguardandoProximaOp, 'atencao')} link={listaDeOs('AGUARDANDO_PROXIMA_OP')}
+          tom={tom(conciliacao.aguardandoProximaOp, 'atencao')} link={listaDeOs('AGUARDANDO_PROXIMA_OP', competencia)}
           apoio={conciliacao.aguardandoProximaOp
             ? `${moeda(conciliacao.valorAguardandoProximaOp)} projetados desta competência`
             : 'Nada ficou para trás'}/>
         <Indicador rotulo="Valor divergente" valor={conciliacao.divergentes}
-          tom={tom(conciliacao.divergentes, 'alerta')} link={listaDeOs('DIVERGENTE')}
+          tom={tom(conciliacao.divergentes, 'alerta')} link={listaDeOs('DIVERGENTE', competencia)}
           apoio={conciliacao.divergentes ? `${moeda(conciliacao.valorDivergencia)} entre o informado e a OP` : 'OP bateu com o informado'}/>
       </GradeIndicadores> : null}
 
@@ -263,24 +258,6 @@ export default function PortoDashboardPage() {
             </ul>
           </Painel>
         : null}
-
-      <div className="painel-faturamento">
-        <Painel etiqueta="Por pessoa" titulo="Faturamento por socorrista">
-          <FaturamentoPorGrupo descricao="Faturamento por socorrista no período"
-            vazio="Nenhum serviço neste período."
-            linhas={dados.faturamentoPorSocorrista.map(l => ({ ...detalhar(l),
-              ...(l.semVinculo
-                ? { link: '/porto/pendencias?filtro=SOCORRISTA', ajudaDoLink: 'Ver as OS que estão sem socorrista' }
-                : { link: `/equipe/${l.chave}` }) }))}/>
-        </Painel>
-        <Painel etiqueta="Por viatura" titulo="Faturamento por viatura">
-          <FaturamentoPorGrupo descricao="Faturamento por viatura no período"
-            vazio="Nenhum serviço neste período."
-            linhas={dados.faturamentoPorViatura.map(l => ({ ...detalhar(l),
-              link: l.semVinculo ? '/porto/ordens-servico?semViatura=1' : `/veiculos?sigla=${encodeURIComponent(l.chave)}`,
-              ...(l.semVinculo ? { ajudaDoLink: 'Ver as OS que estão sem viatura' } : {}) }))}/>
-        </Painel>
-      </div>
 
       {dados.opsDestaque.length
         ? <Painel semRespiro className="painel-ops-titulo" etiqueta="Detalhe"

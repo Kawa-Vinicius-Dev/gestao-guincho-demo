@@ -142,28 +142,17 @@ test('toda OS com socorrista e viatura: o topo não mostra pendência', async ()
   expect(screen.queryByText('Sem socorrista ou viatura')).not.toBeInTheDocument()
 })
 
-test('faturamento por socorrista e por viatura, com as OS sem dono por último', async () => {
+// O faturamento por socorrista e por viatura foi para a Visao geral (Kawa,
+// 23/09/2026: "se deixar os dois, duvide muito o valor"). Aqui nao se repete.
+test('a aba Gráficos não repete o faturamento da Visão geral', async () => {
   servidorDoPainel(painel())
   const Painel = await abrirPainel()
 
   render(<MemoryRouter><Painel/></MemoryRouter>)
 
-  const socorristas = await screen.findByRole('list', { name: /faturamento por socorrista/i })
-  const todas = within(socorristas).getAllByRole('listitem')
-  // A ultima linha e o total, a soma de todas.
-  expect(todas).toHaveLength(6)
-  expect(todas[5]).toHaveTextContent('Total')
-  const linhas = todas.slice(0, 5)
-  expect(linhas[0]).toHaveTextContent('JEFERSON MARTINS DA SILVA')
-  expect(linhas[0]).toHaveTextContent(/R\$\s23\.853,12/)
-  expect(linhas[0]).toHaveTextContent('49 serviços')
-  expect(linhas[4]).toHaveTextContent('Sem socorrista')
-  expect(linhas[4]).toHaveClass('sem-vinculo')
-
-  const viaturas = screen.getByRole('list', { name: /faturamento por viatura/i })
-  expect(within(viaturas).getByText('Sem viatura')).toBeInTheDocument()
-  // Tudo sem viatura: a linha e o total dao os mesmos 275.
-  expect(within(viaturas).getAllByText('275 serviços')).toHaveLength(2)
+  expect(await screen.findByRole('heading', { name: 'Gráficos' })).toBeInTheDocument()
+  expect(screen.queryByRole('list', { name: /faturamento por socorrista/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('list', { name: /faturamento por viatura/i })).not.toBeInTheDocument()
 })
 
 // A RPC devolve a OP com o nome das colunas. A tabela lia valorTotal e
@@ -295,17 +284,4 @@ test('cards de conciliação contam, somam e abrem a lista filtrada', async () =
   expect(semValor).toHaveAttribute('href', '/porto/ordens-servico?situacao=AGUARDANDO_ANALISE&competencia=1')
   expect(screen.getByText('Valor divergente').closest('a'))
     .toHaveAttribute('href', '/porto/ordens-servico?situacao=DIVERGENTE&competencia=1')
-})
-
-test('faturamento por socorrista conta o serviço sem valor', async () => {
-  servidorDoPainel(painel({
-    faturamentoPorSocorrista: [
-      { chave: '1', rotulo: 'JEFERSON MARTINS DA SILVA', valor: 2385, quantidade: 49, semVinculo: false, semValor: 7 },
-    ],
-  }))
-  const Painel = await abrirPainel()
-
-  render(<MemoryRouter><Painel/></MemoryRouter>)
-
-  expect(await screen.findByText('49 serviços · 7 sem valor')).toBeInTheDocument()
 })
