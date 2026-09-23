@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom'
-import { DespesaAcumulada, FaturamentoPorGrupo, GastosPorCategoria, ProporcaoKm,
-  type LinhaFaturamento } from '../components/Graficos'
-import { GradeIndicadores, Indicador, Painel } from '../components/ui/Pagina'
+import { DespesaAcumulada, GastosPorCategoria, ProporcaoKm } from '../components/Graficos'
+import { GradeIndicadores, Indicador } from '../components/ui/Pagina'
 import type { Dashboard } from '../types/modelos'
 import { moeda, percentual } from '../utils/formatadores'
 
@@ -10,9 +9,6 @@ import { moeda, percentual } from '../utils/formatadores'
  * o contexto fica ao lado, a barra de indicadores responde o que pede acao e os
  * graficos dizem quem trouxe o dinheiro.
  */
-
-/** Diferenca de centavos de arredondamento nao vira linha "sem vinculo". */
-const CENTAVO = 0.005
 
 /**
  * Lucro em destaque: e a conta que o dono do guincho abre o sistema para ver. Ao
