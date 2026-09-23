@@ -26,14 +26,16 @@ insert into public.receitas (descricao,valor,data_competencia,status)
 -- Conta atrasada 200
 insert into public.contas_receber (contratante_id,descricao,valor_previsto,data_competencia,vencimento,status)
  values (1,'Fatura',200,'2026-09-05','2026-09-06','ATRASADO');
--- Despesas: 400 paga (viatura), 50 alimentacao paga, 100 aprovada pendente
+-- Despesas: 400 paga (viatura), 50 alimentacao paga, 100 aprovada pendente.
+-- A categoria vai pelo nome: a sincronizacao de comissao, rodada pelas
+-- migrations, cria "Comissao de socorrista" antes, e ela vira a de id 1.
 insert into public.despesas (descricao,categoria_id,valor,data_lancamento,status,aprovada,
   aprovado_por,aprovado_em,data_pagamento,veiculo_id,motorista_id,criado_por,natureza)
- values ('Diesel',1,400,'2026-09-08','PAGO',true,'aaaaaaaa-0000-0000-0000-000000000001',now(),
+ values ('Diesel',(select id from public.categorias where nome='Combustível'),400,'2026-09-08','PAGO',true,'aaaaaaaa-0000-0000-0000-000000000001',now(),
          '2026-09-08',1,1,'aaaaaaaa-0000-0000-0000-000000000002','GERAL'),
-        ('Marmita',2,50,'2026-09-09','PAGO',true,'aaaaaaaa-0000-0000-0000-000000000001',now(),
+        ('Marmita',(select id from public.categorias where nome='Alimentação'),50,'2026-09-09','PAGO',true,'aaaaaaaa-0000-0000-0000-000000000001',now(),
          '2026-09-09',1,1,'aaaaaaaa-0000-0000-0000-000000000002','ALIMENTACAO_FUNCIONARIO'),
-        ('Pneu',1,100,'2026-09-11','PENDENTE',true,'aaaaaaaa-0000-0000-0000-000000000001',now(),
+        ('Pneu',(select id from public.categorias where nome='Combustível'),100,'2026-09-11','PENDENTE',true,'aaaaaaaa-0000-0000-0000-000000000001',now(),
          null,1,null,'aaaaaaaa-0000-0000-0000-000000000001','GERAL');
 -- Km: 1000 rodados, 800 remunerados -> 200 mortos x 2.00 = 400
 insert into public.quilometragens (data_registro,veiculo_id,motorista_id,hodometro_inicial,

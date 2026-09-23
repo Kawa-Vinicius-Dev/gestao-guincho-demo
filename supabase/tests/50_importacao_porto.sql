@@ -71,16 +71,11 @@ select pg_temp.checar('os: receita aponta para a conta',
 select pg_temp.checar('socorrista por QRA',
   (select m.nome from public.ordens_servico_porto os join public.motoristas m on m.id=os.motorista_id
     where os.numero='5632135/26'), 'Por QRA');
--- A INVESTIGAR (22/09/2026): esta vindo AUXILIAR no lugar de "Por viatura". O
--- fixture cadastra um socorrista ligado a L200 e a OS chega com sigla L200 e sem
--- QRA, entao o vinculo deveria sair pelo cadastro da viatura. A migration
--- 20260917090000 trocou esse palpite por "outra OS com a mesma sigla que ja tem
--- socorrista", que e outra pergunta. Se a capacidade de achar pelo cadastro foi
--- perdida sem querer, e regressao; se foi de proposito, este teste e que esta
--- velho. So quem conhece a operacao decide.
-select pg_temp.checar('socorrista por sigla da viatura',
+-- Decidido (Kawa, 17/09/2026): OS que chega sem nome de socorrista vai para o
+-- Auxiliar, mesmo com viatura. O cadastro da viatura nao escolhe o socorrista.
+select pg_temp.checar('sem nome de socorrista vai para o Auxiliar',
   (select m.nome from public.ordens_servico_porto os join public.motoristas m on m.id=os.motorista_id
-    where os.numero='5632136/26'), 'Por viatura');
+    where os.numero='5632136/26'), 'AUXILIAR');
 
 \echo '-- a OP passa a valer a soma das OSs'
 select pg_temp.checar('OP recalculada para 1500',

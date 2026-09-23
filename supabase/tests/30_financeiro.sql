@@ -53,12 +53,12 @@ reset role;
 \echo '===== DESPESAS: so aprovada entra no resultado ====='
 insert into public.despesas (descricao,categoria_id,valor,data_lancamento,status,aprovada,
   aprovado_por,aprovado_em,data_pagamento,veiculo_id,motorista_id,criado_por,natureza) values
- ('Diesel pago',1,400,'2026-09-08','PAGO',true,'aaaaaaaa-0000-0000-0000-000000000001',now(),'2026-09-08',1,1,'aaaaaaaa-0000-0000-0000-000000000002','GERAL'),
- ('Marmita paga',2,50,'2026-09-09','PAGO',true,'aaaaaaaa-0000-0000-0000-000000000001',now(),'2026-09-09',1,1,'aaaaaaaa-0000-0000-0000-000000000002','ALIMENTACAO_FUNCIONARIO'),
- ('Pneu aprovado pendente',1,100,'2026-09-11','PENDENTE',true,'aaaaaaaa-0000-0000-0000-000000000001',now(),null,1,null,'aaaaaaaa-0000-0000-0000-000000000001','GERAL');
+ ('Diesel pago',(select id from public.categorias where nome='Combustível'),400,'2026-09-08','PAGO',true,'aaaaaaaa-0000-0000-0000-000000000001',now(),'2026-09-08',1,1,'aaaaaaaa-0000-0000-0000-000000000002','GERAL'),
+ ('Marmita paga',(select id from public.categorias where nome='Alimentação'),50,'2026-09-09','PAGO',true,'aaaaaaaa-0000-0000-0000-000000000001',now(),'2026-09-09',1,1,'aaaaaaaa-0000-0000-0000-000000000002','ALIMENTACAO_FUNCIONARIO'),
+ ('Pneu aprovado pendente',(select id from public.categorias where nome='Combustível'),100,'2026-09-11','PENDENTE',true,'aaaaaaaa-0000-0000-0000-000000000001',now(),null,1,null,'aaaaaaaa-0000-0000-0000-000000000001','GERAL');
 -- Nao aprovada: nao pode entrar em lugar nenhum do resultado.
 insert into public.despesas (descricao,categoria_id,valor,data_lancamento,status,aprovada,veiculo_id,criado_por)
- values ('Aguardando aprovacao',1,5000,'2026-09-12','PENDENTE',false,1,'aaaaaaaa-0000-0000-0000-000000000002');
+ values ('Aguardando aprovacao',(select id from public.categorias where nome='Combustível'),5000,'2026-09-12','PENDENTE',false,1,'aaaaaaaa-0000-0000-0000-000000000002');
 
 set role authenticated;
 set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';
@@ -118,13 +118,10 @@ set role authenticated;
 set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';
 select pg_temp.checar('OS cancelada fica fora da producao pendente',
   (public.dashboard_financeiro('2026-09-01','2026-09-30') ->> 'producaoPendente'), '300.00');
--- A INVESTIGAR (22/09/2026): a OS cancelada deixou de ser contada em
--- servicosDoPeriodo (3 em vez de 4). O servico aconteceu e depois foi cancelado;
--- a intencao registrada aqui era que ele saisse do dinheiro mas continuasse na
--- contagem de producao. Se alguma migration passou a exclui-lo por completo, a
--- contagem de servicos do periodo esta menor do que a operacao realizou.
-select pg_temp.checar('mas continua contada nos servicos do periodo',
-  (public.dashboard_financeiro('2026-09-01','2026-09-30') ->> 'servicosDoPeriodo'), '4');
+-- Decidido (Kawa, 22/09/2026): OS cancelada sai da producao e dos paineis,
+-- inclusive da contagem de servicos do periodo.
+select pg_temp.checar('e sai da contagem de servicos do periodo',
+  (public.dashboard_financeiro('2026-09-01','2026-09-30') ->> 'servicosDoPeriodo'), '3');
 
 \echo '===== COMISSAO A PAGAR: some quando o ciclo e repassado ====='
 select pg_temp.checar('antes do repasse, a comissao esta devida',
