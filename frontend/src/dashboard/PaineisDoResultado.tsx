@@ -167,7 +167,8 @@ export function PainelFaturamentoPorSocorrista({ dados }: { dados: Dashboard }) 
     detalhe: `${p.servicos} ${p.servicos === 1 ? 'serviço' : 'serviços'} · comissão ${moeda(p.comissao)}`,
   }))
   const semDono = (dados.producaoPaga ?? 0) - pessoas.reduce((soma, p) => soma + p.producao, 0)
-  if (semDono > CENTAVO) linhas.push({ chave: 'sem', rotulo: 'Sem socorrista', valor: semDono, semVinculo: true })
+  if (semDono > CENTAVO) linhas.push({ chave: 'sem', rotulo: 'Sem socorrista', valor: semDono, semVinculo: true,
+    link: '/porto/pendencias?filtro=SOCORRISTA', ajudaDoLink: 'Ver as OS que estão sem socorrista' })
 
   return <Painel etiqueta="Receitas" titulo="Por socorrista"
     aoLado={<Link to="/equipe">Ver socorristas</Link>}>
@@ -189,7 +190,8 @@ export function PainelFaturamentoPorViatura({ dados }: { dados: Dashboard }) {
     detalhe: v.despesas > 0 ? `custo ${moeda(v.despesas)}` : undefined,
   }))
   const semDono = dados.receitaRecebida - viaturas.reduce((soma, v) => soma + v.receitas, 0)
-  if (semDono > CENTAVO) linhas.push({ chave: 'sem', rotulo: 'Sem viatura', valor: semDono, semVinculo: true })
+  if (semDono > CENTAVO) linhas.push({ chave: 'sem', rotulo: 'Sem viatura', valor: semDono, semVinculo: true,
+    link: '/porto/ordens-servico?semViatura=1', ajudaDoLink: 'Ver as OS que estão sem viatura' })
 
   return <Painel etiqueta="Receitas" titulo="Por viatura"
     aoLado={<Link to="/veiculos">Ver viaturas</Link>}>

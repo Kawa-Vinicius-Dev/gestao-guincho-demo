@@ -269,7 +269,10 @@ export default function PortoDashboardPage() {
         <Painel etiqueta="Por pessoa" titulo="Faturamento por socorrista">
           <FaturamentoPorGrupo descricao="Faturamento por socorrista no período"
             vazio="Nenhum serviço neste período."
-            linhas={dados.faturamentoPorSocorrista.map(l => ({ ...detalhar(l), ...(l.semVinculo ? {} : { link: `/equipe/${l.chave}` }) }))}/>
+            linhas={dados.faturamentoPorSocorrista.map(l => ({ ...detalhar(l),
+              ...(l.semVinculo
+                ? { link: '/porto/pendencias?filtro=SOCORRISTA', ajudaDoLink: 'Ver as OS que estão sem socorrista' }
+                : { link: `/equipe/${l.chave}` }) }))}/>
         </Painel>
         <Painel etiqueta="Por viatura" titulo="Faturamento por viatura">
           <FaturamentoPorGrupo descricao="Faturamento por viatura no período"

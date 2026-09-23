@@ -40,7 +40,8 @@ const FILTROS = [
 export default function PortoPendenciasOsPage() {
   const [periodo, setPeriodo] = usePeriodoGlobal()
   const { inicio, fim } = periodo
-  const [filtro, setFiltro] = useState('TODAS')
+  // Link de outra tela (?filtro=SOCORRISTA) ja abre filtrado.
+  const [filtro, setFiltro] = useState(() => new URLSearchParams(window.location.search).get('filtro') ?? 'TODAS')
   const [itens, setItens] = useState<PendenciaOsPorto[]>([])
   const [motoristas, setMotoristas] = useState<Motorista[]>([])
   const [acertos, setAcertos] = useState<Record<number, AcertoPendenciaOsPorto>>({})
