@@ -1,8 +1,7 @@
-import { ApiError, api } from '../api/http'
+import { ApiError } from './erros'
 import type { SenhaRedefinida, Usuario } from '../types/modelos'
 import { ou, supabase } from './cliente'
 import { invalidarCadastro } from './cacheCurto'
-import { moduloNoSupabase } from './modo'
 
 /**
  * Contas de acesso.
@@ -26,7 +25,6 @@ const paraModelo = (l: Linha): Usuario => ({
 })
 
 export async function listarUsuarios(): Promise<Usuario[]> {
-  if (!moduloNoSupabase('usuarios')) return api<Usuario[]>('/api/usuarios')
 
   const linhas = ou(
     await supabase().from('perfis').select(COLUNAS).order('nome'),
@@ -49,18 +47,10 @@ async function admin<T>(corpo: Record<string, unknown>): Promise<T> {
 export async function criarUsuario(
   nome: string, email: string, perfil: Usuario['perfil'],
 ): Promise<SenhaRedefinida> {
-  if (!moduloNoSupabase('usuarios')) {
-    return api<SenhaRedefinida>('/api/usuarios', {
-      method: 'POST', body: JSON.stringify({ nome, email, perfil }),
-    })
-  }
   return admin<SenhaRedefinida>({ acao: 'criar', nome, email, perfil })
 }
 
 export async function redefinirSenha(usuario: Usuario): Promise<SenhaRedefinida> {
-  if (!moduloNoSupabase('usuarios')) {
-    return api<SenhaRedefinida>(`/api/usuarios/${usuario.id}/redefinir-senha`, { method: 'PATCH' })
-  }
   return admin<SenhaRedefinida>({ acao: 'redefinir', perfilId: usuario.id })
 }
 
@@ -112,11 +102,6 @@ export async function reativarAcesso(perfilId: string): Promise<void> {
 export async function criarAcessoSocorrista(
   motoristaId: number, email: string, nome?: string,
 ): Promise<SenhaRedefinida> {
-  if (!moduloNoSupabase('usuarios')) {
-    return api<SenhaRedefinida>(`/api/motoristas/${motoristaId}/acesso`, {
-      method: 'POST', body: JSON.stringify({ email }),
-    })
-  }
   // O nome da conta e o do cadastro; sem ele, a conta sairia com o comeco do e-mail.
   const r = await admin<SenhaRedefinida>({ acao: 'acesso', motoristaId, email, ...(nome ? { nome } : {}) })
   invalidarCadastro('motoristas')

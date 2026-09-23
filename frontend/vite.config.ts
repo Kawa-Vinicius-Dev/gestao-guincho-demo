@@ -5,9 +5,6 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
-    proxy: {
-      '/api': 'http://localhost:8080',
-    },
   },
   test: {
     environment: 'jsdom',
@@ -17,6 +14,12 @@ export default defineConfig({
       },
     },
     setupFiles: './src/test/setup.ts',
+    // O sistema so fala com o Supabase: todo teste tem um projeto de mentira
+    // configurado, e as respostas vem do MSW.
+    env: {
+      VITE_SUPABASE_URL: 'https://projeto-teste.supabase.co',
+      VITE_SUPABASE_ANON_KEY: 'chave-anon-de-teste',
+    },
     css: true,
     // Os testes de integracao (login, navegacao, modal, salvar) levam ~2s
     // sozinhos e passam de 10s quando 59 arquivos disputam a maquina — falhavam

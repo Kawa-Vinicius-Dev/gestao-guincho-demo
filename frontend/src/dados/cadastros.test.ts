@@ -22,13 +22,6 @@ function responder(request: Request, linhas: Record<string, unknown>[]) {
 beforeEach(() => sessionStorage.clear())
 afterEach(() => vi.unstubAllEnvs())
 
-test('sem o modulo ligado, categorias continuam no backend antigo', async () => {
-  servidor.use(http.get('/api/categorias', () => HttpResponse.json([{ id: 1, nome: 'Velha', tipo: 'DESPESA', ativo: true }])))
-  const { listarCategorias } = await carregar('')
-
-  expect((await listarCategorias())[0].nome).toBe('Velha')
-})
-
 // O filtro por tipo tem de ir para o banco. Trazer receita e despesa para
 // descartar metade no browser e egress pago a cada abertura de formulario.
 test('o filtro por tipo vai na consulta, nao no browser', async () => {
@@ -106,23 +99,6 @@ test('contratante: documento em branco vira null', async () => {
 
   expect(corpo.documento).toBeNull()
   expect(salvo.documento).toBeUndefined()
-})
-
-// Um modulo pode estar ligado e o outro nao: a migracao e gradual de verdade.
-test('categorias no Supabase e contratantes ainda no Render convivem', async () => {
-  let peloSupabase = false
-  servidor.use(
-    http.get(`${URL_SUPABASE}/rest/v1/categorias`, () => {
-      peloSupabase = true
-      return HttpResponse.json([{ id: 1, nome: 'Nova', tipo: 'DESPESA', ativo: true }])
-    }),
-    http.get('/api/contratantes', () => HttpResponse.json([{ id: 1, nome: 'Antigo', ativo: true }])),
-  )
-  const { listarCategorias, listarContratantes } = await carregar('auth,categorias')
-
-  expect((await listarCategorias())[0].nome).toBe('Nova')
-  expect(peloSupabase).toBe(true)
-  expect((await listarContratantes())[0].nome).toBe('Antigo')
 })
 
 test('lista vazia e estado vazio, nao erro', async () => {

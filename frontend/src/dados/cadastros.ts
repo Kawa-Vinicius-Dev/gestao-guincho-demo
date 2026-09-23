@@ -1,8 +1,6 @@
-import { api } from '../api/http'
 import type { Categoria, Contratante } from '../types/modelos'
 import { comCacheCurto, invalidarCadastro } from './cacheCurto'
 import { excluirRegistro, ou, supabase } from './cliente'
-import { moduloNoSupabase } from './modo'
 
 /**
  * Categorias e contratantes — as duas listas curtas que quase toda tela abre.
@@ -29,9 +27,6 @@ export type TipoCategoria = 'RECEITA' | 'DESPESA'
  */
 export async function listarCategorias(tipo?: TipoCategoria): Promise<Categoria[]> {
  return comCacheCurto(`categorias:${tipo ?? 'todas'}`, async () => {
-  if (!moduloNoSupabase('categorias')) {
-    return api<Categoria[]>(tipo ? `/api/categorias?tipo=${tipo}` : '/api/categorias')
-  }
   let consulta = supabase().from('categorias').select(COLUNAS_CATEGORIA)
   if (tipo) consulta = consulta.eq('tipo', tipo)
   const linhas = ou(
@@ -45,9 +40,6 @@ export async function listarCategorias(tipo?: TipoCategoria): Promise<Categoria[
 export async function criarCategoria(nome: string, tipo: TipoCategoria): Promise<Categoria> {
   invalidarCadastro(`categorias:${tipo}`)
   invalidarCadastro('categorias:todas')
-  if (!moduloNoSupabase('categorias')) {
-    return api<Categoria>('/api/categorias', { method: 'POST', body: JSON.stringify({ nome, tipo }) })
-  }
   return paraCategoria(ou(
     await supabase().from('categorias').insert({ nome, tipo })
       .select(COLUNAS_CATEGORIA).single(),
@@ -57,7 +49,6 @@ export async function criarCategoria(nome: string, tipo: TipoCategoria): Promise
 
 export async function listarContratantes(): Promise<Contratante[]> {
   return comCacheCurto('contratantes', async () => {
-    if (!moduloNoSupabase('contratantes')) return api<Contratante[]>('/api/contratantes')
 
     const linhas = ou(
       await supabase().from('contratantes').select(COLUNAS_CONTRATANTE).order('nome'),
@@ -69,11 +60,6 @@ export async function listarContratantes(): Promise<Contratante[]> {
 
 export async function criarContratante(nome: string, documento?: string | null): Promise<Contratante> {
   invalidarCadastro('contratantes')
-  if (!moduloNoSupabase('contratantes')) {
-    return api<Contratante>('/api/contratantes', {
-      method: 'POST', body: JSON.stringify({ nome, documento: documento || null }),
-    })
-  }
   const linha = ou(
     await supabase().from('contratantes').insert({ nome, documento: documento || null })
       .select(COLUNAS_CONTRATANTE).single(),

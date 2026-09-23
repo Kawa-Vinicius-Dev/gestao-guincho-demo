@@ -1,9 +1,8 @@
-import { ApiError, api, tokenStorage } from '../api/http'
+import { ApiError } from './erros'
 import type { Usuario } from '../types/modelos'
 import { limparCacheCurto } from './cacheCurto'
 import { invalidarCacheFinanceiro } from './cacheFinanceiro'
 import { erroDoBanco, ou, supabase } from './cliente'
-import { autenticacaoNoSupabase } from './modo'
 
 /**
  * Sessao.
@@ -69,10 +68,6 @@ async function perfilDaSessao(): Promise<Usuario | null> {
 }
 
 export async function usuarioAtual(): Promise<Usuario | null> {
-  if (!autenticacaoNoSupabase()) {
-    if (!tokenStorage.get()) return null
-    return api<Usuario>('/api/auth/me')
-  }
   return perfilDaSessao()
 }
 
@@ -81,17 +76,6 @@ export async function entrar(email: string, senha: string): Promise<Usuario> {
   // resposta antiga ainda esteja em voo, ela nao pode alimentar os caches.
   limparCachesDaSessao()
   const emailNormalizado = email.trim().toLowerCase()
-
-  if (!autenticacaoNoSupabase()) {
-    const resposta = await api<{ token: string; usuario: Usuario }>('/api/auth/login', {
-      method: 'POST', body: JSON.stringify({ email: emailNormalizado, senha }),
-    })
-    if (!resposta.token || resposta.token.startsWith('demo:')) {
-      throw new ApiError('Resposta de autenticação inválida.', 401)
-    }
-    tokenStorage.set(resposta.token)
-    return resposta.usuario
-  }
 
   const { error } = await supabase().auth.signInWithPassword({
     email: emailNormalizado, password: senha,
@@ -114,14 +98,6 @@ export async function sair(): Promise<void> {
   // herdar a lista da anterior — nem ver por trinta segundos algo que o proprio
   // RLS dela negaria.
   limparCachesDaSessao()
-  if (!autenticacaoNoSupabase()) {
-    try {
-      if (tokenStorage.get()) await api('/api/auth/logout', { method: 'POST' })
-    } finally {
-      tokenStorage.clear()
-    }
-    return
-  }
   await supabase().auth.signOut()
 }
 
@@ -140,13 +116,6 @@ export function limparCachesDaSessao(): void {
  * para sair da tela de troca sem trocar nada.
  */
 export async function trocarSenha(senhaAtual: string, novaSenha: string): Promise<void> {
-  if (!autenticacaoNoSupabase()) {
-    await api('/api/auth/senha', {
-      method: 'PUT', body: JSON.stringify({ senhaAtual, novaSenha }),
-    })
-    return
-  }
-
   const { data: sessao } = await supabase().auth.getSession()
   const email = sessao.session?.user?.email
   if (!email) throw new ApiError('Sessão expirada. Entre novamente.', 401)
@@ -173,7 +142,6 @@ export async function trocarSenha(senhaAtual: string, novaSenha: string): Promis
  * refresh falhou. A tela ja ouvia `auth:expired`; aqui so muda quem dispara.
  */
 export function observarSessao(aoPerder: () => void): () => void {
-  if (!autenticacaoNoSupabase()) return () => {}
   const { data } = supabase().auth.onAuthStateChange((evento) => {
     if (evento === 'SIGNED_OUT') aoPerder()
   })

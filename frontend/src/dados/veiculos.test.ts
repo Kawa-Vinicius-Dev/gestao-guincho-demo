@@ -44,22 +44,6 @@ function responder(request: Request, linhas: Record<string, unknown>[]) {
   return HttpResponse.json(objeto ? linhas[0] ?? null : linhas)
 }
 
-test('sem o modulo ligado, continua falando com o backend antigo', async () => {
-  let chamouSupabase = false
-  servidor.use(
-    http.get(`${URL_SUPABASE}/rest/v1/veiculos`, () => { chamouSupabase = true; return HttpResponse.json([]) }),
-    http.get('/api/veiculos', () => HttpResponse.json([
-      { id: 1, identificacao: 'L100', placa: 'XYZ9Z99', custoPorKm: 1.5, ativo: true },
-    ])),
-  )
-  const { listarVeiculos } = await carregar('')
-
-  const veiculos = await listarVeiculos()
-
-  expect(chamouSupabase).toBe(false)
-  expect(veiculos[0].identificacao).toBe('L100')
-})
-
 // A migracao so vale se o dado chegar na tela com a mesma forma de antes: a tela
 // faz conta com custoPorKm e nao saberia o que fazer com custo_por_km em texto.
 test('no Supabase, a linha do banco chega no formato que a tela ja usa', async () => {

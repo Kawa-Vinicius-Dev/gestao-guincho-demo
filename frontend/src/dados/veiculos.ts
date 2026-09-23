@@ -1,9 +1,7 @@
-import { api } from '../api/http'
 import type { Veiculo } from '../types/modelos'
 import { comCacheCurto, invalidarCadastro } from './cacheCurto'
 import { excluirRegistro } from './cliente'
 import { ou, supabase } from './cliente'
-import { moduloNoSupabase } from './modo'
 
 /**
  * Veiculos — o cadastro da frota.
@@ -70,7 +68,6 @@ function paraBanco(dados: DadosVeiculo) {
 
 export async function listarVeiculos(): Promise<Veiculo[]> {
   return comCacheCurto('veiculos', async () => {
-    if (!moduloNoSupabase('veiculos')) return api<Veiculo[]>('/api/veiculos')
 
     // A ordem importa para a tela: a lista lateral da pagina de Veiculos e os
     // seletores de viatura aparecem em ordem de identificacao, como antes.
@@ -84,9 +81,6 @@ export async function listarVeiculos(): Promise<Veiculo[]> {
 
 export async function criarVeiculo(dados: DadosVeiculo): Promise<Veiculo> {
   invalidarCadastro('veiculos')
-  if (!moduloNoSupabase('veiculos')) {
-    return api<Veiculo>('/api/veiculos', { method: 'POST', body: JSON.stringify(dados) })
-  }
   const linha = ou(
     await supabase().from('veiculos').insert(paraBanco(dados)).select(COLUNAS).single(),
     'Não foi possível cadastrar o veículo.',
@@ -96,9 +90,6 @@ export async function criarVeiculo(dados: DadosVeiculo): Promise<Veiculo> {
 
 export async function atualizarVeiculo(id: number, dados: DadosVeiculo): Promise<Veiculo> {
   invalidarCadastro('veiculos')
-  if (!moduloNoSupabase('veiculos')) {
-    return api<Veiculo>(`/api/veiculos/${id}`, { method: 'PUT', body: JSON.stringify(dados) })
-  }
   const linha = ou(
     await supabase().from('veiculos').update(paraBanco(dados)).eq('id', id)
       .select(COLUNAS).single(),

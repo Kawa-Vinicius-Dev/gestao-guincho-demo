@@ -2,7 +2,7 @@ import type {
   AnaliseOrdemPagamentoPorto, ConfirmacaoPorto, LinhaPreviaPorto,
   OsSemSocorristaPorto, PreviaPorto, ReassociacaoOsPorto, ResumoPreviaPorto,
 } from '../../types/modelos'
-import { ApiError } from '../../api/http'
+import { ApiError } from '../erros'
 import { ou, supabase } from '../cliente'
 import { invalidarCacheFinanceiro } from '../dashboard'
 import type { Previa, TipoRelatorio } from './csv'

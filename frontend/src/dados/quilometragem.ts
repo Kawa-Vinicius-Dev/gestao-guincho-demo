@@ -1,8 +1,6 @@
-import { api } from '../api/http'
 import type { Quilometragem } from '../types/modelos'
 import { excluirRegistro, ou, supabase } from './cliente'
 import { invalidarCacheFinanceiro } from './dashboard'
-import { moduloNoSupabase } from './modo'
 
 /**
  * Quilometragem.
@@ -70,7 +68,6 @@ export interface DadosQuilometragem {
 
 /** Com periodo, traz os registros dele: o teto da lista cortaria meses antigos. */
 export async function listarQuilometragens(periodo?: { inicio: string; fim: string }): Promise<Quilometragem[]> {
-  if (!moduloNoSupabase('quilometragem')) return api<Quilometragem[]>('/api/quilometragens')
 
   let consulta = supabase().from('quilometragens').select(COLUNAS)
   if (periodo) consulta = consulta.gte('data_registro', periodo.inicio).lte('data_registro', periodo.fim)
@@ -85,9 +82,6 @@ export async function listarQuilometragens(periodo?: { inicio: string; fim: stri
 
 export async function criarQuilometragem(dados: DadosQuilometragem): Promise<Quilometragem> {
   invalidarCacheFinanceiro()
-  if (!moduloNoSupabase('quilometragem')) {
-    return api<Quilometragem>('/api/quilometragens', { method: 'POST', body: JSON.stringify(dados) })
-  }
   // Vai por RPC, e nao por insert, porque a confirmacao do excesso e regra:
   // precisa ser verificada no servidor, nao na tela.
   const bruta = ou(

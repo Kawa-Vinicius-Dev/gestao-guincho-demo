@@ -3,7 +3,7 @@ import { http, HttpResponse } from 'msw'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, expect, test, vi } from 'vitest'
 import DashboardPage from '../DashboardPage'
-import { servidor } from '../test/servidor'
+import { URL_SUPABASE, servidor } from '../test/servidor'
 import { JANELA_MS, mudancaRecebida, ouvirMudancas } from './aoVivo'
 import { geracaoDoCacheFinanceiro } from './cacheFinanceiro'
 
@@ -42,12 +42,12 @@ test('quem saiu da tela não recebe mais aviso', () => {
 // piscar o carregamento no meio.
 test('a Visão geral aberta mostra a despesa nova sem recarregar a página', async () => {
   let despesas = 0
-  servidor.use(http.get('/api/dashboard', () => HttpResponse.json({
+  servidor.use(http.post(`${URL_SUPABASE}/rest/v1/rpc/dashboard_resumo`, () => HttpResponse.json({ financeiro: {
     receitaRecebida: 1000, receitaPrevista: 0, totalAtrasado: 0,
     despesasPagas: despesas, despesasPrevistas: 0, saldoRealizado: 1000 - despesas,
     saldoProjetado: 1000 - despesas, registrosImportados: 0, quilometragemTotal: 0,
     kmRemunerado: 0, kmMorto: 0, custoKmMorto: 0, resultadoPorVeiculo: [],
-  })))
+  } })))
   render(<MemoryRouter><DashboardPage/></MemoryRouter>)
   expect(await screen.findByText('R$ 1.000,00', { selector: '.destaque-numero strong' })).toBeInTheDocument()
 
