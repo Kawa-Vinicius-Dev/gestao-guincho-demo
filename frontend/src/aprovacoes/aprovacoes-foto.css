@@ -3,3 +3,13 @@
 .botao-icone:hover{color:var(--blue-600);border-color:var(--blue-600)}
 .botao-icone:focus-visible{outline:2px solid var(--blue-600);outline-offset:2px}
 .modal>header .heading-actions{display:flex;align-items:center;gap:8px}
+
+/* Checklist da viatura: todas as fotos de uma vez, dano destacado. */
+.aprovacao-foto-link.com-dano{color:#9a3412}
+.checklist-admin{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.checklist-admin figure{margin:0;display:grid;gap:6px}
+.checklist-admin img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:10px;background:var(--superficie-2)}
+.checklist-admin figcaption{color:var(--muted);font-size:12px;font-weight:600}
+.checklist-admin figure.com-dano img{outline:3px solid #c2410c;outline-offset:-3px}
+.checklist-admin figure.com-dano figcaption{color:#9a3412}
+@media(max-width:900px){.checklist-admin{grid-template-columns:repeat(2,minmax(0,1fr))}}

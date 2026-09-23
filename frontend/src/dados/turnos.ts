@@ -33,6 +33,8 @@ export interface TurnoAberto {
   veiculo: string
   hodometroInicial: number
   temFotoAbertura: boolean
+  /** Turno aberto depois do checklist existir e ainda sem as fotos dele. */
+  faltaChecklist?: boolean
   deDiaAnterior: boolean
   observacoes?: string | null
 }
@@ -75,6 +77,13 @@ export async function meuTurnoDoDia(): Promise<MeuTurnoDoDia> {
     await supabase().rpc('meu_turno_do_dia'),
     'Não foi possível carregar o seu turno.',
   )
+  const turno = (dados as MeuTurnoDoDia).turnoAberto
+  if (turno) {
+    // A RPC da tela e anterior ao checklist; a linha do turno diz se ele falta.
+    const { data: linha } = await supabase().from('turnos')
+      .select('exige_checklist,checklist').eq('id', turno.id).maybeSingle()
+    turno.faltaChecklist = Boolean(linha?.exige_checklist && !linha?.checklist)
+  }
   return dados as MeuTurnoDoDia
 }
 
@@ -86,21 +95,21 @@ export async function meuTurnoDoDia(): Promise<MeuTurnoDoDia> {
  * navegador nao souber decodificar a imagem, sobe o arquivo original: foto
  * pesada e melhor do que turno que nao fecha.
  */
-export async function comprimirFoto(arquivo: File): Promise<File> {
+export async function comprimirFoto(arquivo: File, largura = LARGURA_MAXIMA, qualidade = QUALIDADE): Promise<File> {
   try {
     const bitmap = await createImageBitmap(arquivo)
-    const escala = Math.min(1, LARGURA_MAXIMA / Math.max(bitmap.width, bitmap.height))
-    const largura = Math.round(bitmap.width * escala)
+    const escala = Math.min(1, largura / Math.max(bitmap.width, bitmap.height))
+    const larguraFinal = Math.round(bitmap.width * escala)
     const altura = Math.round(bitmap.height * escala)
     const tela = document.createElement('canvas')
-    tela.width = largura
+    tela.width = larguraFinal
     tela.height = altura
     const contexto = tela.getContext('2d')
     if (!contexto) return arquivo
-    contexto.drawImage(bitmap, 0, 0, largura, altura)
+    contexto.drawImage(bitmap, 0, 0, larguraFinal, altura)
     bitmap.close?.()
     const blob = await new Promise<Blob | null>(resolve =>
-      tela.toBlob(resolve, 'image/jpeg', QUALIDADE))
+      tela.toBlob(resolve, 'image/jpeg', qualidade))
     if (!blob || blob.size >= arquivo.size) return arquivo
     return new File([blob], 'odometro.jpg', { type: 'image/jpeg' })
   } catch {
@@ -291,4 +300,102 @@ export async function linkDaFoto(caminho: string): Promise<string> {
     throw erroDoBanco({ message: error?.message }, 'Não foi possível abrir a foto.')
   }
   return data.signedUrl
+}
+
+// ---------------------------------------------------------------------------
+// Checklist da viatura
+// ---------------------------------------------------------------------------
+
+/**
+ * As 8 fotos que todo checklist tem, na ordem em que o socorrista anda em volta
+ * da viatura. O painel nao esta aqui: ele ja e a foto do odometro da saida.
+ */
+export const FOTOS_DO_CHECKLIST = [
+  { chave: 'frente', rotulo: 'Frente' },
+  { chave: 'traseira', rotulo: 'Traseira' },
+  { chave: 'esquerda', rotulo: 'Lado esquerdo' },
+  { chave: 'direita', rotulo: 'Lado direito' },
+  { chave: 'pneu_de', rotulo: 'Pneu dianteiro esquerdo' },
+  { chave: 'pneu_dd', rotulo: 'Pneu dianteiro direito' },
+  { chave: 'pneu_te', rotulo: 'Pneu traseiro esquerdo' },
+  { chave: 'pneu_td', rotulo: 'Pneu traseiro direito' },
+] as const
+
+export type ChaveDoChecklist = typeof FOTOS_DO_CHECKLIST[number]['chave']
+
+export interface DanoDoChecklist { foto: File; descricao: string }
+
+export interface Checklist {
+  fotos: Partial<Record<ChaveDoChecklist, string>>
+  danos: { caminho: string; descricao: string }[]
+}
+
+/**
+ * Menor que a do odometro: aqui e so para ver se a viatura esta inteira, nao
+ * para ler numero. 1280px em JPEG 0.6 fica perto de 150 KB por foto.
+ */
+const LARGURA_CHECKLIST = 1280
+const QUALIDADE_CHECKLIST = 0.6
+
+/**
+ * Sobe as fotos e grava o checklist. As fotos vao para o Storage; o banco guarda
+ * so o caminho de cada uma, e elas somem na aprovacao ou em 7 dias.
+ */
+export async function enviarChecklist(
+  turnoId: number, fotos: Record<ChaveDoChecklist, File>, danos: DanoDoChecklist[],
+): Promise<void> {
+  const subir = async (nome: string, arquivo: File) => {
+    const comprimida = await comprimirFoto(arquivo, LARGURA_CHECKLIST, QUALIDADE_CHECKLIST)
+    const caminho = `turnos/${turnoId}/checklist-${nome}-${Date.now()}.jpg`
+    const { error } = await supabase().storage.from(BUCKET)
+      .upload(caminho, comprimida, { contentType: comprimida.type, upsert: false })
+    if (error) throw erroDoBanco({ message: error.message }, 'Não foi possível enviar as fotos.')
+    return caminho
+  }
+  try {
+    const caminhos: Record<string, string> = {}
+    for (const { chave } of FOTOS_DO_CHECKLIST) caminhos[chave] = await subir(chave, fotos[chave])
+    const danosEnviados = []
+    for (const [i, dano] of danos.entries()) {
+      danosEnviados.push({ caminho: await subir(`dano-${i + 1}`, dano.foto), descricao: dano.descricao.trim() })
+    }
+    ou(
+      await supabase().rpc('registrar_checklist', {
+        p_turno_id: turnoId, p_fotos: caminhos, p_danos: danosEnviados,
+      }),
+      'Não foi possível registrar o checklist.',
+    )
+  } catch {
+    throw new ApiError('As fotos do checklist não subiram. Tente enviar de novo.', 400)
+  }
+}
+
+/** O checklist de cada turno, para o administrador ver em Aprovações. */
+export async function checklistsDosTurnos(ids: number[]): Promise<Map<number, Checklist>> {
+  if (!ids.length) return new Map()
+  const linhas = ou(
+    await supabase().from('turnos').select('id,checklist,checklist_apagado_em').in('id', ids),
+    'Não foi possível carregar o checklist.',
+  ) as { id: number; checklist: Checklist | null; checklist_apagado_em: string | null }[]
+  return new Map(linhas.filter(l => l.checklist && !l.checklist_apagado_em).map(l => [l.id, l.checklist as Checklist]))
+}
+
+/**
+ * Apaga do Storage as fotos de checklist que ja cumpriram o papel: turno
+ * aprovado, ou com mais de 7 dias. Roda quando o administrador abre Aprovações e
+ * depois de cada aprovação; falhar aqui nao atrapalha a tela.
+ */
+export async function limparChecklistsAntigos(): Promise<void> {
+  try {
+    const lista = ou(
+      await supabase().rpc('checklists_para_apagar'),
+      'Não foi possível conferir as fotos antigas.',
+    ) as { id: number; caminhos: string[] }[]
+    if (!lista?.length) return
+    const { error } = await supabase().storage.from(BUCKET).remove(lista.flatMap(t => t.caminhos))
+    if (error) return
+    await supabase().rpc('marcar_checklists_apagados', { p_ids: lista.map(t => t.id) })
+  } catch {
+    // Tenta de novo na proxima vez que a tela abrir.
+  }
 }

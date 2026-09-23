@@ -2040,6 +2040,27 @@ input,textarea,select,[contenteditable]:not([contenteditable=false]){caret-color
 .nota-os-canceladas{margin:-6px 0 18px;padding:9px 14px;border-radius:8px;background:var(--superficie-2);color:var(--muted);font-size:13px}
 .nota-os-canceladas strong{color:var(--ink)}
 
+/* Checklist da viatura (celular): blocos grandes e redondos, um toque abre a camera. */
+.checklist{display:grid;gap:14px}
+.checklist-topo{display:flex;align-items:center;justify-content:space-between}
+.checklist-contagem{padding:4px 12px;border-radius:99px;background:var(--superficie-2);color:var(--muted);font-size:14px;font-weight:700}
+.checklist-contagem.completa{background:var(--ok-fundo);color:var(--ok-texto)}
+.checklist-grade{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.checklist-bloco{position:relative;display:grid;place-items:center;gap:6px;min-height:128px;padding:12px;overflow:hidden;border:2px dashed var(--controle-borda);border-radius:20px;background:var(--superficie-2);color:var(--ink);cursor:pointer;text-align:center}
+.checklist-bloco:active{transform:scale(.98)}
+.checklist-camera{font-size:34px;line-height:1}
+.checklist-rotulo{font-size:15px;font-weight:700;line-height:1.2}
+.checklist-bloco.esta-pronto{border:2px solid var(--ok-texto);padding:0;align-content:end}
+.checklist-bloco.esta-pronto img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.checklist-bloco.esta-pronto .checklist-rotulo{position:relative;width:100%;padding:8px 6px;background:rgba(6,78,52,.82);color:#fff}
+.checklist-escolha{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.checklist-opcao{min-height:60px;padding:10px;border:2px solid var(--line);border-radius:99px;background:var(--superficie-2);color:var(--ink);font-size:16px;font-weight:700;cursor:pointer}
+.checklist-opcao.esta-marcada{border-color:var(--ok-texto);background:var(--ok-fundo);color:var(--ok-texto)}
+.checklist-opcao.esta-marcada.perigo{border-color:#c2410c;background:#fff1e6;color:#9a3412}
+.checklist-dano{display:grid;gap:10px}
+.checklist-dano-texto{min-height:56px;padding:0 16px;border:2px solid var(--controle-borda);border-radius:16px;background:var(--superficie);color:var(--ink);font-size:16px}
+.checklist-mais{min-height:52px;border:2px dashed var(--controle-borda);border-radius:99px;background:none;color:var(--blue-600);font-size:15px;font-weight:700;cursor:pointer}
+
 /* Despesa fixa: o que passar do valor dela vira Juros. */
 .nota-juros{margin:0;padding:9px 12px;border-radius:7px;background:var(--superficie-2);color:var(--muted);font-size:12.5px}
 .nota-juros strong{color:var(--ink)}

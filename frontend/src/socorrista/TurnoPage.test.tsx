@@ -64,12 +64,45 @@ test('abrir exige viatura, odometro e a foto do painel', async () => {
 
   await user.upload(screen.getByLabelText(/Foto do painel/), new File(['x'], 'painel.jpg', { type: 'image/jpeg' }))
   expect(screen.getByRole('img', { name: /foto do painel que será enviada/i })).toBeInTheDocument()
+
+  // Kawa, 23/09/2026: checklist da viatura obrigatorio — os 4 lados e os 4 pneus.
+  expect(screen.getByRole('button', { name: 'Abrir turno' })).toBeDisabled()
+  expect(screen.getByText('Faltam 8 fotos da viatura.')).toBeInTheDocument()
+  for (const rotulo of ['Frente', 'Traseira', 'Lado esquerdo', 'Lado direito', 'Pneu dianteiro esquerdo',
+    'Pneu dianteiro direito', 'Pneu traseiro esquerdo', 'Pneu traseiro direito']) {
+    await user.upload(screen.getByLabelText(rotulo), new File(['x'], 'foto.jpg', { type: 'image/jpeg' }))
+  }
+  expect(screen.getByText('8 de 8')).toBeInTheDocument()
+  expect(screen.getByText('Diga se viu algum dano.')).toBeInTheDocument()
+
+  // Com dano, precisa da foto e de onde e.
+  await user.click(screen.getByRole('radio', { name: 'Sim, tem dano' }))
+  expect(screen.getByText('Tire a foto do dano e diga onde é.')).toBeInTheDocument()
+  await user.click(screen.getByRole('radio', { name: 'Não, está tudo ok' }))
   expect(screen.getByRole('button', { name: 'Abrir turno' })).toBeEnabled()
 
   // Toda acao importante diz antes o que vai acontecer.
   await user.click(screen.getByRole('button', { name: 'Abrir turno' }))
   expect(await screen.findByRole('heading', { name: 'Abrir o turno?' })).toBeInTheDocument()
   expect(screen.getAllByText('148.502 km').length).toBeGreaterThan(0)
+})
+
+test('turno aberto sem o checklist pede as fotos da viatura antes de fechar', async () => {
+  servidor.use(
+    http.post(`${SUPA}/rest/v1/rpc/meu_turno_do_dia`, () => HttpResponse.json({
+      ...turno,
+      turnoAberto: {
+        id: 9, data: '2026-09-17', abertoEm: '2026-09-17T07:00:00Z', veiculoId: 2,
+        veiculo: 'L168', hodometroInicial: 148320, temFotoAbertura: true,
+        deDiaAnterior: false, observacoes: null,
+      },
+    })),
+    http.get(`${SUPA}/rest/v1/turnos`, () => HttpResponse.json([{ exige_checklist: true, checklist: null }])),
+  )
+  await abrir(turno)
+
+  expect(await screen.findByRole('heading', { name: 'Faltam as fotos da viatura' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Enviar fotos' })).toBeDisabled()
 })
 
 test('odometro menor que o ultimo registro da viatura pede conferencia', async () => {
