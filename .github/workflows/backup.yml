@@ -1,0 +1,85 @@
+# Backup diario do banco (Supabase), criptografado.
+#
+# O repositorio e publico: um arquivo de backup anexado ao Actions pode ser
+# baixado por qualquer pessoa logada no GitHub. Por isso o dump sai criptografado
+# (AES-256, gpg) com uma senha que so o dono tem, e so o arquivo cifrado e
+# guardado — por 30 dias, um por dia.
+#
+# Segredos (Settings > Secrets and variables > Actions):
+#   SUPABASE_DB_URL  Supabase > Connect > "Session pooler" (URI), com a senha do
+#                    banco no lugar de [YOUR-PASSWORD]. O pooler e necessario
+#                    porque o GitHub nao alcanca a conexao direta (so IPv6).
+#   BACKUP_SENHA     Senha para abrir o backup. Guarde fora do GitHub: sem ela o
+#                    arquivo nao abre.
+#
+# O que entra: os esquemas public e legado inteiros, e os usuarios do login
+# (auth.users e auth.identities, so os dados). Fotos e comprovantes do Storage
+# nao entram.
+#
+# Para restaurar:
+#   gpg --decrypt backup-banco-AAAA-MM-DD.tar.gpg > backup.tar && tar -xf backup.tar
+#   pg_restore --no-owner --no-privileges -d "<url do banco>" banco.dump
+#   pg_restore --data-only -d "<url do banco>" usuarios.dump
+name: Backup do banco
+
+on:
+  schedule:
+    - cron: '0 6 * * *' # 03:00 em Brasilia
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup-do-banco
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      BACKUP_SENHA: ${{ secrets.BACKUP_SENHA }}
+    steps:
+      - name: Confere os segredos
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ] || [ -z "$BACKUP_SENHA" ]; then
+            echo "::error::Cadastre SUPABASE_DB_URL e BACKUP_SENHA em Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+
+      # O pg_dump precisa ser da mesma versao do banco ou mais novo.
+      - name: Instala o pg_dump 17
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSo /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-17
+
+      - name: Exporta e criptografa
+        run: |
+          set -euo pipefail
+          PG=/usr/lib/postgresql/17/bin
+          DIA=$(date -u +%F)
+          mkdir backup && cd backup
+          $PG/pg_dump "$SUPABASE_DB_URL" --format=custom --no-owner --no-privileges \
+            --schema=public --schema=legado --file=banco.dump
+          $PG/pg_dump "$SUPABASE_DB_URL" --format=custom --data-only \
+            --table=auth.users --table=auth.identities --file=usuarios.dump
+          tar -cf ../dados.tar banco.dump usuarios.dump
+          cd .. && rm -rf backup
+          gpg --batch --yes --pinentry-mode loopback --passphrase "$BACKUP_SENHA" \
+            --symmetric --cipher-algo AES256 --output "backup-banco-$DIA.tar.gpg" dados.tar
+          rm dados.tar
+          ls -lh "backup-banco-$DIA.tar.gpg"
+
+      - name: Guarda por 30 dias
+        uses: actions/upload-artifact@v4
+        with:
+          name: backup-banco-${{ github.run_number }}
+          path: backup-banco-*.tar.gpg
+          retention-days: 30
+          if-no-files-found: error
