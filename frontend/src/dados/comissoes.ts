@@ -3,7 +3,7 @@ import type {
 } from '../types/modelos'
 import { invalidarCacheFinanceiro } from './cacheFinanceiro'
 import { ou, supabase } from './cliente'
-import { listarPeriodosDeOp } from './porto'
+import { listarPeriodosDeOp, listarPeriodosPorto } from './porto'
 import { agruparPorPeriodo, type PeriodoPorto } from '../utils/periodos'
 
 
@@ -32,7 +32,8 @@ export { listarPeriodosDeOp as listarOpsComissao }
 
 /** Os periodos das telas de comissao: as OPs de cada quinzena juntas. */
 export async function listarPeriodosComissao(): Promise<PeriodoPorto[]> {
-  return agruparPorPeriodo(await listarPeriodosDeOp())
+  // Comissao so existe onde ha OP: a quinzena em andamento fica de fora.
+  return (await listarPeriodosPorto()).filter(p => !p.semOp)
 }
 
 /**

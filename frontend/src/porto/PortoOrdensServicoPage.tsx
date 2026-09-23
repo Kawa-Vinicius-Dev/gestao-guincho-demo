@@ -20,6 +20,7 @@ import { CabecalhoPagina, GradeIndicadores, Indicador, Painel } from '../compone
 import type { Motorista, Veiculo } from '../types/modelos'
 import { data, moeda } from '../utils/formatadores'
 import { usePeriodoGlobal } from '../utils/periodoGlobal'
+import { porCompetencia as porCompetenciaDoPeriodo } from '../utils/modoDoPeriodo'
 import { useValorAdiado } from '../utils/useValorAdiado'
 
 /**
@@ -55,7 +56,6 @@ export default function PortoOrdensServicoPage() {
   const [sigla, setSigla] = useState(() => (busca.get('sigla') ?? '').toUpperCase())
   const [situacao, setSituacao] = useState<SituacaoOs>(() => (busca.get('situacao') ?? '') as SituacaoOs)
   const [semViatura, setSemViatura] = useState(() => busca.get('semViatura') === '1')
-  const [porCompetencia, setPorCompetencia] = useState(() => busca.get('competencia') === '1')
   const [informando, setInformando] = useState<LinhaOs | null>(null)
   const [emLote, setEmLote] = useState(false)
   const [pedido, setPedido] = useState<PedidoConfirmacao | null>(null)
@@ -83,6 +83,9 @@ export default function PortoOrdensServicoPage() {
   // Procurar por numero de OS vale para todo o historico: o numero ja aponta
   // uma OS so, e nao adianta encontrar "nada" porque ela e de outra quinzena.
   const buscandoNumero = Boolean(numeroOsAdiado.trim())
+  // O modo sai do seletor, como em toda tela (utils/modoDoPeriodo): periodo da
+  // OP, mes e intervalo longo pela competencia; ate 8 dias pela data do servico.
+  const porCompetencia = !buscandoNumero && porCompetenciaDoPeriodo(periodo)
   const hoje = new Date().toISOString().slice(0, 10)
   const filtro: FiltroOs = useMemo(() => ({
     inicio: buscandoNumero ? INICIO_DO_HISTORICO : periodo.inicio,
@@ -118,11 +121,11 @@ export default function PortoOrdensServicoPage() {
   }, [])
 
   const paginas = dados ? Math.max(1, Math.ceil(dados.total / TAMANHO_DA_PAGINA)) : 1
-  const temFiltro = Boolean(numeroOs || numeroOp || especialidade || motoristaId || sigla || situacao || semViatura || porCompetencia)
+  const temFiltro = Boolean(numeroOs || numeroOp || especialidade || motoristaId || sigla || situacao || semViatura)
   const veiculoPorSigla = useMemo(() => new Map(veiculos.map(v => [siglaDe(v), v])), [veiculos])
 
   function limparFiltros() {
-    setNumeroOs(''); setNumeroOp(''); setEspecialidade(''); setMotoristaId(0); setSigla(''); setSituacao(''); setSemViatura(false); setPorCompetencia(false)
+    setNumeroOs(''); setNumeroOp(''); setEspecialidade(''); setMotoristaId(0); setSigla(''); setSituacao(''); setSemViatura(false)
   }
 
   async function exportar(formato: 'excel' | 'pdf') {
@@ -273,8 +276,6 @@ export default function PortoOrdensServicoPage() {
         <Campo rotulo="Especialidade"><input value={especialidade} onChange={e => setEspecialidade(e.target.value)} autoComplete="off"/></Campo>
         <Selecao rotulo="Situação" vazio="Todas" value={situacao} onChange={e => setSituacao(e.target.value as SituacaoOs)} opcoes={SITUACOES}/>
         <label className="check-field"><input type="checkbox" checked={semViatura} onChange={e => setSemViatura(e.target.checked)}/><span>Só sem viatura</span></label>
-        {/* A data do servico nunca muda; a competencia e a da OP que vai pagar. */}
-        <label className="check-field"><input type="checkbox" checked={porCompetencia} onChange={e => setPorCompetencia(e.target.checked)}/><span>Filtrar por competência, não pela data do serviço</span></label>
         {temFiltro ? <button type="button" className="button button-ghost" onClick={limparFiltros}>Limpar filtros</button> : null}
       </form>
     </Painel>

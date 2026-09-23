@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { http, HttpResponse } from 'msw'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { servidor } from './test/servidor'
+import { rpcPeriodos } from './test/periodos'
 
 const SUPA = 'https://projeto-teste.supabase.co'
 
@@ -18,10 +19,10 @@ async function abrirVisao() {
   const { esquecerCliente } = await import('./dados/cliente')
   esquecerCliente()
   servidor.use(
-    http.get(`${SUPA}/rest/v1/porto_ops_conciliadas`, () => HttpResponse.json([{
-      id: 1, numero: '06389821', valor_total: 74770, situacao_financeira: 'RECEBIDO',
+    rpcPeriodos(SUPA, [{
+      id: 1, numero: '06389821',
       periodo_inicio: '2026-03-30', periodo_fim: '2026-04-29', data_pagamento_programada: '2026-06-07',
-    }])),
+    }]),
     http.post(`${SUPA}/rest/v1/rpc/dashboard_resumo`, () => HttpResponse.json({ financeiro: null, porto: null })),
   )
   return (await import('./DashboardPage')).default

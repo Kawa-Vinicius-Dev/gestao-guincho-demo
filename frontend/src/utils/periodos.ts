@@ -39,6 +39,8 @@ export interface PeriodoPorto {
   numeros: string[]
   periodoInicio?: string
   periodoFim?: string
+  /** Quinzena em andamento, que ainda nao tem OP (ids e numeros vazios). */
+  semOp?: boolean
 }
 
 const DIA_MS = 86_400_000
@@ -110,7 +112,8 @@ export function rotuloPeriodo(periodo: PeriodoPorto): string {
   const janela = periodo.periodoInicio && periodo.periodoFim
     ? `${data(periodo.periodoInicio)} a ${data(periodo.periodoFim)} · `
     : ''
-  const ops = periodo.numeros.length > 1
+  const ops = !periodo.numeros.length ? 'aguardando OP'
+    : periodo.numeros.length > 1
     ? `OPs ${periodo.numeros.slice(0, -1).join(', ')} e ${periodo.numeros.at(-1)}`
     : `OP ${periodo.numeros[0]}`
   return `${janela}${ops}`

@@ -10,6 +10,7 @@ import * as relatoriosPorto from './porto/relatorios'
 import { ou, supabase } from './cliente'
 import { invalidarCacheFinanceiro } from './dashboard'
 import { moduloNoSupabase } from './modo'
+import type { PeriodoPorto } from '../utils/periodos'
 
 /**
  * Modulo Porto: ordens de pagamento, ordens de servico, pendencias e calendario.
@@ -392,6 +393,33 @@ export async function associarMotoristaPorto(
  * janela —, e nao passa pelo filtro de modulo, porque quem ve a propria comissao
  * nem alcanca a tela de ordens de pagamento.
  */
+/**
+ * As quinzenas do seletor de periodo, calculadas no banco (`porto_periodos`):
+ * as que tem OP, com os numeros, e a quinzena em andamento, ainda sem OP. A
+ * quinzena comeca na data que a Porto declara. E a mesma competencia que as
+ * telas usam para contar servico e receita, entao escolher uma quinzena aqui
+ * e contar por ela la sao a mesma coisa.
+ */
+export async function listarPeriodosPorto(): Promise<PeriodoPorto[]> {
+  const linhas = ou(
+    await supabase().rpc('porto_periodos'),
+    'Não foi possível carregar os períodos.',
+  ) as { inicio: string; fim: string; tem_op: boolean; op_ids: number[]; op_numeros: string[] }[]
+  return (linhas ?? []).map(l => {
+    const ids = [...(l.op_ids ?? [])].sort((a, b) => a - b)
+    return {
+      // Mesmo formato de id de antes (ids das OPs unidos por "-"): o periodo
+      // lembrado continua valendo depois da troca.
+      id: ids.length ? ids.join('-') : `ate-${l.fim}`,
+      ids,
+      numeros: l.op_numeros ?? [],
+      periodoInicio: l.inicio,
+      periodoFim: l.fim,
+      semOp: !l.tem_op,
+    }
+  })
+}
+
 export async function listarPeriodosDeOp(): Promise<OrdemPagamentoPorto[]> {
   const linhas = ou(
     await supabase().from('porto_ops_conciliadas')

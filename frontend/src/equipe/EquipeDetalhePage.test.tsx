@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { http,HttpResponse } from 'msw'
 import { afterEach,beforeEach,expect,test,vi } from 'vitest'
 import { servidor } from '../test/servidor'
+import { rpcPeriodos } from '../test/periodos'
 import { escolher } from '../test/dropdown'
 
 const TOKEN_KEY='fluxo-gestao:token:v1'
@@ -49,7 +50,7 @@ function configurarAdmin(){
   servidor.use(
     http.get('/api/auth/me',()=>HttpResponse.json({id:1,nome:'Administrador',email:'admin@local.test',perfil:'ADMINISTRADOR'})),
     http.get('/api/motoristas',()=>{confirmarConsultaMotoristas();return HttpResponse.json([{id:4,nome:'Ana Motorista',telefone:'(85) 99999-1234',qra:'QRA-ANA',usuarioId:8,ativo:true}])}),
-    http.get(`${URL_SUPABASE}/rest/v1/porto_ops_conciliadas`,()=>HttpResponse.json(ops)),
+    rpcPeriodos(URL_SUPABASE,ops),
     http.post(`${URL_SUPABASE}/rest/v1/rpc/detalhe_socorrista_ops`,async({request})=>{
       const corpo=await request.json() as {p_op_ids:number[]}
       return HttpResponse.json(corpo.p_op_ids.includes(6)?detalheAnterior:detalheAtual)

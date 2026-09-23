@@ -6,7 +6,7 @@ import './frota.css'
 import { usePeriodoGlobal } from '../utils/periodoGlobal'
 import { lerIndicadores } from '../dados/dashboard'
 import { listarOs, listarTodasAsOs, type LinhaOs } from '../dados/porto/listaOs'
-import { porCompetenciaDaOp } from '../utils/modoDoPeriodo'
+import { porCompetencia } from '../utils/modoDoPeriodo'
 import { lerExtrato } from '../dados/extrato'
 import { atualizarVeiculo, criarVeiculo, excluirVeiculo, listarVeiculos } from '../dados/veiculos'
 import { ConfirmarExclusao } from '../components/ConfirmarExclusao'
@@ -39,7 +39,7 @@ export default function FrotasPage(){
   const [servicosDoPeriodo,setServicosDoPeriodo]=useState<LinhaOs[]>([])
   useEffect(()=>{if(!periodo.inicio||!periodo.fim)return
     let valeu=true
-    listarTodasAsOs({inicio:periodo.inicio,fim:periodo.fim,porCompetencia:porCompetenciaDaOp(periodo)})
+    listarTodasAsOs({inicio:periodo.inicio,fim:periodo.fim,porCompetencia:porCompetencia(periodo)})
       .then(p=>{if(!valeu)return
         const mapa=new Map<string,number>()
         for(const os of p.itens){const s=os.viatura?.toUpperCase();if(s)mapa.set(s,(mapa.get(s)??0)+1)}
@@ -56,7 +56,7 @@ export default function FrotasPage(){
       .catch(()=>{if(valeu)setAguardando(null)})
     return()=>{valeu=false}},[veiculoDaSigla,periodo.inicio,periodo.fim])
 
-  const carregar=useCallback(async()=>{const {inicio,fim}=periodo;if(!inicio||!fim||inicio>fim)return;try{const [v,d,l]=await Promise.all([listarVeiculos(),lerIndicadores(inicio,fim),lerExtrato(inicio,fim)]);setVeiculos(v);setFinanceiro(d);setLancamentos(l);setSelecionado(atual=>{const p=pedido.current;pedido.current={id:0,sigla:''}
+  const carregar=useCallback(async()=>{const {inicio,fim}=periodo;if(!inicio||!fim||inicio>fim)return;try{const [v,d,l]=await Promise.all([listarVeiculos(),lerIndicadores(inicio,fim,porCompetencia(periodo)),lerExtrato(inicio,fim)]);setVeiculos(v);setFinanceiro(d);setLancamentos(l);setSelecionado(atual=>{const p=pedido.current;pedido.current={id:0,sigla:''}
       const escolhido=v.find(x=>x.id===p.id||(p.sigla&&[x.siglaPorto,x.identificacao].some(s=>s?.toUpperCase()===p.sigla)))
       return escolhido?escolhido.id:v.some(x=>x.id===atual)?atual:(v[0]?.id??0)})}catch(e){setErro((e as Error).message)}},[periodo])
   useEffect(()=>{void carregar().finally(()=>setCarregando(false))},[carregar])

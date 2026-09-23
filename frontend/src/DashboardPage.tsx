@@ -13,7 +13,7 @@ import { ServicosDoPeriodo } from './financeiro/dre/ServicosDoPeriodo'
 import { DespesasDoPeriodo } from './financeiro/dre/DespesasDoPeriodo'
 import { data } from './utils/formatadores'
 import { usePeriodoGlobal } from './utils/periodoGlobal'
-import { porCompetenciaDaOp } from './utils/modoDoPeriodo'
+import { porCompetencia } from './utils/modoDoPeriodo'
 
 /**
  * Visao geral: o painel principal do sistema.
@@ -36,17 +36,17 @@ export default function DashboardPage(){
   // Uma despesa, uma OP ou uma comissao mudou em qualquer lugar: a tela consulta
   // de novo, mantendo os numeros de agora ate os novos chegarem.
   const [versao,setVersao]=useState(0)
-  // Servicos e despesas pela data em que aconteceram (Kawa, 23/09/2026: filtrando
-  // um dia, "quero todos os servicos e todas as despesas nesse dia"). O resumo de
-  // dinheiro continua pela OP. As listas seguem o filtro: periodo da OP pela
-  // competencia; Mes e De-ate pela data do servico e do lancamento.
+  // Servicos, receita e despesas no mesmo recorte (utils/modoDoPeriodo): periodo
+  // da OP, mes e intervalo longo pela competencia; De-ate de ate 8 dias pela data
+  // do servico. Filtrando um dia, aparecem os servicos e o dinheiro daquele dia.
+  const competencia=porCompetencia(periodo)
   const [servicos,setServicos]=useState<LinhaOs[]|null>(null)
   const [lancamentos,setLancamentos]=useState<LancamentoFinanceiro[]>([])
   useEffect(()=>{const {inicio,fim}=periodo;if(!inicio||!fim||inicio>fim)return
     let valeu=true;setServicos(null)
-    Promise.all([listarTodasAsOs({inicio,fim,porCompetencia:porCompetenciaDaOp(periodo)}).then(p=>p.itens as LinhaOs[]|null).catch(()=>null),lerExtrato(inicio,fim).catch(()=>[] as LancamentoFinanceiro[])])
+    Promise.all([listarTodasAsOs({inicio,fim,porCompetencia:competencia}).then(p=>p.itens as LinhaOs[]|null).catch(()=>null),lerExtrato(inicio,fim).catch(()=>[] as LancamentoFinanceiro[])])
       .then(([s,l])=>{if(valeu){setServicos(s);setLancamentos(l)}})
-    return()=>{valeu=false}},[periodo.inicio,periodo.fim,periodo.op,versao])
+    return()=>{valeu=false}},[periodo.inicio,periodo.fim,competencia,versao])
   useAoVivo(()=>setVersao(v=>v+1))
   const periodoCarregado=useRef('')
   const periodoValido=Boolean(inicio&&fim&&inicio<=fim)
@@ -59,19 +59,19 @@ export default function DashboardPage(){
       setFinanceiro(null);setErro('');setAtualizando(false);return
     }
     let valeu=true
-    const guardado=dashboardEmCache(inicio,fim)
-    const mesmoPeriodo=periodoCarregado.current===`${inicio}|${fim}`
-    periodoCarregado.current=`${inicio}|${fim}`
+    const guardado=dashboardEmCache(inicio,fim,competencia)
+    const mesmoPeriodo=periodoCarregado.current===`${inicio}|${fim}|${competencia}`
+    periodoCarregado.current=`${inicio}|${fim}|${competencia}`
     if(guardado){setFinanceiro(guardado.financeiro);setAtualizando(true)}
     else if(mesmoPeriodo)setAtualizando(true)
     else setFinanceiro(null)
     setErro('')
-    lerDashboard(inicio,fim)
+    lerDashboard(inicio,fim,{porCompetencia:competencia})
       .then(r=>{if(valeu)setFinanceiro(r.financeiro)})
       .catch(e=>{if(valeu)setErro(e.message)})
       .finally(()=>{if(valeu)setAtualizando(false)})
     return()=>{valeu=false}
-  },[inicio,fim,versao])
+  },[inicio,fim,competencia,versao])
 
 
   const temKm=Boolean(financeiro&&(financeiro.kmRemunerado||financeiro.kmMorto))
@@ -112,7 +112,7 @@ export default function DashboardPage(){
 
     {periodoValido&&financeiro
       ? <>
-          <IndicadoresDaOperacao dados={servicos&&!porCompetenciaDaOp(periodo)?{...financeiro,servicosDoPeriodo:servicos.length}:financeiro}/>
+          <IndicadoresDaOperacao dados={financeiro}/>
 
           {temKm
             ? <div className="grade-painel grade-8-4">
@@ -124,14 +124,15 @@ export default function DashboardPage(){
           {/* No lugar do faturamento por socorrista e viatura (que ja esta no Painel
               Porto e em Desempenho): os servicos e as despesas do periodo, para a
               analise do dia. */}
-          {periodo.inicio&&periodo.fim?<ServicosDoPeriodo inicio={periodo.inicio} fim={periodo.fim} porCompetencia={porCompetenciaDaOp(periodo)} servicos={servicos}/>:null}
+          {periodo.inicio&&periodo.fim?<ServicosDoPeriodo inicio={periodo.inicio} fim={periodo.fim} porCompetencia={competencia} servicos={servicos}/>:null}
           <DespesasDoPeriodo lancamentos={lancamentos}/>
         </>
       : null}
 
     <p className="calculation-note">
-      <strong>Como calculamos:</strong> lucro = receitas − despesas pagas. Serviço da Porto
-      conta no período da OP; comissão vira despesa quando é paga.
+      <strong>Como calculamos:</strong> lucro = receitas − despesas pagas. No período da OP,
+      no mês e em intervalos acima de 8 dias, o serviço conta na OP em que entrou; até 8 dias,
+      conta na data do atendimento. Comissão vira despesa quando é paga.
     </p>
   </div>
 }
