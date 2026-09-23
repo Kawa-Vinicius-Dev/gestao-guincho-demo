@@ -9,6 +9,7 @@ import { diasDoPeriodo, montarDre, relatorioDaDre } from './dre'
 import { lerExtrato } from './extrato'
 import { listarTodasAsOs } from './porto/listaOs'
 import { listarVeiculos } from './veiculos'
+import { listarPeriodosPorto } from './porto'
 
 /**
  * Relatorios em CSV.
@@ -44,7 +45,7 @@ export function baixarArquivoCsv(conteudo: string, nomeArquivo: string) {
  * resultado, servicos prestados (um a um ate 8 dias, resumidos acima) e cada
  * despesa paga dentro da categoria.
  */
-export async function baixarDre(inicio: string, fim: string, formato: Formato, porCompetencia = true): Promise<void> {
+export async function baixarDre(inicio: string, fim: string, formato: Formato, porCompetencia = true, opId?: string): Promise<void> {
   if (!moduloNoSupabase('dashboard')) return csvPeloRender('dre', inicio, fim, `dre-${inicio}-a-${fim}.csv`)
   const [financeiro, extrato, servicos, veiculos] = await Promise.all([
     lerIndicadores(inicio, fim, porCompetencia),
@@ -53,7 +54,11 @@ export async function baixarDre(inicio: string, fim: string, formato: Formato, p
     listarVeiculos().catch(() => []),
   ])
   const dre = montarDre(financeiro, extrato, servicos, diasDoPeriodo(inicio, fim), veiculos)
-  await baixarRelatorio(relatorioDaDre(dre, inicio, fim), formato)
+  // Periodo escolhido pela OP: os numeros dela entram no nome do arquivo.
+  const numeros = opId
+    ? (await listarPeriodosPorto().catch(() => [])).find(p => p.id === opId)?.numeros ?? []
+    : []
+  await baixarRelatorio(relatorioDaDre(dre, inicio, fim, numeros), formato)
 }
 
 export async function baixarRelatorioComissoes(ordensPagamento: number[], periodo: string, formato: Formato): Promise<void> {

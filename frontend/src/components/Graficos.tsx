@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { moeda, moedaCurta, numero, percentual } from '../utils/formatadores'
 import './servicosPorGrupo.css'
@@ -22,7 +22,9 @@ function escala(valores:number[]){
 function Vazio({texto}:{texto:string}){return <p className="grafico-vazio">{texto}</p>}
 
 /** `link`: para onde o nome leva — a ficha do socorrista, por exemplo. */
-export type LinhaFaturamento={chave:string;rotulo:string;valor:number;quantidade?:number;detalhe?:string;semVinculo:boolean;link?:string;ajudaDoLink?:string}
+export type LinhaFaturamento={chave:string;rotulo:string;valor:number;quantidade?:number;detalhe?:string;semVinculo:boolean;link?:string;ajudaDoLink?:string
+  /** O que a linha abre ao ser clicada (as OS do socorrista). Sem isto, a linha so mostra a barra. */
+  abre?:ReactNode}
 
 /**
  * Quanto cada socorrista ou viatura faturou, uma barra por linha. A linha sem
@@ -37,14 +39,20 @@ export function FaturamentoPorGrupo({descricao,linhas,vazio}:{descricao:string;l
   const maior=escala(ordenadas.map(l=>l.valor))
   const largura=(v:number)=>`${v>0?Math.max(v/maior*100,1.5):0}%`
   return <ul className="faturamento-grupo" aria-label={descricao}>
-    {ordenadas.map(l=><li key={l.chave} className={l.semVinculo?'sem-vinculo':undefined}>
-      {l.link
-        ?<Link className="faturamento-grupo-rotulo faturamento-grupo-link" title={l.ajudaDoLink??`Ver detalhes de ${l.rotulo}`} to={l.link}>{l.rotulo}</Link>
-        :<span className="faturamento-grupo-rotulo" title={l.rotulo}>{l.rotulo}</span>}
-      <span className="faturamento-grupo-trilho" aria-hidden="true"><span style={{width:largura(l.valor)}}/></span>
-      <strong>{moeda(l.valor)}</strong>
-      <small>{l.detalhe??(l.quantidade==null?'':`${l.quantidade} ${l.quantidade===1?'serviço':'serviços'}`)}</small>
-    </li>)}
+    {ordenadas.map(l=>{
+      const corpo=<>
+        {l.link
+          ?<Link className="faturamento-grupo-rotulo faturamento-grupo-link" title={l.ajudaDoLink??`Ver detalhes de ${l.rotulo}`} to={l.link}>{l.rotulo}</Link>
+          :<span className="faturamento-grupo-rotulo" title={l.rotulo}>{l.rotulo}</span>}
+        <span className="faturamento-grupo-trilho" aria-hidden="true"><span style={{width:largura(l.valor)}}/></span>
+        <strong>{moeda(l.valor)}</strong>
+        <small>{l.detalhe??(l.quantidade==null?'':`${l.quantidade} ${l.quantidade===1?'serviço':'serviços'}`)}</small>
+      </>
+      const classe=[l.semVinculo?'sem-vinculo':'',l.abre?'faturamento-grupo-abre':''].filter(Boolean).join(' ')||undefined
+      // O nome continua sendo link (ficha); clicar no resto da linha abre o detalhe.
+      return <li key={l.chave} className={classe}>
+        {l.abre?<details><summary className="faturamento-grupo-resumo">{corpo}</summary><div className="faturamento-grupo-detalhe">{l.abre}</div></details>:corpo}
+      </li>})}
     {/* A soma das linhas, sempre embaixo (Kawa, 23/09/2026): fecha com o total do periodo. */}
     <li className="faturamento-grupo-total">
       <span className="faturamento-grupo-rotulo">Total</span>

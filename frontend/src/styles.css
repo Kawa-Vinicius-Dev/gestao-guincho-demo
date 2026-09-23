@@ -1981,3 +1981,14 @@ tbody tr{transition:background-color .14s ease}
 .form-novo-acesso{grid-template-columns:1fr 1.3fr .8fr auto}
 .subtitulo-config{margin:22px 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
 @media(max-width:760px){.form-novo-acesso{grid-template-columns:1fr}}
+
+/* Barra que abre o detalhe (Visao geral: as OS de cada socorrista). */
+.faturamento-grupo li.faturamento-grupo-abre{display:block}
+.faturamento-grupo-resumo{display:grid;grid-template-columns:minmax(0,1fr) 124px minmax(0,200px);grid-template-areas:"rotulo valor detalhe" "trilho trilho trilho";row-gap:6px;column-gap:14px;align-items:center;padding:4px 6px;border-radius:7px;cursor:pointer;list-style:none}
+.faturamento-grupo-resumo::-webkit-details-marker{display:none}
+.faturamento-grupo-resumo:hover,.faturamento-grupo-abre details[open]>.faturamento-grupo-resumo{background:var(--superficie-2)}
+.faturamento-grupo-resumo .faturamento-grupo-rotulo{grid-area:rotulo}
+.faturamento-grupo-resumo .faturamento-grupo-trilho{grid-area:trilho}
+.faturamento-grupo-resumo strong{grid-area:valor}
+.faturamento-grupo-resumo small{grid-area:detalhe}
+.faturamento-grupo-detalhe{padding:6px 6px 10px}

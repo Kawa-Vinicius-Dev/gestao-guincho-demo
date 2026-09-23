@@ -3,6 +3,10 @@ import type { Veiculo } from '../../types/modelos'
 import { nomesCurtos } from '../../utils/nomes'
 import { valorDaOs, type LinhaOs } from './listaOs'
 
+/** A chave da linha de uma OS: o socorrista (id) ou a viatura (sigla); 'sem' quando falta. */
+export const chaveDoGrupo = (os: LinhaOs, tipo: 'socorrista' | 'viatura') =>
+  (tipo === 'socorrista' ? (os.motoristaId ? String(os.motoristaId) : '') : (os.viatura?.trim().toUpperCase() ?? '')) || 'sem'
+
 /**
  * Faturamento por socorrista ou por viatura, no formato do antigo Painel Porto:
  * valor, servicos, quantos sem valor, e a linha sem dono por ultimo para a soma

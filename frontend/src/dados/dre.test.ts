@@ -55,6 +55,12 @@ test('até 8 dias, os serviços um a um; acima, resumidos', () => {
     .toEqual(['Resultado', 'Serviços por socorrista', 'Serviços por viatura', 'Despesas pagas, gasto por gasto'])
 })
 
+test('o arquivo da quinzena leva os números das OPs no nome', () => {
+  const dre = montarDre(financeiro, extrato, servicos, 16)
+  expect(relatorioDaDre(dre, '2026-09-01', '2026-09-16', ['06438807', '06438808']).nomeArquivo).toBe('dre-OPs-06438807-06438808')
+  expect(relatorioDaDre(dre, '2026-09-01', '2026-09-16').nomeArquivo).toBe('dre-2026-09-01-a-2026-09-16')
+})
+
 test('no relatório do dia, o serviço sem valor aparece como "Sem valor", não como R$ 0,00', () => {
   const secao = relatorioDaDre(montarDre(financeiro, extrato, servicos, 1), '2026-09-07', '2026-09-07').secoes[3]!
   expect(secao.linhas.map(l => l.at(-1))).toContain('Sem valor')

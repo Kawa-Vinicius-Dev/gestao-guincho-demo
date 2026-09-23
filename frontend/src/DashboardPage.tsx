@@ -8,11 +8,12 @@ import { dashboardEmCache, lerDashboard } from './dados/dashboard'
 import { IndicadoresDaOperacao, PainelDeGastos, PainelDeKm, ResultadoDoPeriodo } from './dashboard/PaineisDoResultado'
 import type { Dashboard, LancamentoFinanceiro, Veiculo } from './types/modelos'
 import { listarTodasAsOs, type LinhaOs } from './dados/porto/listaOs'
-import { faturamentoPorGrupo } from './dados/porto/faturamento'
+import { chaveDoGrupo, faturamentoPorGrupo } from './dados/porto/faturamento'
+import { OsDoGrupo } from './dashboard/OsDoGrupo'
+import type { LinhaFaturamento } from './components/Graficos'
 import { listarVeiculos } from './dados/veiculos'
 import { FaturamentoPorGrupo } from './components/Graficos'
 import { lerExtrato } from './dados/extrato'
-import { ServicosDoPeriodo } from './financeiro/dre/ServicosDoPeriodo'
 import { DespesasDoPeriodo } from './financeiro/dre/DespesasDoPeriodo'
 import { data } from './utils/formatadores'
 import { usePeriodoGlobal } from './utils/periodoGlobal'
@@ -26,6 +27,13 @@ import { porCompetencia } from './utils/modoDoPeriodo'
  * trouxe o dinheiro e para onde ele foi. Km so aparece quando ha km registrado.
  */
 
+
+/** Cada linha de faturamento abre as OS dela. */
+function comOs(linhas:LinhaFaturamento[],oss:LinhaOs[],tipo:'socorrista'|'viatura'):LinhaFaturamento[]{
+  const porChave=new Map<string,LinhaOs[]>()
+  for(const os of oss){const k=chaveDoGrupo(os,tipo);porChave.set(k,[...(porChave.get(k)??[]),os])}
+  return linhas.map(l=>({...l,abre:<OsDoGrupo oss={porChave.get(l.chave)??[]}/>}))
+}
 
 export default function DashboardPage(){
   // O periodo e o do sistema inteiro: trocar aqui troca nas outras telas.
@@ -126,20 +134,20 @@ export default function DashboardPage(){
               </div>
             : <PainelDeGastos dados={financeiro} inicio={inicio} fim={fim}/>}
 
-          {/* Faturamento por socorrista e por viatura no formato do antigo Painel
-              Porto (Kawa, 23/09/2026), sobre a mesma lista de OS dos servicos
-              abaixo: as barras, o total e a lista sao o mesmo numero. */}
+          {/* Faturamento e servicos num bloco so (Kawa, 23/09/2026: "quero
+              simplificar"): a barra de cada socorrista e de cada viatura abre as OS
+              dela. Sai da mesma lista de OS: barras, total e OS sao o mesmo numero. */}
           {servicos?<div className="painel-faturamento">
-            <Painel etiqueta="Por pessoa" titulo="Faturamento por socorrista" aoLado={<Link to="/equipe">Ver socorristas</Link>}>
+            <Painel etiqueta="Por pessoa" titulo="Faturamento e serviços por socorrista" aoLado={<Link to="/equipe">Ver socorristas</Link>}>
               <FaturamentoPorGrupo descricao="Faturamento por socorrista no período" vazio="Nenhum serviço neste período."
-                linhas={faturamentoPorGrupo(servicos,'socorrista')}/>
+                linhas={comOs(faturamentoPorGrupo(servicos,'socorrista'),servicos,'socorrista')}/>
+              <p className="nota-fora-do-fechamento">{competencia?'Pela OP em que o serviço entrou.':'Pela data do atendimento.'} Clique numa linha para ver as OS.</p>
             </Painel>
-            <Painel etiqueta="Por viatura" titulo="Faturamento por viatura" aoLado={<Link to="/veiculos">Ver viaturas</Link>}>
+            <Painel etiqueta="Por viatura" titulo="Faturamento e serviços por viatura" aoLado={<Link to="/veiculos">Ver viaturas</Link>}>
               <FaturamentoPorGrupo descricao="Faturamento por viatura no período" vazio="Nenhum serviço neste período."
-                linhas={faturamentoPorGrupo(servicos,'viatura',veiculos)}/>
+                linhas={comOs(faturamentoPorGrupo(servicos,'viatura',veiculos),servicos,'viatura')}/>
             </Painel>
           </div>:null}
-          {periodo.inicio&&periodo.fim?<ServicosDoPeriodo inicio={periodo.inicio} fim={periodo.fim} porCompetencia={competencia} servicos={servicos}/>:null}
           <DespesasDoPeriodo lancamentos={lancamentos}/>
         </>
       : null}

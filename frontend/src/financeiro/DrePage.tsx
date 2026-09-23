@@ -36,7 +36,7 @@ export default function DrePage() {
   const [carregando,setCarregando]=useState(true)
   const [exportando,setExportando]=useState('')
   async function exportar(formato:'excel'|'pdf'){setExportando(formato);setErro('')
-    try{await baixarDre(inicio,fim,formato,competencia)}catch(e){setErro((e as Error).message)}finally{setExportando('')}}
+    try{await baixarDre(inicio,fim,formato,competencia,periodo.op)}catch(e){setErro((e as Error).message)}finally{setExportando('')}}
   useEffect(()=>{listarVeiculos().then(setVeiculos).catch(()=>setVeiculos([]))},[])
   useEffect(()=>{
     if(!inicio||!fim||inicio>fim)return
@@ -55,7 +55,9 @@ export default function DrePage() {
     <section className="panel painel-filtros"><form className="ledger-filters" onSubmit={e=>e.preventDefault()}><SeletorPeriodo periodo={periodo} aoMudar={setPeriodo}/></form></section>
     {erro?<div className="form-alert">{erro}</div>:null}
     {carregando||!dre?<Carregando/>:<>
-    <section className="dre-hero"><div><span>Lucro operacional</span><strong>{moeda(dre.lucro)}</strong><small>Receitas recebidas menos despesas pagas</small></div><div><span>Margem líquida operacional</span><strong>{dre.margem===null?'—':percentual(dre.margem)}</strong><small>{dre.margem===null?'Sem receita no período':`${dre.servicos.total} ${dre.servicos.total===1?'serviço prestado':'serviços prestados'}${dre.servicos.semValor?`, ${dre.servicos.semValor} ainda sem valor`:''}`}</small></div></section>
+    <section className="dre-hero"><div><span>Lucro operacional</span><strong>{moeda(dre.lucro)}</strong><small>Receitas recebidas menos despesas pagas</small></div><div><span>Margem líquida operacional</span><strong>{dre.margem===null?'—':percentual(dre.margem)}</strong><small>{dre.margem===null?'Sem receita no período':'Lucro sobre a receita recebida'}</small></div></section>
+    {/* Os servicos estao no arquivo da DRE, nao na tela: a linha diz quantos e onde ver. */}
+    <p className="dre-aviso-servicos"><strong>{dre.servicos.total} {dre.servicos.total===1?'serviço':'serviços'} no período</strong>{dre.servicos.semValor?` (${dre.servicos.semValor} sem valor)`:''} · detalhe por socorrista e por viatura no Excel e no PDF da DRE.</p>
     <section className="dre-layout">
       <article className="panel dre-sheet">
         <header><span>Demonstração do resultado</span><strong>Valor</strong></header>
