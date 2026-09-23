@@ -30,3 +30,6 @@
 /* Quanto cada socorrista fez em dinheiro, ao lado da quantidade. */
 .sem-valor-soma{text-align:right;color:var(--muted);font-variant-numeric:tabular-nums;font-size:var(--t-apoio)}
 .sem-valor-total .sem-valor-soma{color:var(--ink);font-weight:700}
+
+/* Onde estao os servicos da DRE: no arquivo exportado. */
+.dre-aviso-servicos{margin:0 0 18px;padding:10px 14px;border-radius:8px;background:var(--info-fundo);color:var(--info-texto);font-size:var(--t-apoio)}

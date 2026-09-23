@@ -102,7 +102,7 @@ export function montarDre(
 }
 
 /** A mesma DRE da tela, em Excel ou PDF. */
-export function relatorioDaDre(m: MontagemDre, inicio: string, fim: string): Relatorio {
+export function relatorioDaDre(m: MontagemDre, inicio: string, fim: string, numerosOps: string[] = []): Relatorio {
   const curtos = nomesCurtos(m.servicos.lista.map(os => os.motorista))
   const ordenar = (linhas: LinhaFaturamento[]) =>
     [...linhas].sort((a, b) => Number(a.semVinculo) - Number(b.semVinculo) || b.valor - a.valor)
@@ -172,6 +172,7 @@ export function relatorioDaDre(m: MontagemDre, inicio: string, fim: string): Rel
         vazio: 'Nenhuma despesa paga no período.',
       },
     ],
-    nomeArquivo: `dre-${inicio}-a-${fim}`,
+    // Quinzena da OP: o arquivo leva os numeros das OPs, mais facil de achar na pasta.
+    nomeArquivo: numerosOps.length ? `dre-OPs-${numerosOps.join('-')}` : `dre-${inicio}-a-${fim}`,
   }
 }
