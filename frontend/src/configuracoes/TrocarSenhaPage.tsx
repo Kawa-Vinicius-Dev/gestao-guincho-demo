@@ -32,6 +32,7 @@ export default function TrocarSenhaPage(){
             <button className="button button-primary button-block" onClick={()=>void logout()}>Ir para o login</button></div>
         : <form onSubmit={trocar}>
             <span className="eyebrow">{usuario?.senhaProvisoria?'Senha provisória':'Segurança'}</span><h2>Troque sua senha</h2>
+            {usuario?<p className="conta-da-senha">Conta: <strong>{usuario.nome}</strong> · {usuario.email}</p>:null}
             <p>{usuario?.senhaProvisoria
               ? 'A senha que você recebeu é temporária. Escolha a sua para liberar o sistema.'
               : 'Informe a senha atual e a nova senha.'}</p>

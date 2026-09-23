@@ -58,3 +58,5 @@ export function AuthProvider({children}:{children:ReactNode}) {
   return <AuthContext.Provider value={valor}>{children}</AuthContext.Provider>
 }
 export function useAuth(){const value=useContext(AuthContext);if(!value)throw new Error('AuthProvider ausente');return value}
+/** A sessao, quando existe: telas que so mostram quem esta logado nao quebram fora do provedor. */
+export function useSessaoOpcional(){return useContext(AuthContext)?.usuario??null}

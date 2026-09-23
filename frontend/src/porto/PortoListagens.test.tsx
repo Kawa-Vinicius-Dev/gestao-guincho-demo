@@ -46,7 +46,7 @@ test('resume e filtra OPs recalculando quantidade e valores',async()=>{
     http.get('/api/porto/ordens-pagamento/resumo',()=>HttpResponse.json({quantidadeTotalOps:1,valorTotalPrevisto:500,quantidadeSemComposicao:0,valorSemComposicao:0,quantidadeConciliadas:0,valorConciliadas:0,quantidadeValorAbaixo:1,diferencaTotalAbaixo:50,quantidadeValorAcima:0,diferencaTotalAcima:0,quantidadeComDivergencia:1,valorTotalDivergencias:50,quantidadePagamentoProgramado:1,valorProgramado:500,quantidadeRecebidas:0,valorRecebido:0,quantidadeAguardandoRecebimento:1,valorAguardandoRecebimento:500,quantidadeVencidasNaoRecebidas:0,valorVencidoNaoRecebido:0,valorMedioPorOp:500,quantidadeOrdensServico:2})),
   )
   const user=userEvent.setup({ delay: null });render(<MemoryRouter><PortoOrdensPagamentoPage/></MemoryRouter>);expect(await screen.findByText('OP-701')).toBeInTheDocument()
-  expect(screen.getByText('Total de OPs')).toBeInTheDocument();expect(screen.getByText('Valor médio por OP')).toBeInTheDocument()
+  expect(screen.getByText('Valor das OPs')).toBeInTheDocument();expect(screen.getByText('Com divergência')).toBeInTheDocument()
   expect(screen.getByRole('columnheader',{name:/soma das os/i})).toBeInTheDocument()
   await user.type(screen.getByLabelText(/número da op/i),'OP-701');await user.click(screen.getByRole('button',{name:/aplicar filtros/i}))
   expect(numeroFiltrado).toBe('OP-701')

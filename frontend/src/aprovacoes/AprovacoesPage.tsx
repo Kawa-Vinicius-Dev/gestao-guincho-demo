@@ -47,13 +47,25 @@ function IconeBaixar() {
   </svg>
 }
 
+function IconeFoto() {
+  return <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" focusable="false" fill="none"
+    stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 6.5h3l1.5-2h5L14 6.5h3v9H3z"/><circle cx="10" cy="11" r="2.8"/>
+  </svg>
+}
+
+/**
+ * A foto e consulta, nao decisao: fica como link discreto a esquerda, e as duas
+ * acoes (recusar e aprovar) ficam a direita, do mesmo tamanho (Kawa, 23/09/2026:
+ * "os bottons tao feios").
+ */
 function VerFoto({ caminho, rotulo, nomeDoArquivo }: { caminho: string; rotulo: string; nomeDoArquivo?: string }) {
   const [url, setUrl] = useState('')
   const [erro, setErro] = useState('')
   return <>
-    <button type="button" className="button button-ghost button-sm"
+    <button type="button" className="aprovacao-foto-link"
       onClick={() => linkDaFoto(caminho).then(setUrl).catch(e => setErro((e as Error).message))}>
-      {rotulo}
+      <IconeFoto/>{rotulo}
     </button>
     {erro ? <span className="form-alert">{erro}</span> : null}
     {/* Baixar fica no topo da foto aberta, so o icone (Kawa, 23/09/2026: "a ideia
@@ -113,11 +125,13 @@ function LinhaTurno({ item, aoResolver }: { item: ItemDaFila; aoResolver: () => 
     {item.observacoes ? <p className="aprovacao-observacao">“{item.observacoes}”</p> : null}
 
     <footer className="aprovacao-acoes">
-      {item.fotoAbertura ? <VerFoto caminho={item.fotoAbertura} rotulo="Foto do início"
-        nomeDoArquivo={`turno-${item.data}-${item.socorrista}-saida.jpg`} /> : null}
-      {item.fotoFechamento ? <VerFoto caminho={item.fotoFechamento} rotulo="Foto do fim"
-        nomeDoArquivo={`turno-${item.data}-${item.socorrista}-chegada.jpg`} /> : null}
-      <button type="button" className="button button-ghost" onClick={() => setDevolvendo(true)}>
+      <span className="aprovacao-fotos">
+        {item.fotoAbertura ? <VerFoto caminho={item.fotoAbertura} rotulo="Foto do início"
+          nomeDoArquivo={`turno-${item.data}-${item.socorrista}-saida.jpg`} /> : null}
+        {item.fotoFechamento ? <VerFoto caminho={item.fotoFechamento} rotulo="Foto do fim"
+          nomeDoArquivo={`turno-${item.data}-${item.socorrista}-chegada.jpg`} /> : null}
+      </span>
+      <button type="button" className="button button-ghost acao-recusar" onClick={() => setDevolvendo(true)}>
         Devolver
       </button>
       <button type="button" className="button button-primary"
@@ -197,8 +211,10 @@ function LinhaDespesa({ item, aoResolver }: { item: ItemDaFila; aoResolver: () =
     {item.observacoes ? <p className="aprovacao-observacao">“{item.observacoes}”</p> : null}
 
     <footer className="aprovacao-acoes">
-      {item.comprovante ? <VerFoto caminho={item.comprovante} rotulo="Ver comprovante" /> : null}
-      <button type="button" className="button button-ghost" onClick={() => setExcluindo(true)}>
+      <span className="aprovacao-fotos">
+        {item.comprovante ? <VerFoto caminho={item.comprovante} rotulo="Ver comprovante" /> : null}
+      </span>
+      <button type="button" className="button button-ghost acao-recusar" onClick={() => setExcluindo(true)}>
         Excluir
       </button>
       <button type="button" className="button button-primary" onClick={() => setConfirmar(true)}>
