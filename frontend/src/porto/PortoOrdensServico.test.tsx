@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { MemoryRouter } from 'react-router-dom'
@@ -73,7 +73,9 @@ test('corrigir a OS do Auxiliar troca socorrista e viatura', async () => {
   const user = userEvent.setup({ delay: null })
   await abrir()
 
-  await user.click(await screen.findByRole('button', { name: /corrigir os 01\/4312215-26/i }))
+  // As acoes da OS moram no detalhe: abre a OS, depois corrige.
+  await user.click(await screen.findByRole('button', { name: /abrir a os 01\/4312215-26/i }))
+  await user.click(await screen.findByRole('button', { name: /corrigir socorrista e viatura/i }))
   const janela = screen.getByRole('dialog')
   await user.selectOptions(within(janela).getByLabelText(/socorrista/i), '9')
   await user.selectOptions(within(janela).getByLabelText(/viatura/i), 'L25')
@@ -91,7 +93,9 @@ test('socorrista desativado não é oferecido para corrigir a OS', async () => {
   const user = userEvent.setup({ delay: null })
   await abrir()
 
-  await user.click(await screen.findByRole('button', { name: /corrigir os 01\/4312215-26/i }))
+  // As acoes da OS moram no detalhe: abre a OS, depois corrige.
+  await user.click(await screen.findByRole('button', { name: /abrir a os 01\/4312215-26/i }))
+  await user.click(await screen.findByRole('button', { name: /corrigir socorrista e viatura/i }))
   const campo = within(screen.getByRole('dialog')).getByLabelText(/socorrista/i)
   expect(within(campo).getByRole('option', { name: /anderson/i })).toBeInTheDocument()
   expect(within(campo).queryByRole('option', { name: /quem saiu/i })).not.toBeInTheDocument()
@@ -167,7 +171,8 @@ test('informa o valor da Porto numa OS sem OP, depois de confirmar', async () =>
   const user = userEvent.setup({ delay: null })
   await abrir()
 
-  await user.click(await screen.findByRole('button', { name: /informar valor da os 01\/4312215-26/i }))
+  await user.click(await screen.findByRole('button', { name: /abrir a os 01\/4312215-26/i }))
+  await user.click(await screen.findByRole('button', { name: /^informar valor$/i }))
   const janela = screen.getByRole('dialog')
   await user.type(within(janela).getByLabelText(/valor do serviço/i), '18100')
   await user.click(within(janela).getByRole('button', { name: /continuar/i }))
@@ -191,8 +196,35 @@ test('OS paga pela OP mostra o valor informado e a diferença', async () => {
 
   expect(await screen.findByText(/valor divergente/i)).toBeInTheDocument()
   expect(screen.getByText(/informado r\$\s*150,00 · \+r\$\s*31,00/i)).toBeInTheDocument()
-  // Quem ja esta numa OP nao tem valor para informar a mao.
-  expect(screen.queryByRole('button', { name: /informar valor da os/i })).not.toBeInTheDocument()
+  // Quem ja esta numa OP nao tem valor para informar a mao, nem no detalhe.
+  await userEvent.setup({ delay: null }).click(screen.getByRole('button', { name: /abrir a os 01\/4312215-26/i }))
+  const detalhe = await screen.findByRole('dialog', { name: '01/4312215-26' })
+  expect(within(detalhe).queryByRole('button', { name: /informar valor/i })).not.toBeInTheDocument()
+  expect(within(detalhe).getByText(/veio da OP e não se edita/i)).toBeInTheDocument()
+})
+
+test('o detalhe da OS mostra tudo e tira a comissão, com confirmação', async () => {
+  let enviado: Record<string, unknown> | null = null
+  servidorBase()
+  servidor.use(
+    http.get(`${SUPA}/rest/v1/ordens_servico_porto`, () =>
+      HttpResponse.json({ sem_comissao: false, status_operacional: 'PROCESSADO', socorrista: 'AUX' })),
+    http.post(`${SUPA}/rest/v1/rpc/porto_definir_comissao_da_os`, async ({ request }) => {
+      enviado = await request.json() as Record<string, unknown>
+      return HttpResponse.json(null)
+    }),
+  )
+  await abrir()
+  const user = userEvent.setup({ delay: null })
+  await user.click(await screen.findByRole('button', { name: /abrir a os 01\/4312215-26/i }))
+  const detalhe = await screen.findByRole('dialog', { name: '01/4312215-26' })
+  expect(within(detalhe).getByText('16/06 a 30/06/2026')).toBeInTheDocument()
+  expect(within(detalhe).getByRole('link', { name: '06416626' })).toHaveAttribute('href', '/porto/ordens-pagamento?numero=06416626')
+
+  await user.click(await within(detalhe).findByRole('button', { name: /tirar comissão e cancelar/i }))
+  const confirmacao = await screen.findByRole('dialog', { name: /tirar a comissão e cancelar/i })
+  await user.click(within(confirmacao).getByRole('button', { name: /tirar comissão e cancelar/i }))
+  await waitFor(() => expect(enviado).toEqual({ p_os_id: 7, p_sem_comissao: true }))
 })
 
 test('card do painel abre a lista já na situação e na competência', async () => {

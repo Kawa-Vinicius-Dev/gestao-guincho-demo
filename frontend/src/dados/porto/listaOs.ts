@@ -175,3 +175,20 @@ export async function definirViaturaEmLote(filtro: FiltroOs, sigla: string, soSe
     'Não foi possível definir a viatura das ordens de serviço.',
   ) as number
 }
+
+/** O que o detalhe da OS precisa e a lista nao traz: a marca de sem comissao. */
+export interface MarcasDaOs { semComissao: boolean; cancelada: boolean; socorristaNoArquivo?: string }
+
+export async function lerMarcasDaOs(id: number): Promise<MarcasDaOs | null> {
+  const linha = ou(
+    await supabase().from('ordens_servico_porto')
+      .select('sem_comissao,status_operacional,socorrista').eq('id', id).maybeSingle(),
+    'Não foi possível abrir a OS.',
+  ) as { sem_comissao: boolean; status_operacional: string; socorrista: string | null } | null
+  if (!linha) return null
+  return {
+    semComissao: linha.sem_comissao,
+    cancelada: linha.status_operacional === 'CANCELADO',
+    socorristaNoArquivo: linha.socorrista ?? undefined,
+  }
+}
