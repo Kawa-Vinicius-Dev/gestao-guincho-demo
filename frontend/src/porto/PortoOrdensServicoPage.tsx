@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { LinkOp, LinkSocorrista } from '../components/LinksDeDado'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useAoVivo } from '../dados/aoVivo'
@@ -14,6 +14,8 @@ import { Modal } from '../components/Modal'
 import { ConfirmarAcao, type PedidoConfirmacao } from '../components/ConfirmarAcao'
 import { SeletorPeriodo } from '../components/SeletorPeriodo'
 import { ETIQUETAS_SITUACAO } from './situacaoOs'
+import { DetalheDaOs } from './os/DetalheDaOs'
+import './os/detalheDaOs.css'
 import { CabecalhoPagina, GradeIndicadores, Indicador, Painel } from '../components/ui/Pagina'
 import type { Motorista, Veiculo } from '../types/modelos'
 import { data, moeda } from '../utils/formatadores'
@@ -38,14 +40,6 @@ const SITUACOES = [
 ]
 
 
-const competenciaDe = (os: LinhaOs) => {
-  if (!os.competenciaInicio || !os.competenciaFim) return '—'
-  const ini = data(os.competenciaInicio)
-  const fim = data(os.competenciaFim)
-  const anoIni = ini.slice(6)
-  const anoFim = fim.slice(6)
-  return anoIni === anoFim ? `${ini.slice(0, 5)} a ${fim}` : `${ini} a ${fim}`
-}
 
 const siglaDe = (v: Veiculo) => (v.siglaPorto || v.identificacao).toUpperCase()
 
@@ -74,6 +68,9 @@ export default function PortoOrdensServicoPage() {
   const [mensagem, setMensagem] = useState('')
   const [exportando, setExportando] = useState('')
   const [corrigindo, setCorrigindo] = useState<LinhaOs | null>(null)
+  // A OS aberta no detalhe: informacoes e acoes dela num lugar so.
+  const [aberta, setAberta] = useState<LinhaOs | null>(null)
+  const abriuPeloLink = useRef(false)
   const [salvando, setSalvando] = useState(false)
   const [versao, setVersao] = useState(0)
   useAoVivo(() => setVersao(v => v + 1))
@@ -102,7 +99,14 @@ export default function PortoOrdensServicoPage() {
     let valeu = true
     setCarregando(true); setErro('')
     listarOs(filtro, pagina)
-      .then(r => { if (valeu) setDados(r) })
+      .then(r => {
+        if (!valeu) return
+        setDados(r)
+        // Chegou por um link de OS (?os=): com uma OS so na lista, ela ja abre.
+        if (!abriuPeloLink.current && busca.get('os') && r.itens.length === 1) {
+          abriuPeloLink.current = true; setAberta(r.itens[0]!)
+        }
+      })
       .catch(e => { if (valeu) setErro((e as Error).message) })
       .finally(() => { if (valeu) setCarregando(false) })
     return () => { valeu = false }
@@ -242,7 +246,7 @@ export default function PortoOrdensServicoPage() {
     <CabecalhoPagina
       modulo="Porto Seguro"
       titulo="Ordens de serviço"
-      descricao="Todas as OS do período. Corrija socorrista e viatura na linha; valor e OP vêm da Porto."
+      descricao="Todas as OS do período. Clique numa OS para ver tudo sobre ela, corrigir ou tirar a comissão; valor e OP vêm da Porto."
       contexto={<>Período: <strong>{data(periodo.inicio)}</strong> → <strong>{data(periodo.fim)}</strong></>}
       acoes={<>
         <button className="button button-ghost" disabled={!dados?.total} onClick={() => setEmLote(true)}>Definir viatura das OS filtradas</button>
@@ -291,15 +295,17 @@ export default function PortoOrdensServicoPage() {
         ? <p className="empty-inline">{temFiltro ? 'Nenhuma OS com esses filtros neste período.' : 'Nenhuma OS neste período. Importe uma OP ou o painel diário.'}</p>
         : dados ? <div className="table-scroll"><table className="tabela-os" aria-label="Ordens de serviço">
           <thead><tr>
-            <th>OS</th><th>Atendimento</th><th>Competência</th><th>Especialidade</th><th>Socorrista</th><th>Viatura</th>
-            <th>OP</th><th>Situação</th><th className="th-numero">Valor</th><th className="th-numero">Comissão</th><th className="th-acoes"/>
+            <th>OS</th><th>Atendimento</th><th>Especialidade</th><th>Socorrista</th><th>Viatura</th>
+            <th>OP</th><th>Situação</th><th className="th-numero">Valor</th><th className="th-numero">Comissão</th>
           </tr></thead>
           <tbody>{dados.itens.map(os => {
             const veiculo = os.viatura ? veiculoPorSigla.get(os.viatura.toUpperCase()) : undefined
-            return <tr key={os.id}>
-              <td className="col-os"><strong>{os.numero}</strong></td>
+            // Clicar na linha abre o detalhe; links e botoes dentro dela seguem o proprio caminho.
+            return <tr key={os.id} className="linha-clicavel"
+              onClick={e => { if (!(e.target as HTMLElement).closest('a,button')) setAberta(os) }}>
+              <td className="col-os"><button type="button" className="os-abrir" onClick={() => setAberta(os)}
+                aria-label={`Abrir a OS ${os.numero}`} title="Ver tudo sobre esta OS">{os.numero}</button></td>
               <td className="col-data">{os.dataAtendimento ? data(os.dataAtendimento) : '—'}</td>
-              <td className="col-competencia"><small>{competenciaDe(os)}</small></td>
               <td className="col-especialidade" title={os.especialidade || undefined}>{os.especialidade || '—'}</td>
               <td className="col-socorrista"><LinkSocorrista id={os.motoristaId} nome={os.motorista}/></td>
               <td className="col-viatura">{veiculo
@@ -317,12 +323,6 @@ export default function PortoOrdensServicoPage() {
                   ? <>{moeda(os.valorManual)}<br/><small>informado, aguarda a OP</small></>
                   : <small>Chega com a OP</small>}</td>
               <td className="col-comissao">{os.comissao !== undefined ? moeda(os.comissao) : <small>Só com a OP</small>}</td>
-              <td className="col-acoes">
-                <div className="table-actions">
-                  {os.ordemPagamentoId ? null : <button className="table-action" onClick={() => setInformando(os)} aria-label={`Informar valor da OS ${os.numero}`}>Informar valor</button>}
-                  <button className="table-action" onClick={() => setCorrigindo(os)} aria-label={`Corrigir OS ${os.numero}`}>Corrigir</button>
-                </div>
-              </td>
             </tr>
           })}</tbody>
         </table></div> : null}
@@ -336,6 +336,12 @@ export default function PortoOrdensServicoPage() {
         : null}
     </Painel>
 
+    {aberta ? <DetalheDaOs os={aberta}
+      veiculoId={aberta.viatura ? veiculoPorSigla.get(aberta.viatura.toUpperCase())?.id : undefined}
+      aoCorrigir={() => { setCorrigindo(aberta); setAberta(null) }}
+      aoInformarValor={() => { setInformando(aberta); setAberta(null) }}
+      aoMudar={texto => { setAberta(null); setMensagem(texto); setVersao(v => v + 1) }}
+      aoFechar={() => setAberta(null)}/> : null}
     {corrigindo ? <Modal etiqueta={`OS ${corrigindo.numero}`} titulo="Corrigir socorrista e viatura" aoFechar={() => setCorrigindo(null)}>
       <form onSubmit={salvarCorrecao} className="form-grid two-columns">
         <Selecao rotulo="Socorrista" name="motoristaId" defaultValue={corrigindo.motoristaId ?? ''} vazio="Selecione"
