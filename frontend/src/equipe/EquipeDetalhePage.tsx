@@ -72,7 +72,7 @@ export default function EquipeDetalhePage(){
         <article className="metric"><span>Total de serviços prestados</span><strong>{detalhe.totalServicosPrestados}</strong><small>Inclui OS ainda não pagas</small></article>
         <article className="metric"><span>Serviços já pagos</span><strong>{detalhe.comissao.quantidadeServicosPagos}</strong><small>Somente OP efetivamente paga</small></article>
         <article className="metric"><span>Produção paga</span><strong>{moeda(detalhe.comissao.producaoPaga)}</strong></article>
-        <article className="metric metric-focus"><span>Comissão 20%</span><strong>{moeda(detalhe.comissao.comissaoBruta)}</strong></article>
+        <article className="metric metric-focus"><span>Comissão</span><strong>{moeda(detalhe.comissao.comissaoBruta)}</strong></article>
         <article className="metric"><span>Descontos</span><strong>{moeda(detalhe.comissao.descontos)}</strong><small>{moeda(detalhe.comissao.descontosPendentes)} aguardando aprovação</small></article>
         <article className={`metric ${detalhe.comissao.liquido<0?'metric-alert':'metric-net'}`}><span>Líquido</span><strong>{moeda(detalhe.comissao.liquido)}</strong><small>Comissão menos descontos</small></article>
       </section>
