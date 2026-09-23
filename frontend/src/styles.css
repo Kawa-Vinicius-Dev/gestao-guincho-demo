@@ -125,7 +125,7 @@ button,input,select,textarea{font:inherit}button{color:inherit}a{color:inherit}:
 small.estimado{display:block;margin-top:2px;padding:1px 5px;width:fit-content;border-radius:4px;color:#8a5a00;background:#fff4e0;font-size:11px;text-transform:uppercase;letter-spacing:.4px}
 
 
-/* ====================================================================
+/* ===========================================================================
    Console do dashboard
    ---------------------------------------------------------------------------
    Leitura de painel de instrumentos: os indicadores viram superficie escura com
@@ -214,7 +214,7 @@ small.estimado{display:block;margin-top:2px;padding:1px 5px;width:fit-content;bo
 /* A faixa preenche o painel de ponta a ponta, sem borda e raio duplicados. */
 .dashboard-tech .panel>.fleet-summary{margin:0;border:0;border-radius:0}
 
-/* ====================================================================
+/* ===========================================================================
    Graficos do dashboard
    ---------------------------------------------------------------------------
    Barras desenhadas com grid e divs, sem biblioteca. Ficam sobre a superficie
@@ -272,7 +272,7 @@ small.estimado{display:block;margin-top:2px;padding:1px 5px;width:fit-content;bo
 }
 @media(prefers-reduced-motion:reduce){.dashboard-tech .barra-preenche{transition:none}}
 
-/* ====================================================================
+/* ===========================================================================
    Tabelas longas: o cabecalho e a chave da linha nao somem
    ---------------------------------------------------------------------------
    A tabela de OS tem 13 colunas e 1251px de largura real: rola na horizontal
@@ -343,7 +343,7 @@ thead th{position:sticky;top:0;z-index:2}
    Regra propria em vez de mover o bloco de 1200px, que carrega outras decisoes. */
 @media(max-width:1400px){.app-shell{grid-template-columns:220px minmax(0,1fr)}}
 
-/* ====================================================================
+/* ===========================================================================
    Console tambem no Dashboard Porto
    ---------------------------------------------------------------------------
    O PR anterior deixou a Visao geral escura e o resto claro. Aqui a divergencia
@@ -361,7 +361,7 @@ thead th{position:sticky;top:0;z-index:2}
 @media(max-width:900px){.dashboard-tech .porto-dashboard-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){.dashboard-tech .porto-dashboard-metrics{grid-template-columns:minmax(0,1fr)}}
 
-/* ====================================================================
+/* ===========================================================================
    Microinteracoes
    ---------------------------------------------------------------------------
    Havia 4 transicoes em ~60 KB de CSS. O .button principal ja respondia; o resto
@@ -389,7 +389,7 @@ tbody tr{transition:background-color .14s ease}
   .table-action:active{transform:none}
 }
 
-/* ====================================================================
+/* ===========================================================================
    Tema escuro
    ---------------------------------------------------------------------------
    Opta-se pelo atributo data-tema no <html>, escolhido na tela de Configuracoes
@@ -457,7 +457,7 @@ tbody tr{transition:background-color .14s ease}
    sobre o navy, abaixo do minimo 4.5:1 do WCAG AA. Era assim desde antes do tema
    escuro - a barra sempre foi escura - e vale para os dois temas. */
 
-/* ====================================================================
+/* ===========================================================================
    Faturamento x custo, para veiculo e para socorrista
    ---------------------------------------------------------------------------
    Duas barras por linha na mesma escala: a distancia entre elas e o resultado.
@@ -480,7 +480,7 @@ tbody tr{transition:background-color .14s ease}
 .dashboard-tech .par-valor-custo{color:var(--muted)}
 .dashboard-tech .par-resultado{text-align:right;font:600 13.5px/1 'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums}
 
-/* ====================================================================
+/* ===========================================================================
    Camada de padronizacao — controles, respiro e toque
    ---------------------------------------------------------------------------
    O resto da folha cresceu por acrescimo: cada tela que nasceu trouxe a propria
@@ -734,7 +734,7 @@ tbody tr{transition:background-color .14s ease}
   .app-shell .button-sm{min-height:40px}
 }
 
-/* ====================================================================
+/* ===========================================================================
    Dropdown proprio
    ---------------------------------------------------------------------------
    A lista do <select> e a unica parte do formulario que o CSS nao alcanca: ela
@@ -828,7 +828,7 @@ tbody tr{transition:background-color .14s ease}
   padding-left:38px;text-align:right;
   font-variant-numeric:tabular-nums;font-size:15px;font-weight:600}
 
-/* ====================================================================
+/* ===========================================================================
    Barra lateral: grupos recolhiveis
    ---------------------------------------------------------------------------
    Ver Layout.tsx para o motivo. Aqui o rotulo do grupo, que era um <span> morto,
@@ -874,7 +874,7 @@ tbody tr{transition:background-color .14s ease}
 .app-shell .table-scroll.atualizando{opacity:.55;transition:opacity .12s ease;pointer-events:none}
 @media(prefers-reduced-motion:reduce){.app-shell .table-scroll.atualizando{transition:none}}
 
-/* ====================================================================
+/* ===========================================================================
    Paineis e avisos que nunca ganharam estilo
    =========================================================================== */
 
@@ -939,7 +939,7 @@ tbody tr{transition:background-color .14s ease}
 .app-shell .field>.campo-arquivo{display:flex}
 .app-shell .field>.campo-valor{display:block}
 
-/* ====================================================================
+/* ===========================================================================
    Atalhos do menu
    ---------------------------------------------------------------------------
    O menu tem dezoito itens e quem opera usa de tres a cinco o dia inteiro. A
@@ -971,7 +971,7 @@ tbody tr{transition:background-color .14s ease}
   color:var(--cyan);font:500 11px 'IBM Plex Mono',monospace;
   letter-spacing:.14em;text-transform:uppercase}
 
-/* ====================================================================
+/* ===========================================================================
    Para onde o dinheiro foi
    ---------------------------------------------------------------------------
    Faixa para composicao e linha em degraus para o momento de cada pagamento.
@@ -1089,7 +1089,7 @@ tbody tr{transition:background-color .14s ease}
 .pagina-despesas .approved{color:var(--muted)}
 .pagina-despesas .positive{color:var(--red)!important}
 
-/* ====================================================================
+/* ===========================================================================
    Veiculos e custos
    =========================================================================== */
 /* O bloco de acoes do cabecalho escuro nao tinha layout nenhum: o selo "Ativo" e
@@ -1111,7 +1111,7 @@ tbody tr{transition:background-color .14s ease}
 .app-shell .fleet-list{gap:var(--espaco-2)}
 .app-shell .fleet-detail{gap:var(--espaco-2)}
 
-/* ====================================================================
+/* ===========================================================================
    Dashboard Porto: cabecalho do painel
    ---------------------------------------------------------------------------
    As duas visoes (Producao / Pagamentos) eram dois botoes soltos encostados no
@@ -1140,7 +1140,7 @@ tbody tr{transition:background-color .14s ease}
    segunda divisoria a poucos pixels da primeira. */
 .app-shell .porto-view-switch+.ledger-filters{border-top:0}
 
-/* ====================================================================
+/* ===========================================================================
    Caixas de marcar
    ---------------------------------------------------------------------------
    As duas das Ordens de servico eram <label> soltos entre a linha de filtros e
@@ -1165,7 +1165,7 @@ tbody tr{transition:background-color .14s ease}
   padding:var(--espaco-1) var(--painel-pad);
   border-bottom:1px solid var(--line);background:var(--superficie-hover)}
 
-/* ====================================================================
+/* ===========================================================================
    Visao geral: arranjo de painel
    ---------------------------------------------------------------------------
    A tela era uma pilha: um bloco embaixo do outro, cada um da largura toda,
@@ -1454,7 +1454,7 @@ tbody tr{transition:background-color .14s ease}
 @media(max-width:1180px){.painel-faturamento{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){.faturamento-grupo-trilho>span{transition:none}}
 
-/* ====================================================================
+/* ===========================================================================
    Confirmacao de saida
    ---------------------------------------------------------------------------
    Um modal estreito, porque a pergunta e curta e uma janela de 620px para duas
@@ -1493,7 +1493,7 @@ tbody tr{transition:background-color .14s ease}
   .confirmar-saida .modal-actions .button{width:100%}
 }
 
-/* ====================================================================
+/* ===========================================================================
    Excluir despesa
    ---------------------------------------------------------------------------
    A lixeira fica apagada em repouso e so ganha o vermelho no hover e no foco:
@@ -1597,7 +1597,7 @@ tbody tr{transition:background-color .14s ease}
 /* Paginacao das listas longas (ordens de servico). */
 .paginacao{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px;border-top:1px solid var(--line, rgba(127,127,127,.2))}
 .paginacao span{font-size:14px;color:var(--muted, #64748b)}
-/* ====================================================================
+/* ===========================================================================
    Listas de cadastro: as colunas param no mesmo lugar em toda linha
    ---------------------------------------------------------------------------
    A linha era um flex com `justify-content:space-between` e tres filhos: nome,
@@ -1618,7 +1618,7 @@ tbody tr{transition:background-color .14s ease}
   align-items:center;gap:var(--espaco-2)}
 .simple-list li>:last-child{justify-self:end}
 
-/* ====================================================================
+/* ===========================================================================
    Barras de rolagem
    ---------------------------------------------------------------------------
    A barra do sistema operacional é cinza-claro com trilho branco. Sobre um
@@ -2012,10 +2012,6 @@ a.brand:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
 body{caret-color:transparent}
 input,textarea,select,[contenteditable]:not([contenteditable=false]){caret-color:auto}
 
-/* Visao geral: receita de OS canceladas, fora das barras. */
-.nota-os-canceladas{margin:-6px 0 18px;padding:9px 14px;border-radius:8px;background:var(--superficie-2);color:var(--muted);font-size:13px}
-.nota-os-canceladas strong{color:var(--ink)}
-
 /* Seletor de periodo: qual regra esta valendo. */
 .modo-do-periodo{align-self:center;justify-self:start;width:max-content;display:inline-flex;align-items:center;height:26px;padding:0 10px;border-radius:99px;background:var(--info-fundo);color:var(--info-texto);font-size:12px;font-weight:600;white-space:nowrap}
 
@@ -2039,3 +2035,7 @@ input,textarea,select,[contenteditable]:not([contenteditable=false]){caret-color
 .gastos-da-categoria ul{margin:0 0 6px;padding:0 4px 0 18px;list-style:none;font-size:12px}
 .gastos-da-categoria li{display:grid;grid-template-columns:80px 1fr auto;gap:10px;padding:5px 0;border-bottom:1px dashed var(--linha-suave);color:var(--muted)}
 .gastos-da-categoria li strong{color:var(--ink);font-weight:600}
+
+/* Visao geral: receita de OS canceladas, fora das barras. */
+.nota-os-canceladas{margin:-6px 0 18px;padding:9px 14px;border-radius:8px;background:var(--superficie-2);color:var(--muted);font-size:13px}
+.nota-os-canceladas strong{color:var(--ink)}
