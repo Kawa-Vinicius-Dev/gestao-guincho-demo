@@ -116,7 +116,7 @@ export function DespesaAcumulada({pontos,inicio,fim}:{pontos:PontoDespesaAcumula
   if(!pontos.length)return <Vazio texto="A trajetória aparece quando houver despesas pagas."/>
   // Espaco a esquerda para a escala: sem valor ao lado, as linhas de grade so
   // enfeitam — quem olha nao sabe se o degrau foi de cem ou de dez mil reais.
-  const largura=640,altura=214,margemEsq=64,margemDir=14,topo=14,base=172
+  const largura=640,altura=214,margemEsq=76,margemDir=14,topo=14,base=172
   const primeiro=diaUtc(inicio),ultimo=diaUtc(fim)
   if(!Number.isFinite(primeiro)||!Number.isFinite(ultimo)||ultimo<primeiro){
     return <Vazio texto="Informe um período válido para ver a trajetória."/>
