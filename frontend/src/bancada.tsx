@@ -260,6 +260,25 @@ const resumoOps = {
   valorVencidoNaoRecebido: 0, valorMedioPorOp: 0, quantidadeOrdensServico: 0,
 }
 
+/**
+ * Desempenho mes a mes: tres meses de OS de exemplo (julho a setembro) nas cinco
+ * viaturas, com quantidades diferentes por mes, para o grafico e a tabela terem o
+ * que mostrar. So a tela de Desempenho usa.
+ */
+const osDeTresMeses = (() => {
+  const viaturas: [string, string, number][] = [['K85', 'DJALMA BEZERRA DE MELO NETO', 8], ['L845', 'ANDERSON JORGE RIBEIRO', 9],
+    ['L168', 'LUIZ FELIPE DA SILVA', 3], ['L25', 'QEBSON RAMOS DA SILVA', 2], ['TF250', 'EDUARDO MARTINS DA SILVA JUNIOR', 5]]
+  const porMes: Record<string, number[]> = { '2026-07': [48, 41, 22, 30, 9], '2026-08': [55, 38, 27, 26, 14], '2026-09': [61, 47, 19, 33, 12] }
+  const itens = Object.entries(porMes).flatMap(([mes, qtds]) => viaturas.flatMap(([sigla, motorista, motoristaId], v) =>
+    Array.from({ length: qtds[v]! }, (_, i) => {
+      const valor = [208, 152, 231.5, 443.2][i % 4]!
+      return { id: Number(`${mes.replace('-', '')}${v}${i}`), numero: `${sigla}-${mes}-${i}`, dataAtendimento: `${mes}-${String(1 + (i % 28)).padStart(2, '0')}`,
+        especialidade: 'SOCORRO', motorista, motoristaId, viatura: sigla, numeroOp: '06438807', situacao: 'CONCILIADA',
+        valorTotal: valor, valorPrevisto: valor, semValor: false }
+    })))
+  return { total: itens.length, semViatura: 0, valorTotal: 0, valorPrevisto: 0, semValor: 0, divergentes: 0, comissaoTotal: 0, itens }
+})()
+
 /** Responde as chamadas do Supabase com o exemplo acima, sem rede. */
 const original = window.fetch
 window.fetch = (async (entrada: RequestInfo | URL, init?: RequestInit) => {
@@ -273,7 +292,7 @@ window.fetch = (async (entrada: RequestInfo | URL, init?: RequestInit) => {
     return responder({ ...resumoOps, quantidadeTotalOps: ops.length, valorTotalPrevisto: total,
       quantidadeRecebidas: ops.length, valorRecebido: total, valorMedioPorOp: total / ops.length })
   }
-  if (url.includes('porto_listar_os')) return responder(listaDeOs)
+  if (url.includes('porto_listar_os')) return responder(tela === 'desempenho' ? osDeTresMeses : listaDeOs)
   if (url.includes('meu_turno_do_dia')) return responder(turnoDoDia)
   if (url.includes('fila_de_aprovacoes')) return responder(filaAprovacoes)
   if (url.includes('porto_pendencias_os')) return responder(pendencias)
@@ -324,6 +343,7 @@ const visaoGeral = {
 const tela = new URLSearchParams(location.search).get('tela')
 const daVisao = tela === 'visao'
 // A Visao geral e o Extrato abrem no periodo da OP real, para terem o que mostrar.
+if (tela === 'desempenho') sessionStorage.setItem('filtro:periodo', JSON.stringify({ inicio: '2026-07-01', fim: '2026-09-30' }))
 if (tela === 'os') sessionStorage.setItem('filtro:periodo', JSON.stringify({ inicio: '2026-09-16', fim: '2026-09-30' }))
 if (daVisao || tela === 'extrato') sessionStorage.setItem('filtro:periodo', JSON.stringify({ inicio: '2026-03-30', fim: '2026-04-29', op: '1' }))
 
