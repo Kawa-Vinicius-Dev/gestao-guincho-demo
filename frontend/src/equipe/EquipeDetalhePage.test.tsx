@@ -86,7 +86,7 @@ test('administrador abre o socorrista pela Equipe e consulta composição oficia
   expect(screen.getByText('OS-PENDENTE')).toBeInTheDocument()
   expect(screen.getByText('Comissão: aguardando pagamento')).toBeInTheDocument()
   expect(within(within(resumo).getByText('Produção paga').closest('article')!).getByText('R$ 500,00')).toBeInTheDocument()
-  expect(within(within(resumo).getByText('Comissão 20%').closest('article')!).getByText('R$ 100,00')).toBeInTheDocument()
+  expect(within(within(resumo).getByText('Comissão', { selector: 'span' }).closest('article')!).getByText('R$ 100,00')).toBeInTheDocument()
   expect(within(within(resumo).getByText('Descontos').closest('article')!).getByText('R$ 30,00')).toBeInTheDocument()
   expect(within(within(resumo).getByText('Líquido').closest('article')!).getByText('R$ 70,00')).toBeInTheDocument()
 

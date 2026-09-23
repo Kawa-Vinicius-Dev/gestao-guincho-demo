@@ -12,6 +12,7 @@ import { Carregando } from '../components/EstadoPagina'
 import { CampoDocumento } from '../components/CamposMascarados'
 import { Campo, Selecao } from '../components/Campos'
 import { Modal } from '../components/Modal'
+import { ComissaoPadrao } from './ComissaoPadrao'
 
 export default function ConfiguracoesPage(){
   const [categorias,setCategorias]=useState<Categoria[]>([]),[contratantes,setContratantes]=useState<Contratante[]>([]),[usuarios,setUsuarios]=useState<Usuario[]>([])
@@ -106,6 +107,7 @@ export default function ConfiguracoesPage(){
   return <div className="page-enter"><header className="page-heading"><div><span className="eyebrow">Base financeira</span><h1>Configurações</h1><p>Contratantes, categorias e segurança da conta.</p></div></header>
     {erro?<div className="form-alert">{erro}</div>:null}{carregando?<Carregando/>:null}{mensagem?<div className="success-notice">{mensagem}</div>:null}<div className="settings-grid">
       <section className="panel settings-card"><header><h2>Aparência</h2><p>Vale só neste computador e neste navegador.</p></header><div className="segmented tema-escolha" role="group" aria-label="Tema visual"><button className={tema==='claro'?'active':''} aria-pressed={tema==='claro'} onClick={()=>trocarTema('claro')}>Claro</button><button className={tema==='escuro'?'active':''} aria-pressed={tema==='escuro'} onClick={()=>trocarTema('escuro')}>Escuro</button></div><p className="empty-inline">O sistema não segue o tema do computador: a cor só muda quando você escolhe aqui.</p></section>
+      <ComissaoPadrao/>
       <section className="panel settings-card"><header><h2>Contratantes</h2><p>Porto Seguro e demais clientes pagadores.</p></header><ul className="simple-list">{contratantes.map(c=><li key={c.id}><strong>{c.nome}</strong><small>{c.documento||'Sem documento'}</small><span className="acoes-da-linha"><button className="table-action" onClick={()=>setEditandoCadastro({tipo:'contratante',item:c})}>Editar</button><button className="table-action table-action-danger" onClick={()=>setExcluindoCadastro({tipo:'contratante',item:c})}>Excluir</button></span></li>)}</ul>
         <form onSubmit={e=>cadastrar(e,'contratantes')} className="inline-form">
           <Campo rotulo="Nome do contratante"><input name="nome" required autoCapitalize="words" autoComplete="off"/></Campo>

@@ -68,6 +68,13 @@ export default function DespesasPage(){
     carregarFixas().catch(x=>setErro((x as Error).message))},[admin])
   // Trocar o periodo traz as despesas dele.
   useEffect(()=>{carregar().catch(x=>setErro((x as Error).message)).finally(()=>setCarregando(false))},[periodo.inicio,periodo.fim])
+  // O "Editar" do Extrato chega aqui com ?editar=<id>: abre o mesmo formulario
+  // desta tela, em vez de manter um segundo formulario de despesa em outro lugar.
+  const [paraEditar,setParaEditar]=useState(()=>Number(new URLSearchParams(window.location.search).get('editar'))||0)
+  useEffect(()=>{if(!paraEditar)return
+    const alvo=lista.find(d=>d.id===paraEditar);if(!alvo)return
+    abrirEdicao(alvo);setParaEditar(0)
+    window.history.replaceState(null,'',window.location.pathname)},[lista,paraEditar])
   async function salvar(e:FormEvent<HTMLFormElement>){e.preventDefault();const f=new FormData(e.currentTarget)
     const texto=(campo:string)=>String(f.get(campo)||'')||null
     const categoriaId=Number(f.get('categoriaId'))
@@ -231,6 +238,8 @@ export default function DespesasPage(){
           </div>
         </details>
         <AcoesModal aoCancelar={()=>{setForm(false);setEditando(null)}}>
+          {editando&&admin?<button type="button" className="button button-ghost acao-excluir-no-editar"
+            onClick={()=>{setExcluindo(editando);setForm(false);setEditando(null)}}>Excluir despesa</button>:null}
           <button className="button button-primary">{editando?'Salvar alterações':'Salvar despesa'}</button>
         </AcoesModal>
       </form>

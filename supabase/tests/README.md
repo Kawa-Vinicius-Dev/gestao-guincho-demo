@@ -37,6 +37,9 @@ Validam as migrations num Postgres local, sem depender de um projeto Supabase.
 - `92_comissao_no_extrato.sql` — 5 asserções de que a despesa de comissão se
   chama "Fulano — comissão da OP tal", acompanha o nome se ele mudar, e de que o
   extrato entrega o socorrista e a OP para a tela montar o link.
+- `93_comissao_por_op.sql` — 13 asserções de que a % da OP (ex.: 17%) vale para
+  todos daquela OP, passa por cima da % do socorrista, aparece igual na lista de
+  Comissões e na tela de OS, e de que o padrão editável só muda o que não fechou.
 - `94_despesa_fixa_com_parcelas.sql` — 9 asserções de que a despesa fixa com
   parcelas (ex.: 9/10) grava o número em cada lançamento, não duplica o mês, se
   encerra sozinha na última e não pula número quando um lançamento é apagado.

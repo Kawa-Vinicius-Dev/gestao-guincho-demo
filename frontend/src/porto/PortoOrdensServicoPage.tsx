@@ -291,7 +291,7 @@ export default function PortoOrdensServicoPage() {
         : dados ? <div className="table-scroll"><table className="tabela-os" aria-label="Ordens de serviço">
           <thead><tr>
             <th>OS</th><th>Atendimento</th><th>Competência</th><th>Especialidade</th><th>Socorrista</th><th>Viatura</th>
-            <th>OP</th><th>Situação</th><th>Valor</th><th>Comissão</th><th className="th-acoes"/>
+            <th>OP</th><th>Situação</th><th className="th-numero">Valor</th><th className="th-numero">Comissão</th><th className="th-acoes"/>
           </tr></thead>
           <tbody>{dados.itens.map(os => {
             const veiculo = os.viatura ? veiculoPorSigla.get(os.viatura.toUpperCase()) : undefined
@@ -299,10 +299,12 @@ export default function PortoOrdensServicoPage() {
               <td className="col-os"><strong>{os.numero}</strong></td>
               <td className="col-data">{os.dataAtendimento ? data(os.dataAtendimento) : '—'}</td>
               <td className="col-competencia"><small>{competenciaDe(os)}</small></td>
-              <td className="col-especialidade">{os.especialidade || '—'}</td>
+              <td className="col-especialidade" title={os.especialidade || undefined}>{os.especialidade || '—'}</td>
               <td className="col-socorrista">{os.motoristaId ? <Link to={`/equipe/${os.motoristaId}`}>{os.motorista}</Link> : '—'}</td>
-              <td className="col-viatura">{veiculo ? <Link to={`/veiculos?veiculo=${veiculo.id}`}>{os.viatura}</Link> : os.viatura || '—'}</td>
-              <td className="col-op">{os.numeroOp ?? <small>Aguardando OP</small>}</td>
+              <td className="col-viatura">{veiculo
+                ? <Link className="vehicle-chip" to={`/veiculos?veiculo=${veiculo.id}`}>{os.viatura}</Link>
+                : os.viatura ? <span className="vehicle-chip">{os.viatura}</span> : <small className="os-sem">Sem viatura</small>}</td>
+              <td className="col-op">{os.numeroOp ? <span className="os-op">{os.numeroOp}</span> : <small className="os-sem">Aguardando OP</small>}</td>
               <td className="col-situacao"><span className={`vehicle-status ${ETIQUETAS_SITUACAO[os.situacao].classe}`}>{ETIQUETAS_SITUACAO[os.situacao].texto}</span></td>
               {/* Com OP, o valor e o oficial; sem OP, o informado a mao, marcado como previsto. */}
               <td className="col-valor">{os.ordemPagamentoId

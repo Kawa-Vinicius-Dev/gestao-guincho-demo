@@ -51,6 +51,9 @@ export function TabelaExtrato({ itens, carregando, aoPagar, aoEditarReceita, aoE
               {podePagar
                 ? <button className="table-action" onClick={() => aoPagar(item)}>Registrar pagamento</button>
                 : null}
+              {!receita && item.origem !== 'COMISSAO'
+                ? <Link className="table-action" to={`/despesas?editar=${item.referenciaId}`}>Editar</Link>
+                : null}
               {receitaManual && aoEditarReceita && aoExcluirReceita
                 ? <span className="acoes-da-linha">
                   <button className="table-action" onClick={() => aoEditarReceita(item)}>Editar</button>

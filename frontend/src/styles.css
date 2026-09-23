@@ -1859,3 +1859,36 @@ tbody tr{transition:background-color .14s ease}
 
 /* Senha com o olho: o botao fica dentro do campo, a direita. */
 .entrada-senha{position:relative;display:block}.entrada-senha input{padding-right:42px}.entrada-senha-olho{position:absolute;top:50%;right:6px;display:grid;place-items:center;width:32px;height:32px;padding:0;border:0;border-radius:6px;color:var(--muted);background:transparent;cursor:pointer;transform:translateY(-50%)}.entrada-senha-olho:hover{color:var(--ink)}.entrada-senha-olho:focus-visible{outline:2px solid var(--blue-600);outline-offset:1px}
+
+/* Barra lateral com letra maior (pedido do cliente, 22/09/2026): os itens eram
+   13px e os titulos de grupo 8px, pequenos para quem le de longe. */
+.primary-nav a{min-height:44px;font-size:15px}
+.nav-icone{width:19px;height:19px;flex-basis:19px}
+.nav-group-titulo,.nav-atalhos-titulo{font-size:10px}
+.sidebar-foot span{font-size:10px}.sidebar-foot small{font-size:11px}
+/* Excluir dentro do Editar despesa: a esquerda, longe do Salvar, na cor de perigo. */
+.acao-excluir-no-editar{order:-1;margin-right:auto;color:var(--erro-texto)}
+/* Dia do Diario clicavel: o botao ocupa a celula inteira e herda a cor do estado. */
+.diario-dia-botao{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;width:100%;height:100%;padding:0;border:0;border-radius:inherit;color:inherit;background:transparent;font:inherit;cursor:pointer}
+.diario-dia-botao:hover{background:rgba(0,0,0,.05)}.diario-dia-botao:focus-visible{outline:2px solid var(--blue-600);outline-offset:1px}
+
+/* Ordens de servico: leitura mais facil (pedido de 22/09/2026). Letra maior,
+   dinheiro a direita com algarismos da mesma largura, OP e viatura em etiqueta,
+   e a linha sob o mouse destacada para nao perder a OS ao correr o olho. */
+.tabela-os{font-size:13px}
+.tabela-os th{font-size:10px}
+.tabela-os tbody tr:hover td{background:var(--superficie-2)}
+.tabela-os .col-os strong{font-size:13px;letter-spacing:.01em}
+.tabela-os .col-data{font-variant-numeric:tabular-nums}
+.tabela-os .col-especialidade{max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tabela-os .col-socorrista a{font-weight:600;text-decoration:none}.tabela-os .col-socorrista a:hover{text-decoration:underline}
+.tabela-os .col-viatura .vehicle-chip{font-size:11px;text-decoration:none}
+.tabela-os .os-op{display:inline-flex;padding:4px 7px;border-radius:5px;background:var(--superficie-2);font:500 11px 'IBM Plex Mono',monospace}
+.tabela-os .os-sem{color:var(--muted);font-style:italic}
+.tabela-os .th-numero,.tabela-os .col-valor,.tabela-os .col-comissao{text-align:right;font-variant-numeric:tabular-nums}
+.tabela-os .col-valor{font-weight:600}
+.tabela-os .col-valor small,.tabela-os .col-comissao small{font-weight:400;color:var(--muted)}
+/* DRE: servicos do periodo ainda sem valor. */
+.dre-sem-valor{margin-top:18px;padding:0}.dre-sem-valor>.panel-title{padding:20px 22px 6px}.dre-sem-valor>.nota-fora-do-fechamento{padding:0 22px 12px}
+.dre-sem-valor-resumo{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--linha-suave)}.dre-sem-valor-resumo>div{background:var(--superficie)}
+.dre-sem-valor .th-numero,.dre-sem-valor .col-numero{text-align:right;font-variant-numeric:tabular-nums}
