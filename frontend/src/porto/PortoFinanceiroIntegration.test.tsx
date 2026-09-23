@@ -93,9 +93,10 @@ test('faturamento por socorrista e por viatura fecha com o total pago',async()=>
   expect(linhas[0]).toHaveTextContent(/comissão R\$\s4\.770,62/)
   expect(linhas[4]).toHaveTextContent('Sem socorrista')
   expect(linhas[4]).toHaveTextContent(/R\$\s3\.938,62/)
-  // Clicar no nome abre a ficha do socorrista; a linha sem dono nao tem para onde ir.
+  // Clicar no nome abre a ficha do socorrista; a linha sem dono abre as OS que
+  // estao sem socorrista (Kawa, 22/09/2026: "sem viatura nao esta clicavel").
   expect(within(linhas[0]).getByRole('link',{name:'JEFERSON MARTINS DA SILVA'})).toHaveAttribute('href','/equipe/1')
-  expect(within(linhas[4]).queryByRole('link')).not.toBeInTheDocument()
+  expect(within(linhas[4]).getByRole('link',{name:'Sem socorrista'})).toHaveAttribute('href','/porto/pendencias?filtro=SOCORRISTA')
 
   const viaturas=screen.getByRole('list',{name:/receitas por viatura/i})
   expect(within(viaturas).getByText('Sem viatura')).toBeInTheDocument()

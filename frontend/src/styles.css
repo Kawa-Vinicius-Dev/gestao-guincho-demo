@@ -1919,3 +1919,7 @@ tbody tr{transition:background-color .14s ease}
    reservar uma coluna larga fixa. */
 .faturamento-grupo li>.faturamento-grupo-rotulo{overflow:visible;white-space:normal;text-overflow:clip;overflow-wrap:anywhere;line-height:1.3}
 .faturamento-grupo li>small{white-space:normal;line-height:1.35}
+/* O nome na barra de faturamento e link: aparece como link sem precisar passar o
+   mouse (sublinhado discreto), inclusive "Sem viatura" e "Sem socorrista". */
+.faturamento-grupo-link{text-decoration:underline;text-decoration-color:color-mix(in srgb,currentColor 35%,transparent);text-underline-offset:3px}
+.faturamento-grupo-link:hover{text-decoration-color:currentColor}
