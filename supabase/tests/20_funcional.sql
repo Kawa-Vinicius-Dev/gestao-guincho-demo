@@ -120,6 +120,9 @@ select pg_temp.checar('servicos do ciclo',
 reset role;
 
 \echo '========== PAGAMENTO DE COMISSAO =========='
+-- DIAGNOSTICO TEMPORARIO
+select id, nome, tipo, lower(btrim(nome)) like 'comiss%o de socorrista' as casa from public.categorias;
+select position('like' in pg_get_functiondef('public.pagar_comissao(bigint,bigint,date,text,text)'::regprocedure)) as tem_like;
 set role authenticated;
 set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000003';
 select pg_temp.checar('pagar comissao cria o repasse',
