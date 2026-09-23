@@ -110,14 +110,15 @@ export async function reativarAcesso(perfilId: string): Promise<void> {
 
 /** Dar acesso cria a conta e a liga ao cadastro do socorrista, no mesmo passo. */
 export async function criarAcessoSocorrista(
-  motoristaId: number, email: string,
+  motoristaId: number, email: string, nome?: string,
 ): Promise<SenhaRedefinida> {
   if (!moduloNoSupabase('usuarios')) {
     return api<SenhaRedefinida>(`/api/motoristas/${motoristaId}/acesso`, {
       method: 'POST', body: JSON.stringify({ email }),
     })
   }
-  const r = await admin<SenhaRedefinida>({ acao: 'acesso', motoristaId, email })
+  // O nome da conta e o do cadastro; sem ele, a conta sairia com o comeco do e-mail.
+  const r = await admin<SenhaRedefinida>({ acao: 'acesso', motoristaId, email, ...(nome ? { nome } : {}) })
   invalidarCadastro('motoristas')
   return r
 }

@@ -66,6 +66,24 @@ function agrupar(oss: LinhaOs[], chave: (os: LinhaOs) => string | undefined, sem
   return grupos
 }
 
+/** Os meses que o periodo cobre, "2026-07", "2026-08"... */
+export function mesesDoPeriodo(inicio: string, fim: string): string[] {
+  const meses: string[] = []
+  let [ano, mes] = inicio.slice(0, 7).split('-').map(Number)
+  const [anoFim, mesFim] = fim.slice(0, 7).split('-').map(Number)
+  while (ano! < anoFim! || (ano === anoFim && mes! <= mesFim!)) {
+    meses.push(`${ano}-${String(mes).padStart(2, '0')}`)
+    if (mes === 12) { ano = ano! + 1; mes = 1 } else { mes = mes! + 1 }
+  }
+  return meses
+}
+
+const nomeDoMes = (mes: string) => {
+  const [ano, numero] = mes.split('-').map(Number)
+  const texto = new Date(ano!, numero! - 1, 1).toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' }).replace('.', '')
+  return texto.charAt(0).toUpperCase() + texto.slice(1)
+}
+
 export default function DesempenhoPage() {
   const [periodo, setPeriodo] = usePeriodoGlobal()
   const [oss, setOss] = useState<LinhaOs[] | null>(null)
@@ -126,6 +144,26 @@ export default function DesempenhoPage() {
 
   function trocarVisao(nova: Visao) { setVisao(nova); setAberto(null) }
 
+  // Mes a mes (pedido do cliente, 23/09/2026): escolhendo varios meses no De-ate,
+  // cada viatura (ou socorrista) mostra o desempenho de cada mes e o total. O mes
+  // do servico segue o modo do periodo: pela OP em que entrou, ou pela data.
+  const competencia = porCompetencia(periodo)
+  const meses = periodo.inicio && periodo.fim ? mesesDoPeriodo(periodo.inicio, periodo.fim) : []
+  const mesDaOs = (os: LinhaOs) => (competencia ? os.competenciaFim : os.dataAtendimento)?.slice(0, 7) ?? ''
+  const siglaDoVeiculo = new Map(veiculos.map(v => [v.id, (v.siglaPorto || v.identificacao).toUpperCase()]))
+  const noMes = (g: Grupo, mes: string): number => {
+    if (medidaValida === 'km') {
+      return kms.filter(k => k.veiculoId !== undefined && siglaDoVeiculo.get(k.veiculoId) === g.chave && k.data.slice(0, 7) === mes)
+        .reduce((t, k) => t + (k.quilometragemTotal || 0), 0)
+    }
+    const doMes = g.os.filter(os => mesDaOs(os) === mes)
+    if (medidaValida === 'servicos') return doMes.length
+    if (medidaValida === 'comissao') return doMes.reduce((t, os) => t + (os.comissao ?? 0), 0)
+    return doMes.reduce((t, os) => t + valorDaOs(os), 0)
+  }
+  const formatarCelula = (valor: number) => medidaValida === 'servicos' ? numero(valor)
+    : medidaValida === 'km' ? `${numero(valor)} km` : moeda(valor)
+
   return <div className="page-enter pagina-desempenho">
     <CabecalhoPagina modulo="Operação" titulo="Desempenho"
       descricao="Serviços, faturamento e km de cada viatura, e serviços, produção e comissão de cada socorrista, no período."/>
@@ -176,6 +214,22 @@ export default function DesempenhoPage() {
         </li>
       </ul> : null}
     </Painel>
+
+    {meses.length > 1 && ordenados.length ? <Painel semRespiro etiqueta="Mês a mês"
+      titulo={`${visao === 'viaturas' ? 'Viaturas' : 'Socorristas'} por mês · ${MEDIDAS[visao].find(([m]) => m === medidaValida)?.[1].toLowerCase()}`}>
+      <div className="table-scroll"><table className="tabela-mes-a-mes" aria-label="Desempenho mês a mês">
+        <thead><tr><th>{visao === 'viaturas' ? 'Viatura' : 'Socorrista'}</th>
+          {meses.map(m => <th key={m} className="th-numero">{nomeDoMes(m)}</th>)}<th className="th-numero">Total</th></tr></thead>
+        <tbody>{ordenados.map(g => <tr key={g.chave} className={g.chave === 'sem' ? 'sem-vinculo' : undefined}>
+          <td>{g.link ? <Link to={g.link}>{g.rotulo}</Link> : g.rotulo}</td>
+          {meses.map(m => <td key={m} className="col-numero">{formatarCelula(noMes(g, m))}</td>)}
+          <td className="col-numero"><strong>{formatarCelula(g[medidaValida])}</strong></td>
+        </tr>)}</tbody>
+        <tfoot><tr className="linha-total"><td><strong>Total</strong></td>
+          {meses.map(m => <td key={m} className="col-numero"><strong>{formatarCelula(ordenados.reduce((t, g) => t + noMes(g, m), 0))}</strong></td>)}
+          <td className="col-numero"><strong>{formatarCelula(soma(medidaValida))}</strong></td></tr></tfoot>
+      </table></div>
+    </Painel> : null}
 
     {grupoAberto ? <Painel etiqueta={visao === 'viaturas' ? 'Viatura' : 'Socorrista'}
       titulo={`Serviços de ${grupoAberto.rotulo}`} semRespiro

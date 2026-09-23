@@ -163,3 +163,16 @@ export async function excluirMotorista(id: number): Promise<void> {
   invalidarCadastro('motoristas')
   await excluirRegistro('motoristas', id, 'Não foi possível excluir o socorrista.')
 }
+
+/**
+ * Liga uma conta de socorrista que ja existe ao cadastro dele. Sem a ligacao a
+ * pessoa entra no sistema mas nao ve os proprios servicos, turnos e comissao
+ * (foi o que aconteceu com a conta do Anderson, criada em Acessos em 23/09/2026).
+ */
+export async function ligarAcessoAoSocorrista(motoristaId: number, perfilId: string): Promise<void> {
+  invalidarCadastro('motoristas')
+  ou(
+    await supabase().from('motoristas').update({ perfil_id: perfilId }).eq('id', motoristaId),
+    'Não foi possível ligar a conta ao socorrista.',
+  )
+}

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { MemoryRouter } from 'react-router-dom'
@@ -51,9 +51,10 @@ test('o dono cria um administrador e vê a senha provisória uma única vez', as
   const user = userEvent.setup({ delay: null })
   await abrir()
 
-  await user.type(await screen.findByLabelText(/^nome$/i), 'Jeferson')
+  // Administrador: escolhe o perfil primeiro, e ai o formulario pede o nome.
+  await user.selectOptions(await screen.findByLabelText(/^perfil$/i), 'ADMINISTRADOR')
+  await user.type(screen.getByLabelText(/^nome$/i), 'Jeferson')
   await user.type(screen.getByLabelText(/e-mail de acesso/i), 'jeferson@autosocorro.com.br')
-  await user.selectOptions(screen.getByLabelText(/^perfil$/i), 'ADMINISTRADOR')
   await user.click(screen.getByRole('button', { name: /criar acesso/i }))
 
   // O dono nao escolhe senha: ele so recebe a provisoria para repassar.
@@ -72,7 +73,8 @@ test('e-mail repetido não cria conta nenhuma: o erro da Edge Function aparece n
   const user = userEvent.setup({ delay: null })
   await abrir()
 
-  await user.type(await screen.findByLabelText(/^nome$/i), 'Jeferson')
+  await user.selectOptions(await screen.findByLabelText(/^perfil$/i), 'ADMINISTRADOR')
+  await user.type(screen.getByLabelText(/^nome$/i), 'Jeferson')
   await user.type(screen.getByLabelText(/e-mail de acesso/i), 'jeferson@autosocorro.com.br')
   await user.click(screen.getByRole('button', { name: /criar acesso/i }))
 
@@ -175,4 +177,64 @@ test('conta encerrada aparece como tal e pode ser reativada', async () => {
 
   expect(enviado).toEqual({ acao: 'reativar', perfilId: 'a1b2' })
   expect(await screen.findByText(/foi reativado/i)).toBeInTheDocument()
+})
+
+// Kawa, 23/09/2026: criar o acesso de um socorrista ja cadastrado tem de ser um
+// passo so, e a conta tem de nascer ligada ao cadastro dele.
+test('acesso de socorrista: escolhe a pessoa do cadastro e a conta nasce ligada a ela', async () => {
+  let enviado: Record<string, unknown> | null = null
+  servidorBase()
+  servidor.use(
+    http.get(`${SUPA}/rest/v1/motoristas`, () => HttpResponse.json([
+      { id: 9, nome: 'ANDERSON JORGE RIBEIRO', ativo: true, perfil_id: null, codigos_porto: [] },
+      { id: 1, nome: 'JEFERSON MARTINS DA SILVA', ativo: true, perfil_id: 'x1', codigos_porto: [] },
+    ])),
+    http.post(`${SUPA}/functions/v1/admin-usuarios`, async ({ request }) => {
+      enviado = await request.json() as Record<string, unknown>
+      return HttpResponse.json({ usuarioId: 'z9', nome: 'ANDERSON JORGE RIBEIRO', email: 'anderson@x.com.br',
+        senhaProvisoria: 'abcd-1234' }, { status: 201 })
+    }),
+  )
+  const user = userEvent.setup({ delay: null })
+  await abrir()
+
+  const quem = await screen.findByLabelText(/^socorrista$/i)
+  // So quem ainda nao tem acesso aparece para escolher.
+  expect(screen.queryByRole('option', { name: 'JEFERSON MARTINS DA SILVA' })).not.toBeInTheDocument()
+  await user.selectOptions(quem, '9')
+  await user.type(screen.getByLabelText(/e-mail de acesso/i), 'anderson@x.com.br')
+  await user.click(screen.getByRole('button', { name: /criar acesso/i }))
+
+  expect(enviado).toEqual({ acao: 'acesso', motoristaId: 9, email: 'anderson@x.com.br', nome: 'ANDERSON JORGE RIBEIRO' })
+  expect(await screen.findByText('abcd-1234')).toBeInTheDocument()
+})
+
+test('conta de socorrista sem cadastro ligado avisa e se liga ao socorrista', async () => {
+  let ligado: { url: string; corpo: unknown } | null = null
+  servidor.use(
+    http.get(`${SUPA}/rest/v1/categorias`, () => HttpResponse.json([])),
+    http.get(`${SUPA}/rest/v1/perfis`, () => HttpResponse.json([
+      { id: 'a1b2', nome: 'ANDERSON JORGE RIBEIRO', email: 'anderson@x.com.br',
+        perfil: 'FUNCIONARIO', ativo: true, senha_provisoria: false },
+    ])),
+    http.get(`${SUPA}/rest/v1/motoristas`, () => HttpResponse.json([
+      { id: 9, nome: 'ANDERSON JORGE RIBEIRO', ativo: true, perfil_id: null, codigos_porto: [] },
+    ])),
+    http.patch(`${SUPA}/rest/v1/motoristas`, async ({ request }) => {
+      ligado = { url: request.url, corpo: await request.json() }
+      return new HttpResponse(null, { status: 204 })
+    }),
+  )
+  const user = userEvent.setup({ delay: null })
+  await abrir()
+
+  expect(await screen.findByText('Sem cadastro ligado')).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: /ligar ao socorrista/i }))
+  // O socorrista com o mesmo nome ja vem escolhido.
+  const janela = screen.getByRole('dialog')
+  expect(within(janela).getByRole('combobox', { name: /^socorrista$/i })).toHaveValue('9')
+  await user.click(within(janela).getByRole('button', { name: /ligar conta/i }))
+
+  expect(ligado!.corpo).toEqual({ perfil_id: 'a1b2' })
+  expect(ligado!.url).toContain('id=eq.9')
 })
