@@ -71,12 +71,15 @@ grant execute on function public.porto_definir_comissao_da_os(bigint, boolean) t
 do $$
 declare
     v_def text := pg_get_functiondef('public.porto_confirmar_importacao'::regproc);
-    v_antes constant text := '                   status_operacional = case
-                       when public.ordens_servico_porto.status_financeiro = ''RECEBIDO''';
-    v_depois constant text := '                   status_operacional = case
-                       when public.ordens_servico_porto.sem_comissao
-                       then public.ordens_servico_porto.status_operacional
-                       when public.ordens_servico_porto.status_financeiro = ''RECEBIDO''';
+    -- Quebra de linha escrita como \n, e nao digitada: colado no SQL Editor a
+    -- partir do Windows, o arquivo chega com CRLF e a ancora nunca casaria com
+    -- o corpo da funcao, que o banco guarda com LF.
+    v_antes constant text := E'                   status_operacional = case\n'
+        || E'                       when public.ordens_servico_porto.status_financeiro = ''RECEBIDO''';
+    v_depois constant text := E'                   status_operacional = case\n'
+        || E'                       when public.ordens_servico_porto.sem_comissao\n'
+        || E'                       then public.ordens_servico_porto.status_operacional\n'
+        || E'                       when public.ordens_servico_porto.status_financeiro = ''RECEBIDO''';
 begin
     if position('ordens_servico_porto.sem_comissao' in v_def) > 0 then
         return; -- ja aplicada
