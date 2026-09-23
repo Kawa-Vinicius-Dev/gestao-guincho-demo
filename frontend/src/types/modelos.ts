@@ -36,6 +36,8 @@ export interface Despesa {
   aprovada:boolean; criadoPor:string; comprovanteNomeOriginal?:string; comprovanteTamanhoBytes?:number
   /** Veio de uma despesa fixa (custo fixo); sem isto, e custo variavel. */
   despesaRecorrenteId?:number
+  /** Juros pago pelo atraso desta despesa fixa (a diferenca acima do valor dela). */
+  jurosDeDespesaId?:number
 }
 export interface DespesaRecorrente {
   id:number; descricao:string; categoria:string; categoriaId:number; valor:number; diaVencimento:number;

@@ -1,6 +1,4 @@
-import { api } from '../api/http'
 import { ou, supabase } from './cliente'
-import { moduloNoSupabase } from './modo'
 
 /**
  * Atalhos do menu. Sao do usuario e de mais ninguem — nem o administrador ve os
@@ -9,9 +7,6 @@ import { moduloNoSupabase } from './modo'
  */
 
 export async function listarFavoritos(): Promise<string[]> {
-  if (!moduloNoSupabase('favoritos')) {
-    return api<{ rotas: string[] }>('/api/favoritos').then(r => r.rotas)
-  }
   const linhas = ou(
     await supabase().from('favoritos_menu').select('rota').order('ordem').order('id'),
     'Não foi possível carregar os atalhos.',
@@ -20,11 +15,6 @@ export async function listarFavoritos(): Promise<string[]> {
 }
 
 export async function salvarFavoritos(rotas: string[]): Promise<string[]> {
-  if (!moduloNoSupabase('favoritos')) {
-    return api<{ rotas: string[] }>('/api/favoritos', {
-      method: 'PUT', body: JSON.stringify({ rotas }),
-    }).then(r => r.rotas)
-  }
   const linhas = ou(
     await supabase().rpc('substituir_favoritos', { p_rotas: rotas }),
     'Não foi possível salvar os atalhos.',

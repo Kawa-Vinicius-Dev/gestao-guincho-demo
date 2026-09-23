@@ -29,13 +29,6 @@ const LINHA = {
   veiculos: { identificacao: 'L168' },
 }
 
-test('sem o modulo ligado, continua no backend antigo', async () => {
-  servidor.use(http.get('/api/motoristas', () => HttpResponse.json([{ id: 1, nome: 'Velho', ativo: true }])))
-  const { listarMotoristas } = await carregar('')
-
-  expect((await listarMotoristas())[0].nome).toBe('Velho')
-})
-
 test('a viatura vem no mesmo select, sem uma consulta por socorrista', async () => {
   let colunas: string | null = null
   let idas = 0

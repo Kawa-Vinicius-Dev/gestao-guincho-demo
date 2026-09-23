@@ -159,15 +159,3 @@ test('remover limpa a tabela antes do arquivo', async () => {
   expect(passos).toEqual(['tabela', 'arquivo'])
 })
 
-test('sem o modulo ligado, o comprovante continua no backend antigo', async () => {
-  let peloRender = false
-  servidor.use(http.post('/api/despesas/12/comprovante', () => {
-    peloRender = true
-    return HttpResponse.json({})
-  }))
-  const { anexarComprovante } = await carregar('')
-
-  await anexarComprovante(DESPESA, arquivo('nota.pdf', 'application/pdf'))
-
-  expect(peloRender).toBe(true)
-})

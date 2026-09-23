@@ -5,7 +5,7 @@ import { lancarFixasVencidas } from '../dados/despesasFixas'
 import { ConfirmarAcao, type PedidoConfirmacao } from '../components/ConfirmarAcao'
 import { SeletorPeriodo } from '../components/SeletorPeriodo'
 import { usePeriodoGlobal } from '../utils/periodoGlobal'
-import { aprovarDespesa, atualizarDespesa, criarDespesa, excluirDespesa, listarDespesas, marcarDescontoComissao, despesasIguais } from '../dados/despesas'
+import { aprovarDespesa, atualizarDespesa, criarDespesa, excluirDespesa, listarDespesas, marcarDescontoComissao, despesasIguais, valorPagoDaFixa } from '../dados/despesas'
 import { abrirComprovante, anexarComprovante, removerComprovante } from '../dados/comprovantes'
 import { listarCategorias } from '../dados/cadastros'
 import { listarMotoristas } from '../dados/motoristas'
@@ -96,6 +96,19 @@ export default function DespesasPage(){
     // Quem responde pelo caixa nao precisa aprovar o proprio lancamento: a
     // despesa do administrador ja nasce aprovada, e paga se ele disse que ja
     // pagou. A RPC confere o perfil, entao a bandeira so escolhe o caminho.
+    // Despesa fixa paga com atraso: o que passar do valor dela vira Juros.
+    if(editando?.despesaRecorrenteId){
+      const fixa=editando,juros=Math.round(Math.max(body.valor-fixa.valor,0)*100)/100
+      if(juros>0&&juros!==jurosDa(fixa)){
+        setPedido({titulo:'Lançar juros por atraso?',
+          efeito:<>A despesa fixa continua com {moeda(fixa.valor)} na categoria dela, e a diferença de <strong>{moeda(juros)}</strong> entra como despesa paga na categoria <strong>Juros</strong>, na mesma data.</>,
+          resumo:[['Despesa fixa',fixa.descricao],['Valor da fixa',moeda(fixa.valor)],['Valor pago',moeda(body.valor)],['Juros',moeda(juros)]],
+          textoConfirmar:'Lançar juros',aoConfirmar:()=>salvarFixa(fixa,body,descricao)})
+        return
+      }
+      await salvarFixa(fixa,body,descricao)
+      return
+    }
     if(editando){
       try{await atualizarDespesa(editando,body);setForm(false);setEditando(null)
         setMensagem(`Despesa "${descricao}" atualizada. Os totais foram recalculados.`);await carregar()}
@@ -112,6 +125,18 @@ export default function DespesasPage(){
       return
     }
     await criar(body)
+  }
+  /** O juros que ja esta lancado para esta despesa fixa (0 quando nao ha). */
+  function jurosDa(fixa:Despesa){return lista.find(d=>d.jurosDeDespesaId===fixa.id)?.valor??0}
+  async function salvarFixa(fixa:Despesa,body:Parameters<typeof atualizarDespesa>[1],descricao:string){
+    try{
+      // A fixa guarda o valor dela; o valor pago vai para o banco, que separa o juros.
+      await atualizarDespesa(fixa,{...body,valor:fixa.valor})
+      const juros=await valorPagoDaFixa(fixa.id,body.valor)
+      setForm(false);setEditando(null)
+      setMensagem(juros>0?`Despesa "${descricao}" atualizada, com ${moeda(juros)} de juros na categoria Juros.`:`Despesa "${descricao}" atualizada. Os totais foram recalculados.`)
+      await carregar()
+    }catch(x){setErro((x as Error).message)}
   }
   async function criar(body:Parameters<typeof criarDespesa>[0]){
     try{const criada=await criarDespesa(body,admin);setForm(false)
@@ -189,7 +214,7 @@ export default function DespesasPage(){
       {/* O essencial primeiro: quanto, no que, quando e de quem. O resto e raro e
           fica em "Mais detalhes", fechado. */}
       <form onSubmit={salvar} className="form-grid three-columns">
-        <CampoValor rotulo="Valor" name="valor" defaultValue={editando?.valor} required/>
+        <CampoValor rotulo={editando?.despesaRecorrenteId?'Valor pago':'Valor'} name="valor" defaultValue={editando?(editando.despesaRecorrenteId?editando.valor+jurosDa(editando):editando.valor):undefined} required/>
         {/* O socorrista so ve o que o administrador liberou (Configuracoes > Categorias). */}
         <Selecao rotulo="Categoria" name="categoriaId" defaultValue={editando?.categoriaId??''} required
           opcoes={categorias.filter(x=>x.ativo&&(admin||x.socorristaPode)).map(x=>({valor:x.id,texto:x.nome}))}/>
@@ -218,6 +243,9 @@ export default function DespesasPage(){
             <label className="field two-span"><span>Observações</span><input name="observacoes" defaultValue={editando?.observacoes} autoCapitalize="sentences" autoComplete="off"/></label>
           </div>
         </details>
+        {editando?.despesaRecorrenteId?<p className="field-wide nota-juros">
+          Despesa fixa de {moeda(editando.valor)}. Pagou com atraso? Coloque em <strong>Valor pago</strong> o que foi pago: a diferença entra sozinha como <strong>Juros</strong>.
+        </p>:null}
         <AcoesModal aoCancelar={()=>{setForm(false);setEditando(null)}}>
           {editando&&admin?<button type="button" className="button button-ghost acao-excluir-no-editar"
             onClick={()=>{setExcluindo(editando);setForm(false);setEditando(null)}}>Excluir despesa</button>:null}

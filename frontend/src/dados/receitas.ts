@@ -1,8 +1,6 @@
-import { api } from '../api/http'
 import type { Receita } from '../types/modelos'
 import { invalidarCacheFinanceiro } from './dashboard'
 import { ou, supabase } from './cliente'
-import { moduloNoSupabase } from './modo'
 
 /**
  * Receitas.
@@ -103,7 +101,6 @@ export const TETO_DA_LISTA = 300
  * o teto da lista geral deixaria as receitas manuais antigas de fora.
  */
 export async function listarReceitas(filtro: { apenasManuais?: boolean } = {}): Promise<Receita[]> {
-  if (!moduloNoSupabase('receitas')) return api<Receita[]>('/api/receitas')
 
   let consulta = supabase().from('receitas').select(COLUNAS)
   if (filtro.apenasManuais) consulta = consulta.eq('manual', true)
@@ -119,7 +116,6 @@ export async function listarReceitas(filtro: { apenasManuais?: boolean } = {}): 
 
 /** Uma receita, para abrir a edicao a partir de uma linha do extrato. */
 export async function lerReceita(id: number): Promise<Receita> {
-  if (!moduloNoSupabase('receitas')) return api<Receita>(`/api/receitas/${id}`)
   const linha = ou(
     await supabase().from('receitas').select(COLUNAS).eq('id', id).single(),
     'Não foi possível abrir a receita.',
@@ -129,9 +125,6 @@ export async function lerReceita(id: number): Promise<Receita> {
 
 export async function criarReceita(dados: DadosReceita): Promise<Receita> {
   invalidarCacheFinanceiro()
-  if (!moduloNoSupabase('receitas')) {
-    return api<Receita>('/api/receitas', { method: 'POST', body: JSON.stringify(dados) })
-  }
   const linha = ou(
     await supabase().from('receitas').insert(paraBanco(dados)).select(COLUNAS).single(),
     'Não foi possível registrar a receita.',
@@ -141,9 +134,6 @@ export async function criarReceita(dados: DadosReceita): Promise<Receita> {
 
 export async function atualizarReceita(id: number, dados: DadosReceita): Promise<Receita> {
   invalidarCacheFinanceiro()
-  if (!moduloNoSupabase('receitas')) {
-    return api<Receita>(`/api/receitas/${id}`, { method: 'PUT', body: JSON.stringify(dados) })
-  }
   const linha = ou(
     await supabase().from('receitas').update(paraBanco(dados)).eq('id', id)
       .select(COLUNAS).single(),
@@ -160,17 +150,13 @@ export async function atualizarReceita(id: number, dados: DadosReceita): Promise
  */
 export async function excluirReceita(id: number): Promise<void> {
   invalidarCacheFinanceiro()
-  if (!moduloNoSupabase('receitas')) {
-    await api(`/api/receitas/${id}`, { method: 'DELETE' })
-    return
-  }
   const apagadas = ou(
     await supabase().from('receitas').delete().eq('id', id).select('id'),
     'Não foi possível excluir a receita.',
   ) as { id: number }[]
 
   if (!apagadas.length) {
-    const { ApiError } = await import('../api/http')
+    const { ApiError } = await import('./erros')
     throw new ApiError(
       'Receitas originadas da Porto ou de importação não podem ser excluídas manualmente.',
       403,

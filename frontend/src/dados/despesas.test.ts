@@ -41,13 +41,6 @@ const LINHA = {
   motoristas: { nome: 'Anderson' }, perfis: { nome: 'Ana' },
 }
 
-test('sem o modulo ligado, continua no backend antigo', async () => {
-  servidor.use(http.get('/api/despesas', () => HttpResponse.json([{ id: 1, descricao: 'Antiga' }])))
-  const { listarDespesas } = await carregar('')
-
-  expect((await listarDespesas())[0].descricao).toBe('Antiga')
-})
-
 test('a linha chega no formato que a tabela ja usa, com os nomes resolvidos', async () => {
   servidor.use(http.get(`${URL_SUPABASE}/rest/v1/despesas`, () => HttpResponse.json([LINHA])))
   const { listarDespesas } = await carregar('auth,despesas')
@@ -302,4 +295,18 @@ test('recusa de permissão não vira lançamento pendente disfarçado', async ()
     { descricao: 'Almoço', categoriaId: 3, valor: 50, data: '2026-09-16' }, true))
     .rejects.toThrow(/não tem permissão/i)
   expect(inseriu).toBe(false)
+})
+
+// Kawa, 23/09/2026: seguro de 200 pago como 210 por atraso. A tela manda o valor
+// pago; o banco deixa 200 na fixa e lanca os 10 em Juros.
+test('valor pago da despesa fixa vai para o banco, que devolve o juros', async () => {
+  let corpo: unknown
+  servidor.use(http.post(`${URL_SUPABASE}/rest/v1/rpc/despesa_fixa_valor_pago`, async ({ request }) => {
+    corpo = await request.json()
+    return HttpResponse.json(10)
+  }))
+  const { valorPagoDaFixa } = await carregar('tudo')
+
+  expect(await valorPagoDaFixa(12, 210)).toBe(10)
+  expect(corpo).toEqual({ p_despesa_id: 12, p_valor: 210 })
 })

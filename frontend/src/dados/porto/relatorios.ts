@@ -5,15 +5,6 @@ import { detalharOrdemPagamentoPorto, listarOrdensPagamentoPorto } from '../port
 import { ou, supabase } from '../cliente'
 import { listarTodasAsOs, valorDaOs, type LinhaOs } from './listaOs'
 import { nomesCurtos } from '../../utils/nomes'
-import {
-  baixarOrdensServicoPorto as ossPeloRender,
-  baixarRelatorioOpPorto as opPeloRender,
-  baixarRelatorioPorto as peloRender,
-} from '../../api/porto'
-
-// Caminho de rollback: o XLSX/PDF do backend antigo continua alcancavel.
-export { ossPeloRender, opPeloRender, peloRender }
-
 /**
  * Exportacoes do modulo Porto, em Excel e PDF organizados (ver dados/exportar).
  *

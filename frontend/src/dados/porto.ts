@@ -1,15 +1,9 @@
-import { ApiError, api } from '../api/http'
-import type {
-  AcertoPendenciaOsPorto, ConfirmacaoPorto, DashboardAltoNivelPorto, DetalheOpPorto,
-  OpDestaquePorto,
-  JustificativaPorto, OrdemPagamentoPorto, OrdemServicoPorto, PendenciaOsPorto, PendenciaPorto,
-  PreviaPorto, ResumoOpsPorto,
-} from '../types/modelos'
+import { ApiError } from './erros'
+import type { AcertoPendenciaOsPorto, ConfirmacaoPorto, DashboardAltoNivelPorto, DetalheOpPorto, OpDestaquePorto, JustificativaPorto, OrdemPagamentoPorto, OrdemServicoPorto, PendenciaOsPorto, PendenciaPorto, PreviaPorto, ResumoOpsPorto } from '../types/modelos'
 import * as importacao from './porto/importacao'
 import * as relatoriosPorto from './porto/relatorios'
 import { ou, supabase } from './cliente'
 import { invalidarCacheFinanceiro } from './dashboard'
-import { moduloNoSupabase } from './modo'
 import type { PeriodoPorto } from '../utils/periodos'
 
 /**
@@ -20,8 +14,6 @@ import type { PeriodoPorto } from '../utils/periodos'
  * status comparando o valor da OP com a soma das OSs. Resumo, dashboard e
  * detalhe sao RPC: agregam, e agregacao e trabalho do banco.
  */
-
-const consulta = (params?: URLSearchParams) => (params?.toString() ? `?${params}` : '')
 
 const COLUNAS_OP = [
   'id', 'numero', 'valor_total', 'nome_codigo', 'data_pagamento_programada',
@@ -121,9 +113,6 @@ function osParaModelo(l: Record<string, unknown>): OrdemServicoPorto {
 export async function listarOrdensPagamentoPorto(
   params?: URLSearchParams,
 ): Promise<OrdemPagamentoPorto[]> {
-  if (!moduloNoSupabase('porto')) {
-    return api<OrdemPagamentoPorto[]>(`/api/porto/ordens-pagamento${consulta(params)}`)
-  }
   let q = supabase().from('porto_ops_conciliadas').select(COLUNAS_OP)
   const inicio = params?.get('dataInicio')
   const fim = params?.get('dataFim')
@@ -145,9 +134,6 @@ export async function listarOrdensPagamentoPorto(
 export async function resumirOrdensPagamentoPorto(
   params?: URLSearchParams,
 ): Promise<ResumoOpsPorto> {
-  if (!moduloNoSupabase('porto')) {
-    return api<ResumoOpsPorto>(`/api/porto/ordens-pagamento/resumo${consulta(params)}`)
-  }
   return ou(
     await supabase().rpc('porto_resumo_ops', {
       p_inicio: params?.get('dataInicio') ?? null, p_fim: params?.get('dataFim') ?? null,
@@ -185,7 +171,6 @@ export async function idDaOpPeloNumero(numero: string): Promise<number | null> {
 }
 
 export async function detalharOrdemPagamentoPorto(id: number): Promise<DetalheOpPorto> {
-  if (!moduloNoSupabase('porto')) return api<DetalheOpPorto>(`/api/porto/ordens-pagamento/${id}`)
 
   const bruto = ou(
     await supabase().rpc('porto_detalhe_op', { p_id: id }),
@@ -239,11 +224,6 @@ export async function criarOrdemPagamentoPorto(
   dados: Record<string, unknown>,
 ): Promise<OrdemPagamentoPorto> {
   invalidarCacheFinanceiro()
-  if (!moduloNoSupabase('porto')) {
-    return api<OrdemPagamentoPorto>('/api/porto/ordens-pagamento', {
-      method: 'POST', body: JSON.stringify(dados),
-    })
-  }
   const nova = ou(
     await supabase().from('ordens_pagamento_porto').insert({
       numero: dados.numero,
@@ -263,11 +243,6 @@ export async function atualizarOrdemPagamentoPorto(
   id: number, dados: Record<string, unknown>,
 ): Promise<OrdemPagamentoPorto> {
   invalidarCacheFinanceiro()
-  if (!moduloNoSupabase('porto')) {
-    return api<OrdemPagamentoPorto>(`/api/porto/ordens-pagamento/${id}`, {
-      method: 'PUT', body: JSON.stringify(dados),
-    })
-  }
   // O numero passa pela funcao que tambem acerta as comissoes no Extrato.
   if (typeof dados.numero === 'string') await renomearOp(id, dados.numero)
   ou(
@@ -290,10 +265,6 @@ export async function atualizarOrdemPagamentoPorto(
  */
 export async function renomearOp(id: number, numero: string): Promise<void> {
   invalidarCacheFinanceiro()
-  if (!moduloNoSupabase('porto')) {
-    await api(`/api/porto/ordens-pagamento/${id}`, { method: 'PUT', body: JSON.stringify({ numero: numero.trim() }) })
-    return
-  }
   ou(
     await supabase().rpc('porto_renomear_op', { p_id: id, p_numero: numero.trim() }),
     'Não foi possível trocar o número da OP.',
@@ -303,11 +274,6 @@ export async function renomearOp(id: number, numero: string): Promise<void> {
 export async function justificarOrdemPagamentoPorto(
   id: number, motivo: string, observacao: string,
 ): Promise<JustificativaPorto> {
-  if (!moduloNoSupabase('porto')) {
-    return api<JustificativaPorto>(`/api/porto/ordens-pagamento/${id}/justificativas`, {
-      method: 'POST', body: JSON.stringify({ motivo, observacao }),
-    })
-  }
   const { usuarioAtualId } = await import('./cliente')
   const j = ou(
     await supabase().from('justificativas_porto').insert({
@@ -327,9 +293,6 @@ export async function justificarOrdemPagamentoPorto(
 export async function listarOrdensServicoPorto(
   params?: URLSearchParams,
 ): Promise<OrdemServicoPorto[]> {
-  if (!moduloNoSupabase('porto')) {
-    return api<OrdemServicoPorto[]>(`/api/porto/ordens-servico${consulta(params)}`)
-  }
   let q = supabase().from('ordens_servico_porto').select(COLUNAS_OS)
   const inicio = params?.get('dataInicio')
   const fim = params?.get('dataFim')
@@ -357,11 +320,6 @@ export async function associarMotoristaPorto(
   ordemServicoId: number, motoristaId: number,
 ): Promise<OrdemServicoPorto> {
   invalidarCacheFinanceiro()
-  if (!moduloNoSupabase('porto')) {
-    return api<OrdemServicoPorto>(`/api/porto/ordens-servico/${ordemServicoId}/motorista`, {
-      method: 'PATCH', body: JSON.stringify({ motoristaId }),
-    })
-  }
   // Vinculo feito a mao nao pode ser desfeito por importacao: a coluna registra
   // que foi manual, como o backend fazia.
   const linha = ou(
@@ -481,11 +439,6 @@ export async function informarValorOrdemServicoPorto(
   ordemServicoId: number, valorTotal: number,
 ): Promise<OrdemServicoPorto> {
   invalidarCacheFinanceiro()
-  if (!moduloNoSupabase('porto')) {
-    return api<OrdemServicoPorto>(`/api/porto/ordens-servico/${ordemServicoId}/valor`, {
-      method: 'PATCH', body: JSON.stringify({ valorTotal }),
-    })
-  }
   // A guarda de "servico ja pago" mora no banco: o filtro recusa a linha em vez
   // de confiar na tela para nao oferecer o campo.
   const linha = ou(
@@ -509,9 +462,6 @@ export interface PeriodoPadraoPorto { dataInicio: string; dataFim: string }
  * nele, senao o mes do servico mais recente — para nao abrir vazia.
  */
 export async function periodoPadraoOrdensServicoPorto(): Promise<PeriodoPadraoPorto> {
-  if (!moduloNoSupabase('porto')) {
-    return api<PeriodoPadraoPorto>('/api/porto/ordens-servico/periodo-padrao')
-  }
   const hoje = new Date()
   const mes = (d: Date) => ({
     dataInicio: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`,
@@ -540,7 +490,6 @@ export async function periodoPadraoOrdensServicoPorto(): Promise<PeriodoPadraoPo
 // ---------------------------------------------------------------- pendencias
 
 export async function listarPendenciasPorto(): Promise<PendenciaPorto[]> {
-  if (!moduloNoSupabase('porto')) return api<PendenciaPorto[]>('/api/porto/pendencias')
 
   const linhas = ou(
     await supabase().from('pendencias_porto')
@@ -565,9 +514,6 @@ export async function listarPendenciasPorto(): Promise<PendenciaPorto[]> {
 }
 
 export async function criarPendenciaPorto(dados: Record<string, unknown>): Promise<PendenciaPorto> {
-  if (!moduloNoSupabase('porto')) {
-    return api<PendenciaPorto>('/api/porto/pendencias', { method: 'POST', body: JSON.stringify(dados) })
-  }
   ou(
     await supabase().from('pendencias_porto').insert({
       ordem_servico_id: dados.referenciaId ?? dados.ordemServicoId,
@@ -586,9 +532,6 @@ export async function criarPendenciaPorto(dados: Record<string, unknown>): Promi
 }
 
 export async function resolverPendenciaPorto(id: number): Promise<PendenciaPorto> {
-  if (!moduloNoSupabase('porto')) {
-    return api<PendenciaPorto>(`/api/porto/pendencias/${id}/resolver`, { method: 'PATCH' })
-  }
   const { usuarioAtualId } = await import('./cliente')
   ou(
     await supabase().from('pendencias_porto')
@@ -609,19 +552,10 @@ export async function resolverPendenciaPorto(id: number): Promise<PendenciaPorto
  * ------------------------------------------------------------------ */
 
 export async function criarPreviaPorto(arquivo: File): Promise<PreviaPorto> {
-  if (!moduloNoSupabase('porto')) {
-    const body = new FormData()
-    body.append('arquivo', arquivo)
-    return api<PreviaPorto>('/api/porto/importacoes/previa', { method: 'POST', body })
-  }
   return importacao.criarPreviaPorto(arquivo)
 }
 
 export async function criarPreviaConteudoPorto(conteudo: string): Promise<PreviaPorto> {
-  if (!moduloNoSupabase('porto')) {
-    return api<PreviaPorto>('/api/porto/importacoes/previa-conteudo',
-      { method: 'POST', body: JSON.stringify({ conteudo }) })
-  }
   return importacao.criarPreviaConteudoPorto(conteudo)
 }
 
@@ -629,39 +563,17 @@ export async function avaliarImportacaoPorto(
   previa: PreviaPorto,
   // O ciclo saiu: a OP define o proprio periodo pelas OS que ela paga.
   dados: { numeroOrdemPagamento: string },
-  signal?: AbortSignal,
 ): Promise<PreviaPorto> {
-  if (!moduloNoSupabase('porto')) {
-    return api<PreviaPorto>(`/api/porto/importacoes/${previa.id}/avaliar`,
-      { method: 'POST', body: JSON.stringify(dados), signal })
-  }
   return importacao.avaliarImportacaoPorto(previa, dados.numeroOrdemPagamento)
 }
 
 export async function confirmarImportacaoPorto(
   previa: PreviaPorto, dados: importacao.ConfirmacaoImportacao = {},
 ): Promise<ConfirmacaoPorto> {
-  if (!moduloNoSupabase('porto')) {
-    return api<ConfirmacaoPorto>(`/api/porto/importacoes/${previa.id}/confirmar`, {
-      method: 'POST',
-      body: JSON.stringify({
-        numeroOrdemPagamento: dados.numeroOrdemPagamento,
-        calendarioPagamentoId: dados.calendarioPagamentoId ?? null,
-        confirmarDivergencias: dados.confirmarDivergencias ?? false,
-        confirmarReassociacoes: dados.confirmarReassociacoes ?? false,
-        motivoDivergencia: dados.motivoDivergencia,
-        justificativaDivergencia: dados.justificativaDivergencia,
-      }),
-    })
-  }
   return importacao.confirmarImportacaoPorto(previa, dados)
 }
 
 export async function cancelarImportacaoPorto(id: number): Promise<void> {
-  if (!moduloNoSupabase('porto')) {
-    await api(`/api/porto/importacoes/${id}/cancelar`, { method: 'POST' })
-    return
-  }
   await importacao.cancelarImportacaoPorto(id)
 }
 
@@ -672,12 +584,6 @@ export async function cancelarImportacaoPorto(id: number): Promise<void> {
 export async function criarPreviaComposicaoPorto(
   op: { id: number; numero: string }, arquivo: File,
 ): Promise<PreviaPorto> {
-  if (!moduloNoSupabase('porto')) {
-    const body = new FormData()
-    body.append('arquivo', arquivo)
-    return api<PreviaPorto>(`/api/porto/ordens-pagamento/${op.id}/composicao/previa`,
-      { method: 'POST', body })
-  }
   const previa = await importacao.criarPreviaPorto(arquivo)
   return importacao.avaliarImportacaoPorto(previa, op.numero)
 }
@@ -697,15 +603,9 @@ export async function baixarRelatorioDiarioPorto(dia: string, formato: 'excel' |
 export async function baixarRelatorioPorto(
   formato: 'excel' | 'pdf', params?: URLSearchParams,
 ): Promise<void> {
-  if (!moduloNoSupabase('porto')) return relatoriosPorto.peloRender(formato, params)
   return relatoriosPorto.baixarRelatorioPorto(formato, params)
 }
 
 export async function baixarRelatorioOpPorto(id: number, formato: 'excel' | 'pdf'): Promise<void> {
-  if (!moduloNoSupabase('porto')) return relatoriosPorto.opPeloRender(id, formato)
   return relatoriosPorto.baixarRelatorioOpPorto(id, formato)
-}
-
-export async function baixarOrdensServicoPorto(params?: URLSearchParams): Promise<void> {
-  return relatoriosPorto.ossPeloRender(params)
 }

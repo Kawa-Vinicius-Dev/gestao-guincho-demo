@@ -1,9 +1,6 @@
-import { api } from '../api/http'
-import { resumirOrdensPagamentoPorto } from '../api/porto'
 import type { Dashboard } from '../types/modelos'
 import { entradaDoCacheFinanceiro, geracaoDoCacheFinanceiro, guardarNoCacheFinanceiro } from './cacheFinanceiro'
 import { ou, supabase } from './cliente'
-import { moduloNoSupabase } from './modo'
 
 export { invalidarCacheFinanceiro } from './cacheFinanceiro'
 
@@ -19,23 +16,8 @@ export { invalidarCacheFinanceiro } from './cacheFinanceiro'
  * servidor e somava la; aqui o Postgres soma e responde alguns kilobytes.
  */
 
-/**
- * Do resumo Porto, a tela usa quatro numeros.
- *
- * O endpoint antigo devolvia vinte e dois — sem composicao, conciliadas, valor
- * acima, valor abaixo, vencidas, media por OP. Trafegar dezoito para descartar
- * dezoito e o tipo de heranca que nao vale a pena copiar.
- */
-export interface ResumoPortoDashboard {
-  quantidadeTotalOps: number
-  valorTotalPrevisto: number
-  valorProgramado: number
-  valorRecebido: number
-}
-
 export interface ResumoDashboard {
   financeiro: Dashboard
-  porto: ResumoPortoDashboard | null
 }
 
 /**
@@ -74,9 +56,7 @@ export async function lerDashboard(
   }
 
   const geracaoDoPedido = geracaoDoCacheFinanceiro()
-  const dados = moduloNoSupabase('dashboard')
-    ? await peloSupabase(inicio, fim, porCompetencia)
-    : await peloRender(inicio, fim)
+  const dados = await peloSupabase(inicio, fim, porCompetencia)
 
   guardarNoCacheFinanceiro(k, dados, geracaoDoPedido)
   return dados
@@ -87,29 +67,11 @@ async function peloSupabase(inicio: string, fim: string, porCompetencia: boolean
     await supabase().rpc('dashboard_resumo', { p_inicio: inicio, p_fim: fim, p_por_competencia: porCompetencia }),
     'Não foi possível carregar os indicadores.',
   ) as { financeiro: Dashboard }
-  // O resumo Porto saiu da chamada: a Visao geral nunca o usou (a aba Graficos
-  // tem o dela). Continua no tipo so pelo caminho antigo do Render.
-  return { financeiro: resposta.financeiro, porto: null }
-}
-
-/**
- * Caminho antigo: duas chamadas, e o resumo Porto podia falhar sozinho sem
- * derrubar os indicadores. Preservado inteiro para rollback.
- */
-async function peloRender(inicio: string, fim: string): Promise<ResumoDashboard> {
-  const [financeiro, porto] = await Promise.all([
-    api<Dashboard>(`/api/dashboard?inicio=${inicio}&fim=${fim}`),
-    resumirOrdensPagamentoPorto(new URLSearchParams({ dataInicio: inicio, dataFim: fim }))
-      .catch(() => null),
-  ])
-  return { financeiro, porto }
+  return { financeiro: resposta.financeiro }
 }
 
 /** So os indicadores, para a DRE e a tela de Veiculos, que nao mostram Porto. */
 export async function lerIndicadores(inicio: string, fim: string, porCompetencia = true): Promise<Dashboard> {
-  if (!moduloNoSupabase('dashboard')) {
-    return api<Dashboard>(`/api/dashboard?inicio=${inicio}&fim=${fim}`)
-  }
   return ou(
     await supabase().rpc('dashboard_financeiro', { p_inicio: inicio, p_fim: fim, p_por_competencia: porCompetencia }),
     'Não foi possível carregar os indicadores.',

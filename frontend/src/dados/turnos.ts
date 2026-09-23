@@ -1,6 +1,5 @@
-import { ApiError } from '../api/http'
+import { ApiError } from './erros'
 import { erroDoBanco, ou, supabase } from './cliente'
-import { moduloNoSupabase } from './modo'
 
 /**
  * Turno do socorrista.
@@ -73,14 +72,7 @@ export interface MeuTurnoDoDia {
   veiculoSugerido: number | null
 }
 
-function exigirSupabase() {
-  if (!moduloNoSupabase('turnos')) {
-    throw new ApiError('Área do socorrista indisponível nesta configuração.', 503)
-  }
-}
-
 export async function meuTurnoDoDia(): Promise<MeuTurnoDoDia> {
-  exigirSupabase()
   const dados = ou(
     await supabase().rpc('meu_turno_do_dia'),
     'Não foi possível carregar o seu turno.',
@@ -140,7 +132,6 @@ export async function abrirTurno(dados: {
   observacoes?: string
   foto: File
 }): Promise<number> {
-  exigirSupabase()
   const id = ou(
     await supabase().rpc('abrir_turno', {
       p_veiculo_id: dados.veiculoId,
@@ -159,7 +150,6 @@ export async function abrirTurno(dados: {
 
 /** Envia (ou reenvia) a foto do painel na saida de um turno ja aberto. */
 export async function enviarFotoAbertura(turnoId: number, foto: File): Promise<void> {
-  exigirSupabase()
   try {
     const caminho = await subirFoto(turnoId, 'abertura', foto)
     ou(
@@ -179,7 +169,6 @@ export async function fecharTurno(dados: {
   foto: File
   observacoes?: string
 }): Promise<void> {
-  exigirSupabase()
   // A foto sobe primeiro: o fechamento so e gravado com o caminho dela, e o
   // banco recusa fechar sem foto. Assim nao existe turno fechado sem prova.
   const caminho = await subirFoto(dados.turnoId, 'fechamento', dados.foto)
@@ -242,7 +231,6 @@ export interface FilaDeAprovacoes {
 }
 
 export async function filaDeAprovacoes(inicio?: string, fim?: string): Promise<FilaDeAprovacoes> {
-  exigirSupabase()
   const dados = ou(
     await supabase().rpc('fila_de_aprovacoes', {
       p_inicio: inicio ?? null,
@@ -256,7 +244,6 @@ export async function filaDeAprovacoes(inicio?: string, fim?: string): Promise<F
 export async function aprovarTurno(
   turnoId: number, kmProdutivo: number, observacoes?: string,
 ): Promise<void> {
-  exigirSupabase()
   ou(
     await supabase().rpc('aprovar_turno', {
       p_turno_id: turnoId,
@@ -268,7 +255,6 @@ export async function aprovarTurno(
 }
 
 export async function devolverTurno(turnoId: number, motivo: string): Promise<void> {
-  exigirSupabase()
   ou(
     await supabase().rpc('devolver_turno', { p_turno_id: turnoId, p_motivo: motivo }),
     'Não foi possível devolver o turno.',

@@ -1,8 +1,6 @@
-import { api } from '../api/http'
 import type { DespesaRecorrente, LancamentoRecorrente } from '../types/modelos'
 import { excluirRegistro, ou, supabase } from './cliente'
 import { invalidarCacheFinanceiro } from './dashboard'
-import { moduloNoSupabase } from './modo'
 
 /**
  * Despesas fixas: o molde, e o lancamento do mes a partir dele.
@@ -58,7 +56,6 @@ export interface DadosDespesaFixa {
 }
 
 export async function listarDespesasFixas(): Promise<DespesaRecorrente[]> {
-  if (!moduloNoSupabase('despesasFixas')) return api<DespesaRecorrente[]>('/api/despesas-recorrentes')
 
   const linhas = ou(
     await supabase().from('despesas_recorrentes').select(COLUNAS).order('descricao'),
@@ -68,11 +65,6 @@ export async function listarDespesasFixas(): Promise<DespesaRecorrente[]> {
 }
 
 export async function criarDespesaFixa(dados: DadosDespesaFixa): Promise<DespesaRecorrente> {
-  if (!moduloNoSupabase('despesasFixas')) {
-    return api<DespesaRecorrente>('/api/despesas-recorrentes', {
-      method: 'POST', body: JSON.stringify(dados),
-    })
-  }
   const linha = ou(
     await supabase().from('despesas_recorrentes').insert({
       descricao: dados.descricao, categoria_id: dados.categoriaId, valor: dados.valor,
@@ -86,12 +78,6 @@ export async function criarDespesaFixa(dados: DadosDespesaFixa): Promise<Despesa
 }
 
 export async function alternarAtivoDespesaFixa(fixa: DespesaRecorrente): Promise<DespesaRecorrente> {
-  if (!moduloNoSupabase('despesasFixas')) {
-    return api<DespesaRecorrente>(
-      `/api/despesas-recorrentes/${fixa.id}/${fixa.ativo ? 'desativar' : 'reativar'}`,
-      { method: 'PATCH' },
-    )
-  }
   const linha = ou(
     await supabase().from('despesas_recorrentes').update({ ativo: !fixa.ativo })
       .eq('id', fixa.id).select(COLUNAS).single(),
@@ -102,9 +88,6 @@ export async function alternarAtivoDespesaFixa(fixa: DespesaRecorrente): Promise
 
 export async function lancarDespesasFixasDoMes(mes: string): Promise<LancamentoRecorrente> {
   invalidarCacheFinanceiro()
-  if (!moduloNoSupabase('despesasFixas')) {
-    return api<LancamentoRecorrente>(`/api/despesas-recorrentes/lancamentos?mes=${mes}`, { method: 'POST' })
-  }
   const r = ou(
     await supabase().rpc('lancar_despesas_recorrentes', { p_mes: `${mes}-01` }),
     'Não foi possível lançar as despesas fixas.',
@@ -134,7 +117,6 @@ export async function excluirDespesaFixa(id: number): Promise<void> {
  * isso sozinho todo dia; a tela chama ao abrir como garantia. Nao duplica.
  */
 export async function lancarFixasVencidas(): Promise<number> {
-  if (!moduloNoSupabase('despesasFixas')) return 0
   invalidarCacheFinanceiro()
   return Number(ou(
     await supabase().rpc('lancar_fixas_vencidas'),

@@ -1,7 +1,5 @@
-import { baixarCopiaDosDados as peloRender } from '../api/porto'
 import { supabase } from './cliente'
 import { hojeIso } from '../utils/formatadores'
-import { moduloNoSupabase } from './modo'
 import { baixarArquivoCsv, paraCsv } from './relatorios'
 
 /**
@@ -77,7 +75,6 @@ async function lerTudo(
 }
 
 export async function baixarCopiaDosDados(): Promise<void> {
-  if (!moduloNoSupabase('porto')) return peloRender()
 
   const cliente = supabase()
   const partes = await Promise.all(TABELAS.map(async tabela => {

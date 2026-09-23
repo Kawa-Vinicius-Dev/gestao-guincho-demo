@@ -1,7 +1,5 @@
-import { api } from '../api/http'
 import type { LancamentoFinanceiro } from '../types/modelos'
 import { ou, supabase } from './cliente'
-import { moduloNoSupabase } from './modo'
 
 /**
  * Extrato: receita e despesa na mesma lista, ordenadas por data.
@@ -31,9 +29,6 @@ type LinhaExtrato = {
 }
 
 export async function lerExtrato(inicio: string, fim: string): Promise<LancamentoFinanceiro[]> {
-  if (!moduloNoSupabase('dashboard')) {
-    return api<LancamentoFinanceiro[]>(`/api/lancamentos?inicio=${inicio}&fim=${fim}`)
-  }
   const linhas = ou(
     await supabase().rpc('extrato_financeiro', { p_inicio: inicio, p_fim: fim }),
     'Não foi possível carregar o extrato.',

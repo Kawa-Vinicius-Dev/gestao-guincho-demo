@@ -164,15 +164,3 @@ test('sair encerra a sessao e apaga os numeros da operacao em cache', async () =
   expect(dashboardEmCache('2026-09-01','2026-09-30')).toBeUndefined()
 })
 
-test('sem o modo auth, tudo continua no backend antigo', async () => {
-  servidor.use(http.post('/api/auth/login', () => HttpResponse.json({
-    token: 'token-admin-teste',
-    usuario: { id: 1, nome: 'Administrador', email: 'a@b.c', perfil: 'ADMINISTRADOR' },
-  })))
-  const { entrar } = await carregar('')
-
-  const usuario = await entrar('a@b.c', 'x')
-
-  expect(usuario.perfil).toBe('ADMINISTRADOR')
-  expect(sessionStorage.getItem('fluxo-gestao:token:v1')).toBe('token-admin-teste')
-})

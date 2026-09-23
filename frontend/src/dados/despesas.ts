@@ -1,8 +1,7 @@
-import { ApiError, api } from '../api/http'
+import { ApiError } from './erros'
 import type { Despesa } from '../types/modelos'
 import { invalidarCacheFinanceiro } from './dashboard'
 import { ou, supabase, usuarioAtualId } from './cliente'
-import { moduloNoSupabase } from './modo'
 
 /**
  * Despesas.
@@ -24,7 +23,7 @@ import { moduloNoSupabase } from './modo'
 const COLUNAS = [
   'id', 'descricao', 'valor', 'data_lancamento', 'vencimento', 'data_pagamento',
   'forma_pagamento', 'status', 'aprovada', 'protocolo', 'observacoes', 'desconta_comissao',
-  'categoria_id', 'veiculo_id', 'motorista_id', 'despesa_recorrente_id',
+  'categoria_id', 'veiculo_id', 'motorista_id', 'despesa_recorrente_id', 'juros_de_despesa_id',
   'comprovante_arquivo', 'comprovante_nome_original', 'comprovante_tamanho_bytes',
   'categorias(nome)', 'veiculos(identificacao)', 'motoristas(nome)', 'perfis!despesas_criado_por_fkey(nome)',
 ].join(',')
@@ -32,6 +31,7 @@ const COLUNAS = [
 type Vinculo<T> = T | T[] | null
 type LinhaDespesa = {
   despesa_recorrente_id?: number | null
+  juros_de_despesa_id?: number | null
   id: number
   descricao: string
   valor: number | string
@@ -78,6 +78,7 @@ function paraModelo(linha: LinhaDespesa): Despesa {
     motorista: um(linha.motoristas)?.nome,
     protocolo: linha.protocolo ?? undefined,
     despesaRecorrenteId: linha.despesa_recorrente_id ?? undefined,
+    jurosDeDespesaId: linha.juros_de_despesa_id ?? undefined,
     descontaComissao: Boolean(linha.desconta_comissao),
     comprovante: linha.comprovante_arquivo ?? undefined,
     observacoes: linha.observacoes ?? undefined,
@@ -126,7 +127,6 @@ export const TETO_DA_LISTA = 300
 
 /** Com periodo, traz as despesas dele: um ano de comissoes passa do teto da lista. */
 export async function listarDespesas(periodo?: { inicio: string; fim: string }): Promise<Despesa[]> {
-  if (!moduloNoSupabase('despesas')) return api<Despesa[]>('/api/despesas')
 
   let consulta = supabase().from('despesas').select(COLUNAS)
   if (periodo) consulta = consulta.gte('data_lancamento', periodo.inicio).lte('data_lancamento', periodo.fim)
@@ -161,9 +161,6 @@ export async function criarDespesa(dados: DadosDespesa, jaAprovada = false): Pro
   // ate um minuto um total que a propria pessoa acabou de alterar e pior do que
   // esperar a consulta.
   invalidarCacheFinanceiro()
-  if (!moduloNoSupabase('despesas')) {
-    return api<Despesa>('/api/despesas', { method: 'POST', body: JSON.stringify(dados) })
-  }
 
   if (jaAprovada) {
     const aprovada = await lancarJaAprovada(dados)
@@ -209,9 +206,6 @@ export async function criarDespesa(dados: DadosDespesa, jaAprovada = false): Pro
  */
 export async function marcarDescontoComissao(id: number, desconta: boolean): Promise<void> {
   invalidarCacheFinanceiro()
-  if (!moduloNoSupabase('despesas')) {
-    throw new ApiError('Marcar desconto só existe na versão que fala direto com o Supabase.', 501)
-  }
   const alteradas = ou(
     await supabase().from('despesas').update({ desconta_comissao: desconta }).eq('id', id).select('id'),
     'Não foi possível alterar o desconto da comissão.',
@@ -223,10 +217,6 @@ export async function marcarDescontoComissao(id: number, desconta: boolean): Pro
 
 export async function aprovarDespesa(id: number): Promise<void> {
   invalidarCacheFinanceiro()
-  if (!moduloNoSupabase('despesas')) {
-    await api(`/api/despesas/${id}/aprovar`, { method: 'PATCH' })
-    return
-  }
   ou(
     await supabase().rpc('aprovar_despesa', { p_despesa_id: id }),
     'Não foi possível aprovar a despesa.',
@@ -237,12 +227,6 @@ export async function pagarDespesa(
   id: number, dataPagamento: string, formaPagamento?: string | null,
 ): Promise<void> {
   invalidarCacheFinanceiro()
-  if (!moduloNoSupabase('despesas')) {
-    await api(`/api/despesas/${id}/pagar`, {
-      method: 'PATCH', body: JSON.stringify({ dataPagamento, formaPagamento }),
-    })
-    return
-  }
   ou(
     await supabase().rpc('pagar_despesa', {
       p_despesa_id: id,
@@ -302,9 +286,6 @@ export async function atualizarDespesa(despesa: Despesa, dados: DadosDespesa): P
 
 export async function excluirDespesa(despesa: Despesa): Promise<void> {
   invalidarCacheFinanceiro()
-  if (!moduloNoSupabase('despesas')) {
-    throw new ApiError('A exclusão de despesas só existe na versão que fala direto com o Supabase.', 501)
-  }
 
   const apagadas = ou(
     await supabase().from('despesas').delete().eq('id', despesa.id).select('id'),
@@ -370,8 +351,22 @@ async function lancarJaAprovada(dados: DadosDespesa): Promise<Despesa | null> {
  * caminhoes podem ter o mesmo seguro no mesmo dia.
  */
 export async function despesasIguais(descricao: string, valor: number, data: string): Promise<number> {
-  if (!moduloNoSupabase('despesas')) return 0
   const { count } = await supabase().from('despesas').select('id', { count: 'exact', head: true })
     .eq('descricao', descricao).eq('valor', valor).eq('data_lancamento', data).neq('status', 'REJEITADO')
   return count ?? 0
+}
+
+/**
+ * Quanto foi pago de verdade numa despesa fixa ja lancada. Pago acima do valor
+ * da fixa (200 pagos como 210), a fixa fica com 200 e os 10 entram como despesa
+ * na categoria Juros; igual ou abaixo, nao ha juros. Devolve o juros que ficou.
+ * So para despesa fixa: o banco recusa as outras.
+ */
+export async function valorPagoDaFixa(id: number, valorPago: number): Promise<number> {
+  invalidarCacheFinanceiro()
+  const juros = ou(
+    await supabase().rpc('despesa_fixa_valor_pago', { p_despesa_id: id, p_valor: valorPago }),
+    'Não foi possível registrar o juros.',
+  )
+  return Number(juros ?? 0)
 }

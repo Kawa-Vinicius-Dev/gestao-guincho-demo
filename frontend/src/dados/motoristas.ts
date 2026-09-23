@@ -1,9 +1,7 @@
-import { api } from '../api/http'
 import type { Motorista } from '../types/modelos'
 import { comCacheCurto, invalidarCadastro } from './cacheCurto'
 import { excluirRegistro } from './cliente'
 import { ou, supabase } from './cliente'
-import { moduloNoSupabase } from './modo'
 
 /**
  * Socorristas.
@@ -84,7 +82,6 @@ function paraBanco(dados: DadosMotorista) {
 
 export async function listarMotoristas(): Promise<Motorista[]> {
   return comCacheCurto('motoristas', async () => {
-    if (!moduloNoSupabase('motoristas')) return api<Motorista[]>('/api/motoristas')
 
     const linhas = ou(
       await supabase().from('motoristas').select(COLUNAS).order('nome'),
@@ -96,9 +93,6 @@ export async function listarMotoristas(): Promise<Motorista[]> {
 
 export async function criarMotorista(dados: DadosMotorista): Promise<Motorista> {
   invalidarCadastro('motoristas')
-  if (!moduloNoSupabase('motoristas')) {
-    return api<Motorista>('/api/motoristas', { method: 'POST', body: JSON.stringify(dados) })
-  }
   const linha = ou(
     await supabase().from('motoristas').insert(paraBanco(dados)).select(COLUNAS).single(),
     'Não foi possível cadastrar o socorrista.',
@@ -108,9 +102,6 @@ export async function criarMotorista(dados: DadosMotorista): Promise<Motorista> 
 
 export async function atualizarMotorista(id: number, dados: DadosMotorista): Promise<Motorista> {
   invalidarCadastro('motoristas')
-  if (!moduloNoSupabase('motoristas')) {
-    return api<Motorista>(`/api/motoristas/${id}`, { method: 'PUT', body: JSON.stringify(dados) })
-  }
   const linha = ou(
     await supabase().from('motoristas').update(paraBanco(dados)).eq('id', id)
       .select(COLUNAS).single(),
@@ -144,12 +135,6 @@ export async function definirPercentualDoSocorrista(
 
 export async function alternarAtivoMotorista(motorista: Motorista): Promise<Motorista> {
   invalidarCadastro('motoristas')
-  if (!moduloNoSupabase('motoristas')) {
-    return api<Motorista>(
-      `/api/motoristas/${motorista.id}/${motorista.ativo ? 'desativar' : 'reativar'}`,
-      { method: 'PATCH' },
-    )
-  }
   const linha = ou(
     await supabase().from('motoristas').update({ ativo: !motorista.ativo })
       .eq('id', motorista.id).select(COLUNAS).single(),
