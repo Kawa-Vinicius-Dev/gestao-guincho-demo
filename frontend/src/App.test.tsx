@@ -26,7 +26,8 @@ test('administrador começa com a base vazia e cria o primeiro lançamento', asy
 
   expect(await screen.findByRole('heading', { name: 'Visão geral', level: 1 })).toBeInTheDocument()
   const fluxo = await screen.findByRole('region', { name: /resultado do período/i })
-  expect(within(fluxo).getByText('R$ 780,00')).toBeInTheDocument()
+  // O painel aparece antes dos numeros: espera o valor, nao so o painel.
+  expect(await within(fluxo).findByText('R$ 780,00')).toBeInTheDocument()
   expect(within(fluxo).getByText('R$ 200,00')).toBeInTheDocument()
   expect(within(fluxo).getByText('R$ 580,00')).toBeInTheDocument()
 
