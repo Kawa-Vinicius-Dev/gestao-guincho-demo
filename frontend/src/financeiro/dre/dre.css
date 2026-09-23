@@ -1,0 +1,13 @@
+/* DRE: servicos sem valor por socorrista, do que mais fez para o que menos fez. */
+.sem-valor-ranking{margin:0;padding:4px 22px 18px;list-style:none;display:grid;gap:2px}
+.sem-valor-ranking summary{display:grid;grid-template-columns:minmax(0,260px) minmax(80px,1fr) 110px;align-items:center;gap:14px;padding:9px 8px;border-radius:7px;cursor:pointer;list-style:none}
+.sem-valor-ranking summary::-webkit-details-marker{display:none}
+.sem-valor-ranking summary:hover{background:var(--superficie-2)}
+.sem-valor-ranking details[open] summary{background:var(--superficie-2)}
+.sem-valor-nome{font-weight:600;overflow-wrap:anywhere}
+.sem-valor-trilho{position:relative;height:8px;border-radius:99px;background:var(--linha-suave);overflow:hidden}
+.sem-valor-trilho>span{position:absolute;inset:0 auto 0 0;border-radius:99px;background:var(--blue-500)}
+.sem-valor-ranking summary strong{text-align:right;font-variant-numeric:tabular-nums}
+.sem-valor-os{margin:6px 0 10px 8px;padding-left:22px;display:grid;gap:4px;color:var(--muted);font-size:13px}
+.sem-valor-os li{display:grid;grid-template-columns:130px 100px 1fr 100px;gap:10px}
+.sem-valor-os li a{color:var(--ink)}
