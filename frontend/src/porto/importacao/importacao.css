@@ -4,3 +4,15 @@
 .config-abas button:hover{color:var(--ink);background:var(--superficie-2)}
 .config-abas button.ativa{color:#fff;background:var(--blue-600)}
 .importacao-explica{margin:0 0 14px;color:var(--muted);font-size:14px;max-width:760px}
+
+/* Resumo da importacao: o que mudou e o caminho para o que pede acao. */
+.resumo-importacao{margin:14px 0;padding:14px 18px;border:1px solid var(--ok-texto);border-radius:10px;background:var(--ok-fundo)}
+.resumo-importacao header{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:baseline;margin-bottom:8px}
+.resumo-importacao header strong{color:var(--ok-texto);font-size:15px}
+.resumo-importacao header span{color:var(--muted);font-size:13px}
+.resumo-importacao ul{display:grid;gap:4px;margin:0;padding:0;list-style:none;font-size:14px}
+.resumo-importacao li{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;color:var(--ink)}
+.resumo-importacao li::before{content:'•';color:var(--ok-texto)}
+.resumo-importacao li.atencao::before{color:var(--aviso-texto)}
+.resumo-importacao li.atencao span{color:var(--aviso-texto);font-weight:600}
+.resumo-importacao a{color:var(--blue-600);font-size:13px;font-weight:600}
