@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { LinkOs } from '../components/LinksDeDado'
 import { Link } from 'react-router-dom'
 import { listarPendenciasOsPorto, resolverPendenciasOsPorto } from '../dados/porto'
 import { useAoVivo } from '../dados/aoVivo'
@@ -153,7 +154,7 @@ export default function PortoPendenciasOsPage() {
             <th>Valor</th><th>Socorrista</th><th>Viatura</th>
           </tr></thead>
           <tbody>{visiveis.map(item => <tr key={item.id}>
-            <td><strong>{item.numeroOs}</strong><small>{item.especialidade || '—'}</small></td>
+            <td><strong><LinkOs numero={item.numeroOs}/></strong><small>{item.especialidade || '—'}</small></td>
             <td>{item.dataAtendimento ? data(item.dataAtendimento) : '—'}</td>
             <td>{item.seguradora || '—'}</td>
             <td>{item.numeroOp || 'Aguardando OP'}</td>

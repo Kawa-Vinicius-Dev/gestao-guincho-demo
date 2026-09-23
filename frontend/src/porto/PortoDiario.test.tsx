@@ -1,4 +1,5 @@
 import { render, screen, within } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import userEvent from '@testing-library/user-event'
 import { expect, test, vi, beforeEach } from 'vitest'
 import PortoDiarioPage from './PortoDiarioPage'
@@ -52,7 +53,7 @@ async function colar(user: ReturnType<typeof userEvent.setup>, texto: string) {
 
 test('colagem de mais de uma quinzena é recusada antes de virar prévia', async () => {
   const user = userEvent.setup({ delay: null })
-  render(<PortoDiarioPage />)
+  render(<MemoryRouter><PortoDiarioPage /></MemoryRouter>)
 
   await colar(user, [registro('5673329', '01/09/2026'), registro('5677129', '20/09/2026')].join('\n'))
 
@@ -64,7 +65,7 @@ test('importa o Diário depois da confirmação e recarrega o mapa', async () =>
   criarPrevia.mockResolvedValue(previaDe(['5673329', '5677129']))
   confirmar.mockResolvedValue({ importados: 2, ignorados: 0 } as Awaited<ReturnType<typeof porto.confirmarImportacaoPorto>>)
   const user = userEvent.setup({ delay: null })
-  render(<PortoDiarioPage />)
+  render(<MemoryRouter><PortoDiarioPage /></MemoryRouter>)
 
   await colar(user, [registro('5673329', '01/09/2026'), registro('5677129', '03/09/2026')].join('\n'))
 
@@ -81,7 +82,7 @@ test('importa o Diário depois da confirmação e recarrega o mapa', async () =>
 })
 
 test('o mapa mostra quantos dias ainda estão sem Diário', async () => {
-  render(<PortoDiarioPage />)
+  render(<MemoryRouter><PortoDiarioPage /></MemoryRouter>)
 
   expect(await screen.findByText(/1 dia ainda sem diário importado/i)).toBeInTheDocument()
 })

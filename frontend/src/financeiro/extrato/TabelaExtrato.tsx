@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { LinkOp, LinkViatura } from '../../components/LinksDeDado'
 import { Carregando, Vazio } from '../../components/EstadoPagina'
 import type { LancamentoFinanceiro } from '../../types/modelos'
 import { data, moeda } from '../../utils/formatadores'
@@ -38,7 +39,7 @@ export function TabelaExtrato({ itens, carregando, aoPagar, aoEditarReceita, aoE
               <small>{item.origem}{item.protocolo ? ` · ${item.protocolo}` : ''}</small>
             </td>
             <td>{item.categoria}</td>
-            <td>{item.veiculo ?? '—'}</td>
+            <td><LinkViatura id={item.veiculoId} sigla={item.veiculo}/></td>
             <td>
               <span className={`ledger-status ${item.realizado ? 'ledger-recebido' : 'ledger-pendente'}`}>
                 {item.realizado ? (receita ? 'Recebido' : 'Pago') : 'Previsto'}
@@ -78,6 +79,6 @@ function Descricao({ item }: { item: LancamentoFinanceiro }) {
   return <>
     <Link className="extrato-socorrista" to={`/equipe/${item.motoristaId}`}
       title="Abrir a comissão deste socorrista">{item.motorista ?? 'Socorrista'}</Link>
-    {` — comissão da OP ${item.numeroOp}`}
+    {' — comissão da OP '}<LinkOp numero={item.numeroOp}/>
   </>
 }

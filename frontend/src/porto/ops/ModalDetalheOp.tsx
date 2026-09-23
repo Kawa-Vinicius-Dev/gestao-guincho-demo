@@ -1,4 +1,5 @@
 import type { FormEvent } from 'react'
+import { LinkOs } from '../../components/LinksDeDado'
 import { Campo, Selecao } from '../../components/Campos'
 import { Modal } from '../../components/Modal'
 import type { DetalheOpPorto, PreviaPorto } from '../../types/modelos'
@@ -67,7 +68,7 @@ export function ModalDetalheOp(props: Props) {
         <thead><tr><th>OS</th><th>Especialidade</th><th>Data</th><th>Valor</th></tr></thead>
         <tbody>
           {detalhe.ordensServico.map(os => <tr key={os.id}>
-            <td>{os.numero}</td><td>{os.especialidade}</td>
+            <td><LinkOs numero={os.numero}/></td><td>{os.especialidade}</td>
             <td>{data(os.dataAtendimento)}</td><td>{moeda(os.valorTotal)}</td>
           </tr>)}
         </tbody>

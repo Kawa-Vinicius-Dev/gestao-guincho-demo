@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { LinkSocorrista, LinkViatura } from '../components/LinksDeDado'
 import './tipoCusto.css'
 import { alternarAtivoDespesaFixa, atualizarDespesaFixa, criarDespesaFixa, excluirDespesaFixa, lancarDespesasFixasDoMes, listarDespesasFixas } from '../dados/despesasFixas'
 import { ConfirmarExclusao } from '../components/ConfirmarExclusao'
@@ -169,7 +170,7 @@ export default function DespesasPage(){
     {admin?<section className="panel painel-filtros"><form className="ledger-filters" onSubmit={e=>e.preventDefault()}><SeletorPeriodo periodo={periodo} aoMudar={setPeriodo}/></form></section>:null}
     {admin&&lista.length?<SeletorTipoCusto lista={lista} tipo={tipoCusto} aoMudar={setTipoCusto}/>:null}
     {admin?<section className="panel">{lista.length?<div className="table-scroll"><table><thead><tr><th>Descrição</th><th>Categoria</th><th>Data</th><th>Veículo</th><th>Socorrista</th><th>Situação</th><th>Aprovação</th><th>Valor</th><th>Comprovante</th><th/></tr></thead><tbody>
-      {lista.filter(d=>!tipoCusto||(tipoCusto==='FIXA')===Boolean(d.despesaRecorrenteId)).map(d=><tr key={d.id}><td><strong>{d.descricao}</strong><small>{d.criadoPor}</small></td><td>{d.categoria}</td><td>{data(d.data)}</td><td>{d.veiculo||'—'}</td><td>{d.motorista||'—'}{d.motorista&&!d.protocolo?.startsWith('COMISSAO-')
+      {lista.filter(d=>!tipoCusto||(tipoCusto==='FIXA')===Boolean(d.despesaRecorrenteId)).map(d=><tr key={d.id}><td><strong>{d.descricao}</strong><small>{d.criadoPor}</small></td><td>{d.categoria}</td><td>{data(d.data)}</td><td><LinkViatura id={d.veiculoId} sigla={d.veiculo}/></td><td><LinkSocorrista id={d.motoristaId} nome={d.motorista}/>{d.motorista&&!d.protocolo?.startsWith('COMISSAO-')
           ?<label className="desconto-na-lista"><input type="checkbox" checked={Boolean(d.descontaComissao)} onChange={()=>setPedido(d.descontaComissao
             ?{titulo:'Parar de descontar da comissão?',efeito:<>{moeda(d.valor)} deixa de sair da comissão de <strong>{d.motorista}</strong>. A comissão é recalculada na hora.</>,resumo:[['Despesa',d.descricao],['Data',data(d.data)],['Valor',moeda(d.valor)]],textoConfirmar:'Parar de descontar',aoConfirmar:()=>alternarDesconto(d)}
             :{titulo:'Descontar da comissão?',efeito:<>{moeda(d.valor)} sai da comissão de <strong>{d.motorista}</strong>, na OP do período desta data. A comissão é recalculada na hora.</>,resumo:[['Despesa',d.descricao],['Data',data(d.data)],['Valor',moeda(d.valor)]],textoConfirmar:'Descontar da comissão',aoConfirmar:()=>alternarDesconto(d)})} aria-label={`Descontar ${d.descricao} da comissão de ${d.motorista}`}/><span>Desconta da comissão</span></label>

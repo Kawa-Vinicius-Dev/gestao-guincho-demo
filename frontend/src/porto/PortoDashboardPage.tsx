@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { LinkOp } from '../components/LinksDeDado'
 import { Link } from 'react-router-dom'
 import { baixarRelatorioPorto, obterDashboardAltoNivelPorto } from '../dados/porto'
 import type {
@@ -218,15 +219,15 @@ export default function PortoDashboardPage() {
 
     {dados && !vazio ? <>
       <GradeIndicadores>
-        <Indicador rotulo="Serviços realizados" valor={dados.quantidadeTotalServicos}
+        <Indicador rotulo="Serviços realizados" valor={dados.quantidadeTotalServicos} link="/porto/ordens-servico"
           apoio={`${moeda(dados.valorTotalRealizado)} no período`}/>
-        <Indicador rotulo="Aguardando OP" valor={dados.quantidadeAguardandoOp}
+        <Indicador rotulo="Aguardando OP" valor={dados.quantidadeAguardandoOp} link="/porto/ordens-servico?situacao=AGUARDANDO"
           tom={tom(dados.quantidadeAguardandoOp, 'atencao')}
           apoio={dados.valorAguardandoOp
             ? `${moeda(dados.valorAguardandoOp)} sem cobrança`
             // O painel do dia chega sem valor: o preco so vem com a OP.
             : dados.quantidadeAguardandoOp ? 'Sem valor até a OP' : 'Nenhum serviço fora de OP'}/>
-        <Indicador rotulo="OPs com divergência" valor={dados.quantidadeComDivergencia}
+        <Indicador rotulo="OPs com divergência" valor={dados.quantidadeComDivergencia} link="/porto/ordens-pagamento"
           tom={tom(dados.quantidadeComDivergencia, 'alerta')}
           apoio={dados.quantidadeComDivergencia ? moeda(dados.valorTotalDivergencias) : 'Composição confere'}/>
       </GradeIndicadores>
@@ -289,7 +290,7 @@ export default function PortoDashboardPage() {
                 <th>Recebido</th><th>Conciliação</th>
               </tr></thead>
               <tbody>{dados.opsDestaque.map(op => <tr key={op.id}>
-                <td><strong>{op.numero}</strong></td>
+                <td><strong><LinkOp numero={op.numero}/></strong></td>
                 <td>{op.periodoInicio && op.periodoFim
                   ? `${data(op.periodoInicio)} a ${data(op.periodoFim)}`
                   : op.dataPagamentoProgramada ? data(op.dataPagamentoProgramada) : '—'}</td>

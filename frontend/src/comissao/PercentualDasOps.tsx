@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { LinkOp } from '../components/LinksDeDado'
 import { Modal } from '../components/Modal'
 import { definirPercentualDaOp, listarPercentuaisDasOps, type PercentualDaOp } from '../dados/comissoes'
 
@@ -52,7 +53,7 @@ export function PercentualDasOps({ ids, padrao, aoMudar }: {
     <div className="table-scroll"><table>
       <thead><tr><th>OP</th><th>Comissão</th><th/></tr></thead>
       <tbody>{ops.map(op => <tr key={op.id}>
-        <td><strong>{op.numero}</strong></td>
+        <td><strong><LinkOp numero={op.numero}/></strong></td>
         <td>{op.percentual !== null
           ? <strong>{emPorcento(op.percentual)}</strong>
           : <span className="commission-waiting">Padrão / de cada socorrista</span>}</td>

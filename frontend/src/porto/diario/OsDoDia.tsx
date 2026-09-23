@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { LinkOs, LinkSocorrista, LinkViatura } from '../../components/LinksDeDado'
 import { Carregando } from '../../components/EstadoPagina'
 import { Modal } from '../../components/Modal'
 import { listarTodasAsOs, type PaginaOs } from '../../dados/porto/listaOs'
@@ -32,10 +33,10 @@ export function OsDoDia({ dia, aoFechar }: { dia: string; aoFechar: () => void }
         ? <div className="table-scroll"><table>
           <thead><tr><th>OS</th><th>Especialidade</th><th>Socorrista</th><th>Viatura</th><th>Situação</th><th>Valor</th></tr></thead>
           <tbody>{pagina.itens.map(os => <tr key={os.id}>
-            <td><strong>{os.numero}</strong></td>
+            <td><strong><LinkOs numero={os.numero}/></strong></td>
             <td>{os.especialidade || '—'}</td>
-            <td>{os.motorista || os.socorristaNoArquivo || '—'}</td>
-            <td>{os.viatura ? <span className="vehicle-chip">{os.viatura}</span> : '—'}</td>
+            <td>{os.motorista ? <LinkSocorrista id={os.motoristaId} nome={os.motorista}/> : os.socorristaNoArquivo || '—'}</td>
+            <td><LinkViatura sigla={os.viatura} chip/></td>
             <td><span className={`vehicle-status ${ETIQUETAS_SITUACAO[os.situacao].classe}`}>{ETIQUETAS_SITUACAO[os.situacao].texto}</span></td>
             <td>{os.valorPrevisto ? moeda(os.valorPrevisto) : <span className="commission-waiting">Sem valor</span>}</td>
           </tr>)}</tbody>

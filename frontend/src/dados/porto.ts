@@ -186,6 +186,15 @@ export async function obterDashboardAltoNivelPorto(
   return { ...bruto, opsDestaque: bruto.opsDestaque.map(opDestaqueParaModelo) }
 }
 
+/** O id da OP a partir do numero: os links de dado levam o numero, que e o que aparece na tela. */
+export async function idDaOpPeloNumero(numero: string): Promise<number | null> {
+  const linha = ou(
+    await supabase().from('ordens_pagamento_porto').select('id').eq('numero', numero).maybeSingle(),
+    'Não foi possível encontrar a OP.',
+  ) as { id: number } | null
+  return linha?.id ?? null
+}
+
 export async function detalharOrdemPagamentoPorto(id: number): Promise<DetalheOpPorto> {
   if (!moduloNoSupabase('porto')) return api<DetalheOpPorto>(`/api/porto/ordens-pagamento/${id}`)
 

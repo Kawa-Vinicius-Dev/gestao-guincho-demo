@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { LinkOs, LinkSocorrista, LinkViatura } from '../components/LinksDeDado'
 import { Link } from 'react-router-dom'
 import { useAoVivo } from '../dados/aoVivo'
 import { listarTodasAsOs, type LinhaOs } from '../dados/porto/listaOs'
@@ -80,11 +81,11 @@ export default function ContasReceberPage() {
             <th>OS</th><th>Atendimento</th><th>Especialidade</th><th>Viatura</th><th>Socorrista</th><th>Situação</th><th>Valor</th>
           </tr></thead>
           <tbody>{itens.map(os => <tr key={os.id}>
-            <td><strong>{os.numero}</strong></td>
+            <td><strong><LinkOs numero={os.numero}/></strong></td>
             <td>{os.dataAtendimento ? data(os.dataAtendimento) : '—'}</td>
             <td>{os.especialidade || '—'}</td>
-            <td>{os.viatura || '—'}</td>
-            <td>{os.motorista || os.socorristaNoArquivo || '—'}</td>
+            <td><LinkViatura sigla={os.viatura}/></td>
+            <td>{os.motorista ? <LinkSocorrista id={os.motoristaId} nome={os.motorista}/> : os.socorristaNoArquivo || '—'}</td>
             <td>{os.situacao === 'AGUARDANDO_PROXIMA_OP'
               ? <small>Aguardando próxima OP</small>
               : os.situacao === 'VALOR_MANUAL' ? <small>Valor informado</small> : <small>Sem valor</small>}</td>
