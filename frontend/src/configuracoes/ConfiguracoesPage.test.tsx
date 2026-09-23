@@ -20,12 +20,13 @@ test('a tela de configurações é alcançável e troca a senha pelo backend', a
     return new HttpResponse(null, { status: 204 })
   }))
   const user = userEvent.setup({ delay: null })
-  abrir('/configuracoes?aba=acessos')
+  abrir('/configuracoes?aba=sistema')
 
   expect(await screen.findByRole('heading', { name: /configurações/i })).toBeInTheDocument()
   await user.type(screen.getByLabelText(/senha atual/i), 'Admin@123')
-  await user.type(screen.getByLabelText(/nova senha/i), 'SenhaNova@2026')
-  await user.click(screen.getByRole('button', { name: /alterar senha/i }))
+  await user.type(screen.getByLabelText(/^nova senha/i), 'SenhaNova@2026')
+  await user.type(screen.getByLabelText(/repita a nova senha/i), 'SenhaNova@2026')
+  await user.click(screen.getByRole('button', { name: /trocar minha senha/i }))
 
   expect(await screen.findByText(/senha alterada/i)).toBeInTheDocument()
   expect(enviado).toEqual({ senhaAtual: 'Admin@123', novaSenha: 'SenhaNova@2026' })
@@ -35,12 +36,13 @@ test('erro do backend ao trocar a senha aparece na tela', async () => {
   servidor.use(http.put('/api/auth/senha', () => HttpResponse.json(
     { detalhe: 'A senha atual não confere.' }, { status: 400 })))
   const user = userEvent.setup({ delay: null })
-  abrir('/configuracoes?aba=acessos')
+  abrir('/configuracoes?aba=sistema')
 
   await screen.findByRole('heading', { name: /configurações/i })
   await user.type(screen.getByLabelText(/senha atual/i), 'ErradaDemais')
-  await user.type(screen.getByLabelText(/nova senha/i), 'SenhaNova@2026')
-  await user.click(screen.getByRole('button', { name: /alterar senha/i }))
+  await user.type(screen.getByLabelText(/^nova senha/i), 'SenhaNova@2026')
+  await user.type(screen.getByLabelText(/repita a nova senha/i), 'SenhaNova@2026')
+  await user.click(screen.getByRole('button', { name: /trocar minha senha/i }))
 
   expect(await screen.findByText('A senha atual não confere.')).toBeInTheDocument()
 })

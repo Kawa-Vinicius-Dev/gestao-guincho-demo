@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { EntradaSenha } from '../components/EntradaSenha'
+import { useSessaoOpcional } from '../auth/AuthContext'
 import { criarUsuario, encerrarAcesso, excluirAcesso, listarUsuarios, reativarAcesso, redefinirSenha } from '../dados/usuarios'
 import { atualizarCategoria, definirCategoriaDoSocorrista, criarCategoria, excluirCategoria, listarCategorias } from '../dados/cadastros'
 import { ConfirmarExclusao } from '../components/ConfirmarExclusao'
@@ -20,6 +21,7 @@ type Aba='financeiro'|'acessos'|'sistema'
 const ABAS:[Aba,string][]=[['financeiro','Financeiro'],['acessos','Acessos'],['sistema','Sistema']]
 
 export default function ConfiguracoesPage(){
+  const usuario = useSessaoOpcional()
   // A aba fica na URL (?aba=acessos): um link de outra tela abre direto nela.
   const [aba,setAba]=useState<Aba>(()=>{const a=new URLSearchParams(window.location.search).get('aba');return ABAS.some(([id])=>id===a)?a as Aba:'financeiro'})
   function trocarAba(nova:Aba){setAba(nova);window.history.replaceState(null,'',`${window.location.pathname}?aba=${nova}`)}
@@ -110,11 +112,12 @@ export default function ConfiguracoesPage(){
   async function copiar(valor:string){try{await navigator.clipboard.writeText(valor);setCopiada(true)}catch{setCopiada(false)}}
   async function senha(e:FormEvent<HTMLFormElement>){e.preventDefault();const formulario=e.currentTarget;const f=new FormData(formulario)
     setErro('');setMensagem('')
+    if(f.get('novaSenha')!==f.get('confirmacao')){setErro('A nova senha e a repetição não são iguais.');return}
     try{await trocarSenha(String(f.get('senhaAtual')),String(f.get('novaSenha')))
       formulario.reset();setMensagem('Senha alterada. Os acessos abertos em outros dispositivos foram encerrados.')}
     catch(x){setErro((x as Error).message)}
   }
-  return <div className="page-enter"><header className="page-heading"><div><span className="eyebrow">Base financeira</span><h1>Configurações</h1><p>Comissão, despesas fixas e categorias; cadastros; acessos; e o sistema.</p></div></header>
+  return <div className="page-enter"><header className="page-heading"><div><span className="eyebrow">Base financeira</span><h1>Configurações</h1><p>Comissão, despesas fixas e categorias; acessos; sua senha e o sistema.</p></div></header>
     {erro?<div className="form-alert">{erro}</div>:null}{carregando?<Carregando/>:null}{mensagem?<div className="success-notice">{mensagem}</div>:null}
       {/* Abas: cada assunto no seu lugar, em vez de uma parede de cartoes. */}
       <nav className="config-abas" role="tablist" aria-label="Seções das configurações">
@@ -124,23 +127,53 @@ export default function ConfiguracoesPage(){
       {aba==='financeiro'?<div className="settings-grid">
       <ComissaoPadrao/>
       <DespesasFixas/>
-      <section className="panel settings-card"><header><h2>Categorias</h2><p>Classifique para entender para onde o dinheiro vai. Marque as que o <strong>socorrista pode usar</strong> ao lançar uma despesa: as outras nem aparecem para ele.</p></header><ul className="simple-list">{categorias.map(c=><li key={c.id}><strong>{c.nome}</strong><small>{c.tipo==='RECEITA'?'Receita':'Despesa'}</small>{c.tipo==='DESPESA'?<label className="categoria-socorrista"><input type="checkbox" checked={Boolean(c.socorristaPode)} onChange={()=>void alternarSocorrista(c)}/><span>Socorrista pode lançar</span></label>:null}<span className="acoes-da-linha"><button className="table-action" onClick={()=>setEditandoCadastro({tipo:'categoria',item:c})}>Editar</button><button className="table-action table-action-danger" onClick={()=>setExcluindoCadastro({tipo:'categoria',item:c})}>Excluir</button></span></li>)}</ul>
-        <form onSubmit={cadastrar} className="inline-form">
-          <Campo rotulo="Nome da categoria"><input name="nome" required autoCapitalize="words" autoComplete="off"/></Campo>
-          <Selecao rotulo="Tipo da categoria" name="tipo" opcoes={[{valor:'DESPESA',texto:'Despesa'},{valor:'RECEITA',texto:'Receita'}]}/>
-          <button className="button button-ghost">Adicionar</button></form></section>
+      {/* Categorias em tabela (Kawa, 23/09/2026: "ta muito esquisito"): nome, tipo,
+          se o socorrista pode usar e as acoes, tudo na mesma linha. */}
+      <section className="panel settings-card settings-wide"><header><h2>Categorias</h2><p>Classifique para entender para onde o dinheiro vai. Marque as que o <strong>socorrista pode usar</strong> ao lançar uma despesa: as outras nem aparecem para ele.</p></header>
+        <form onSubmit={cadastrar} className="inline-form form-nova-linha">
+          <Campo rotulo="Nova categoria"><input name="nome" required autoCapitalize="words" autoComplete="off" placeholder="Ex.: Pedágio"/></Campo>
+          <Selecao rotulo="Tipo" name="tipo" opcoes={[{valor:'DESPESA',texto:'Despesa'},{valor:'RECEITA',texto:'Receita'}]}/>
+          <button className="button button-primary">Adicionar categoria</button></form>
+        <div className="table-scroll"><table className="tabela-config" aria-label="Categorias">
+          <thead><tr><th>Categoria</th><th>Tipo</th><th>Socorrista pode lançar</th><th className="col-acoes"/></tr></thead>
+          <tbody>{categorias.map(c=><tr key={c.id}>
+            <td><strong>{c.nome}</strong></td>
+            <td><span className={`etiqueta-tipo ${c.tipo==='RECEITA'?'tipo-receita':'tipo-despesa'}`}>{c.tipo==='RECEITA'?'Receita':'Despesa'}</span></td>
+            <td>{c.tipo==='DESPESA'?<label className="categoria-socorrista"><input type="checkbox" checked={Boolean(c.socorristaPode)} onChange={()=>void alternarSocorrista(c)}/><span>{c.socorristaPode?'Sim':'Não'}</span></label>:<small className="texto-apoio">Só o administrador</small>}</td>
+            <td className="col-acoes"><button className="table-action" onClick={()=>setEditandoCadastro({tipo:'categoria',item:c})}>Editar</button><button className="table-action table-action-danger" onClick={()=>setExcluindoCadastro({tipo:'categoria',item:c})}>Excluir</button></td>
+          </tr>)}</tbody>
+        </table></div></section>
       </div>:null}
       {aba==='acessos'?<div className="settings-grid">
-      <section className="panel settings-card"><header><h2>Acessos</h2><p>Quem entra no sistema. Crie uma conta nova, ou redefina a senha de quem esqueceu e passe a provisória para a pessoa.</p></header><ul className="simple-list">{usuarios.map(u=><li key={u.id}><strong>{u.nome}</strong><small>{u.email} · {u.perfil==='ADMINISTRADOR'?'Administrador':'Socorrista'}{u.ativo?'':' · encerrado'}{u.senhaProvisoria?' · senha provisória pendente':''}</small><button className="table-action" onClick={()=>setPedido({titulo:'Redefinir senha?',efeito:<>A senha atual de <strong>{u.nome}</strong> para de funcionar na hora. O sistema gera uma senha provisória para você repassar, e a pessoa troca no primeiro acesso.</>,resumo:[['Usuário',u.nome],['E-mail',u.email]],textoConfirmar:'Redefinir senha',perigo:true,aoConfirmar:()=>redefinir(u)})}>Redefinir senha</button>{u.ativo?<button className="table-action table-action-danger" onClick={()=>pedirEncerramento(u)}>Encerrar acesso</button>:<button className="table-action" onClick={()=>pedirReativacao(u)}>Reativar acesso</button>}<button className="table-action table-action-danger" onClick={()=>pedirExclusao(u)}>Excluir</button></li>)}</ul>
-        <form onSubmit={criarAcesso} className="inline-form">
+      <section className="panel settings-card settings-wide"><header><h2>Acessos</h2><p>Quem entra no sistema. Crie uma conta nova, ou redefina a senha de quem esqueceu e passe a provisória para a pessoa.</p></header>
+        <div className="table-scroll"><table className="tabela-config" aria-label="Acessos">
+          <thead><tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Situação</th><th className="col-acoes"/></tr></thead>
+          <tbody>{usuarios.map(u=><tr key={u.id}>
+            <td><strong>{u.nome}</strong></td>
+            <td className="col-email" title={u.email}>{u.email}</td>
+            <td>{u.perfil==='ADMINISTRADOR'?'Administrador':'Socorrista'}</td>
+            <td>{!u.ativo?<span className="etiqueta-situacao situacao-encerrado">Encerrado</span>:u.senhaProvisoria?<span className="etiqueta-situacao situacao-pendente">Senha provisória</span>:<span className="etiqueta-situacao situacao-ativo">Ativo</span>}</td>
+            <td className="col-acoes"><button className="table-action" onClick={()=>setPedido({titulo:'Redefinir senha?',efeito:<>A senha atual de <strong>{u.nome}</strong> para de funcionar na hora. O sistema gera uma senha provisória para você repassar, e a pessoa troca no primeiro acesso.</>,resumo:[['Usuário',u.nome],['E-mail',u.email]],textoConfirmar:'Redefinir senha',perigo:true,aoConfirmar:()=>redefinir(u)})}>Redefinir senha</button>{u.ativo?<button className="table-action table-action-danger" onClick={()=>pedirEncerramento(u)}>Encerrar acesso</button>:<button className="table-action" onClick={()=>pedirReativacao(u)}>Reativar acesso</button>}<button className="table-action table-action-danger" onClick={()=>pedirExclusao(u)}>Excluir</button></td>
+          </tr>)}</tbody>
+        </table></div>
+        <h3 className="subtitulo-config">Novo acesso</h3>
+        <form onSubmit={criarAcesso} className="inline-form form-novo-acesso">
           <Campo rotulo="Nome"><input name="nome" required autoCapitalize="words" autoComplete="off"/></Campo>
           <Campo rotulo="E-mail de acesso"><input name="email" type="email" inputMode="email" autoComplete="off" autoCapitalize="none" autoCorrect="off" spellCheck={false} required/></Campo>
           <Selecao rotulo="Perfil" name="perfil" opcoes={[{valor:'FUNCIONARIO',texto:'Socorrista'},{valor:'ADMINISTRADOR',texto:'Administrador'}]}/>
-          <button className="button button-ghost">Criar acesso</button></form>
+          <button className="button button-primary">Criar acesso</button></form>
         <p className="empty-inline">Administrador vê e mexe em tudo: financeiro, Porto, equipe e os acessos das outras pessoas. Socorrista só registra as próprias despesas e vê a comissão dele. Para dar acesso a um socorrista já cadastrado, use o botão na tela de Socorristas — lá a conta já nasce ligada ao cadastro dele.</p></section>
-      <section className="panel settings-card"><header><h2>Trocar senha</h2><p>A nova senha deve ter pelo menos oito caracteres.</p></header><form onSubmit={senha} className="form-grid"><label className="field"><span>Senha atual</span><EntradaSenha name="senhaAtual" autoComplete="current-password" required/></label><label className="field"><span>Nova senha</span><EntradaSenha name="novaSenha" autoComplete="new-password" minLength={8} required/></label><button className="button button-primary">Alterar senha</button></form></section>
       </div>:null}
       {aba==='sistema'?<div className="settings-grid">
+      {/* A senha de quem esta usando o sistema agora. Ficava ao lado da lista de
+          acessos e parecia trocar a senha de outra pessoa (Kawa, 23/09/2026:
+          "trocar senha ta muito ambiguo"). A de outra pessoa e "Redefinir senha". */}
+      <section className="panel settings-card"><header><h2>Minha senha</h2><p>Troca a senha <strong>da sua conta</strong>{usuario?<> ({usuario.nome} · {usuario.email})</>:null}. Para a senha de outra pessoa, use <em>Redefinir senha</em> em Acessos.</p></header>
+        <form onSubmit={senha} className="form-grid">
+          <label className="field"><span>Sua senha atual</span><EntradaSenha name="senhaAtual" autoComplete="current-password" required/></label>
+          <label className="field"><span>Nova senha</span><EntradaSenha name="novaSenha" autoComplete="new-password" minLength={8} required/><small className="texto-apoio">Pelo menos 8 caracteres.</small></label>
+          <label className="field"><span>Repita a nova senha</span><EntradaSenha name="confirmacao" autoComplete="new-password" minLength={8} required/></label>
+          <button className="button button-primary">Trocar minha senha</button></form></section>
       <section className="panel settings-card"><header><h2>Aparência</h2><p>Vale só neste computador e neste navegador.</p></header><div className="segmented tema-escolha" role="group" aria-label="Tema visual"><button className={tema==='claro'?'active':''} aria-pressed={tema==='claro'} onClick={()=>trocarTema('claro')}>Claro</button><button className={tema==='escuro'?'active':''} aria-pressed={tema==='escuro'} onClick={()=>trocarTema('escuro')}>Escuro</button></div><p className="empty-inline">O sistema não segue o tema do computador: a cor só muda quando você escolhe aqui.</p></section>
       <section className="panel settings-card"><header><h2>Cópia dos dados</h2><p>O banco não tem backup automático. Baixe de tempos em tempos e guarde fora do sistema.</p></header>
         <p className="empty-inline">Um arquivo do Excel com ordens de pagamento, ordens de serviço, receitas, despesas, contas a receber, socorristas, veículos, quilometragem, calendário e despesas fixas.</p>
