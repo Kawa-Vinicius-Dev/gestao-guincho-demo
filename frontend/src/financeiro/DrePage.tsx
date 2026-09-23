@@ -86,7 +86,6 @@ export default function DrePage() {
         <div><span>2</span><p><strong>Até {DIAS_PARA_DETALHAR} dias, um a um</strong>Em períodos maiores, resumidos por socorrista e por viatura.</p></div>
         <button className="button button-primary" disabled={exportando!==''} onClick={()=>void exportar('excel')}>{exportando==='excel'?'Gerando Excel…':'Exportar Excel'}</button>
         <button className="button button-ghost" disabled={exportando!==''} onClick={()=>void exportar('pdf')}>{exportando==='pdf'?'Gerando PDF…':'Exportar PDF'}</button>
-        <button className="button button-ghost" onClick={() => window.print()}>Imprimir DRE</button>
       </aside>
     </section>
 
