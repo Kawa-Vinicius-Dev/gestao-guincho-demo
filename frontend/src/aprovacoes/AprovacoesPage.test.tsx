@@ -107,3 +107,23 @@ test('turno aberto de dia passado aparece como cobranca, nao como aprovacao', as
   expect(await screen.findByText(/QEBSON RAMOS DA SILVA/)).toBeInTheDocument()
   expect(screen.getByText(/2 dias em aberto/)).toBeInTheDocument()
 })
+
+test('a despesa do socorrista pode ser excluída, com confirmação que diz de quem é', async () => {
+  let apagou = ''
+  servidor.use(
+    http.post(`${SUPA}/rest/v1/rpc/fila_de_aprovacoes`, () => HttpResponse.json(fila)),
+    http.delete(`${SUPA}/rest/v1/despesas`, ({ request }) => {
+      apagou = new URL(request.url).searchParams.get('id') ?? ''
+      return HttpResponse.json([{ id: 51 }])
+    }),
+  )
+  await abrir()
+  const user = userEvent.setup()
+  const cartao = (await screen.findByText('Almoço em serviço')).closest('article')!
+  await user.click(within(cartao).getByRole('button', { name: 'Excluir' }))
+
+  const janela = await screen.findByRole('dialog')
+  expect(within(janela).getByText(/NATANAEL JOSE DE FREITAS NETO sai do sistema/)).toBeTruthy()
+  await user.click(within(janela).getByRole('button', { name: /excluir/i }))
+  await vi.waitFor(() => expect(apagou).toBe('eq.51'))
+})
