@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import './tipoCusto.css'
 import { alternarAtivoDespesaFixa, atualizarDespesaFixa, criarDespesaFixa, excluirDespesaFixa, lancarDespesasFixasDoMes, listarDespesasFixas } from '../dados/despesasFixas'
 import { ConfirmarExclusao } from '../components/ConfirmarExclusao'
 import { ConfirmarAcao, type PedidoConfirmacao } from '../components/ConfirmarAcao'
@@ -53,6 +54,9 @@ export default function DespesasPage(){
   // precisa dizer qual e, com descricao e valor, senao confirmar e um chute.
   const [excluindo,setExcluindo]=useState<Despesa|null>(null),[apagando,setApagando]=useState(false)
   const [periodo,setPeriodo]=usePeriodoGlobal()
+  // Custo fixo (veio de uma despesa fixa) x variavel (o resto: mecanico, multa,
+  // adiantamento). Kawa, 22/09/2026: separar os dois, cada um com o seu total.
+  const [tipoCusto,setTipoCusto]=useState<''|'FIXA'|'VARIAVEL'>('')
   const periodoValido=Boolean(periodo.inicio&&periodo.fim&&periodo.inicio<=periodo.fim)
   const carregar=()=>admin&&periodoValido?listarDespesas({inicio:periodo.inicio,fim:periodo.fim}).then(setLista):Promise.resolve()
   // Despesa lancada por outra pessoa, ou comissao recalculada, entra na lista sozinha.
@@ -106,14 +110,17 @@ export default function DespesasPage(){
       await carregar()}catch(x){setErro((x as Error).message)}
   }
   const carregarFixas=()=>admin?listarDespesasFixas().then(setFixas):Promise.resolve()
+  // "3 de 10": as duas juntas, ou nenhuma (fixa sem fim, como IPTU e contador).
+  const parcelasDoForm=(f:FormData)=>{const total=Number(f.get('totalParcelas'))||null
+    return {totalParcelas:total,parcelaInicial:total?(Number(f.get('parcelaInicial'))||1):null}}
   async function salvarFixa(e:FormEvent<HTMLFormElement>){e.preventDefault();const formulario=e.currentTarget;const f=new FormData(formulario)
     setErro('');setMensagem('')
-    try{await criarDespesaFixa({descricao:String(f.get('descricao')),categoriaId:Number(f.get('categoriaId')),valor:Number(f.get('valor')),diaVencimento:Number(f.get('diaVencimento')),veiculoId:f.get('veiculoId')?Number(f.get('veiculoId')):null})
+    try{await criarDespesaFixa({descricao:String(f.get('descricao')),categoriaId:Number(f.get('categoriaId')),valor:Number(f.get('valor')),diaVencimento:Number(f.get('diaVencimento')),veiculoId:f.get('veiculoId')?Number(f.get('veiculoId')):null,...parcelasDoForm(f)})
       formulario.reset();await carregarFixas()}catch(x){setErro((x as Error).message)}
   }
   async function salvarEdicaoFixa(e:FormEvent<HTMLFormElement>){e.preventDefault();if(!fixaEditando)return;const f=new FormData(e.currentTarget)
     setErro('')
-    try{await atualizarDespesaFixa(fixaEditando.id,{descricao:String(f.get('descricao')),categoriaId:Number(f.get('categoriaId')),valor:Number(f.get('valor')),diaVencimento:Number(f.get('diaVencimento')),veiculoId:f.get('veiculoId')?Number(f.get('veiculoId')):null})
+    try{await atualizarDespesaFixa(fixaEditando.id,{descricao:String(f.get('descricao')),categoriaId:Number(f.get('categoriaId')),valor:Number(f.get('valor')),diaVencimento:Number(f.get('diaVencimento')),veiculoId:f.get('veiculoId')?Number(f.get('veiculoId')):null,...parcelasDoForm(f)})
       setFixaEditando(null);setMensagem('Despesa fixa atualizada.');await carregarFixas()}
     catch(x){setErro((x as Error).message)}
   }
@@ -124,7 +131,7 @@ export default function DespesasPage(){
   // lancar o mesmo mes duas vezes nao duplica: o backend so cria o que falta
   async function lancarFixas(){setErro('');setMensagem('');setLancando(true)
     try{const r=await lancarDespesasFixasDoMes(mes)
-      setMensagem(`${r.lancadas} ${r.lancadas===1?'despesa fixa lançada':'despesas fixas lançadas'}${r.valorLancado?` · ${moeda(r.valorLancado)}`:''}${r.jaExistiam?` · ${r.jaExistiam} já estavam lançadas`:''}.`)
+      setMensagem(`${r.lancadas} ${r.lancadas===1?'despesa fixa lançada':'despesas fixas lançadas'}${r.valorLancado?` · ${moeda(r.valorLancado)}`:''}${r.jaExistiam?` · ${r.jaExistiam} já estavam lançadas`:''}${r.encerradas?` · ${r.encerradas} ${r.encerradas===1?'fixa chegou à última parcela e foi encerrada':'fixas chegaram à última parcela e foram encerradas'}`:''}.`)
       await carregar()}
     catch(x){setErro((x as Error).message)}finally{setLancando(false)}
   }
@@ -160,8 +167,9 @@ export default function DespesasPage(){
       : <header className="cabecalho-socorrista"><h1>Minhas despesas</h1></header>}
     {erro?<div className="form-alert" role="alert">{erro}</div>:null}{carregando?<Carregando/>:null}{mensagem?<div className="success-notice">{mensagem}</div>:null}
     {admin?<section className="panel painel-filtros"><form className="ledger-filters" onSubmit={e=>e.preventDefault()}><SeletorPeriodo periodo={periodo} aoMudar={setPeriodo}/></form></section>:null}
+    {admin&&lista.length?<SeletorTipoCusto lista={lista} tipo={tipoCusto} aoMudar={setTipoCusto}/>:null}
     {admin?<section className="panel">{lista.length?<div className="table-scroll"><table><thead><tr><th>Descrição</th><th>Categoria</th><th>Data</th><th>Veículo</th><th>Socorrista</th><th>Situação</th><th>Aprovação</th><th>Valor</th><th>Comprovante</th><th/></tr></thead><tbody>
-      {lista.map(d=><tr key={d.id}><td><strong>{d.descricao}</strong><small>{d.criadoPor}</small></td><td>{d.categoria}</td><td>{data(d.data)}</td><td>{d.veiculo||'—'}</td><td>{d.motorista||'—'}{d.motorista&&!d.protocolo?.startsWith('COMISSAO-')
+      {lista.filter(d=>!tipoCusto||(tipoCusto==='FIXA')===Boolean(d.despesaRecorrenteId)).map(d=><tr key={d.id}><td><strong>{d.descricao}</strong><small>{d.criadoPor}</small></td><td>{d.categoria}</td><td>{data(d.data)}</td><td>{d.veiculo||'—'}</td><td>{d.motorista||'—'}{d.motorista&&!d.protocolo?.startsWith('COMISSAO-')
           ?<label className="desconto-na-lista"><input type="checkbox" checked={Boolean(d.descontaComissao)} onChange={()=>setPedido(d.descontaComissao
             ?{titulo:'Parar de descontar da comissão?',efeito:<>{moeda(d.valor)} deixa de sair da comissão de <strong>{d.motorista}</strong>. A comissão é recalculada na hora.</>,resumo:[['Despesa',d.descricao],['Data',data(d.data)],['Valor',moeda(d.valor)]],textoConfirmar:'Parar de descontar',aoConfirmar:()=>alternarDesconto(d)}
             :{titulo:'Descontar da comissão?',efeito:<>{moeda(d.valor)} sai da comissão de <strong>{d.motorista}</strong>, na OP do período desta data. A comissão é recalculada na hora.</>,resumo:[['Despesa',d.descricao],['Data',data(d.data)],['Valor',moeda(d.valor)]],textoConfirmar:'Descontar da comissão',aoConfirmar:()=>alternarDesconto(d)})} aria-label={`Descontar ${d.descricao} da comissão de ${d.motorista}`}/><span>Desconta da comissão</span></label>
@@ -186,7 +194,7 @@ export default function DespesasPage(){
     {admin?<section className="panel" aria-label="Despesas fixas"><header className="panel-title"><div><h2>Despesas fixas</h2><p>O que cai todo mês: aluguel, seguro, parcela. Cadastre uma vez e lance o mês quando quiser.</p></div>
       <div className="heading-actions"><Campo rotulo="Mês"><input aria-label="Mês do lançamento" type="month" value={mes} onChange={e=>setMes(e.target.value)}/></Campo>
         <button className="button button-primary" disabled={lancando||!fixas.some(f=>f.ativo)} onClick={()=>{const ativas=fixas.filter(f=>f.ativo);setPedido({titulo:'Lançar as despesas fixas do mês?',efeito:<>As despesas fixas ativas viram despesas pagas de <strong>{mes.split('-').reverse().join('/')}</strong> e entram na Visão geral. As que já foram lançadas nesse mês não duplicam.</>,resumo:[['Mês',mes.split('-').reverse().join('/')],['Despesas fixas ativas',String(ativas.length)],['Total',moeda(ativas.reduce((s,f)=>s+f.valor,0))]],textoConfirmar:'Lançar despesas',aoConfirmar:lancarFixas})}}>{lancando?'Lançando…':'Lançar as fixas do mês'}</button></div></header>
-      {fixas.length?<ul className="simple-list">{fixas.map(f=><li key={f.id}><strong>{f.descricao}</strong><small>{f.categoria} · {moeda(f.valor)} · todo dia {f.diaVencimento}{f.veiculo?` · ${f.veiculo}`:''}{f.ativo?'':' · desativada'}</small><span className="acoes-da-linha"><button className="table-action" onClick={()=>setFixaEditando(f)}>Editar</button><button className={f.ativo?'table-action table-action-danger':'table-action'} onClick={()=>setPedido(f.ativo
+      {fixas.length?<ul className="simple-list">{fixas.map(f=><li key={f.id}><strong>{f.descricao}</strong><small>{f.categoria} · {moeda(f.valor)} · todo dia {f.diaVencimento}{f.veiculo?` · ${f.veiculo}`:''}{f.totalParcelas?` · ${f.proximaParcela&&f.proximaParcela<=f.totalParcelas?`próxima parcela ${f.proximaParcela}/${f.totalParcelas}`:`${f.totalParcelas}/${f.totalParcelas} pagas`}`:''}{f.ativo?'':f.totalParcelas&&(f.proximaParcela??0)>f.totalParcelas?' · encerrada':' · desativada'}</small><span className="acoes-da-linha"><button className="table-action" onClick={()=>setFixaEditando(f)}>Editar</button><button className={f.ativo?'table-action table-action-danger':'table-action'} onClick={()=>setPedido(f.ativo
             ?{titulo:'Desativar despesa fixa?',efeito:<><strong>{f.descricao}</strong> deixa de ser lançada nos próximos meses. O que já foi lançado continua.</>,resumo:[['Despesa fixa',f.descricao],['Valor',moeda(f.valor)]],textoConfirmar:'Desativar',perigo:true,aoConfirmar:()=>alternarFixa(f)}
             :{titulo:'Reativar despesa fixa?',efeito:<><strong>{f.descricao}</strong> volta a ser lançada quando você lançar as fixas do mês.</>,resumo:[['Despesa fixa',f.descricao],['Valor',moeda(f.valor)]],textoConfirmar:'Reativar',aoConfirmar:()=>alternarFixa(f)})}>{f.ativo?'Desativar':'Reativar'}</button><button className="table-action table-action-danger" onClick={()=>setFixaExcluindo(f)}>Excluir</button></span></li>)}</ul>:<p className="empty-inline">Nenhuma despesa fixa cadastrada.</p>}
       <form onSubmit={salvarFixa} className="inline-form">
@@ -195,6 +203,8 @@ export default function DespesasPage(){
         <CampoValor rotulo="Valor da despesa fixa" name="valor" required/>
         <CampoNumero rotulo="Dia do vencimento" name="diaVencimento" decimais={0} min={1} max={31} required/>
         <Selecao rotulo="Veículo da despesa fixa" name="veiculoId" vazio="Sem veículo" opcoes={veiculos.map(x=>({valor:x.id,texto:x.identificacao}))}/>
+        <CampoNumero rotulo="Parcela atual" name="parcelaInicial" decimais={0} min={1} placeholder="Ex.: 3"/>
+        <CampoNumero rotulo="Total de parcelas" name="totalParcelas" decimais={0} min={1} placeholder="Vazio: sem fim"/>
         <button className="button button-ghost">Adicionar</button></form></section>:null}
     {form?<Modal etiqueta="Saída" titulo={editando?'Editar despesa':'Registrar despesa'} largo aoFechar={()=>{setForm(false);setEditando(null)}}>
       {/* O essencial primeiro: quanto, no que, quando e de quem. O resto e raro e
@@ -259,6 +269,10 @@ export default function DespesasPage(){
         <CampoValor rotulo="Valor" name="valor" defaultValue={fixaEditando.valor} required/>
         <CampoNumero rotulo="Dia do vencimento" name="diaVencimento" decimais={0} min={1} max={31} defaultValue={String(fixaEditando.diaVencimento)} required/>
         <Selecao rotulo="Veículo" name="veiculoId" vazio="Sem veículo" defaultValue={fixaEditando.veiculoId??''} opcoes={veiculos.map(x=>({valor:x.id,texto:x.identificacao}))}/>
+        <CampoNumero rotulo="Parcela do primeiro lançamento" name="parcelaInicial" decimais={0} min={1} defaultValue={fixaEditando.parcelaInicial?String(fixaEditando.parcelaInicial):''}
+          ajuda="Vale para o primeiro lançamento; depois a contagem segue sozinha."/>
+        <CampoNumero rotulo="Total de parcelas" name="totalParcelas" decimais={0} min={1} defaultValue={fixaEditando.totalParcelas?String(fixaEditando.totalParcelas):''}
+          ajuda="Vazio: a fixa não tem fim."/>
         <AcoesModal aoCancelar={()=>setFixaEditando(null)}><button className="button button-primary">Salvar alterações</button></AcoesModal>
       </form>
     </Modal>:null}
@@ -268,6 +282,22 @@ export default function DespesasPage(){
       aoConfirmar={async()=>{await excluirDespesaFixa(fixaExcluindo.id);setMensagem('Despesa fixa excluída.');await carregarFixas()}}
       aoFechar={()=>setFixaExcluindo(null)}/>:null}
     {pedido?<ConfirmarAcao {...pedido} aoFechar={()=>setPedido(null)}/>:null}
+  </div>
+}
+
+/** Todas, Fixas ou Variaveis, cada uma com o total do periodo. */
+function SeletorTipoCusto({lista,tipo,aoMudar}:{lista:Despesa[];tipo:''|'FIXA'|'VARIAVEL';aoMudar:(t:''|'FIXA'|'VARIAVEL')=>void}){
+  const validas=lista.filter(d=>d.status!=='REJEITADO')
+  const soma=(filtro:(d:Despesa)=>boolean)=>validas.filter(filtro).reduce((t,d)=>t+d.valor,0)
+  const opcoes:[''|'FIXA'|'VARIAVEL',string,number][]=[
+    ['','Todas',soma(()=>true)],
+    ['FIXA','Custo fixo',soma(d=>Boolean(d.despesaRecorrenteId))],
+    ['VARIAVEL','Custo variável',soma(d=>!d.despesaRecorrenteId)],
+  ]
+  return <div className="tipo-custo" role="group" aria-label="Tipo de custo">
+    {opcoes.map(([valor,rotulo,total])=><button key={valor||'todas'} type="button" aria-pressed={tipo===valor}
+      className={tipo===valor?'tipo-custo-opcao ativa':'tipo-custo-opcao'} onClick={()=>aoMudar(valor)}>
+      <span>{rotulo}</span><strong>{moeda(total)}</strong></button>)}
   </div>
 }
 

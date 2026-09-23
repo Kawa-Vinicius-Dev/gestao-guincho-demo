@@ -40,6 +40,9 @@ Validam as migrations num Postgres local, sem depender de um projeto Supabase.
 - `93_comissao_por_op.sql` — 13 asserções de que a % da OP (ex.: 17%) vale para
   todos daquela OP, passa por cima da % do socorrista, aparece igual na lista de
   Comissões e na tela de OS, e de que o padrão editável só muda o que não fechou.
+- `94_despesa_fixa_com_parcelas.sql` — 9 asserções de que a despesa fixa com
+  parcelas (ex.: 9/10) grava o número em cada lançamento, não duplica o mês, se
+  encerra sozinha na última e não pula número quando um lançamento é apagado.
 - `95_copia_dos_dados.sql` — 10 asserções de que a cópia dos dados consegue ler
   todas as colunas que pede. O banco não tem backup automático, então essa cópia
   é a única proteção do dono — e ela ficou quebrada sem ninguém saber.
