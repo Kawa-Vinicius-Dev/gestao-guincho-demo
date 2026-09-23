@@ -7,11 +7,11 @@ import DesempenhoPage from './DesempenhoPage'
 
 const os = (i: number, viatura: string, motorista: string, valor: number): LinhaOs => ({
   id: i, numero: `OS-${i}`, valorTotal: valor, valorPrevisto: valor || undefined, viatura, motorista,
-  motoristaId: motorista === 'Anderson' ? 7 : 8, situacao: 'CONCILIADA', dataAtendimento: '2026-09-10',
+  motoristaId: motorista === 'Anderson' ? 7 : 8, situacao: 'CONCILIADA', dataAtendimento: '2026-09-10', semValor: !valor,
 })
 const lista = [os(1, 'L168', 'Anderson', 500), os(2, 'L168', 'Djalma', 300), os(3, 'L204', 'Anderson', 0)]
 
-vi.mock('../dados/porto/listaOs', () => ({ listarTodasAsOs: () => Promise.resolve({ itens: lista }) }))
+vi.mock('../dados/porto/listaOs', async orig => ({ ...await orig<object>(), listarTodasAsOs: () => Promise.resolve({ itens: lista }) }))
 vi.mock('../dados/quilometragem', () => ({ listarQuilometragens: () => Promise.resolve([{ veiculoId: 1, quilometragemTotal: 420 }]) }))
 vi.mock('../dados/veiculos', () => ({ listarVeiculos: () => Promise.resolve([{ id: 1, identificacao: 'L168', siglaPorto: 'L168', custoPorKm: 2, ativo: true }]) }))
 

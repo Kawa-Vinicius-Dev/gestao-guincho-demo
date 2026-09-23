@@ -1,11 +1,9 @@
 import { useEffect, useState } from 'react'
 import { LinkOs, LinkSocorrista, LinkViatura } from '../../components/LinksDeDado'
-import { listarTodasAsOs, type LinhaOs } from '../../dados/porto/listaOs'
+import { listarTodasAsOs, valorDaOs, type LinhaOs } from '../../dados/porto/listaOs'
 import { data, moeda } from '../../utils/formatadores'
 import './dre.css'
 
-/** O valor da OS: o oficial da OP quando ha; senao o informado a mao. */
-const valorDaOs = (os: LinhaOs) => os.valorPrevisto ?? (os.valorTotal || 0)
 
 /**
  * Todos os servicos do periodo, pela data em que foram feitos, por socorrista.
@@ -33,7 +31,7 @@ export function ServicosDoPeriodo({ inicio, fim, porCompetencia = false, servico
   const servicos = prontos !== undefined ? prontos : buscados
 
   if (!servicos) return null
-  const semValor = servicos.filter(os => !valorDaOs(os)).length
+  const semValor = servicos.filter(os => os.semValor).length
   const total = servicos.reduce((t, os) => t + valorDaOs(os), 0)
 
   // Quem mais fez primeiro; empate, em ordem alfabetica.
@@ -72,7 +70,7 @@ export function ServicosDoPeriodo({ inicio, fim, porCompetencia = false, servico
                 <LinkOs numero={os.numero}/>
                 <span>{os.dataAtendimento ? data(os.dataAtendimento) : '—'}</span>
                 <span>{os.especialidade || '—'} · <LinkViatura sigla={os.viatura}/></span>
-                <span>{valorDaOs(os) ? moeda(valorDaOs(os)) : 'Sem valor'}</span>
+                <span>{os.semValor ? 'Sem valor' : moeda(valorDaOs(os))}</span>
               </li>)}
             </ol>
           </details>

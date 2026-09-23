@@ -456,10 +456,10 @@ export async function listarPeriodosDeOp(): Promise<OrdemPagamentoPorto[]> {
  * ninguem termina.
  */
 export async function listarPendenciasOsPorto(
-  inicio: string, fim: string,
+  inicio: string, fim: string, porCompetencia = true,
 ): Promise<PendenciaOsPorto[]> {
   return ou(
-    await supabase().rpc('porto_pendencias_os', { p_inicio: inicio, p_fim: fim }),
+    await supabase().rpc('porto_pendencias_os', { p_inicio: inicio, p_fim: fim, p_por_competencia: porCompetencia }),
     'Não foi possível carregar as pendências do período.',
   ) as PendenciaOsPorto[]
 }

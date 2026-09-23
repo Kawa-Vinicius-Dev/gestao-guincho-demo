@@ -4,7 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { Carregando } from '../components/EstadoPagina'
 import { SeletorPeriodo } from '../components/SeletorPeriodo'
 import { CabecalhoPagina, Painel } from '../components/ui/Pagina'
-import { listarTodasAsOs, type LinhaOs } from '../dados/porto/listaOs'
+import { listarTodasAsOs, valorDaOs, type LinhaOs } from '../dados/porto/listaOs'
 import { porCompetencia } from '../utils/modoDoPeriodo'
 import { listarQuilometragens } from '../dados/quilometragem'
 import { listarVeiculos } from '../dados/veiculos'
@@ -49,8 +49,6 @@ const formatar = (medida: Medida, valor: number) =>
   medida === 'servicos' ? `${valor} ${valor === 1 ? 'serviço' : 'serviços'}`
     : medida === 'km' ? `${numero(valor)} km` : moeda(valor)
 
-/** O valor da OS: o oficial da OP quando ha; senao o informado a mao. */
-const valorDaOs = (os: LinhaOs) => os.valorPrevisto ?? (os.valorTotal || 0)
 
 function agrupar(oss: LinhaOs[], chave: (os: LinhaOs) => string | undefined, semDono: string): Map<string, Grupo> {
   const grupos = new Map<string, Grupo>()
@@ -60,7 +58,7 @@ function agrupar(oss: LinhaOs[], chave: (os: LinhaOs) => string | undefined, sem
     g.servicos += 1
     g.faturamento += valorDaOs(os)
     g.comissao += os.comissao ?? 0
-    if (!valorDaOs(os)) g.semValor += 1
+    if (os.semValor) g.semValor += 1
     g.os.push(os)
     grupos.set(k, g)
   }
@@ -187,7 +185,7 @@ export default function DesempenhoPage() {
           <td>{visao === 'viaturas' ? <LinkSocorrista id={os.motoristaId} nome={os.motorista}/> : <LinkViatura sigla={os.viatura} chip/>}</td>
           <td className="col-op">{os.numeroOp ? <span className="os-op"><LinkOp numero={os.numeroOp}/></span> : <small className="os-sem">Aguardando OP</small>}</td>
           <td><span className={`vehicle-status ${ETIQUETAS_SITUACAO[os.situacao].classe}`}>{ETIQUETAS_SITUACAO[os.situacao].texto}</span></td>
-          <td className="col-valor">{valorDaOs(os) ? moeda(valorDaOs(os)) : <small>Sem valor</small>}</td>
+          <td className="col-valor">{os.semValor ? <small>Sem valor</small> : moeda(valorDaOs(os))}</td>
         </tr>)}</tbody>
       </table></div> : <p className="empty-inline">Só há km lançado para esta viatura no período, sem serviço.</p>}
     </Painel> : null}

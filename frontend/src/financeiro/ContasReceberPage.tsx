@@ -42,7 +42,7 @@ export default function ContasReceberPage() {
     return () => { valeu = false }
   }, [inicio, fim, versao])
 
-  const semValor = itens.filter(os => os.valorManual === undefined).length
+  const semValor = itens.filter(os => os.semValor).length
   const paraAProxima = itens.filter(os => os.situacao === 'AGUARDANDO_PROXIMA_OP').length
   const lista = (situacao: string) => `/porto/ordens-servico?situacao=${situacao}&competencia=1`
 
