@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { LinkOp, LinkOs, LinkSocorrista, LinkViatura } from '../components/LinksDeDado'
 import { Link } from 'react-router-dom'
 import { Carregando } from '../components/EstadoPagina'
 import { SeletorPeriodo } from '../components/SeletorPeriodo'
@@ -167,11 +168,11 @@ export default function DesempenhoPage() {
         <thead><tr><th>OS</th><th>Atendimento</th><th>Especialidade</th>
           <th>{visao === 'viaturas' ? 'Socorrista' : 'Viatura'}</th><th>OP</th><th>Situação</th><th className="th-numero">Valor</th></tr></thead>
         <tbody>{grupoAberto.os.map(os => <tr key={os.id}>
-          <td className="col-os"><strong>{os.numero}</strong></td>
+          <td className="col-os"><strong><LinkOs numero={os.numero}/></strong></td>
           <td className="col-data">{os.dataAtendimento ? data(os.dataAtendimento) : '—'}</td>
           <td className="col-especialidade" title={os.especialidade || undefined}>{os.especialidade || '—'}</td>
-          <td>{visao === 'viaturas' ? os.motorista || '—' : os.viatura ? <span className="vehicle-chip">{os.viatura}</span> : '—'}</td>
-          <td className="col-op">{os.numeroOp ? <span className="os-op">{os.numeroOp}</span> : <small className="os-sem">Aguardando OP</small>}</td>
+          <td>{visao === 'viaturas' ? <LinkSocorrista id={os.motoristaId} nome={os.motorista}/> : <LinkViatura sigla={os.viatura} chip/>}</td>
+          <td className="col-op">{os.numeroOp ? <span className="os-op"><LinkOp numero={os.numeroOp}/></span> : <small className="os-sem">Aguardando OP</small>}</td>
           <td><span className={`vehicle-status ${ETIQUETAS_SITUACAO[os.situacao].classe}`}>{ETIQUETAS_SITUACAO[os.situacao].texto}</span></td>
           <td className="col-valor">{valorDaOs(os) ? moeda(valorDaOs(os)) : <small>Sem valor</small>}</td>
         </tr>)}</tbody>

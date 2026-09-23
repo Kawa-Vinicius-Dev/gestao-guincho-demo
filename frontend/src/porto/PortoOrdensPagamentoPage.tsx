@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { atualizarOrdemPagamentoPorto, definirQuinzenaOp, baixarRelatorioOpPorto, baixarRelatorioPorto, confirmarImportacaoPorto, criarPreviaComposicaoPorto, criarOrdemPagamentoPorto, detalharOrdemPagamentoPorto, justificarOrdemPagamentoPorto, listarOrdensPagamentoPorto, resumirOrdensPagamentoPorto } from '../dados/porto'
+import { atualizarOrdemPagamentoPorto, definirQuinzenaOp, baixarRelatorioOpPorto, baixarRelatorioPorto, confirmarImportacaoPorto, criarPreviaComposicaoPorto, criarOrdemPagamentoPorto, detalharOrdemPagamentoPorto, idDaOpPeloNumero, justificarOrdemPagamentoPorto, listarOrdensPagamentoPorto, resumirOrdensPagamentoPorto } from '../dados/porto'
 import { Campo, Selecao } from '../components/Campos'
 import type { DetalheOpPorto, OrdemPagamentoPorto, PreviaPorto, ResumoOpsPorto } from '../types/modelos'
 import { data, moeda } from '../utils/formatadores'
@@ -54,6 +54,14 @@ export default function PortoOrdensPagamentoPage() {
   }
 
   useEffect(() => { void carregar(new URLSearchParams()) }, [])
+  // Link de dado de outra tela (?numero=06438807): abre o detalhe daquela OP.
+  useEffect(() => {
+    const numero = new URLSearchParams(window.location.search).get('numero')
+    if (!numero) return
+    idDaOpPeloNumero(numero)
+      .then(id => { if (id) void abrirDetalhe(id); else setErro(`A OP ${numero} não foi encontrada.`) })
+      .catch((e: Error) => setErro(e.message))
+  }, [])
 
   async function aplicar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault()

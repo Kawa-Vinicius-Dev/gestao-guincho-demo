@@ -1,4 +1,5 @@
 import { render,screen,within } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import userEvent from '@testing-library/user-event'
 import { http,HttpResponse } from 'msw'
 import { afterEach,beforeEach,expect,test,vi } from 'vitest'
@@ -65,7 +66,7 @@ test('socorrista vê só a quantidade e os serviços feitos, sem dinheiro', asyn
   )
   const MinhaComissaoPage = await abrirPagina(() => import('./MinhaComissaoPage'))
 
-  render(<MinhaComissaoPage/>)
+  render(<MemoryRouter><MinhaComissaoPage/></MemoryRouter>)
 
   expect(await screen.findByRole('heading', { name: 'Meus serviços' })).toBeInTheDocument()
   expect(await screen.findByText('OS-1')).toBeInTheDocument()
@@ -89,7 +90,7 @@ test('administrador filtra resumo e abre o detalhamento que forma a comissão', 
   const ComissoesPage = await abrirPagina(() => import('./ComissoesPage'))
   const user = userEvent.setup({ delay: null })
 
-  render(<ComissoesPage/>)
+  render(<MemoryRouter><ComissoesPage/></MemoryRouter>)
 
   const linha = await screen.findByRole('row', { name: /ana motorista/i })
   expect(within(linha).getByText('-R$ 50,00')).toBeInTheDocument()
@@ -117,7 +118,7 @@ test('comissão já lançada em despesas, sem botão de pagar', async () => {
   const ComissoesPage = await abrirPagina(() => import('./ComissoesPage'))
   const user = userEvent.setup({ delay: null })
 
-  render(<ComissoesPage/>)
+  render(<MemoryRouter><ComissoesPage/></MemoryRouter>)
 
   const linha = await screen.findByRole('row', { name: /ana motorista/i })
   expect(within(linha).getByText('Lançada em 29/04/2026')).toBeInTheDocument()
@@ -143,7 +144,7 @@ test('o detalhe lista todos os gastos e diz quais descontam', async () => {
   const ComissoesPage = await abrirPagina(() => import('./ComissoesPage'))
   const user = userEvent.setup({ delay: null })
 
-  render(<ComissoesPage/>)
+  render(<MemoryRouter><ComissoesPage/></MemoryRouter>)
   const linha = await screen.findByRole('row', { name: /ana motorista/i })
   await user.click(within(linha).getByRole('button', { name: /detalhar/i }))
 
@@ -174,7 +175,7 @@ test('comissão prevista da competência aparece separada da confirmada', async 
   )
   const ComissoesPage = await abrirPagina(() => import('./ComissoesPage'))
 
-  render(<ComissoesPage/>)
+  render(<MemoryRouter><ComissoesPage/></MemoryRouter>)
 
   const titulo = await screen.findByRole('heading', { name: 'Comissão prevista' })
   const tabela = titulo.closest('section')!
@@ -198,7 +199,7 @@ test('socorrista vê só a OP mais recente, sem escolher período', async () => 
   )
   const MinhaComissaoPage = await abrirPagina(() => import('./MinhaComissaoPage'))
 
-  render(<MinhaComissaoPage/>)
+  render(<MemoryRouter><MinhaComissaoPage/></MemoryRouter>)
 
   expect(await screen.findByText('OS-1')).toBeInTheDocument()
   // A mais recente (28/05), e nenhuma outra: sem seletor, sem "Selecione".

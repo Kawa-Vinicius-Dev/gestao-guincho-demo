@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { LinkOp, LinkSocorrista } from '../components/LinksDeDado'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useAoVivo } from '../dados/aoVivo'
 import { baixarRelatorio, type Relatorio } from '../dados/exportar'
@@ -54,7 +55,7 @@ export default function PortoOrdensServicoPage() {
   // aqui filtrada, mesmo que seja de outro periodo.
   const [busca] = useSearchParams()
   const [numeroOs, setNumeroOs] = useState(() => busca.get('os') ?? '')
-  const [numeroOp, setNumeroOp] = useState('')
+  const [numeroOp, setNumeroOp] = useState(() => busca.get('op') ?? '')
   const [especialidade, setEspecialidade] = useState('')
   const [motoristaId, setMotoristaId] = useState(0)
   const [sigla, setSigla] = useState(() => (busca.get('sigla') ?? '').toUpperCase())
@@ -281,7 +282,7 @@ export default function PortoOrdensServicoPage() {
         apoio={dados && dados.valorPrevisto !== dados.valorTotal ? `${moeda(dados.valorTotal)} já pagos pela OP` : 'Oficial da OP mais o informado'}/>
       <Indicador rotulo="Sem valor" valor={dados ? dados.semValor.toLocaleString('pt-BR') : '—'}
         apoio={dados?.semValor ? 'Aguardando a análise da Porto' : 'Todas com valor'}/>
-      <Indicador rotulo="Comissão" valor={dados ? moeda(dados.comissaoTotal) : '—'} apoio="20% das OS já pagas numa OP"/>
+      <Indicador rotulo="Comissão" valor={dados ? moeda(dados.comissaoTotal) : '—'} link="/comissoes" apoio="Pela % de cada OP, nas OS já pagas"/>
     </GradeIndicadores>
 
     <Painel semRespiro>
@@ -300,11 +301,11 @@ export default function PortoOrdensServicoPage() {
               <td className="col-data">{os.dataAtendimento ? data(os.dataAtendimento) : '—'}</td>
               <td className="col-competencia"><small>{competenciaDe(os)}</small></td>
               <td className="col-especialidade" title={os.especialidade || undefined}>{os.especialidade || '—'}</td>
-              <td className="col-socorrista">{os.motoristaId ? <Link to={`/equipe/${os.motoristaId}`}>{os.motorista}</Link> : '—'}</td>
+              <td className="col-socorrista"><LinkSocorrista id={os.motoristaId} nome={os.motorista}/></td>
               <td className="col-viatura">{veiculo
                 ? <Link className="vehicle-chip" to={`/veiculos?veiculo=${veiculo.id}`}>{os.viatura}</Link>
                 : os.viatura ? <span className="vehicle-chip">{os.viatura}</span> : <small className="os-sem">Sem viatura</small>}</td>
-              <td className="col-op">{os.numeroOp ? <span className="os-op">{os.numeroOp}</span> : <small className="os-sem">Aguardando OP</small>}</td>
+              <td className="col-op">{os.numeroOp ? <span className="os-op"><LinkOp numero={os.numeroOp}/></span> : <small className="os-sem">Aguardando OP</small>}</td>
               <td className="col-situacao"><span className={`vehicle-status ${ETIQUETAS_SITUACAO[os.situacao].classe}`}>{ETIQUETAS_SITUACAO[os.situacao].texto}</span></td>
               {/* Com OP, o valor e o oficial; sem OP, o informado a mao, marcado como previsto. */}
               <td className="col-valor">{os.ordemPagamentoId

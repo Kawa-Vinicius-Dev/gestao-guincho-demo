@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { LinkOs, LinkSocorrista, LinkViatura } from '../../components/LinksDeDado'
 import { listarTodasAsOs, type LinhaOs } from '../../dados/porto/listaOs'
 import { data } from '../../utils/formatadores'
 
@@ -41,11 +42,11 @@ function UmPorUm({ servicos }: { servicos: LinhaOs[] }) {
   return <div className="table-scroll"><table>
     <thead><tr><th>OS</th><th>Atendimento</th><th>Especialidade</th><th>Socorrista</th><th>Viatura</th></tr></thead>
     <tbody>{servicos.map(os => <tr key={os.id}>
-      <td><strong>{os.numero}</strong></td>
+      <td><strong><LinkOs numero={os.numero}/></strong></td>
       <td>{os.dataAtendimento ? data(os.dataAtendimento) : '—'}</td>
       <td>{os.especialidade || '—'}</td>
-      <td>{os.motorista || '—'}</td>
-      <td>{os.viatura || '—'}</td>
+      <td><LinkSocorrista id={os.motoristaId} nome={os.motorista}/></td>
+      <td><LinkViatura sigla={os.viatura}/></td>
     </tr>)}</tbody>
   </table></div>
 }

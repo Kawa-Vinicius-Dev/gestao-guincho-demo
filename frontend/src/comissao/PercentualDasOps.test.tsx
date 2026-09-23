@@ -1,4 +1,5 @@
 import { render, screen, within } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
@@ -28,7 +29,7 @@ test('editar a OP para 17% manda 0,17 e avisa que vale para todos da OP', async 
   esquecerCliente()
   const { PercentualDasOps } = await import('./PercentualDasOps')
   const mudou = vi.fn()
-  render(<PercentualDasOps ids={[9]} padrao={0.2} aoMudar={mudou}/>)
+  render(<MemoryRouter><PercentualDasOps ids={[9]} padrao={0.2} aoMudar={mudou}/></MemoryRouter>)
 
   const user = userEvent.setup()
   await user.click(await screen.findByRole('button', { name: 'Editar a comissão da OP 06438807' }))

@@ -82,18 +82,18 @@ export function ResultadoDoPeriodo({ dados, atualizando }: { dados: Dashboard; a
 export function IndicadoresDaOperacao({ dados }: { dados: Dashboard }) {
   const servicos = dados.servicosDoPeriodo ?? 0
   const pendentes = dados.servicosPendentes ?? 0
-  // Comissao da equipe: 20% dos servicos pagos, somando todos os socorristas.
+  // Comissao da equipe: a % de cada OP sobre os servicos pagos, somando todos.
   // Ja entra em despesas sozinha; aqui aparece o valor de cada um e o total.
   const comissoes = (dados.resultadoPorSocorrista ?? []).reduce((soma, p) => soma + p.comissao, 0)
   return <GradeIndicadores>
-    <Indicador rotulo="Serviços" valor={servicos}
+    <Indicador rotulo="Serviços" valor={servicos} link="/porto/ordens-servico"
       apoio={pendentes
         ? `${pendentes} ${pendentes === 1 ? 'aguarda' : 'aguardam'} OP`
         : servicos ? `${moeda(dados.producaoPaga ?? 0)} pagos pela Porto` : 'Nenhum serviço'}/>
-    <Indicador rotulo="Comissões" valor={moeda(comissoes)}
+    <Indicador rotulo="Comissões" valor={moeda(comissoes)} link="/comissoes"
       apoio={comissoes > 0 ? 'Total da equipe no período, já em despesas' : 'Nenhuma comissão no período'}/>
     {dados.despesasPrevistas > 0
-      ? <Indicador rotulo="Despesas a pagar" valor={moeda(dados.despesasPrevistas)}
+      ? <Indicador rotulo="Despesas a pagar" valor={moeda(dados.despesasPrevistas)} link="/despesas"
           tom="atencao" apoio="Aprovadas, ainda não pagas"/>
       : null}
   </GradeIndicadores>

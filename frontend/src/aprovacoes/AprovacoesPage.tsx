@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { LinkSocorrista, LinkViatura } from '../components/LinksDeDado'
 import { ConfirmarAcao } from '../components/ConfirmarAcao'
 import { Carregando, ErroPagina, Vazio } from '../components/EstadoPagina'
 import { Modal } from '../components/Modal'
@@ -63,8 +64,8 @@ function LinhaTurno({ item, aoResolver }: { item: ItemDaFila; aoResolver: () => 
   return <article className="aprovacao-item">
     <header>
       <span className="aprovacao-tipo aprovacao-tipo-turno">Turno</span>
-      <h3>{item.socorrista}{item.qra ? <small> · QRA {item.qra}</small> : null}</h3>
-      <span className="aprovacao-data">{dataCurta(item.data)} · {item.veiculo}</span>
+      <h3><LinkSocorrista id={item.socorristaId} nome={item.socorrista}/>{item.qra ? <small> · QRA {item.qra}</small> : null}</h3>
+      <span className="aprovacao-data">{dataCurta(item.data)} · <LinkViatura id={item.veiculoId} sigla={item.veiculo}/></span>
     </header>
 
     <dl className="aprovacao-numeros">
@@ -149,8 +150,8 @@ function LinhaDespesa({ item, aoResolver }: { item: ItemDaFila; aoResolver: () =
   return <article className="aprovacao-item">
     <header>
       <span className="aprovacao-tipo aprovacao-tipo-despesa">Despesa</span>
-      <h3>{item.socorrista}{item.qra ? <small> · QRA {item.qra}</small> : null}</h3>
-      <span className="aprovacao-data">{dataCurta(item.data)}{item.veiculo ? ` · ${item.veiculo}` : ''}</span>
+      <h3><LinkSocorrista id={item.socorristaId} nome={item.socorrista}/>{item.qra ? <small> · QRA {item.qra}</small> : null}</h3>
+      <span className="aprovacao-data">{dataCurta(item.data)}{item.veiculo ? <> · <LinkViatura id={item.veiculoId} sigla={item.veiculo}/></> : null}</span>
     </header>
 
     <dl className="aprovacao-numeros">
