@@ -1,0 +1,3 @@
+# Migrations sao coladas no SQL Editor a partir do Windows: com CRLF, uma ancora
+# de texto com quebra de linha nunca casa com o corpo da funcao (LF no banco).
+*.sql text eol=lf
