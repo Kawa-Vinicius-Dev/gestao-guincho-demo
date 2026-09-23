@@ -7,14 +7,14 @@
 .detalhe-os-situacao{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
 .detalhe-os-dados,.detalhe-os-valores{display:grid;grid-template-columns:1fr 1fr;gap:14px 18px;margin:0 0 18px;padding:16px;border:1px solid var(--line);border-radius:8px}
 .detalhe-os-largo{grid-column:1/-1}
-.detalhe-os-dados dt,.detalhe-os-valores dt{margin-bottom:4px;color:var(--muted);font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+.detalhe-os-dados dt,.detalhe-os-valores dt{margin-bottom:4px;color:var(--muted);font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase}
 .detalhe-os-dados dd,.detalhe-os-valores dd{margin:0;font-size:14px;font-weight:500}
 .detalhe-os-valores{background:var(--superficie-2)}
 .detalhe-os-valores dd{font-size:18px;font-weight:600;font-variant-numeric:tabular-nums}
-.detalhe-os-valores dd small{font-size:12px;font-weight:400;color:var(--muted)}
+.detalhe-os-valores dd small{font-size:13px;font-weight:400;color:var(--muted)}
 .detalhe-os-acoes{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
 .botao-perigo{color:var(--erro-texto)}.botao-perigo:hover{border-color:var(--erro-texto)}
 /* Tabela: a OS abre o detalhe; a linha inteira tambem. */
-.tabela-os .os-abrir{padding:0;border:0;color:inherit;background:none;font:600 13px 'IBM Plex Mono',monospace;text-decoration:underline;text-decoration-color:color-mix(in srgb,currentColor 35%,transparent);text-underline-offset:3px;cursor:pointer}
+.tabela-os .os-abrir{padding:0;border:0;color:inherit;background:none;font:600 14px 'IBM Plex Mono',monospace;text-decoration:underline;text-decoration-color:color-mix(in srgb,currentColor 35%,transparent);text-underline-offset:3px;cursor:pointer}
 .tabela-os .os-abrir:hover{color:var(--blue-600)}.tabela-os .os-abrir:focus-visible{outline:2px solid var(--blue-600);outline-offset:2px}
 .tabela-os tr.linha-clicavel{cursor:pointer}
