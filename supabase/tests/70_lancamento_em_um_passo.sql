@@ -60,7 +60,7 @@ select pg_temp.barrado('funcionário não lança despesa já aprovada',
   $$select public.registrar_despesa_aprovada('Minha peça',1,999,'2026-09-16',
       null,null,null,null,null,null,'GERAL',true,null)$$);
 insert into public.despesas (descricao,categoria_id,valor,data_lancamento,status,aprovada,criado_por)
- values ('Gasto do socorrista',1,80,'2026-09-16','PENDENTE',false,'aaaaaaaa-0000-0000-0000-000000000002');
+ values ('Gasto do socorrista',(select id from public.categorias where nome='Combustível'),80,'2026-09-16','PENDENTE',false,'aaaaaaaa-0000-0000-0000-000000000002');
 select pg_temp.checar('a despesa dele nasce pendente, como antes',
   (select status || '/' || aprovada::text from public.despesas where descricao = 'Gasto do socorrista'),
   'PENDENTE/false');

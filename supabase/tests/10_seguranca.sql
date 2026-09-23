@@ -106,12 +106,14 @@ select pg_temp.checar('funcionario NAO lanca despesa em nome de outro',
 select pg_temp.checar('funcionario NAO lanca despesa ja aprovada',
   pg_temp.tentar($q$insert into public.despesas
      (descricao,categoria_id,valor,data_lancamento,criado_por,aprovada,aprovado_por,aprovado_em)
-     values ('Auto-aprovada',1,50,current_date,'33333333-3333-3333-3333-333333333333',
+     values ('Auto-aprovada',(select id from public.categorias where nome='Combustível'),50,current_date,'33333333-3333-3333-3333-333333333333',
              true,'33333333-3333-3333-3333-333333333333',now())$q$), 'NEGADO');
+-- A categoria vai pelo nome: a sincronizacao de comissao, rodada pelas
+-- migrations, cria "Comissao de socorrista" antes, e ela vira a de id 1.
 select pg_temp.checar('funcionario lanca a propria despesa',
   pg_temp.tentar($q$insert into public.despesas
      (descricao,categoria_id,valor,data_lancamento,criado_por)
-     values ('Pedagio da Ana',1,20,current_date,'33333333-3333-3333-3333-333333333333')$q$),
+     values ('Pedagio da Ana',(select id from public.categorias where nome='Combustível'),20,current_date,'33333333-3333-3333-3333-333333333333')$q$),
   'PERMITIU');
 select pg_temp.checar('funcionario NAO aprova nada',
   pg_temp.tentar('select public.aprovar_despesa(2)'), 'NEGADO');

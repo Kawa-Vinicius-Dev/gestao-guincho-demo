@@ -29,6 +29,8 @@ set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000002';
 select pg_temp.checar('socorrista le a comissao padrao',
   (select percentual_padrao::text from public.configuracao_comissao), '0.2000');
 reset role;
+-- Sem usuario na sessao: e assim que o agendador do banco chama.
+reset request.jwt.claim.sub;
 
 \echo '===== Fixas: so as vencidas entram, ja pagas ====='
 select pg_temp.checar('dia 20: entra o seguro (18), nao a internet (25)',
