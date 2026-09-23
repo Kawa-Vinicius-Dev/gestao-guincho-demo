@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { LinkOs, LinkSocorrista, LinkViatura } from '../../components/LinksDeDado'
 import { listarTodasAsOs, valorDaOs, type LinhaOs } from '../../dados/porto/listaOs'
 import { data, moeda } from '../../utils/formatadores'
+import { nomesCurtos } from '../../utils/nomes'
 import './dre.css'
 
 
@@ -43,6 +44,7 @@ export function ServicosDoPeriodo({ inicio, fim, porCompetencia = false, servico
   }, new Map<string, { nome: string; id?: number; os: LinhaOs[] }>()).values()]
     .sort((a, b) => b.os.length - a.os.length || a.nome.localeCompare(b.nome))
   const maior = grupos[0]?.os.length ?? 1
+  const curtos = nomesCurtos(grupos.map(g => g.nome))
 
   return <section className="panel dre-sem-valor" aria-label="Serviços do período">
     <header className="panel-title">
@@ -61,7 +63,7 @@ export function ServicosDoPeriodo({ inicio, fim, porCompetencia = false, servico
         {grupos.map(g => <li key={g.nome}>
           <details>
             <summary>
-              <span className="sem-valor-nome">{g.id ? <LinkSocorrista id={g.id} nome={g.nome}/> : g.nome}</span>
+              <span className="sem-valor-nome" title={g.nome}>{g.id ? <LinkSocorrista id={g.id} nome={curtos.get(g.nome) ?? g.nome}/> : g.nome}</span>
               <span className="sem-valor-trilho" aria-hidden="true"><span style={{ width: `${Math.max(g.os.length / maior * 100, 2)}%` }}/></span>
               <strong>{g.os.length} {g.os.length === 1 ? 'serviço' : 'serviços'}</strong>
             </summary>

@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import type { LinhaOs } from '../dados/porto/listaOs'
 import { numero } from '../utils/formatadores'
 import { LinkSocorrista, LinkViatura } from './LinksDeDado'
+import { nomesCurtos } from '../utils/nomes'
 import './servicosPorGrupo.css'
 
 /**
@@ -55,5 +56,7 @@ export function contarServicos(oss: LinhaOs[], tipo: 'viatura' | 'socorrista'): 
     linha.quantidade += 1
     mapa.set(chave, linha)
   }
-  return [...mapa.values()]
+  // Socorrista pelo nome curto: primeiro nome, e o ultimo sobrenome se repetir.
+  const curtos = nomesCurtos([...mapa.values()].filter(l => !l.semDono).map(l => l.rotulo))
+  return [...mapa.values()].map(l => l.semDono || tipo !== 'socorrista' ? l : { ...l, rotulo: curtos.get(l.rotulo) ?? l.rotulo })
 }

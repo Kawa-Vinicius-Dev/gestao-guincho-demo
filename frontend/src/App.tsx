@@ -99,7 +99,9 @@ export default function App(){
         <Route path="/aprovacoes" element={<Aprovacoes/>}/>
         <Route path="/porto/importacoes" element={<PortoImportacoes/>}/>
         <Route path="/porto/diario" element={<PortoDiario/>}/>
-        <Route path="/porto/dashboard" element={<PortoDashboard/>}/>
+        <Route path="/graficos" element={<PortoDashboard/>}/>
+        {/* O Painel Porto virou a aba Graficos da Visao geral (Kawa, 23/09/2026). */}
+        <Route path="/porto/dashboard" element={<Navigate to="/graficos" replace/>}/>
         <Route path="/porto/ordens-pagamento" element={<PortoOps/>}/>
         <Route path="/porto/ordens-servico" element={<PortoOss/>}/>
         <Route path="/porto/pendencias" element={<PortoPendenciasOs/>}/>

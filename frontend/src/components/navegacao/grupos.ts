@@ -27,6 +27,7 @@ export const GRUPOS: Grupo[] = [
   { menu: '/', titulo: 'Visão geral', abas: [
     { rota: '/', rotulo: 'Resumo' },
     { rota: '/dre', rotulo: 'DRE' },
+    { rota: '/graficos', rotulo: 'Gráficos' },
   ] },
   { menu: '/lancamentos', titulo: 'Extrato', abas: [
     { rota: '/lancamentos', rotulo: 'Tudo' },
