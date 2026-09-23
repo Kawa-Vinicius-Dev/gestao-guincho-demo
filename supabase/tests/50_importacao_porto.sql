@@ -191,7 +191,9 @@ select public.porto_registrar_importacao('op-sigla.csv','hash-op-sigla','OS_VINC
 select public.porto_confirmar_importacao(
   (select id from public.importacoes_porto where hash_arquivo='hash-op-sigla'),
   '[{"numero_os":"1234/26","valor_total":"250.00","sigla_viatura":"","socorrista":" ","hash_registro":"o1"}]'::jsonb,
-  'OP-300'
+  'OP-300', null,
+  -- A OP-300 ja vale 100 e o arquivo soma 250: o portao pede confirmacao.
+  'DESCONTO', 'Arquivo complementar do teste', true
 );
 select pg_temp.checar('OP vazia mantem a sigla do painel',
   (select sigla_viatura from public.ordens_servico_porto where numero='1234/26'), 'L168');

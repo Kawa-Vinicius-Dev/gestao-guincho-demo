@@ -132,8 +132,10 @@ reset role;
 set role authenticated;
 set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';
 select public.pagar_comissao(1, 1, '2026-09-21');
-select pg_temp.checar('depois do repasse, a comissao do ciclo deixa de ser devida',
-  (public.dashboard_financeiro('2026-09-01','2026-09-30') ->> 'comissaoAPagar'), '0');
+-- O repasse manual (pagar_comissao) e do fluxo antigo: a comissao hoje entra
+-- sozinha quando a OP fecha, sem segundo passo (Kawa, 16/09/2026), e a
+-- "comissao a pagar" do painel sai da OP, nao do repasse. A chamada fica porque
+-- as checagens abaixo contam a despesa que ela cria.
 
 -- O repasse vira despesa paga e entra no caixa; mas nao pode ser contado como
 -- custo da pessoa de novo, senao a comissao apareceria duas vezes no custo dela.
