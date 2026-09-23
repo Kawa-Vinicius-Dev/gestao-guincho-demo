@@ -15,3 +15,14 @@
 /* Total embaixo do ranking: a soma dos socorristas. */
 .sem-valor-total{display:grid;grid-template-columns:minmax(0,260px) minmax(80px,1fr) 110px;align-items:center;gap:14px;margin-top:6px;padding:12px 8px 0;border-top:2px solid var(--line);font-weight:700}
 .sem-valor-total strong{text-align:right;font-variant-numeric:tabular-nums}
+
+/* DRE discriminada: cada categoria de despesa abre os gastos dela. */
+.dre-categoria>summary{list-style:none;cursor:pointer}
+.dre-categoria>summary::-webkit-details-marker{display:none}
+.dre-categoria>summary .dre-line span::before{content:'▸ ';color:var(--muted)}
+.dre-categoria[open]>summary .dre-line span::before{content:'▾ '}
+.dre-gastos{margin:0 0 6px;padding:0 22px 0 58px;list-style:none;font-size:var(--t-apoio)}
+.dre-gastos li{display:grid;grid-template-columns:90px 1fr auto;gap:12px;padding:5px 0;border-bottom:1px dashed var(--linha-suave);color:var(--muted)}
+.dre-gastos li strong{color:var(--ink);font-weight:600}
+.dre-servicos{margin-top:18px}
+.dre-servicos h3{margin:0 0 10px;font-size:var(--t-apoio);text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
