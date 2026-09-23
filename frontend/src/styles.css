@@ -2035,3 +2035,7 @@ input,textarea,select,[contenteditable]:not([contenteditable=false]){caret-color
 .gastos-da-categoria ul{margin:0 0 6px;padding:0 4px 0 18px;list-style:none;font-size:12px}
 .gastos-da-categoria li{display:grid;grid-template-columns:80px 1fr auto;gap:10px;padding:5px 0;border-bottom:1px dashed var(--linha-suave);color:var(--muted)}
 .gastos-da-categoria li strong{color:var(--ink);font-weight:600}
+
+/* Visao geral: receita de OS canceladas, fora das barras. */
+.nota-os-canceladas{margin:-6px 0 18px;padding:9px 14px;border-radius:8px;background:var(--superficie-2);color:var(--muted);font-size:13px}
+.nota-os-canceladas strong{color:var(--ink)}
