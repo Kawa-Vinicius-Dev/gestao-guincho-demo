@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { listarPeriodosPorto } from '../dados/porto'
 import { globalDoPeriodoPorto, intervaloDoMes, type PeriodoGlobal } from '../utils/periodoGlobal'
+import { porCompetencia } from '../utils/modoDoPeriodo'
 import { rotuloPeriodo, type PeriodoPorto } from '../utils/periodos'
 import { Campo, Selecao } from './Campos'
 
@@ -55,5 +56,11 @@ export function SeletorPeriodo({ periodo, aoMudar }: { periodo: PeriodoGlobal; a
       <input aria-label="Data final" type="date" value={periodo.fim} min={periodo.inicio || undefined}
         onChange={e => aoMudar({ ...periodo, op: '', mes: '', fim: e.target.value })}/>
     </Campo>
+    {/* A mesma quinzena conta diferente pela OP e pela data: a etiqueta diz qual vale. */}
+    <span className="modo-do-periodo" title={porCompetencia(periodo)
+      ? 'Período da OP ou mês: cada serviço conta na OP em que entrou.'
+      : 'De–até: cada serviço conta na data do atendimento.'}>
+      {porCompetencia(periodo) ? 'Contando pela OP' : 'Contando pela data do serviço'}
+    </span>
   </>
 }
