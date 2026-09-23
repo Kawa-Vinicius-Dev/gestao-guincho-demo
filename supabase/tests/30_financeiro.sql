@@ -139,9 +139,11 @@ select public.pagar_comissao(1, 1, '2026-09-21');
 
 -- O repasse vira despesa paga e entra no caixa; mas nao pode ser contado como
 -- custo da pessoa de novo, senao a comissao apareceria duas vezes no custo dela.
+-- A marmita (50) foi para a viatura desde 20260916170000 ("nao e adiantamento
+-- ao socorrista"), como a suite 20 registra: o custo proprio dele fica em 0.
 select pg_temp.checar('o repasse nao dobra o custo do socorrista',
   (public.dashboard_financeiro('2026-09-01','2026-09-30') -> 'resultadoPorSocorrista' -> 0 ->> 'despesas'),
-  '50.00');
+  '0');
 
 \echo '===== POR CATEGORIA: participacao soma 100 ====='
 -- Combustivel 400, repasse de comissao 150, alimentacao 50.
