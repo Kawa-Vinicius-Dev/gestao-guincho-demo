@@ -139,21 +139,25 @@ export function relatorioDaDre(m: MontagemDre, inicio: string, fim: string): Rel
         ],
         totais: ['Lucro operacional', m.lucro],
       },
+      resumoPor('Serviços por socorrista', m.servicos.porSocorrista),
       ...(m.servicos.detalhado
         ? [{
-            titulo: 'Serviços prestados',
+            titulo: 'Serviços prestados, por socorrista',
             colunas: [
-              { titulo: 'Data', tipo: 'data' as const, largura: 12 }, { titulo: 'OS', largura: 16 },
-              { titulo: 'Especialidade', largura: 16 }, { titulo: 'Socorrista', largura: 18 },
+              { titulo: 'Socorrista', largura: 18 }, { titulo: 'Data', tipo: 'data' as const, largura: 12 },
+              { titulo: 'OS', largura: 16 }, { titulo: 'Especialidade', largura: 16 },
               { titulo: 'Viatura', largura: 10 }, { titulo: 'OP', largura: 12 }, { titulo: 'Valor', tipo: 'moeda' as const, largura: 14 },
             ],
-            linhas: m.servicos.lista.map(os => [os.dataAtendimento, os.numero, os.especialidade,
-              curtos.get(os.motorista ?? '') ?? os.motorista ?? 'Sem socorrista', os.viatura ?? 'Sem viatura',
-              os.numeroOp ?? 'Aguardando OP', os.semValor ? 'Sem valor' : valorDaOs(os)]),
-            totais: ['Total', `${m.servicos.total} serviços`, null, null, null, null, m.servicos.valor],
+            linhas: [...m.servicos.lista]
+              .map(os => ({ os, quem: curtos.get(os.motorista ?? '') ?? os.motorista ?? 'Sem socorrista' }))
+              .sort((a, b) => Number(a.quem === 'Sem socorrista') - Number(b.quem === 'Sem socorrista')
+                || a.quem.localeCompare(b.quem) || (a.os.dataAtendimento ?? '').localeCompare(b.os.dataAtendimento ?? ''))
+              .map(({ os, quem }) => [quem, os.dataAtendimento, os.numero, os.especialidade, os.viatura ?? 'Sem viatura',
+                os.numeroOp ?? 'Aguardando OP', os.semValor ? 'Sem valor' : valorDaOs(os)]),
+            totais: ['Total', null, `${m.servicos.total} serviços`, null, null, null, m.servicos.valor],
             vazio: 'Nenhum serviço no período.',
           }]
-        : [resumoPor('Serviços por socorrista', m.servicos.porSocorrista), resumoPor('Serviços por viatura', m.servicos.porViatura)]),
+        : [resumoPor('Serviços por viatura', m.servicos.porViatura)]),
       {
         titulo: 'Despesas pagas, gasto por gasto',
         colunas: [

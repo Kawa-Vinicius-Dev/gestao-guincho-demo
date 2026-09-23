@@ -20,8 +20,10 @@ import './dre.css'
  * mesmo total no cartao); sem ele, o painel busca sozinho. Com `porCompetencia`
  * (periodo escolhido pela OP), vale o periodo da OP, e nao a data do servico.
  */
-export function ServicosDoPeriodo({ inicio, fim, porCompetencia = false, servicos: prontos }: {
+export function ServicosDoPeriodo({ inicio, fim, porCompetencia = false, servicos: prontos, abertos = false }: {
   inicio: string; fim: string; porCompetencia?: boolean; servicos?: LinhaOs[] | null
+  /** Cada socorrista ja aberto nas OS dele (a DRE de periodo curto: um a um). */
+  abertos?: boolean
 }) {
   const [buscados, setBuscados] = useState<LinhaOs[] | null>(null)
   useEffect(() => {
@@ -61,11 +63,14 @@ export function ServicosDoPeriodo({ inicio, fim, porCompetencia = false, servico
       </p>
       <ol className="sem-valor-ranking">
         {grupos.map(g => <li key={g.nome}>
-          <details>
+          <details open={abertos}>
             <summary>
               <span className="sem-valor-nome" title={g.nome}>{g.id ? <LinkSocorrista id={g.id} nome={curtos.get(g.nome) ?? g.nome}/> : g.nome}</span>
               <span className="sem-valor-trilho" aria-hidden="true"><span style={{ width: `${Math.max(g.os.length / maior * 100, 2)}%` }}/></span>
               <strong>{g.os.length} {g.os.length === 1 ? 'serviço' : 'serviços'}</strong>
+              {/* Quanto cada um fez em dinheiro, e quantos ainda sem valor. */}
+              <small className="sem-valor-soma">{moeda(g.os.reduce((t, os) => t + valorDaOs(os), 0))}
+                {g.os.some(os => os.semValor) ? ` · ${g.os.filter(os => os.semValor).length} sem valor` : ''}</small>
             </summary>
             <ol className="sem-valor-os">
               {[...g.os].sort((a, b) => (a.dataAtendimento ?? '').localeCompare(b.dataAtendimento ?? '')).map(os => <li key={os.id}>
@@ -80,6 +85,7 @@ export function ServicosDoPeriodo({ inicio, fim, porCompetencia = false, servico
         <li className="sem-valor-total">
           <span>Total</span><span aria-hidden="true"/>
           <strong>{servicos.length} {servicos.length === 1 ? 'serviço' : 'serviços'}</strong>
+          <small className="sem-valor-soma">{moeda(total)}</small>
         </li>
       </ol>
     </>}

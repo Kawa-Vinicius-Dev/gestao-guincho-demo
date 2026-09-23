@@ -4,16 +4,16 @@ import { porCompetencia } from '../utils/modoDoPeriodo'
 import { useEffect, useMemo, useState } from 'react'
 import { Carregando } from '../components/EstadoPagina'
 import { FaturamentoPorGrupo } from '../components/Graficos'
-import { LinkOs, LinkSocorrista, LinkViatura } from '../components/LinksDeDado'
+import { LinkSocorrista, LinkViatura } from '../components/LinksDeDado'
 import { lerIndicadores } from '../dados/dashboard'
 import { lerExtrato } from '../dados/extrato'
 import { diasDoPeriodo, DIAS_PARA_DETALHAR, montarDre } from '../dados/dre'
-import { listarTodasAsOs, valorDaOs, type LinhaOs } from '../dados/porto/listaOs'
+import { listarTodasAsOs, type LinhaOs } from '../dados/porto/listaOs'
 import { baixarDre } from '../dados/relatorios'
 import { listarVeiculos } from '../dados/veiculos'
 import type { Dashboard, LancamentoFinanceiro, Veiculo } from '../types/modelos'
 import { data, moeda, percentual } from '../utils/formatadores'
-import { nomesCurtos } from '../utils/nomes'
+import { ServicosDoPeriodo } from './dre/ServicosDoPeriodo'
 import './dre/dre.css'
 
 function Linha({ titulo, valor, nivel = 0, total = false, negativo = false }: { titulo: string; valor: number; nivel?: number; total?: boolean; negativo?: boolean }) {
@@ -51,7 +51,6 @@ export default function DrePage() {
 
   const dre=useMemo(()=>financeiro&&inicio&&fim?montarDre(financeiro,extrato,servicos,diasDoPeriodo(inicio,fim),veiculos):null,
     [financeiro,extrato,servicos,veiculos,inicio,fim])
-  const curtos=useMemo(()=>nomesCurtos(servicos.map(os=>os.motorista)),[servicos])
 
   return <div className="page-enter">
     <header className="page-heading"><div><span className="eyebrow">Demonstrativo do resultado</span><h1>DRE</h1><p>Receitas, serviços prestados e cada despesa do período, discriminados.</p></div></header>
@@ -90,26 +89,14 @@ export default function DrePage() {
       </aside>
     </section>
 
-    <section className="panel dre-servicos" aria-label="Serviços prestados">
-      <header className="panel-title"><div><span className="eyebrow">Serviços prestados</span>
-        <h2>{dre.servicos.total} {dre.servicos.total===1?'serviço':'serviços'} · {moeda(dre.servicos.valor)}</h2>
-        <p>{competencia?'Pela OP em que o serviço entrou.':'Pela data do atendimento.'}{dre.servicos.semValor?` ${dre.servicos.semValor} ainda sem valor: o valor chega com a OP.`:''}</p></div></header>
-      {!dre.servicos.total?<p className="empty-inline">Nenhum serviço neste período.</p>
-        :dre.servicos.detalhado
-        ?<div className="table-scroll"><table className="tabela-os" aria-label="Serviços um a um">
-          <thead><tr><th>Data</th><th>OS</th><th>Especialidade</th><th>Socorrista</th><th>Viatura</th><th>OP</th><th className="th-numero">Valor</th></tr></thead>
-          <tbody>{dre.servicos.lista.map(os=><tr key={os.id}>
-            <td>{os.dataAtendimento?data(os.dataAtendimento):'—'}</td><td><LinkOs numero={os.numero}/></td><td>{os.especialidade||'—'}</td>
-            <td title={os.motorista}><LinkSocorrista id={os.motoristaId} nome={curtos.get(os.motorista??'')??os.motorista}/></td>
-            <td><LinkViatura sigla={os.viatura}/></td><td>{os.numeroOp??<small className="os-sem">Aguardando OP</small>}</td>
-            <td className="col-valor">{os.semValor?<small>Sem valor</small>:moeda(valorDaOs(os))}</td></tr>)}</tbody>
-          <tfoot><tr className="linha-total"><td colSpan={6}><strong>Total · {dre.servicos.total} serviços</strong></td><td className="col-valor"><strong>{moeda(dre.servicos.valor)}</strong></td></tr></tfoot>
-        </table></div>
-        :<div className="painel-faturamento">
-          <div><h3>Por socorrista</h3><FaturamentoPorGrupo descricao="Serviços por socorrista" vazio="Nenhum serviço." linhas={dre.servicos.porSocorrista}/></div>
-          <div><h3>Por viatura</h3><FaturamentoPorGrupo descricao="Serviços por viatura" vazio="Nenhum serviço." linhas={dre.servicos.porViatura}/></div>
-        </div>}
-    </section>
+    {/* Os socorristas com os servicos que cada um fez no periodo (Kawa,
+        23/09/2026). Ate 8 dias ja abre as OS de cada um; acima, abre no clique,
+        e a viatura aparece resumida ao lado. */}
+    {inicio&&fim?<ServicosDoPeriodo inicio={inicio} fim={fim} porCompetencia={competencia} servicos={servicos} abertos={dre.servicos.detalhado}/>:null}
+    {!dre.servicos.detalhado&&dre.servicos.total?<section className="panel dre-servicos" aria-label="Serviços por viatura">
+      <header className="panel-title"><div><span className="eyebrow">Serviços prestados</span><h2>Por viatura</h2></div></header>
+      <FaturamentoPorGrupo descricao="Serviços por viatura" vazio="Nenhum serviço." linhas={dre.servicos.porViatura}/>
+    </section>:null}
     </>}
   </div>
 }

@@ -1,6 +1,6 @@
 /* DRE: servicos sem valor por socorrista, do que mais fez para o que menos fez. */
 .sem-valor-ranking{margin:0;padding:4px 22px 18px;list-style:none;display:grid;gap:2px}
-.sem-valor-ranking summary{display:grid;grid-template-columns:minmax(0,260px) minmax(80px,1fr) 110px;align-items:center;gap:14px;padding:9px 8px;border-radius:7px;cursor:pointer;list-style:none}
+.sem-valor-ranking summary{display:grid;grid-template-columns:minmax(0,260px) minmax(80px,1fr) 110px 150px;align-items:center;gap:14px;padding:9px 8px;border-radius:7px;cursor:pointer;list-style:none}
 .sem-valor-ranking summary::-webkit-details-marker{display:none}
 .sem-valor-ranking summary:hover{background:var(--superficie-2)}
 .sem-valor-ranking details[open] summary{background:var(--superficie-2)}
@@ -13,7 +13,7 @@
 .sem-valor-os li a{color:var(--ink)}
 .servicos-resumo{margin:0;color:var(--muted);font-size:14px}.servicos-resumo strong{color:var(--ink)}
 /* Total embaixo do ranking: a soma dos socorristas. */
-.sem-valor-total{display:grid;grid-template-columns:minmax(0,260px) minmax(80px,1fr) 110px;align-items:center;gap:14px;margin-top:6px;padding:12px 8px 0;border-top:2px solid var(--line);font-weight:700}
+.sem-valor-total{display:grid;grid-template-columns:minmax(0,260px) minmax(80px,1fr) 110px 150px;align-items:center;gap:14px;margin-top:6px;padding:12px 8px 0;border-top:2px solid var(--line);font-weight:700}
 .sem-valor-total strong{text-align:right;font-variant-numeric:tabular-nums}
 
 /* DRE discriminada: cada categoria de despesa abre os gastos dela. */
@@ -26,3 +26,7 @@
 .dre-gastos li strong{color:var(--ink);font-weight:600}
 .dre-servicos{margin-top:18px}
 .dre-servicos h3{margin:0 0 10px;font-size:var(--t-apoio);text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+
+/* Quanto cada socorrista fez em dinheiro, ao lado da quantidade. */
+.sem-valor-soma{text-align:right;color:var(--muted);font-variant-numeric:tabular-nums;font-size:var(--t-apoio)}
+.sem-valor-total .sem-valor-soma{color:var(--ink);font-weight:700}
