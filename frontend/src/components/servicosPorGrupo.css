@@ -1,0 +1,15 @@
+/* Servicos por viatura ou socorrista: nome a esquerda, quantidade a direita, total embaixo. */
+.servicos-grupo h3{margin:0 0 10px;font-size:var(--t-rotulo,12px);font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
+.servicos-grupo ul{margin:0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:4px 18px}
+.servicos-grupo li{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:7px 10px;border-radius:7px;font-size:14px}
+.servicos-grupo li{border-bottom:1px solid var(--linha-suave);border-radius:0}
+.servicos-grupo li strong{font-variant-numeric:tabular-nums}
+.servicos-grupo-nome{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.servicos-grupo li.sem-dono .servicos-grupo-nome{color:var(--muted)}
+.servicos-grupo li.servicos-grupo-total{grid-column:1/-1;margin-top:6px;padding:10px;border-top:2px solid var(--line);border-radius:0;background:none;font-weight:700}
+.servicos-grupo li.servicos-grupo-total strong{font-size:18px}
+/* Linha de total no fim de tabelas e listas de servicos. */
+tfoot .linha-total td{border-top:2px solid var(--line);background:var(--superficie-2);font-weight:700}
+.table-scroll tfoot .linha-total td{position:sticky;bottom:0;z-index:1}
+.faturamento-grupo li.faturamento-grupo-total{margin-top:4px;padding-top:12px;border-top:2px solid var(--line);grid-template-areas:"rotulo valor detalhe"}
+.faturamento-grupo li.faturamento-grupo-total .faturamento-grupo-rotulo{font-weight:700}

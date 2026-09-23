@@ -311,7 +311,13 @@ thead th{position:sticky;top:0;z-index:2}
    nao rolava na vertical, nao grudava em lugar nenhum. Dando altura maxima, a
    lista longa rola dentro do proprio quadro e o cabecalho fica onde deve.
    Tabela curta nao alcanca o limite e continua sem barra. */
-.table-scroll{max-height:min(68vh,620px);overflow:auto}
+.table-scroll{position:relative;max-height:min(68vh,620px);overflow:auto}
+/* Rolagem infinita (Kawa, 23/09/2026): o campo de arquivo escondido de cada linha
+   ("Anexar comprovante") e posicionado em absoluto. Sem um pai posicionado, ele
+   escapava da tabela e ficava na altura da linha dele na pagina — com 300 linhas,
+   metros de tela vazia embaixo. Ancorado no proprio rotulo e na tabela, fica
+   preso dentro do quadro que rola. */
+.app-shell label.file-action,.app-shell .campo-arquivo,.fleet-list{position:relative}
 
 /* Coluna unica de socorrista: nome vinculado, QRA e acao no mesmo lugar. Antes
    eram duas colunas (o texto cru da Porto e o vinculo do sistema) que mostravam
@@ -1663,7 +1669,7 @@ tbody tr{transition:background-color .14s ease}
 .diario-dia-os{color:var(--muted);font-size:12px;line-height:1}
 .diario-dia-ok{border-color:var(--ok-texto);background:var(--ok-fundo);color:var(--ok-texto)}
 .diario-dia-falta{border-color:var(--aviso-texto);background:var(--aviso-fundo);color:var(--aviso-texto)}
-.diario-dia-futuro{opacity:.45}
+.diario-dia-futuro,.diario-dia-antes{opacity:.45}
 .diario-dia-vazio{height:var(--diario-celula)}
 .diario-mapa-navegacao{display:flex;align-items:center;gap:12px;font-size:14px}
 

@@ -148,8 +148,11 @@ test('faturamento por socorrista e por viatura, com as OS sem dono por último',
   render(<MemoryRouter><Painel/></MemoryRouter>)
 
   const socorristas = await screen.findByRole('list', { name: /faturamento por socorrista/i })
-  const linhas = within(socorristas).getAllByRole('listitem')
-  expect(linhas).toHaveLength(5)
+  const todas = within(socorristas).getAllByRole('listitem')
+  // A ultima linha e o total, a soma de todas.
+  expect(todas).toHaveLength(6)
+  expect(todas[5]).toHaveTextContent('Total')
+  const linhas = todas.slice(0, 5)
   expect(linhas[0]).toHaveTextContent('JEFERSON MARTINS DA SILVA')
   expect(linhas[0]).toHaveTextContent(/R\$\s23\.853,12/)
   expect(linhas[0]).toHaveTextContent('49 serviços')
@@ -158,7 +161,8 @@ test('faturamento por socorrista e por viatura, com as OS sem dono por último',
 
   const viaturas = screen.getByRole('list', { name: /faturamento por viatura/i })
   expect(within(viaturas).getByText('Sem viatura')).toBeInTheDocument()
-  expect(within(viaturas).getByText('275 serviços')).toBeInTheDocument()
+  // Tudo sem viatura: a linha e o total dao os mesmos 275.
+  expect(within(viaturas).getAllByText('275 serviços')).toHaveLength(2)
 })
 
 // A RPC devolve a OP com o nome das colunas. A tabela lia valorTotal e

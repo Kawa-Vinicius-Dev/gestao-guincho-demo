@@ -4,27 +4,23 @@ import { listarFavoritos, salvarFavoritos } from '../dados/favoritos'
 import { useAuth } from '../auth/AuthContext'
 import { MarcaJms } from './MarcaJms'
 import { ConfirmarSaida } from './ConfirmarSaida'
+import { AbasDaTela } from './navegacao/AbasDaTela'
+import { ondeEstou } from './navegacao/grupos'
 
+// Menu enxuto (Kawa, 23/09/2026): o administrador ve so o item principal de
+// cada grupo; as demais telas viram abas no topo (components/navegacao/grupos).
 const itens = [
   ['/', 'Visão geral', true, 'financeiro'],
   ['/lancamentos', 'Extrato', true, 'financeiro'],
-  ['/contas-receber', 'Contas a receber', true, 'financeiro'],
-  ['/dre', 'DRE', true, 'financeiro'],
   ['/turno', 'Turno do dia', false, 'operacao'],
   ['/aprovacoes', 'Aprovações', true, 'operacao'],
   ['/despesas', 'Despesas', false, 'operacao'],
-  ['/quilometragem', 'Quilometragem', true, 'operacao'],
   ['/veiculos', 'Viaturas', true, 'operacao'],
-  ['/desempenho', 'Desempenho', true, 'operacao'],
   ['/equipe', 'Socorristas', true, 'equipe'],
   ['/minha-comissao', 'Meus serviços', false, 'equipe'],
-  ['/comissoes', 'Comissões', true, 'equipe'],
   ['/porto/dashboard', 'Painel Porto', true, 'porto'],
-  ['/porto/diario', 'Diário', true, 'porto'],
-  ['/porto/importacoes', 'Importar', true, 'porto'],
-  ['/porto/ordens-pagamento', 'Ordens de pagamento', true, 'porto'],
-  ['/porto/ordens-servico', 'Ordens de serviço', true, 'porto'],
-  ['/porto/pendencias', 'Pendências', true, 'porto'],
+  ['/porto/ordens-servico', 'Serviços', true, 'porto'],
+  ['/porto/ordens-pagamento', 'OPs', true, 'porto'],
   ['/configuracoes', 'Configurações', true, 'sistema'],
 ] as const
 /** Mesmo teto do backend (FavoritoMenuController.MAXIMO): o topo do menu tem de continuar curto. */
@@ -44,7 +40,7 @@ const grupos = { financeiro: 'Financeiro', operacao: 'Operação', equipe: 'Equi
  * aparecer nada pode tirar"); o que o administrador precisa delas esta em
  * Aprovacoes e na ficha de cada socorrista.
  */
-const SO_DO_SOCORRISTA = new Set(['/turno', '/minha-comissao'])
+const SO_DO_SOCORRISTA = new Set(['/turno', '/minha-comissao', '/despesas'])
 const vePeloPerfil = (rota: string, somenteAdmin: boolean, admin: boolean) =>
   admin ? !SO_DO_SOCORRISTA.has(rota) : !somenteAdmin
 
@@ -89,8 +85,12 @@ function ItemDoMenu({rota,titulo,fixado,aoFixar,aoNavegar}:{
   rota:string; titulo:string; fixado:boolean;
   aoFixar:(rota:string)=>void; aoNavegar:()=>void
 }){
+  // Fica aceso em qualquer aba do grupo: em Quilometragem, o item e Viaturas.
+  const { pathname, search } = useLocation()
+  const doGrupo=ondeEstou(pathname,search)?.grupo.menu===rota
   return <span className="nav-item">
-    <NavLink to={rota} end={rota==='/'} onClick={aoNavegar}>
+    <NavLink to={rota} end={rota==='/'} onClick={aoNavegar}
+      className={({isActive})=>(isActive||doGrupo)?'active':undefined}>
       <Icone rota={rota}/><span>{titulo}</span>
     </NavLink>
     <button type="button" className={fixado?'nav-estrela fixada':'nav-estrela'}
@@ -127,7 +127,7 @@ function Icone({rota}:{rota:string}){
 
 export function Layout() {
   const { usuario, logout } = useAuth()
-  const { pathname } = useLocation()
+  const { pathname, search } = useLocation()
   const [aberto,setAberto]=useState(false)
   // Menu aberto no celular fecha no Esc, como o fundo escuro ja fecha no toque.
   useEffect(()=>{
@@ -141,7 +141,9 @@ export function Layout() {
 
   // Qual grupo contem a tela atual. E ele que abre quando nao ha escolha guardada,
   // e ele nunca fica fechado — esconder de onde a pessoa esta desorienta.
-  const grupoAtual=(itens.find(([rota])=>rota==='/'?pathname==='/':pathname.startsWith(rota))?.[3]
+  // A tela pode ser uma aba (Quilometragem e aba de Viaturas): vale o item do grupo dela.
+  const menuAtual=ondeEstou(pathname,search)?.grupo.menu
+  const grupoAtual=(itens.find(([rota])=>menuAtual?rota===menuAtual:rota==='/'?pathname==='/':pathname.startsWith(rota))?.[3]
     ?? 'financeiro') as keyof typeof grupos
 
   /**
@@ -223,7 +225,7 @@ export function Layout() {
           <button className="logout-button" onClick={()=>setSaindo(true)}>Sair</button>
         </div>
       </header>
-      <main className="content"><Outlet/></main>
+      <main className="content">{admin?<AbasDaTela/>:null}<Outlet/></main>
     </div>
     {aberto?<button className="sidebar-scrim" aria-label="Fechar menu" onClick={()=>setAberto(false)}/>:null}
     {saindo?<ConfirmarSaida nome={usuario?.nome} aoCancelar={()=>setSaindo(false)} aoConfirmar={logout}/>:null}

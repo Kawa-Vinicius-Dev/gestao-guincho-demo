@@ -17,7 +17,7 @@ export function TabelaExtrato({ itens, carregando, aoPagar, aoEditarReceita, aoE
   if (carregando) return <Carregando card />
   if (!itens.length) {
     return <Vazio titulo="Nenhum lançamento"
-      descricao="O backend não possui movimentos nesta competência."/>
+      descricao="Nada lançado neste período."/>
   }
   return <div className="table-scroll">
     <table>

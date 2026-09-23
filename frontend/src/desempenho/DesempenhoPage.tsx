@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { LinkOp, LinkOs, LinkSocorrista, LinkViatura } from '../components/LinksDeDado'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { Carregando } from '../components/EstadoPagina'
 import { SeletorPeriodo } from '../components/SeletorPeriodo'
 import { CabecalhoPagina, Painel } from '../components/ui/Pagina'
 import { listarTodasAsOs, type LinhaOs } from '../dados/porto/listaOs'
+import { porCompetenciaDaOp } from '../utils/modoDoPeriodo'
 import { listarQuilometragens } from '../dados/quilometragem'
 import { listarVeiculos } from '../dados/veiculos'
 import type { Quilometragem, Veiculo } from '../types/modelos'
@@ -72,7 +73,12 @@ export default function DesempenhoPage() {
   const [kms, setKms] = useState<Quilometragem[]>([])
   const [veiculos, setVeiculos] = useState<Veiculo[]>([])
   const [erro, setErro] = useState('')
-  const [visao, setVisao] = useState<Visao>('viaturas')
+  // Desempenho e aba de Viaturas (?visao=viaturas) e de Socorristas (?visao=socorristas):
+  // a URL escolhe a visao, e o seletor proprio so aparece sem ela.
+  const [busca] = useSearchParams()
+  const visaoDaUrl = busca.get('visao') === 'socorristas' ? 'socorristas' : busca.get('visao') === 'viaturas' ? 'viaturas' : null
+  const [visaoEscolhida, setVisao] = useState<Visao>('viaturas')
+  const visao: Visao = visaoDaUrl ?? visaoEscolhida
   const [medida, setMedida] = useState<Medida>('servicos')
   const [aberto, setAberto] = useState<string | null>(null)
 
@@ -80,12 +86,12 @@ export default function DesempenhoPage() {
     if (!periodo.inicio || !periodo.fim || periodo.inicio > periodo.fim) return
     setOss(null); setErro(''); setAberto(null)
     Promise.all([
-      listarTodasAsOs({ inicio: periodo.inicio, fim: periodo.fim }),
+      listarTodasAsOs({ inicio: periodo.inicio, fim: periodo.fim, porCompetencia: porCompetenciaDaOp(periodo) }),
       listarQuilometragens({ inicio: periodo.inicio, fim: periodo.fim }).catch(() => []),
       listarVeiculos().catch(() => []),
     ]).then(([p, k, v]) => { setOss(p.itens); setKms(k); setVeiculos(v) })
       .catch((e: Error) => setErro(e.message))
-  }, [periodo.inicio, periodo.fim])
+  }, [periodo.inicio, periodo.fim, periodo.op])
 
   const grupos = useMemo<Grupo[]>(() => {
     if (!oss) return []
@@ -111,6 +117,8 @@ export default function DesempenhoPage() {
   const medidaValida = MEDIDAS[visao].some(([m]) => m === medida) ? medida : 'servicos'
   const ordenados = [...grupos].sort((a, b) => b[medidaValida] - a[medidaValida] || a.rotulo.localeCompare(b.rotulo))
   const maior = Math.max(...ordenados.map(g => g[medidaValida]), 1)
+  // A soma de todas as linhas, sempre embaixo (Kawa, 23/09/2026).
+  const soma = (m: Medida) => ordenados.reduce((t, g) => t + g[m], 0)
   const grupoAberto = ordenados.find(g => g.chave === aberto) ?? null
 
   function trocarVisao(nova: Visao) { setVisao(nova); setAberto(null) }
@@ -129,11 +137,11 @@ export default function DesempenhoPage() {
 
     <Painel semRespiro>
       <div className="desempenho-controles">
-        <div className="segmented" role="group" aria-label="Ver por">
+        {visaoDaUrl ? null : <div className="segmented" role="group" aria-label="Ver por">
           {(['viaturas', 'socorristas'] as Visao[]).map(v => <button key={v} type="button" aria-pressed={visao === v}
             className={visao === v ? 'active' : undefined} onClick={() => trocarVisao(v)}>
             {v === 'viaturas' ? 'Viaturas' : 'Socorristas'}</button>)}
-        </div>
+        </div>}
         <div className="segmented" role="group" aria-label="Medida">
           {MEDIDAS[visao].map(([m, rotulo]) => <button key={m} type="button" aria-pressed={medidaValida === m}
             className={medidaValida === m ? 'active' : undefined} onClick={() => setMedida(m)}>{rotulo}</button>)}
@@ -158,6 +166,11 @@ export default function DesempenhoPage() {
             </button>
           </li>
         })}
+        <li className="desempenho-total">
+          <span className="desempenho-rotulo">Total</span><span/>
+          <strong>{formatar(medidaValida, soma(medidaValida))}</strong>
+          <small>{medidaValida === 'servicos' ? moeda(soma('faturamento')) : formatar('servicos', soma('servicos'))}</small>
+        </li>
       </ul> : null}
     </Painel>
 

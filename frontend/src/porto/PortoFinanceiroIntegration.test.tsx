@@ -81,40 +81,6 @@ test('a barra mostra os serviços, sem comissão a pagar',async()=>{
 
 // A soma das barras fecha com o que foi pago: o que nao tem socorrista ou viatura
 // vinculados aparece na ultima linha, em vez de sumir.
-test('faturamento por socorrista e por viatura fecha com o total pago',async()=>{
-  servidorDaVisao(dashboard())
-  render(<MemoryRouter><DashboardPage/></MemoryRouter>)
-
-  const pessoas=await screen.findByRole('list',{name:/receitas por socorrista/i})
-  const linhas=within(pessoas).getAllByRole('listitem')
-  expect(linhas).toHaveLength(5)
-  expect(linhas[0]).toHaveTextContent('JEFERSON MARTINS DA SILVA')
-  // O valor da comissao de cada um aparece ao lado do faturamento.
-  expect(linhas[0]).toHaveTextContent(/comissão R\$\s4\.770,62/)
-  expect(linhas[4]).toHaveTextContent('Sem socorrista')
-  expect(linhas[4]).toHaveTextContent(/R\$\s3\.938,62/)
-  // Clicar no nome abre a ficha do socorrista; a linha sem dono abre as OS que
-  // estao sem socorrista (Kawa, 22/09/2026: "sem viatura nao esta clicavel").
-  expect(within(linhas[0]).getByRole('link',{name:'JEFERSON MARTINS DA SILVA'})).toHaveAttribute('href','/equipe/1')
-  expect(within(linhas[4]).getByRole('link',{name:'Sem socorrista'})).toHaveAttribute('href','/porto/pendencias?filtro=SOCORRISTA')
-
-  const viaturas=screen.getByRole('list',{name:/receitas por viatura/i})
-  expect(within(viaturas).getByText('Sem viatura')).toBeInTheDocument()
-  expect(within(viaturas).getByText(/R\$\s74\.770,00/)).toBeInTheDocument()
-})
-
-test('viatura com despesa mostra o custo ao lado do faturamento',async()=>{
-  servidorDaVisao(dashboard({resultadoPorVeiculo:[
-    {veiculoId:2,veiculo:'L168',receitas:74770,despesas:1200,resultado:73570,kmMorto:0,custoKmMorto:0},
-  ]}))
-  render(<MemoryRouter><DashboardPage/></MemoryRouter>)
-
-  const viaturas=await screen.findByRole('list',{name:/receitas por viatura/i})
-  expect(within(viaturas).getByText('L168')).toBeInTheDocument()
-  expect(within(viaturas).getByText(/custo R\$\s1\.200,00/)).toBeInTheDocument()
-  expect(within(viaturas).queryByText('Sem viatura')).not.toBeInTheDocument()
-})
-
 test('km só aparece quando há km registrado',async()=>{
   servidorDaVisao(dashboard())
   const {unmount}=render(<MemoryRouter><DashboardPage/></MemoryRouter>)

@@ -5,11 +5,15 @@ import { SeletorPeriodo } from './components/SeletorPeriodo'
 import { CabecalhoPagina } from './components/ui/Pagina'
 import { useAoVivo } from './dados/aoVivo'
 import { dashboardEmCache, lerDashboard } from './dados/dashboard'
-import { IndicadoresDaOperacao, PainelDeGastos, PainelDeKm, PainelFaturamentoPorSocorrista,
-  PainelFaturamentoPorViatura, ResultadoDoPeriodo } from './dashboard/PaineisDoResultado'
-import type { Dashboard } from './types/modelos'
+import { IndicadoresDaOperacao, PainelDeGastos, PainelDeKm, ResultadoDoPeriodo } from './dashboard/PaineisDoResultado'
+import type { Dashboard, LancamentoFinanceiro } from './types/modelos'
+import { listarTodasAsOs, type LinhaOs } from './dados/porto/listaOs'
+import { lerExtrato } from './dados/extrato'
+import { ServicosDoPeriodo } from './financeiro/dre/ServicosDoPeriodo'
+import { DespesasDoPeriodo } from './financeiro/dre/DespesasDoPeriodo'
 import { data } from './utils/formatadores'
 import { usePeriodoGlobal } from './utils/periodoGlobal'
+import { porCompetenciaDaOp } from './utils/modoDoPeriodo'
 
 /**
  * Visao geral: o painel principal do sistema.
@@ -32,6 +36,17 @@ export default function DashboardPage(){
   // Uma despesa, uma OP ou uma comissao mudou em qualquer lugar: a tela consulta
   // de novo, mantendo os numeros de agora ate os novos chegarem.
   const [versao,setVersao]=useState(0)
+  // Servicos e despesas pela data em que aconteceram (Kawa, 23/09/2026: filtrando
+  // um dia, "quero todos os servicos e todas as despesas nesse dia"). O resumo de
+  // dinheiro continua pela OP. As listas seguem o filtro: periodo da OP pela
+  // competencia; Mes e De-ate pela data do servico e do lancamento.
+  const [servicos,setServicos]=useState<LinhaOs[]|null>(null)
+  const [lancamentos,setLancamentos]=useState<LancamentoFinanceiro[]>([])
+  useEffect(()=>{const {inicio,fim}=periodo;if(!inicio||!fim||inicio>fim)return
+    let valeu=true;setServicos(null)
+    Promise.all([listarTodasAsOs({inicio,fim,porCompetencia:porCompetenciaDaOp(periodo)}).then(p=>p.itens as LinhaOs[]|null).catch(()=>null),lerExtrato(inicio,fim).catch(()=>[] as LancamentoFinanceiro[])])
+      .then(([s,l])=>{if(valeu){setServicos(s);setLancamentos(l)}})
+    return()=>{valeu=false}},[periodo.inicio,periodo.fim,periodo.op,versao])
   useAoVivo(()=>setVersao(v=>v+1))
   const periodoCarregado=useRef('')
   const periodoValido=Boolean(inicio&&fim&&inicio<=fim)
@@ -97,7 +112,7 @@ export default function DashboardPage(){
 
     {periodoValido&&financeiro
       ? <>
-          <IndicadoresDaOperacao dados={financeiro}/>
+          <IndicadoresDaOperacao dados={servicos&&!porCompetenciaDaOp(periodo)?{...financeiro,servicosDoPeriodo:servicos.length}:financeiro}/>
 
           {temKm
             ? <div className="grade-painel grade-8-4">
@@ -106,10 +121,11 @@ export default function DashboardPage(){
               </div>
             : <PainelDeGastos dados={financeiro} inicio={inicio} fim={fim}/>}
 
-          <div className="painel-faturamento">
-            <PainelFaturamentoPorSocorrista dados={financeiro}/>
-            <PainelFaturamentoPorViatura dados={financeiro}/>
-          </div>
+          {/* No lugar do faturamento por socorrista e viatura (que ja esta no Painel
+              Porto e em Desempenho): os servicos e as despesas do periodo, para a
+              analise do dia. */}
+          {periodo.inicio&&periodo.fim?<ServicosDoPeriodo inicio={periodo.inicio} fim={periodo.fim} porCompetencia={porCompetenciaDaOp(periodo)} servicos={servicos}/>:null}
+          <DespesasDoPeriodo lancamentos={lancamentos}/>
         </>
       : null}
 

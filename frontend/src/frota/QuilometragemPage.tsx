@@ -98,20 +98,21 @@ export default function QuilometragemPage() {
   }
 
   return <div className="page-enter">
-    <header className="page-heading"><div><span className="eyebrow">Eficiência operacional</span><h1>Quilometragem</h1><p>Distâncias e custos registrados no banco oficial da operação.</p></div>
-      <div className="heading-actions"><div className="periodo-no-cabecalho"><SeletorPeriodo periodo={periodo} aoMudar={setPeriodo}/></div><button className="button button-primary" onClick={() => { setEditando(null); setModal(true) }}>+ Registrar quilometragem</button></div></header>
+    <header className="page-heading"><div><span className="eyebrow">Eficiência operacional</span><h1>Quilometragem</h1><p>Km rodado, km pago e km morto de cada viatura no período.</p></div>
+      <div className="heading-actions"><button className="button button-primary" onClick={() => { setEditando(null); setModal(true) }}>+ Registrar quilometragem</button></div></header>
+    <section className="panel painel-filtros"><form className="ledger-filters" onSubmit={e=>e.preventDefault()}><SeletorPeriodo periodo={periodo} aoMudar={setPeriodo}/></form></section>
     {erro && !modal ? <div className="form-alert" role="alert">{erro}</div> : null}
     {mensagem ? <div className="success-notice">{mensagem}</div> : null}
 
     <section className="km-definitions">
       <article><span className="km-symbol paid">KM</span><div><strong>Km rodado</strong><p>Diferença oficial entre os hodômetros final e inicial.</p></div></article>
-      <article><span className="km-symbol dead">0</span><div><strong>Km morto</strong><p>O backend calcula a diferença entre a quilometragem total e a remunerada.</p></div></article>
+      <article><span className="km-symbol dead">0</span><div><strong>Km morto</strong><p>A diferença entre o km rodado e o km pago.</p></div></article>
     </section>
 
     <section className="km-overview">
       <div><span>Km rodado</span><strong>{numero(kmRodado)} km</strong><small>100% do percurso</small></div>
       <div className={percentual > 15 ? 'danger' : ''}><span>Km morto</span><strong>{numero(kmMorto)} km</strong><small>{percentual.toFixed(1)}% do percurso</small></div>
-      <div><span>Custo improdutivo</span><strong>{moeda(custo)}</strong><small>Calculado pelo backend</small></div>
+      <div><span>Custo improdutivo</span><strong>{moeda(custo)}</strong><small>Km morto × custo por km</small></div>
     </section>
 
     <section className="panel km-vehicles"><header className="panel-title"><div><span className="eyebrow">Comparativo</span><h2>Eficiência por veículo</h2></div></header>

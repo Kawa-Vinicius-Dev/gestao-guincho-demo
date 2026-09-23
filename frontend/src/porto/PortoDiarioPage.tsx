@@ -37,9 +37,25 @@ const mesVizinho = (mes: string, passo: number) => {
   return `${d.getFullYear()}-${dois(d.getMonth() + 1)}`
 }
 
+/**
+ * O mes inteiro, do dia 1 ao ultimo. O banco so responde a partir do inicio do
+ * historico; antes disso o dia aparece apagado, "antes do inicio do sistema".
+ * Sem isso, marco mostrava so 30 e 31 — e na coluna errada, porque o
+ * alinhamento contava a partir do dia 1 (Kawa, 23/09/2026).
+ */
+function mesCompleto(mes: string, dias: DiaDoDiario[]): (DiaDoDiario & { antes?: boolean })[] {
+  const doBanco = new Map(dias.map(d => [d.dia, d]))
+  const ultimo = Number(fimDoMes(mes).slice(8))
+  return Array.from({ length: ultimo }, (_, i) => {
+    const dia = `${mes}-${dois(i + 1)}`
+    return doBanco.get(dia) ?? { dia, importado: false, os: 0, semValor: 0, antes: dia < INICIO_DO_HISTORICO }
+  })
+}
+
 /** Um mes de dias, cada um dizendo se o Diario ja passou por ali. */
-function MapaDoMes({ mes, dias, aoEscolher }: { mes: string; dias: DiaDoDiario[]; aoEscolher: (dia: string) => void }) {
+function MapaDoMes({ mes, dias: doBanco, aoEscolher }: { mes: string; dias: DiaDoDiario[]; aoEscolher: (dia: string) => void }) {
   const hoje = new Date().toISOString().slice(0, 10)
+  const dias = mesCompleto(mes, doBanco)
   // Alinha o dia 1 na coluna do dia da semana certo.
   const vazios = new Date(`${mes}-01T12:00:00`).getDay()
   return <div className="diario-mapa">
@@ -50,19 +66,20 @@ function MapaDoMes({ mes, dias, aoEscolher }: { mes: string; dias: DiaDoDiario[]
       {Array.from({ length: vazios }, (_, i) => <li key={`vazio${i}`} className="diario-dia-vazio" aria-hidden="true"/>)}
       {dias.map(d => {
         const futuro = d.dia > hoje
-        const estado = futuro ? 'futuro' : d.importado ? 'ok' : 'falta'
-        const texto = futuro ? 'ainda não aconteceu'
+        const foraDoSistema = futuro || Boolean(d.antes)
+        const estado = futuro ? 'futuro' : d.antes ? 'antes' : d.importado ? 'ok' : 'falta'
+        const texto = futuro ? 'ainda não aconteceu' : d.antes ? 'antes do início do sistema'
           : d.importado ? `${d.os} ${d.os === 1 ? 'serviço' : 'serviços'}${d.semValor ? `, ${d.semValor} sem valor` : ''}`
           : 'sem Diário importado'
         // Dia que ja aconteceu e clicavel: abre as OS daquele dia.
         const conteudoDoDia = <>
           <span className="diario-dia-numero">{Number(d.dia.slice(8))}</span>
-          <span className="diario-dia-os">{futuro ? '' : d.os || ''}</span>
+          <span className="diario-dia-os">{foraDoSistema ? '' : d.os || ''}</span>
           <span className="apenas-leitor">{dataBr(d.dia)}: {texto}</span>
         </>
         return <li key={d.dia} className={`diario-dia diario-dia-${estado}`}
           title={`${dataBr(d.dia)} — ${texto}`}>
-          {futuro ? conteudoDoDia
+          {foraDoSistema ? conteudoDoDia
             : <button type="button" className="diario-dia-botao" onClick={() => aoEscolher(d.dia)}>{conteudoDoDia}</button>}
         </li>
       })}
@@ -111,7 +128,9 @@ export default function PortoDiarioPage() {
           {faltando
             ? `${faltando} ${faltando === 1 ? 'dia ainda sem Diário importado' : 'dias ainda sem Diário importado'} neste mês.`
             : 'Todos os dias do mês já têm Diário importado.'}
-          {' '}O histórico começa em {dataBr(INICIO_DO_HISTORICO)}.
+          {`${mes}-01` < INICIO_DO_HISTORICO
+            ? <> Os dias apagados são anteriores a {dataBr(INICIO_DO_HISTORICO)}, quando o sistema começou.</>
+            : null}
         </p>
       </>}
     </Painel>

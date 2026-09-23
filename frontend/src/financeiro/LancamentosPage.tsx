@@ -85,7 +85,7 @@ export default function LancamentosPage() {
       // Lancar e aprovar na mesma acao: no Supabase isto esbarra na regra de que
       // ninguem aprova o proprio lancamento. Ver dados/despesas.test.ts.
       await aprovarDespesa(despesa.id)
-      setModal(false);setMensagem('Lançamento persistido. Os totais oficiais foram atualizados.');await carregar()
+      setModal(false);setMensagem('Lançamento salvo. Os totais foram atualizados.');await carregar()
     }catch(e){setMensagem((e as Error).message)}
   }
 
@@ -100,7 +100,7 @@ export default function LancamentosPage() {
   }
 
   return <div className="page-enter">
-    <header className="page-heading"><div><span className="eyebrow">Financeiro operacional</span><h1>Extrato</h1><p>Extrato formado exclusivamente por receitas, contas a receber e despesas persistidas no backend.</p></div>
+    <header className="page-heading"><div><span className="eyebrow">Financeiro operacional</span><h1>Extrato</h1><p>Tudo o que entrou e saiu no período: receitas, despesas e comissões.</p></div>
       <div className="heading-total-with-action"><span><small>Saldo realizado filtrado</small><strong className={realizado>=0?'positive':'negative'}>{moeda(realizado)}</strong></span><button className="button button-ghost" onClick={()=>setReceitaAberta(true)}>+ Registrar receita</button><button className="button button-primary" onClick={()=>setModal(true)}>+ Nova despesa</button></div></header>
     {mensagem?<div className="success-notice">{mensagem}</div>:null}
     <section className="panel"><div className="ledger-filters">

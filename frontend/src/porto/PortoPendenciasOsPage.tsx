@@ -106,7 +106,6 @@ export default function PortoPendenciasOsPage() {
       contexto={<>Período: <strong>{data(inicio)}</strong> → <strong>{data(fim)}</strong></>}
       acoes={<>
         <Link className="button button-ghost" to="/porto/ordens-servico">Ordens de serviço</Link>
-        <Link className="button button-ghost" to="/porto/devolvidos">Serviços devolvidos</Link>
         <button className="button button-primary" disabled={!pendentes || salvando} onClick={() => void salvar()}>
           {salvando ? 'Salvando…' : `Salvar ${pendentes || ''} ${pendentes === 1 ? 'acerto' : 'acertos'}`.trim()}
         </button>

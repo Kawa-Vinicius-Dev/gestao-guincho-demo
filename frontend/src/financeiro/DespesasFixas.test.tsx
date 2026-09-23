@@ -25,6 +25,7 @@ const aluguel = {
 async function cadastrar(user: ReturnType<typeof userEvent.setup>, campos: Record<string, string>) {
   await user.click(await screen.findByRole('button', { name: /nova despesa fixa/i }))
   const janela = await screen.findByRole('dialog', { name: /nova despesa fixa/i })
+  if ('total de parcelas' in campos) await user.click(within(janela).getByRole('button', { name: 'Parcelada' }))
   for (const [rotulo, valor] of Object.entries(campos)) {
     await user.type(within(janela).getByLabelText(new RegExp(rotulo, 'i')), valor)
   }
@@ -73,4 +74,18 @@ test('cadastra 10 parcelas com 3 já pagas, e a lista mostra a próxima', async 
   // 10 parcelas com 3 ja pagas: a proxima a entrar e a 4a.
   expect(enviado).toMatchObject({ parcelaInicial: 4, totalParcelas: 10 })
   expect(await screen.findByText('3 de 10 pagas · próxima 4ª')).toBeInTheDocument()
+})
+
+// Seguro e valor fixo de verdade: sem parcela, os campos de parcelas nem aparecem.
+test('valor fixo todo mês não pede parcelas; parcelada pede', async () => {
+  servidor.use(http.get('/api/despesas-recorrentes', () => HttpResponse.json([])))
+  const user = userEvent.setup({ delay: null })
+  abrir()
+  await user.click(await screen.findByRole('button', { name: /nova despesa fixa/i }))
+  const janela = await screen.findByRole('dialog', { name: /nova despesa fixa/i })
+  expect(within(janela).getByRole('button', { name: 'Valor fixo todo mês' })).toHaveAttribute('aria-pressed', 'true')
+  expect(within(janela).queryByLabelText(/total de parcelas/i)).not.toBeInTheDocument()
+  await user.click(within(janela).getByRole('button', { name: 'Parcelada' }))
+  expect(within(janela).getByLabelText(/total de parcelas/i)).toBeInTheDocument()
+  expect(within(janela).getByLabelText(/parcelas já pagas/i)).toBeInTheDocument()
 })

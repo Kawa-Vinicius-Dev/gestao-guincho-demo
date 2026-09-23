@@ -8,3 +8,7 @@
 .desempenho-linha strong{font-size:14px;font-variant-numeric:tabular-nums;text-align:right}
 .desempenho-linha small{color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}
 .desempenho-barras .sem-vinculo .desempenho-rotulo{color:#8a6410}
+/* Linha do total: mesma grade das barras, separada por um traco. */
+.desempenho-total{display:grid;grid-template-columns:minmax(120px,190px) minmax(0,1fr) minmax(110px,auto) minmax(120px,auto);align-items:center;gap:14px;margin-top:6px;padding:12px 10px 4px;border-top:2px solid var(--line);font-weight:700}
+.desempenho-total strong{text-align:right;font-size:17px;font-variant-numeric:tabular-nums}
+.desempenho-total small{color:var(--muted);font-size:12px}

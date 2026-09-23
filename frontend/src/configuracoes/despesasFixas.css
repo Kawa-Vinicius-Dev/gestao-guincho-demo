@@ -1,0 +1,5 @@
+/* Tipo da despesa fixa: escolha em cima, explicacao embaixo. */
+.tipo-da-fixa{display:grid;gap:8px}
+.tipo-da-fixa .segmented{width:fit-content}
+.tipo-da-fixa small{display:block;color:var(--muted)}
+.tipo-da-fixa .segmented button.active{color:#fff;background:var(--blue-600);box-shadow:none}

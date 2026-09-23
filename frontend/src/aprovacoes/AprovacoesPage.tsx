@@ -3,6 +3,7 @@ import { LinkSocorrista, LinkViatura } from '../components/LinksDeDado'
 import { ConfirmarAcao } from '../components/ConfirmarAcao'
 import { Carregando, ErroPagina, Vazio } from '../components/EstadoPagina'
 import { Modal } from '../components/Modal'
+import './aprovacoes-foto.css'
 import { CabecalhoPagina, Painel } from '../components/ui/Pagina'
 import { aprovarDespesa, excluirDespesa } from '../dados/despesas'
 import { ConfirmarExclusao } from '../components/ConfirmarExclusao'
@@ -38,6 +39,14 @@ function dataCurta(iso: string) {
   return new Date(`${iso}T12:00`).toLocaleDateString('pt-BR')
 }
 
+/** Seta para baixo sobre a bandeja: o icone de download de sempre. */
+function IconeBaixar() {
+  return <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" focusable="false" fill="none"
+    stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M10 3v10M5.5 8.5 10 13l4.5-4.5M3.5 14.5v2h13v-2"/>
+  </svg>
+}
+
 function VerFoto({ caminho, rotulo, nomeDoArquivo }: { caminho: string; rotulo: string; nomeDoArquivo?: string }) {
   const [url, setUrl] = useState('')
   const [erro, setErro] = useState('')
@@ -46,17 +55,18 @@ function VerFoto({ caminho, rotulo, nomeDoArquivo }: { caminho: string; rotulo: 
       onClick={() => linkDaFoto(caminho).then(setUrl).catch(e => setErro((e as Error).message))}>
       {rotulo}
     </button>
-    {/* Baixar para o computador: a foto e apagada depois da aprovacao, e numa
-        divergencia quem aprova precisa guardar a prova. */}
-    {nomeDoArquivo
-      ? <button type="button" className="button button-ghost button-sm" title="Salvar a foto no computador"
-          onClick={() => baixarFoto(caminho, nomeDoArquivo).catch(e => setErro((e as Error).message))}>
-          Baixar
-        </button>
-      : null}
     {erro ? <span className="form-alert">{erro}</span> : null}
+    {/* Baixar fica no topo da foto aberta, so o icone (Kawa, 23/09/2026: "a ideia
+        e simplificar"). A foto e apagada depois da aprovacao, e numa divergencia
+        quem aprova precisa guardar a prova. */}
     {url
-      ? <Modal etiqueta="Comprovação" titulo={rotulo} fecharAoClicarFora aoFechar={() => setUrl('')}>
+      ? <Modal etiqueta="Comprovação" titulo={rotulo} fecharAoClicarFora aoFechar={() => setUrl('')}
+          acoes={nomeDoArquivo
+            ? <button type="button" className="botao-icone" aria-label="Baixar a foto" title="Baixar a foto"
+                onClick={() => baixarFoto(caminho, nomeDoArquivo).catch(e => setErro((e as Error).message))}>
+                <IconeBaixar/>
+              </button>
+            : undefined}>
           <img src={url} alt={rotulo} className="aprovacoes-foto" />
         </Modal>
       : null}
@@ -103,9 +113,9 @@ function LinhaTurno({ item, aoResolver }: { item: ItemDaFila; aoResolver: () => 
     {item.observacoes ? <p className="aprovacao-observacao">“{item.observacoes}”</p> : null}
 
     <footer className="aprovacao-acoes">
-      {item.fotoAbertura ? <VerFoto caminho={item.fotoAbertura} rotulo="Foto da saída"
+      {item.fotoAbertura ? <VerFoto caminho={item.fotoAbertura} rotulo="Foto do início"
         nomeDoArquivo={`turno-${item.data}-${item.socorrista}-saida.jpg`} /> : null}
-      {item.fotoFechamento ? <VerFoto caminho={item.fotoFechamento} rotulo="Foto da chegada"
+      {item.fotoFechamento ? <VerFoto caminho={item.fotoFechamento} rotulo="Foto do fim"
         nomeDoArquivo={`turno-${item.data}-${item.socorrista}-chegada.jpg`} /> : null}
       <button type="button" className="button button-ghost" onClick={() => setDevolvendo(true)}>
         Devolver
@@ -131,7 +141,7 @@ function LinhaTurno({ item, aoResolver }: { item: ItemDaFila; aoResolver: () => 
           avisos={[produtivo === 0 && rodado > 0
             ? 'Sem km produtivo informado, o turno inteiro vira km morto.' : null,
             item.fotoAbertura || item.fotoFechamento
-              ? 'As fotos do odômetro são apagadas depois da aprovação. Se houver divergência, use "Baixar" antes.' : null]}
+              ? 'As fotos do odômetro são apagadas depois da aprovação. Se houver divergência, abra a foto e baixe antes.' : null]}
           textoConfirmar="Aprovar turno"
           aoConfirmar={async () => {
             await aprovarTurno(item.id, produtivo)

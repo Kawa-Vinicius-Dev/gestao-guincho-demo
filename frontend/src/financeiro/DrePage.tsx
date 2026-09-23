@@ -1,5 +1,6 @@
 import { SeletorPeriodo } from '../components/SeletorPeriodo'
 import { usePeriodoGlobal } from '../utils/periodoGlobal'
+import { porCompetenciaDaOp } from '../utils/modoDoPeriodo'
 import { useEffect, useMemo, useState } from 'react'
 import { Carregando } from '../components/EstadoPagina'
 import { lerIndicadores } from '../dados/dashboard'
@@ -7,7 +8,8 @@ import { lerExtrato } from '../dados/extrato'
 import { baixarDre } from '../dados/relatorios'
 import type { Dashboard, LancamentoFinanceiro } from '../types/modelos'
 import { moeda, percentual } from '../utils/formatadores'
-import { ServicosSemValor } from './dre/ServicosSemValor'
+import { ServicosDoPeriodo } from './dre/ServicosDoPeriodo'
+import { DespesasDoPeriodo } from './dre/DespesasDoPeriodo'
 
 function Linha({ titulo, valor, nivel = 0, total = false, negativo = false }: { titulo: string; valor: number; nivel?: number; total?: boolean; negativo?: boolean }) {
   return <div className={`dre-line ${total ? 'dre-total' : ''}`} style={{ paddingLeft: `${22 + nivel * 18}px` }}><span>{negativo ? '(−) ' : ''}{titulo}</span><strong className={valor < 0 ? 'negative' : ''}>{moeda(Math.abs(valor))}</strong></div>
@@ -46,7 +48,8 @@ export default function DrePage() {
   }, [financeiro,extrato])
   const margem = calculo.receitaBruta ? (calculo.lucro / calculo.receitaBruta) * 100 : null
   return <div className="page-enter">
-    <header className="page-heading"><div><span className="eyebrow">Demonstrativo simplificado</span><h1>DRE</h1><p>Receitas recebidas, despesas pagas e resultado — conforme o financeiro oficial.</p></div><div className="heading-actions"><div className="periodo-no-cabecalho"><SeletorPeriodo periodo={periodo} aoMudar={setPeriodo}/></div></div></header>
+    <header className="page-heading"><div><span className="eyebrow">Demonstrativo simplificado</span><h1>DRE</h1><p>Receitas recebidas, despesas pagas e resultado — conforme o financeiro oficial.</p></div></header>
+    <section className="panel painel-filtros"><form className="ledger-filters" onSubmit={e=>e.preventDefault()}><SeletorPeriodo periodo={periodo} aoMudar={setPeriodo}/></form></section>
     {erro?<div className="form-alert">{erro}</div>:null}
     {carregando?<Carregando/>:<>
     <section className="dre-hero"><div><span>Lucro operacional</span><strong>{moeda(calculo.lucro)}</strong><small>Depois das despesas aprovadas e pagas</small></div><div><span>Margem líquida operacional</span><strong>{margem===null?'—':percentual(margem)}</strong><small>{margem===null?'Sem receita no período':margem >= 20 ? 'Resultado saudável no período' : 'Margem abaixo do alvo recomendado'}</small></div></section>
@@ -67,7 +70,7 @@ export default function DrePage() {
         <button className="button button-ghost" onClick={() => window.print()}>Imprimir DRE</button>
       </aside>
     </section>
-    {inicio&&fim&&inicio<=fim?<ServicosSemValor inicio={inicio} fim={fim}/>:null}
+    {inicio&&fim&&inicio<=fim?<><ServicosDoPeriodo inicio={inicio} fim={fim} porCompetencia={porCompetenciaDaOp(periodo)}/><DespesasDoPeriodo lancamentos={extrato}/></>:null}
     </>}
   </div>
 }

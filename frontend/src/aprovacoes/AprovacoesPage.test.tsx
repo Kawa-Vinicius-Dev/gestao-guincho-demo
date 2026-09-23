@@ -127,3 +127,19 @@ test('a despesa do socorrista pode ser excluída, com confirmação que diz de q
   await user.click(within(janela).getByRole('button', { name: /excluir/i }))
   await vi.waitFor(() => expect(apagou).toBe('eq.51'))
 })
+
+// Kawa, 23/09/2026: so "Foto do inicio / Foto do fim"; baixar e o icone no topo
+// da foto aberta, e nao mais um botao ao lado.
+test('a foto abre numa janela com o ícone de baixar no topo', async () => {
+  servidor.use(
+    http.post(`${SUPA}/rest/v1/rpc/fila_de_aprovacoes`, () => HttpResponse.json(fila)),
+    http.post(`${SUPA}/storage/v1/object/sign/*`, () => HttpResponse.json({ signedURL: '/object/sign/turnos/foto.jpg?token=t' })),
+  )
+  await abrir()
+  const user = userEvent.setup({ delay: null })
+
+  await user.click(await screen.findByRole('button', { name: 'Foto do fim' }))
+  expect(screen.queryByRole('button', { name: /^baixar$/i })).not.toBeInTheDocument()
+  const janela = await screen.findByRole('dialog', { name: 'Foto do fim' })
+  expect(within(janela).getByRole('button', { name: 'Baixar a foto' })).toBeInTheDocument()
+})
