@@ -12,10 +12,12 @@ import { moduloNoSupabase } from './modo'
  * vez de trazer tudo e filtrar no browser.
  */
 
-const COLUNAS_CATEGORIA = 'id,nome,tipo,ativo'
+const COLUNAS_CATEGORIA = 'id,nome,tipo,ativo,socorrista_pode'
 const COLUNAS_CONTRATANTE = 'id,nome,documento,ativo'
 
-type LinhaCategoria = { id: number; nome: string; tipo: 'RECEITA' | 'DESPESA'; ativo: boolean }
+type LinhaCategoria = { id: number; nome: string; tipo: 'RECEITA' | 'DESPESA'; ativo: boolean; socorrista_pode?: boolean }
+const paraCategoria = (l: LinhaCategoria): Categoria =>
+  ({ id: l.id, nome: l.nome, tipo: l.tipo, ativo: l.ativo, socorristaPode: Boolean(l.socorrista_pode) })
 type LinhaContratante = { id: number; nome: string; documento: string | null; ativo: boolean }
 
 export type TipoCategoria = 'RECEITA' | 'DESPESA'
@@ -36,7 +38,7 @@ export async function listarCategorias(tipo?: TipoCategoria): Promise<Categoria[
     await consulta.order('nome'),
     'Não foi possível carregar as categorias.',
   ) as LinhaCategoria[]
-  return linhas
+  return linhas.map(paraCategoria)
  })
 }
 
@@ -46,11 +48,11 @@ export async function criarCategoria(nome: string, tipo: TipoCategoria): Promise
   if (!moduloNoSupabase('categorias')) {
     return api<Categoria>('/api/categorias', { method: 'POST', body: JSON.stringify({ nome, tipo }) })
   }
-  return ou(
+  return paraCategoria(ou(
     await supabase().from('categorias').insert({ nome, tipo })
       .select(COLUNAS_CATEGORIA).single(),
     'Não foi possível cadastrar a categoria.',
-  ) as LinhaCategoria
+  ) as LinhaCategoria)
 }
 
 export async function listarContratantes(): Promise<Contratante[]> {
@@ -88,6 +90,13 @@ export async function atualizarCategoria(id: number, nome: string): Promise<void
   esquecerCategorias()
   ou(await supabase().from('categorias').update({ nome }).eq('id', id).select('id').single(),
     'Não foi possível salvar a categoria.')
+}
+
+/** Libera ou tira a categoria da lista do socorrista. O banco recusa o resto. */
+export async function definirCategoriaDoSocorrista(id: number, pode: boolean): Promise<void> {
+  esquecerCategorias()
+  ou(await supabase().from('categorias').update({ socorrista_pode: pode }).eq('id', id).select('id').single(),
+    'Não foi possível alterar a categoria.')
 }
 
 export async function excluirCategoria(id: number): Promise<void> {

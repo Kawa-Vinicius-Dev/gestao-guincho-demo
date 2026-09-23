@@ -1,7 +1,7 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { LinkSocorrista, LinkViatura } from '../components/LinksDeDado'
 import './tipoCusto.css'
-import { alternarAtivoDespesaFixa, atualizarDespesaFixa, criarDespesaFixa, excluirDespesaFixa, lancarDespesasFixasDoMes, listarDespesasFixas } from '../dados/despesasFixas'
+import { lancarFixasVencidas } from '../dados/despesasFixas'
 import { ConfirmarExclusao } from '../components/ConfirmarExclusao'
 import { ConfirmarAcao, type PedidoConfirmacao } from '../components/ConfirmarAcao'
 import { SeletorPeriodo } from '../components/SeletorPeriodo'
@@ -17,14 +17,13 @@ import { useAoVivo } from '../dados/aoVivo'
 import { CampoNumero } from '../components/CamposMascarados'
 import { StatusBadge } from '../components/StatusBadge'
 import { Carregando, Vazio } from '../components/EstadoPagina'
-import type { Categoria, Despesa, DespesaRecorrente,  Motorista, Veiculo } from '../types/modelos'
+import type { Categoria, Despesa, Motorista, Veiculo } from '../types/modelos'
 import { data, hojeIso, moeda } from '../utils/formatadores'
 import { Campo, Selecao } from '../components/Campos'
 import { FORMAS_PAGAMENTO } from './LancamentosPage'
 import { CampoValor } from '../components/CampoValor'
 import { AcoesModal, Modal } from '../components/Modal'
 
-const mesAtual=()=>hojeIso().slice(0,7)
 
 const hoje=hojeIso
 
@@ -42,7 +41,6 @@ export default function DespesasPage(){
   // Despesa aberta para edicao; nulo e lancamento novo.
   const [editando,setEditando]=useState<Despesa|null>(null)
   const [pedido,setPedido]=useState<PedidoConfirmacao|null>(null)
-  const [fixaEditando,setFixaEditando]=useState<DespesaRecorrente|null>(null),[fixaExcluindo,setFixaExcluindo]=useState<DespesaRecorrente|null>(null)
   useEffect(()=>{if(admin)return
     meuTurnoDoDia().then(setTurno).catch(()=>setTurno(null))},[admin])
   const souEu=turno?.socorrista??null
@@ -50,7 +48,6 @@ export default function DespesasPage(){
   const possoLancar=Boolean(souEu&&minhaViatura)
   const abrirForm=()=>{setEditando(null);setSocorristaDoForm('');setForm(true)}
   const abrirEdicao=(d:Despesa)=>{setEditando(d);setSocorristaDoForm(d.motoristaId?String(d.motoristaId):'');setForm(true)}
-  const [fixas,setFixas]=useState<DespesaRecorrente[]>([]),[mes,setMes]=useState(mesAtual()),[lancando,setLancando]=useState(false)
   // Qual despesa esta na janela de confirmacao, e nao um booleano: a janela
   // precisa dizer qual e, com descricao e valor, senao confirmar e um chute.
   const [excluindo,setExcluindo]=useState<Despesa|null>(null),[apagando,setApagando]=useState(false)
@@ -66,9 +63,14 @@ export default function DespesasPage(){
   useEffect(()=>{
     Promise.all([listarCategorias('DESPESA'),listarVeiculos(),listarMotoristas()])
       .then(([c,v,m])=>{setCategorias(c);setVeiculos(v);setMotoristas(m)}).catch(x=>setErro((x as Error).message))
-    carregarFixas().catch(x=>setErro((x as Error).message))},[admin])
-  // Trocar o periodo traz as despesas dele.
-  useEffect(()=>{carregar().catch(x=>setErro((x as Error).message)).finally(()=>setCarregando(false))},[periodo.inicio,periodo.fim])
+  },[admin])
+  // Trocar o periodo traz as despesas dele. As fixas que ja venceram neste mes
+  // entram antes (o banco faz isso todo dia; aqui e a garantia, e nao duplica).
+  const fixasConferidas=useRef(false)
+  useEffect(()=>{
+    const antes=admin&&!fixasConferidas.current
+      ?lancarFixasVencidas().catch(()=>0).finally(()=>{fixasConferidas.current=true}):Promise.resolve(0)
+    antes.then(()=>carregar()).catch(x=>setErro((x as Error).message)).finally(()=>setCarregando(false))},[periodo.inicio,periodo.fim])
   // O "Editar" do Extrato chega aqui com ?editar=<id>: abre o mesmo formulario
   // desta tela, em vez de manter um segundo formulario de despesa em outro lugar.
   const [paraEditar,setParaEditar]=useState(()=>Number(new URLSearchParams(window.location.search).get('editar'))||0)
@@ -109,32 +111,6 @@ export default function DespesasPage(){
         ?'Despesa registrada e aprovada. Registre o pagamento quando ele sair.'
         :'Despesa registrada, mas ficou pendente: o banco ainda não tem o lançamento em um passo. Aprove e registre o pagamento para ela entrar nos totais.')
       await carregar()}catch(x){setErro((x as Error).message)}
-  }
-  const carregarFixas=()=>admin?listarDespesasFixas().then(setFixas):Promise.resolve()
-  // "3 de 10": as duas juntas, ou nenhuma (fixa sem fim, como IPTU e contador).
-  const parcelasDoForm=(f:FormData)=>{const total=Number(f.get('totalParcelas'))||null
-    return {totalParcelas:total,parcelaInicial:total?(Number(f.get('parcelaInicial'))||1):null}}
-  async function salvarFixa(e:FormEvent<HTMLFormElement>){e.preventDefault();const formulario=e.currentTarget;const f=new FormData(formulario)
-    setErro('');setMensagem('')
-    try{await criarDespesaFixa({descricao:String(f.get('descricao')),categoriaId:Number(f.get('categoriaId')),valor:Number(f.get('valor')),diaVencimento:Number(f.get('diaVencimento')),veiculoId:f.get('veiculoId')?Number(f.get('veiculoId')):null,...parcelasDoForm(f)})
-      formulario.reset();await carregarFixas()}catch(x){setErro((x as Error).message)}
-  }
-  async function salvarEdicaoFixa(e:FormEvent<HTMLFormElement>){e.preventDefault();if(!fixaEditando)return;const f=new FormData(e.currentTarget)
-    setErro('')
-    try{await atualizarDespesaFixa(fixaEditando.id,{descricao:String(f.get('descricao')),categoriaId:Number(f.get('categoriaId')),valor:Number(f.get('valor')),diaVencimento:Number(f.get('diaVencimento')),veiculoId:f.get('veiculoId')?Number(f.get('veiculoId')):null,...parcelasDoForm(f)})
-      setFixaEditando(null);setMensagem('Despesa fixa atualizada.');await carregarFixas()}
-    catch(x){setErro((x as Error).message)}
-  }
-  async function alternarFixa(fixa:DespesaRecorrente){setErro('')
-    try{await alternarAtivoDespesaFixa(fixa);await carregarFixas()}
-    catch(x){setErro((x as Error).message)}
-  }
-  // lancar o mesmo mes duas vezes nao duplica: o backend so cria o que falta
-  async function lancarFixas(){setErro('');setMensagem('');setLancando(true)
-    try{const r=await lancarDespesasFixasDoMes(mes)
-      setMensagem(`${r.lancadas} ${r.lancadas===1?'despesa fixa lançada':'despesas fixas lançadas'}${r.valorLancado?` · ${moeda(r.valorLancado)}`:''}${r.jaExistiam?` · ${r.jaExistiam} já estavam lançadas`:''}${r.encerradas?` · ${r.encerradas} ${r.encerradas===1?'fixa chegou à última parcela e foi encerrada':'fixas chegaram à última parcela e foram encerradas'}`:''}.`)
-      await carregar()}
-    catch(x){setErro((x as Error).message)}finally{setLancando(false)}
   }
   async function alternarDesconto(d:Despesa){setErro('');setMensagem('')
     try{await marcarDescontoComissao(d.id,!d.descontaComissao)
@@ -192,27 +168,14 @@ export default function DespesasPage(){
           : <><p className="chamada-turno">Abra o turno antes: é dele que saem o seu nome e a viatura em que você está.</p>
               <a className="button button-primary botao-alto" href="/turno">Abrir turno</a></>}
       </section>}
-    {admin?<section className="panel" aria-label="Despesas fixas"><header className="panel-title"><div><h2>Despesas fixas</h2><p>O que cai todo mês: aluguel, seguro, parcela. Cadastre uma vez e lance o mês quando quiser.</p></div>
-      <div className="heading-actions"><Campo rotulo="Mês"><input aria-label="Mês do lançamento" type="month" value={mes} onChange={e=>setMes(e.target.value)}/></Campo>
-        <button className="button button-primary" disabled={lancando||!fixas.some(f=>f.ativo)} onClick={()=>{const ativas=fixas.filter(f=>f.ativo);setPedido({titulo:'Lançar as despesas fixas do mês?',efeito:<>As despesas fixas ativas viram despesas pagas de <strong>{mes.split('-').reverse().join('/')}</strong> e entram na Visão geral. As que já foram lançadas nesse mês não duplicam.</>,resumo:[['Mês',mes.split('-').reverse().join('/')],['Despesas fixas ativas',String(ativas.length)],['Total',moeda(ativas.reduce((s,f)=>s+f.valor,0))]],textoConfirmar:'Lançar despesas',aoConfirmar:lancarFixas})}}>{lancando?'Lançando…':'Lançar as fixas do mês'}</button></div></header>
-      {fixas.length?<ul className="simple-list">{fixas.map(f=><li key={f.id}><strong>{f.descricao}</strong><small>{f.categoria} · {moeda(f.valor)} · todo dia {f.diaVencimento}{f.veiculo?` · ${f.veiculo}`:''}{f.totalParcelas?` · ${f.proximaParcela&&f.proximaParcela<=f.totalParcelas?`próxima parcela ${f.proximaParcela}/${f.totalParcelas}`:`${f.totalParcelas}/${f.totalParcelas} pagas`}`:''}{f.ativo?'':f.totalParcelas&&(f.proximaParcela??0)>f.totalParcelas?' · encerrada':' · desativada'}</small><span className="acoes-da-linha"><button className="table-action" onClick={()=>setFixaEditando(f)}>Editar</button><button className={f.ativo?'table-action table-action-danger':'table-action'} onClick={()=>setPedido(f.ativo
-            ?{titulo:'Desativar despesa fixa?',efeito:<><strong>{f.descricao}</strong> deixa de ser lançada nos próximos meses. O que já foi lançado continua.</>,resumo:[['Despesa fixa',f.descricao],['Valor',moeda(f.valor)]],textoConfirmar:'Desativar',perigo:true,aoConfirmar:()=>alternarFixa(f)}
-            :{titulo:'Reativar despesa fixa?',efeito:<><strong>{f.descricao}</strong> volta a ser lançada quando você lançar as fixas do mês.</>,resumo:[['Despesa fixa',f.descricao],['Valor',moeda(f.valor)]],textoConfirmar:'Reativar',aoConfirmar:()=>alternarFixa(f)})}>{f.ativo?'Desativar':'Reativar'}</button><button className="table-action table-action-danger" onClick={()=>setFixaExcluindo(f)}>Excluir</button></span></li>)}</ul>:<p className="empty-inline">Nenhuma despesa fixa cadastrada.</p>}
-      <form onSubmit={salvarFixa} className="inline-form">
-        <Campo rotulo="Descrição da despesa fixa"><input name="descricao" placeholder="Ex.: Aluguel do pátio" required autoCapitalize="sentences" autoComplete="off"/></Campo>
-        <Selecao rotulo="Categoria da despesa fixa" name="categoriaId" required opcoes={categorias.map(x=>({valor:x.id,texto:x.nome}))}/>
-        <CampoValor rotulo="Valor da despesa fixa" name="valor" required/>
-        <CampoNumero rotulo="Dia do vencimento" name="diaVencimento" decimais={0} min={1} max={31} required/>
-        <Selecao rotulo="Veículo da despesa fixa" name="veiculoId" vazio="Sem veículo" opcoes={veiculos.map(x=>({valor:x.id,texto:x.identificacao}))}/>
-        <CampoNumero rotulo="Parcela atual" name="parcelaInicial" decimais={0} min={1} placeholder="Ex.: 3"/>
-        <CampoNumero rotulo="Total de parcelas" name="totalParcelas" decimais={0} min={1} placeholder="Vazio: sem fim"/>
-        <button className="button button-ghost">Adicionar</button></form></section>:null}
     {form?<Modal etiqueta="Saída" titulo={editando?'Editar despesa':'Registrar despesa'} largo aoFechar={()=>{setForm(false);setEditando(null)}}>
       {/* O essencial primeiro: quanto, no que, quando e de quem. O resto e raro e
           fica em "Mais detalhes", fechado. */}
       <form onSubmit={salvar} className="form-grid three-columns">
         <CampoValor rotulo="Valor" name="valor" defaultValue={editando?.valor} required/>
-        <Selecao rotulo="Categoria" name="categoriaId" defaultValue={editando?.categoriaId??''} required opcoes={categorias.map(x=>({valor:x.id,texto:x.nome}))}/>
+        {/* O socorrista so ve o que o administrador liberou (Configuracoes > Categorias). */}
+        <Selecao rotulo="Categoria" name="categoriaId" defaultValue={editando?.categoriaId??''} required
+          opcoes={categorias.filter(x=>x.ativo&&(admin||x.socorristaPode)).map(x=>({valor:x.id,texto:x.nome}))}/>
         <label className="field"><span>Data</span><input name="data" type="date" defaultValue={editando?.data??hoje()} required/></label>
         {admin
           ? <><Selecao rotulo="Viatura" name="veiculoId" vazio="Nenhuma" defaultValue={editando?.veiculoId??''} opcoes={veiculos.map(x=>({valor:x.id,texto:x.identificacao}))}/>
@@ -263,25 +226,6 @@ export default function DespesasPage(){
         <button type="button" className="button button-danger" disabled={apagando} onClick={()=>void excluir()}>{apagando?'Excluindo…':'Excluir despesa'}</button>
       </div>
     </Modal>:null}
-    {fixaEditando?<Modal etiqueta="Despesa fixa" titulo="Editar despesa fixa" aoFechar={()=>setFixaEditando(null)}>
-      <form onSubmit={salvarEdicaoFixa} className="form-grid two-columns">
-        <Campo rotulo="Descrição"><input name="descricao" defaultValue={fixaEditando.descricao} required autoCapitalize="sentences" autoComplete="off"/></Campo>
-        <Selecao rotulo="Categoria" name="categoriaId" required defaultValue={fixaEditando.categoriaId} opcoes={categorias.map(x=>({valor:x.id,texto:x.nome}))}/>
-        <CampoValor rotulo="Valor" name="valor" defaultValue={fixaEditando.valor} required/>
-        <CampoNumero rotulo="Dia do vencimento" name="diaVencimento" decimais={0} min={1} max={31} defaultValue={String(fixaEditando.diaVencimento)} required/>
-        <Selecao rotulo="Veículo" name="veiculoId" vazio="Sem veículo" defaultValue={fixaEditando.veiculoId??''} opcoes={veiculos.map(x=>({valor:x.id,texto:x.identificacao}))}/>
-        <CampoNumero rotulo="Parcela do primeiro lançamento" name="parcelaInicial" decimais={0} min={1} defaultValue={fixaEditando.parcelaInicial?String(fixaEditando.parcelaInicial):''}
-          ajuda="Vale para o primeiro lançamento; depois a contagem segue sozinha."/>
-        <CampoNumero rotulo="Total de parcelas" name="totalParcelas" decimais={0} min={1} defaultValue={fixaEditando.totalParcelas?String(fixaEditando.totalParcelas):''}
-          ajuda="Vazio: a fixa não tem fim."/>
-        <AcoesModal aoCancelar={()=>setFixaEditando(null)}><button className="button button-primary">Salvar alterações</button></AcoesModal>
-      </form>
-    </Modal>:null}
-    {fixaExcluindo?<ConfirmarExclusao coisa="despesa fixa" nome={fixaExcluindo.descricao}
-      aviso="O molde sai da lista e não gera mais lançamentos. As despesas já lançadas a partir dele continuam."
-      resumo={[['Descrição',fixaExcluindo.descricao],['Valor',moeda(fixaExcluindo.valor)],['Todo dia',String(fixaExcluindo.diaVencimento)]]}
-      aoConfirmar={async()=>{await excluirDespesaFixa(fixaExcluindo.id);setMensagem('Despesa fixa excluída.');await carregarFixas()}}
-      aoFechar={()=>setFixaExcluindo(null)}/>:null}
     {pedido?<ConfirmarAcao {...pedido} aoFechar={()=>setPedido(null)}/>:null}
   </div>
 }

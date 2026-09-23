@@ -9,7 +9,9 @@ export interface Usuario { id: number | string; nome: string; email: string; per
 export interface SenhaRedefinida { usuarioId: number | string; nome: string; email: string; senhaProvisoria: string }
 export interface Veiculo { id: number; identificacao: string; placa?: string; modelo?: string; custoPorKm: number; siglaPorto?: string; ativo: boolean }
 export interface Contratante { id: number; nome: string; documento?: string; ativo: boolean }
-export interface Categoria { id: number; nome: string; tipo: 'RECEITA' | 'DESPESA'; ativo: boolean }
+export interface Categoria { id: number; nome: string; tipo: 'RECEITA' | 'DESPESA'; ativo: boolean
+  /** O socorrista pode lancar despesa nesta categoria (Configuracoes > Categorias). */
+  socorristaPode?: boolean }
 /**
  * `usuarioId` aceita numero ou texto: no backend antigo era o id do usuario, no
  * Supabase e o uuid do perfil. A tela so pergunta se ha vinculo, nunca mostra o

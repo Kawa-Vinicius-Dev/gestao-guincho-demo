@@ -128,3 +128,16 @@ export async function atualizarDespesaFixa(id: number, dados: DadosDespesaFixa):
 export async function excluirDespesaFixa(id: number): Promise<void> {
   await excluirRegistro('despesas_recorrentes', id, 'Não foi possível excluir a despesa fixa.')
 }
+
+/**
+ * Lanca, ja pagas, as fixas cujo vencimento deste mes ja chegou. O banco faz
+ * isso sozinho todo dia; a tela chama ao abrir como garantia. Nao duplica.
+ */
+export async function lancarFixasVencidas(): Promise<number> {
+  if (!moduloNoSupabase('despesasFixas')) return 0
+  invalidarCacheFinanceiro()
+  return Number(ou(
+    await supabase().rpc('lancar_fixas_vencidas'),
+    'Não foi possível lançar as despesas fixas do mês.',
+  ) ?? 0)
+}

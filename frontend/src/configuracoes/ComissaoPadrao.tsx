@@ -29,6 +29,8 @@ export function ComissaoPadrao() {
   return <section className="panel settings-card">
     <header><h2>Comissão padrão</h2>
       <p>Vale para quem não tem porcentagem própria e para as OPs sem porcentagem definida em Comissões.</p></header>
+    {/* Sem conseguir ler, diz o porque: antes o cartao ficava vazio, sem explicacao. */}
+    {atual === null && erro ? <div className="form-alert" role="alert">{erro}</div> : null}
     {atual === null ? null : <form onSubmit={pedir} className="form-grid">
       <label className="field"><span>Comissão padrão (%)</span>
         <input name="padrao" type="number" min="0" max="20" step="0.5" inputMode="decimal" required
