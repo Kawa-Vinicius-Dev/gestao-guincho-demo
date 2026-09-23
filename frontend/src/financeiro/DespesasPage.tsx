@@ -5,7 +5,7 @@ import { lancarFixasVencidas } from '../dados/despesasFixas'
 import { ConfirmarAcao, type PedidoConfirmacao } from '../components/ConfirmarAcao'
 import { SeletorPeriodo } from '../components/SeletorPeriodo'
 import { usePeriodoGlobal } from '../utils/periodoGlobal'
-import { aprovarDespesa, atualizarDespesa, criarDespesa, excluirDespesa, listarDespesas, marcarDescontoComissao } from '../dados/despesas'
+import { aprovarDespesa, atualizarDespesa, criarDespesa, excluirDespesa, listarDespesas, marcarDescontoComissao, despesasIguais } from '../dados/despesas'
 import { abrirComprovante, anexarComprovante, removerComprovante } from '../dados/comprovantes'
 import { listarCategorias } from '../dados/cadastros'
 import { listarMotoristas } from '../dados/motoristas'
@@ -102,6 +102,18 @@ export default function DespesasPage(){
       catch(x){setErro((x as Error).message)}
       return
     }
+    // Igual a uma que ja esta lancada (descricao, valor e data)? Pergunta antes.
+    const iguais=await despesasIguais(descricao,body.valor,body.data).catch(()=>0)
+    if(iguais){
+      setPedido({titulo:'Lançar esta despesa de novo?',
+        efeito:<>Já {iguais===1?'existe uma despesa igual':`existem ${iguais} despesas iguais`} lançada{iguais===1?'':'s'}: mesma descrição, mesmo valor e mesma data. Se for outro gasto de verdade (por exemplo, o mesmo seguro de dois caminhões), confirme. Se foi clique duplo, cancele.</>,
+        resumo:[['Despesa',descricao],['Data',data(body.data)],['Valor',moeda(body.valor)]],
+        textoConfirmar:'Lançar mesmo assim',perigo:true,aoConfirmar:()=>criar(body)})
+      return
+    }
+    await criar(body)
+  }
+  async function criar(body:Parameters<typeof criarDespesa>[0]){
     try{const criada=await criarDespesa(body,admin);setForm(false)
       // A mensagem sai do que o banco devolveu, e nao do que a tela pediu:
       // quando a funcao de lancamento em um passo ainda nao foi aplicada, a

@@ -63,7 +63,9 @@ export interface Dashboard {
   kmMorto:number; custoKmMorto:number; resultadoPorVeiculo:ResultadoVeiculo[]
   producaoPaga:number; comissaoSobreProducao:number
   producaoPendente:number; servicosPendentes:number; servicosDoPeriodo:number
-  comissaoAPagar:number; despesasPorCategoria:GastoPorCategoria[]; resultadoPorSocorrista:ResultadoSocorrista[]
+  comissaoAPagar:number;
+  /** Receita de OS canceladas (tirar comissao): paga pela Porto, fora dos servicos. */
+  receitaOsCanceladas?:number; osCanceladasComReceita?:number; despesasPorCategoria:GastoPorCategoria[]; resultadoPorSocorrista:ResultadoSocorrista[]
   despesasAcumuladasPorDia?:DespesaAcumuladaDia[]
   recebimentosForaDoPeriodo?:RecebimentoForaDoPeriodo[]
 }

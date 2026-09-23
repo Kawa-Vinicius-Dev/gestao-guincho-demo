@@ -15,7 +15,7 @@ import { listarVeiculos } from './dados/veiculos'
 import { FaturamentoPorGrupo } from './components/Graficos'
 import { lerExtrato } from './dados/extrato'
 import { DespesasDoPeriodo } from './financeiro/dre/DespesasDoPeriodo'
-import { data } from './utils/formatadores'
+import { data, moeda } from './utils/formatadores'
 import { usePeriodoGlobal } from './utils/periodoGlobal'
 import { porCompetencia } from './utils/modoDoPeriodo'
 
@@ -148,6 +148,12 @@ export default function DashboardPage(){
                 linhas={comOs(faturamentoPorGrupo(servicos,'viatura',veiculos),servicos,'viatura')}/>
             </Painel>
           </div>:null}
+          {/* A receita das OS canceladas fica no caixa (a Porto pagou), mas elas sairam
+              dos servicos: a nota explica a diferenca entre a receita e as barras. */}
+          {financeiro.receitaOsCanceladas?<p className="nota-os-canceladas">
+            + <strong>{moeda(financeiro.receitaOsCanceladas)}</strong> de {financeiro.osCanceladasComReceita} {financeiro.osCanceladasComReceita===1?'OS cancelada':'OS canceladas'}:
+            a Porto pagou e o valor está nas receitas, mas {financeiro.osCanceladasComReceita===1?'ela saiu':'elas saíram'} dos serviços e das barras acima.
+          </p>:null}
           <DespesasDoPeriodo lancamentos={lancamentos}/>
         </>
       : null}

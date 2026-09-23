@@ -362,3 +362,16 @@ async function lancarJaAprovada(dados: DadosDespesa): Promise<Despesa | null> {
   ) as unknown as LinhaDespesa
   return paraModelo(completa)
 }
+
+/**
+ * Quantas despesas iguais (mesma descricao, valor e data) ja estao lancadas, sem
+ * contar as rejeitadas. O seguro de 10/09/2026 entrou duas vezes com menos de 1
+ * segundo entre uma e outra; antes de gravar, a tela pergunta. Nao bloqueia: dois
+ * caminhoes podem ter o mesmo seguro no mesmo dia.
+ */
+export async function despesasIguais(descricao: string, valor: number, data: string): Promise<number> {
+  if (!moduloNoSupabase('despesas')) return 0
+  const { count } = await supabase().from('despesas').select('id', { count: 'exact', head: true })
+    .eq('descricao', descricao).eq('valor', valor).eq('data_lancamento', data).neq('status', 'REJEITADO')
+  return count ?? 0
+}
