@@ -157,9 +157,12 @@ grant execute on function public.porto_periodos() to authenticated;
 drop function if exists public.dashboard_resumo(date, date);
 drop function if exists public.dashboard_financeiro(date, date);
 
+-- security definer, como porto_listar_os: o filtro de OS (porto_os_filtradas)
+-- nao e executavel por `authenticated`. A primeira linha barra quem nao e
+-- administrador, e so administrador le estas tabelas inteiras de qualquer forma.
 create or replace function public.dashboard_financeiro(p_inicio date, p_fim date, p_por_competencia boolean default true)
 returns jsonb
-language plpgsql stable set search_path = ''
+language plpgsql stable security definer set search_path = ''
 as $$
 declare
     v_resultado jsonb;
