@@ -9,6 +9,7 @@ import { listarVeiculos } from '../dados/veiculos'
 import { listarTodasAsOs, type LinhaOs } from '../dados/porto/listaOs'
 import { ServicosPorGrupo, contarServicos } from '../components/ServicosPorGrupo'
 import { porCompetenciaDaOp } from '../utils/modoDoPeriodo'
+import './equipe.css'
 import { alternarAtivoMotorista, atualizarMotorista, criarMotorista, definirPercentualDoSocorrista, excluirMotorista, listarMotoristas } from '../dados/motoristas'
 import { ConfirmarExclusao } from '../components/ConfirmarExclusao'
 import { ConfirmarAcao, type PedidoConfirmacao } from '../components/ConfirmarAcao'
@@ -113,14 +114,14 @@ export default function EquipePage(){
   if(carregando)return <Carregando/>
   if(erro&&!motoristas.length)return <ErroPagina mensagem={erro} tentarNovamente={carregar}/>
   return <div className="page-enter">
-    <header className="page-heading"><div><span className="eyebrow">Operação e identificação</span><h1>Socorristas</h1><p>Cadastros vinculados às OS Porto, com acesso ao histórico e à composição oficial de comissão.</p></div><button className="button button-primary" onClick={abrirCadastro}>+ Cadastrar socorrista</button></header>
+    <header className="page-heading"><div><span className="eyebrow">Operação e identificação</span><h1>Socorristas</h1><p>Clique no cartão de um socorrista para ver os serviços, a comissão e as despesas dele.</p></div><button className="button button-primary" onClick={abrirCadastro}>+ Cadastrar socorrista</button></header>
     {erro?<div className="form-alert" role="alert">{erro}</div>:null}
     <section className="panel painel-filtros"><form className="ledger-filters" onSubmit={e=>e.preventDefault()}>
       <SeletorPeriodo periodo={periodo} aoMudar={setPeriodo}/>
     </form></section>
     {servicos?.length?<section className="panel panel-respiro" aria-label="Serviços por socorrista"><ServicosPorGrupo tipo="socorrista" titulo="Serviços por socorrista no período" linhas={contarServicos(servicos,'socorrista')}/></section>:null}
     {motoristas.length?<section className="team-grid" aria-label="Socorristas cadastrados">{motoristas.map(motorista=><article className="panel team-card team-card-real" key={motorista.id}>
-      <header><span className="team-avatar">{motorista.nome.split(' ').map(parte=>parte[0]).slice(0,2).join('')}</span><span><strong>{motorista.nome}</strong><small>{ehAuxiliar(motorista.nome)?'Recebe as OS que chegam sem socorrista':<>{motorista.qra||'QRA não informado'}{motorista.veiculo?` · ${motorista.veiculo}`:' · sem viatura'}{motorista.percentualComissao!=null?` · ${Math.round(motorista.percentualComissao*1000)/10}% de comissão`:''}</>}</small></span><span className={`staff-status ${motorista.ativo?'staff-disponivel':'staff-folga'}`}>{motorista.ativo?'Ativo':'Inativo'}</span></header>
+      <header><span className="team-avatar">{motorista.nome.split(' ').map(parte=>parte[0]).slice(0,2).join('')}</span><span><strong><Link className="team-card-link" to={`/equipe/${motorista.id}`} title={`Abrir ${motorista.nome}`}>{motorista.nome}</Link></strong><small>{ehAuxiliar(motorista.nome)?'Recebe as OS que chegam sem socorrista':<>{motorista.qra||'QRA não informado'}{motorista.veiculo?` · ${motorista.veiculo}`:' · sem viatura'}{motorista.percentualComissao!=null?` · ${Math.round(motorista.percentualComissao*1000)/10}% de comissão`:''}</>}</small></span><span className={`staff-status ${motorista.ativo?'staff-disponivel':'staff-folga'}`}>{motorista.ativo?'Ativo':'Inativo'}</span></header>
       <div className="team-contact"><span>Telefone<strong>{motorista.telefone||(ehAuxiliar(motorista.nome)?'—':'Não informado')}</strong></span>
         <span>Acesso<strong>{(()=>{const c=contaDe(motorista)
           if(!motorista.usuarioId)return 'Sem acesso'
@@ -129,7 +130,7 @@ export default function EquipePage(){
           return c.senhaProvisoria?'Senha provisória':'Ativo'})()}</strong><small>{contaDe(motorista)?.email??''}</small></span></div>
       {/* O que ele rodou na competencia e ainda espera a OP: producao antes do pagamento. */}
       {previstaDe(motorista)?<p className="team-previsto">{previstaDe(motorista)!.servicos} {previstaDe(motorista)!.servicos===1?'serviço aguardando OP':'serviços aguardando OP'} · {moeda(previstaDe(motorista)!.valorPrevisto)} previstos{previstaDe(motorista)!.semValor?` · ${previstaDe(motorista)!.semValor} sem valor`:''}</p>:null}
-      <div className="team-card-actions"><Link className="button button-ghost team-detail-action" to={`/equipe/${motorista.id}`}>Ver detalhes</Link>
+      <div className="team-card-actions">
         <button className="table-action" onClick={()=>abrirEdicao(motorista)}>Editar</button>
         <button className={motorista.ativo?'table-action table-action-danger':'table-action'} onClick={()=>setPedido(motorista.ativo
             ?{titulo:'Desativar socorrista?',efeito:<><strong>{motorista.nome}</strong> sai das listas de escolha e não recebe OS novas pelo QRA. Serviços, comissões e despesas já lançados continuam.</>,resumo:[['Socorrista',motorista.nome],['QRA',motorista.qra||'—']],textoConfirmar:'Desativar',perigo:true,aoConfirmar:()=>alternarAtivo(motorista)}

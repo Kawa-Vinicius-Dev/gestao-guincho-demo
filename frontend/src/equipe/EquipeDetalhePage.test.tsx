@@ -67,7 +67,7 @@ test('administrador abre o socorrista pela Equipe e consulta composição oficia
   await consultaMotoristas
   const cartao=(await screen.findByText('Ana Motorista')).closest('article')
   expect(cartao).not.toBeNull()
-  await user.click(within(cartao!).getByRole('link',{name:/ver detalhes/i}))
+  await user.click(within(cartao!).getAllByRole('link')[0]!)
 
   expect(await screen.findByRole('heading',{name:'Ana Motorista'})).toBeInTheDocument()
   expect(window.location.pathname).toBe('/equipe/4')
@@ -124,7 +124,7 @@ test('as despesas no nome do socorrista que não descontam aparecem à parte',as
   render(<App/>)
   await consultaMotoristas
   const cartao=(await screen.findByText('Ana Motorista')).closest('article')
-  await user.click(within(cartao!).getByRole('link',{name:/ver detalhes/i}))
+  await user.click(within(cartao!).getAllByRole('link')[0]!)
 
   const painel=await screen.findByRole('region',{name:/outras despesas no nome do socorrista/i})
   expect(within(painel).getByText('Pedágio da viagem')).toBeInTheDocument()
@@ -144,7 +144,7 @@ test('mostrar as outras despesas não mexe no líquido da comissão',async()=>{
   render(<App/>)
   await consultaMotoristas
   const cartao=(await screen.findByText('Ana Motorista')).closest('article')
-  await user.click(within(cartao!).getByRole('link',{name:/ver detalhes/i}))
+  await user.click(within(cartao!).getAllByRole('link')[0]!)
 
   const resumo=await screen.findByRole('region',{name:/resumo do período/i})
   // Comissao 100 menos o desconto de 30. Os R$ 258 de pedagio e peca ficam fora.
@@ -167,7 +167,7 @@ test('a janela de cancelar a OS diz a comissão que sai, e o valor do serviço �
 
   await consultaMotoristas
   const cartao=(await screen.findByText('Ana Motorista')).closest('article')
-  await user.click(within(cartao!).getByRole('link',{name:/ver detalhes/i}))
+  await user.click(within(cartao!).getAllByRole('link')[0]!)
   await screen.findByRole('heading',{name:'Ana Motorista'})
 
   const linha=(await screen.findByText('OS-PAGA')).closest('tr')!

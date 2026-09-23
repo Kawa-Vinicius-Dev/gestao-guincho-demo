@@ -1,0 +1,10 @@
+/* Cartao do socorrista clicavel inteiro (Kawa, 23/09/2026: "o cliente e alheio a
+   tecnologia"): o link do nome se estende sobre o cartao; os botoes de acao ficam
+   por cima dele e continuam fazendo so o que dizem. */
+.team-card-real{position:relative;transition:border-color .15s ease,box-shadow .15s ease}
+.team-card-real:hover{border-color:var(--blue-600);box-shadow:0 6px 18px rgba(7,20,38,.12)}
+.team-card-link{color:inherit;text-decoration:none}
+.team-card-link::after{content:'';position:absolute;inset:0;border-radius:inherit;z-index:0}
+.team-card-link:focus-visible{outline:none}
+.team-card-real:has(.team-card-link:focus-visible){outline:2px solid var(--blue-600);outline-offset:2px}
+.team-card-actions,.team-card-real .team-previsto,.team-contact a{position:relative;z-index:1}
