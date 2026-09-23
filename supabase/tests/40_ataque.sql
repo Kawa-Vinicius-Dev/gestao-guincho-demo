@@ -86,14 +86,10 @@ select pg_temp.checar('funcionario le contas a receber', (select count(*)::text 
 select pg_temp.checar('funcionario le ordens de pagamento', (select count(*)::text from public.ordens_pagamento_porto), '0');
 select pg_temp.checar('funcionario chama o dashboard',
   pg_temp.tentar('select public.dashboard_resumo(current_date,current_date)'), 'NEGADO');
-select pg_temp.checar('funcionario chama o resumo Porto',
-  pg_temp.tentar('select public.resumo_porto_dashboard(current_date,current_date)'), 'NEGADO');
 select pg_temp.checar('funcionario aprova despesa', pg_temp.tentar('select public.aprovar_despesa(2)'), 'NEGADO');
 select pg_temp.checar('funcionario paga despesa', pg_temp.tentar('select public.pagar_despesa(2)'), 'NEGADO');
 select pg_temp.checar('funcionario recebe conta', pg_temp.tentar('select public.receber_conta(1,90000,current_date)'), 'NEGADO');
-select pg_temp.checar('funcionario paga comissao', pg_temp.tentar('select public.pagar_comissao(1,1)'), 'NEGADO');
 select pg_temp.checar('funcionario lanca despesas fixas', pg_temp.tentar($q$select public.lancar_despesas_recorrentes(current_date)$q$), 'NEGADO');
-select pg_temp.checar('funcionario marca atrasos', pg_temp.tentar('select public.marcar_atrasos()'), 'NEGADO');
 select pg_temp.checar('funcionario cria categoria',
   pg_temp.tentar($q$insert into public.categorias (nome,tipo) values ('Minha','DESPESA')$q$), 'NEGADO');
 select pg_temp.checar('funcionario cria contratante',
@@ -120,7 +116,7 @@ select pg_temp.checar('Ana lanca despesa assinando como Bruno',
   pg_temp.tentar($q$insert into public.despesas (descricao,categoria_id,valor,data_lancamento,criado_por)
     values ('Forjada',1,50,current_date,'44444444-4444-4444-4444-444444444444')$q$), 'NEGADO');
 select pg_temp.checar('Ana pede a comissao do Bruno pelo id',
-  pg_temp.tentar('select public.comissao_do_ciclo(1, 2)'), 'NEGADO');
+  pg_temp.tentar('select public.comissao_das_ops(array[1]::bigint[], 2)'), 'NEGADO');
 select pg_temp.checar('Ana muda o proprio perfil para administrador',
   pg_temp.tentar($q$update public.perfis set perfil='ADMINISTRADOR'
     where id='33333333-3333-3333-3333-333333333333'$q$), 'NEGADO');

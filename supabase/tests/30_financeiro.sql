@@ -131,11 +131,13 @@ select pg_temp.checar('antes do repasse, a comissao esta devida',
 reset role;
 set role authenticated;
 set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';
-select public.pagar_comissao(1, 1, '2026-09-21');
--- O repasse manual (pagar_comissao) e do fluxo antigo: a comissao hoje entra
--- sozinha quando a OP fecha, sem segundo passo (Kawa, 16/09/2026), e a
--- "comissao a pagar" do painel sai da OP, nao do repasse. A chamada fica porque
--- as checagens abaixo contam a despesa que ela cria.
+-- O repasse manual (pagar_comissao) saiu com o fluxo antigo: a comissao hoje
+-- entra sozinha quando a OP fecha (Kawa, 16/09/2026). As checagens abaixo so
+-- precisam da despesa de comissao paga, com o protocolo de comissao.
+-- A categoria de comissao ja existe: as migrations a criam.
+select public.registrar_despesa_aprovada('Comissão do ciclo',
+  (select id from public.categorias where nome = 'Comissão de socorrista'), 150, '2026-09-21',
+  p_motorista_id => 1, p_protocolo => 'COMISSAO-1-1', p_paga => true, p_data_pagamento => '2026-09-21');
 
 -- O repasse vira despesa paga e entra no caixa; mas nao pode ser contado como
 -- custo da pessoa de novo, senao a comissao apareceria duas vezes no custo dela.
@@ -168,27 +170,11 @@ select pg_temp.checar('o ultimo acumulado fecha com despesas pagas',
    order by posicao desc limit 1),
   (public.dashboard_financeiro('2026-09-01','2026-09-30') ->> 'despesasPagas'));
 
-\echo '===== RESUMO PORTO: previsto x programado x recebido ====='
--- OP-1 recebida (previsto 1000, recebido 980) e OP-2 programada (500).
-select pg_temp.checar('previsto soma as duas OPs',
-  (public.resumo_porto_dashboard('2026-09-01','2026-09-30') ->> 'valorTotalPrevisto'), '1500.00');
-select pg_temp.checar('quantidade de OPs do periodo',
-  (public.resumo_porto_dashboard('2026-09-01','2026-09-30') ->> 'quantidadeTotalOps'), '2');
--- "Programado" e toda OP com data de pagamento marcada, recebida ou nao — e o
--- que o Spring mostra, entao e o que fica. Que isso repita o previsto esta
--- registrado como divida tecnica, nao corrigido aqui.
-select pg_temp.checar('programado segue a regra do Spring: tem data marcada',
-  (public.resumo_porto_dashboard('2026-09-01','2026-09-30') ->> 'valorProgramado'), '1500.00');
--- Recebido usa o valor confirmado no banco (980), nao o previsto (1000).
-select pg_temp.checar('recebido usa o valor confirmado, nao o previsto',
-  (public.resumo_porto_dashboard('2026-09-01','2026-09-30') ->> 'valorRecebido'), '980.00');
-select pg_temp.checar('OP fora do periodo nao entra',
-  (public.resumo_porto_dashboard('2026-10-01','2026-10-31') ->> 'quantidadeTotalOps'), '0');
-
 \echo '===== CHAMADA UNICA ====='
-select pg_temp.checar('dashboard_resumo traz os dois blocos',
+-- O bloco "porto" saiu em 20260923200000: a Visao geral nunca o leu.
+select pg_temp.checar('dashboard_resumo traz o bloco financeiro',
   (select string_agg(k, ',' order by k) from jsonb_object_keys(
-     public.dashboard_resumo('2026-09-01','2026-09-30')) k), 'financeiro,porto');
+     public.dashboard_resumo('2026-09-01','2026-09-30')) k), 'financeiro');
 select pg_temp.checar('e os numeros batem com as funcoes separadas',
   (public.dashboard_resumo('2026-09-01','2026-09-30') -> 'financeiro' ->> 'saldoRealizado'),
   (public.dashboard_financeiro('2026-09-01','2026-09-30') ->> 'saldoRealizado'));

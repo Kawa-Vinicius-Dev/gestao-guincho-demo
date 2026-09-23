@@ -1,6 +1,6 @@
 import { ApiError, api } from '../api/http'
 import type {
-  AcertoPendenciaOsPorto, ConfirmacaoPorto, DashboardAltoNivelPorto, DashboardPorto, DetalheOpPorto,
+  AcertoPendenciaOsPorto, ConfirmacaoPorto, DashboardAltoNivelPorto, DetalheOpPorto,
   OpDestaquePorto,
   JustificativaPorto, OrdemPagamentoPorto, OrdemServicoPorto, PendenciaOsPorto, PendenciaPorto,
   PreviaPorto, ResumoOpsPorto,
@@ -154,18 +154,6 @@ export async function resumirOrdensPagamentoPorto(
     }),
     'Não foi possível carregar o resumo das ordens.',
   ) as ResumoOpsPorto
-}
-
-export async function obterDashboardPorto(params?: URLSearchParams): Promise<DashboardPorto> {
-  if (!moduloNoSupabase('porto')) {
-    return api<DashboardPorto>(`/api/porto/dashboard${consulta(params)}`)
-  }
-  return ou(
-    await supabase().rpc('porto_dashboard', {
-      p_inicio: params?.get('dataInicio') ?? null, p_fim: params?.get('dataFim') ?? null,
-    }),
-    'Não foi possível carregar o painel da Porto.',
-  ) as DashboardPorto
 }
 
 /**

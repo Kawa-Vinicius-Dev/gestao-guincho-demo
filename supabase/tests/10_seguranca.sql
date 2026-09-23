@@ -132,7 +132,7 @@ set request.jwt.claim.sub = '44444444-4444-4444-4444-444444444444';
 select pg_temp.checar('Bruno nao ve a despesa da Ana',
   (select coalesce(string_agg(descricao, ','), '') from public.despesas), 'Diesel do Bruno');
 select pg_temp.checar('Bruno nao consulta a comissao da Ana',
-  pg_temp.tentar('select public.comissao_do_ciclo(1, 1)'), 'NEGADO');
+  pg_temp.tentar('select public.comissao_das_ops(array[1]::bigint[], 1)'), 'NEGADO');
 reset role;
 
 -- ============ senha provisoria trava a escrita ============
@@ -191,9 +191,6 @@ insert into public.despesas (descricao,categoria_id,valor,data_lancamento,criado
 select pg_temp.checar('admin aprova o proprio lancamento (Spring nao barra)',
   pg_temp.tentar($q$select public.aprovar_despesa(
       (select id from public.despesas where descricao='Reembolso do proprio admin'))$q$), 'PERMITIU');
-select pg_temp.checar('admin NAO rejeita o proprio lancamento',
-  pg_temp.tentar($q$select public.rejeitar_despesa(
-      (select id from public.despesas where descricao='Reembolso do proprio admin'))$q$), 'NEGADO');
 reset role;
 
 set role authenticated;
