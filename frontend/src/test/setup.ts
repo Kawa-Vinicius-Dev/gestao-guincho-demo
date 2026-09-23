@@ -6,10 +6,11 @@ import { limparCacheCurto } from '../dados/cacheCurto'
 import { invalidarCacheFinanceiro } from '../dados/dashboard'
 import { restaurarEstadoTeste, servidor } from './servidor'
 
-// O padrao do findBy* e 1s. Com dezoito arquivos em paralelo a maquina fica carregada e testes
-// corretos falhavam por tempo, cada rodada num arquivo diferente. Esperar mais nao esconde erro:
-// asserção errada continua falhando, so demora mais para desistir.
-configure({ asyncUtilTimeout: 5000 })
+// O padrao do findBy* e 1s. Com a suite inteira em paralelo a maquina fica carregada e testes
+// corretos falhavam por tempo, cada rodada num arquivo diferente. 5s ainda estourava com 68
+// arquivos (23/09/2026). Esperar mais nao esconde erro: asserção errada continua falhando, so
+// demora mais para desistir.
+configure({ asyncUtilTimeout: 10_000 })
 
 beforeAll(() => servidor.listen({ onUnhandledRequest: 'error' }))
 afterEach(() => {
