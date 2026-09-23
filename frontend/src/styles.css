@@ -2039,3 +2039,7 @@ input,textarea,select,[contenteditable]:not([contenteditable=false]){caret-color
 /* Visao geral: receita de OS canceladas, fora das barras. */
 .nota-os-canceladas{margin:-6px 0 18px;padding:9px 14px;border-radius:8px;background:var(--superficie-2);color:var(--muted);font-size:13px}
 .nota-os-canceladas strong{color:var(--ink)}
+
+/* Despesa fixa: o que passar do valor dela vira Juros. */
+.nota-juros{margin:0;padding:9px 12px;border-radius:7px;background:var(--superficie-2);color:var(--muted);font-size:12.5px}
+.nota-juros strong{color:var(--ink)}

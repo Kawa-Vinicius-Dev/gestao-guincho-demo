@@ -303,3 +303,17 @@ test('recusa de permissão não vira lançamento pendente disfarçado', async ()
     .rejects.toThrow(/não tem permissão/i)
   expect(inseriu).toBe(false)
 })
+
+// Kawa, 23/09/2026: seguro de 200 pago como 210 por atraso. A tela manda o valor
+// pago; o banco deixa 200 na fixa e lanca os 10 em Juros.
+test('valor pago da despesa fixa vai para o banco, que devolve o juros', async () => {
+  let corpo: unknown
+  servidor.use(http.post(`${URL_SUPABASE}/rest/v1/rpc/despesa_fixa_valor_pago`, async ({ request }) => {
+    corpo = await request.json()
+    return HttpResponse.json(10)
+  }))
+  const { valorPagoDaFixa } = await carregar('tudo')
+
+  expect(await valorPagoDaFixa(12, 210)).toBe(10)
+  expect(corpo).toEqual({ p_despesa_id: 12, p_valor: 210 })
+})
