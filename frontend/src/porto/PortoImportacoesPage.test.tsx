@@ -17,7 +17,7 @@ test('mede a chamada de análise de importação', async () => {
       }, { status: 201 })),
     )
     const user = userEvent.setup({ delay: null })
-    render(<PortoImportacoesPage />)
+    render(<MemoryRouter><PortoImportacoesPage/></MemoryRouter>)
     await user.upload(screen.getByLabelText(/arquivo csv/i), new File(['csv'], 'medicao.csv', { type: 'text/csv' }))
     await user.click(screen.getByRole('button', { name: /analisar csv/i }))
 
@@ -46,7 +46,7 @@ test('ignora duplo clique enquanto confirma a importação', async () => {
     }),
   )
   const user=userEvent.setup({ delay: null })
-  render(<PortoImportacoesPage />)
+  render(<MemoryRouter><PortoImportacoesPage/></MemoryRouter>)
   await user.upload(screen.getByLabelText(/arquivo csv/i),new File(['csv'],'duplo-clique.csv',{type:'text/csv'}))
   await user.click(screen.getByRole('button',{name:/analisar csv/i}))
   await screen.findByText('OP-DUPLO-1')
@@ -70,7 +70,7 @@ test('expõe o progresso e mantém erro de confirmação acionável', async () =
     http.post('/api/porto/importacoes/83/confirmar', () => new Promise(resolve => { concluirConfirmacao=resolve })),
   )
   const user=userEvent.setup({ delay: null })
-  render(<PortoImportacoesPage />)
+  render(<MemoryRouter><PortoImportacoesPage/></MemoryRouter>)
   await user.upload(screen.getByLabelText(/arquivo csv/i),new File(['csv'],'progresso.csv',{type:'text/csv'}))
   await user.click(screen.getByRole('button',{name:/analisar csv/i}))
   expect(screen.getByRole('status')).toHaveTextContent(/analisando arquivo/i)
@@ -102,7 +102,7 @@ test('envia CSV, exige OP para relatório de OS e confirma a prévia', async () 
     }),
   )
   const user=userEvent.setup({ delay: null })
-  render(<PortoImportacoesPage />)
+  render(<MemoryRouter><PortoImportacoesPage/></MemoryRouter>)
   const arquivo=new File(['Número da Ordem de Serviço;Valor Total\nOS-901;700'], 'os.csv', { type: 'text/csv' })
   await user.upload(screen.getByLabelText(/arquivo csv/i),arquivo)
   await user.click(screen.getByRole('button',{name:/analisar csv/i}))
@@ -117,7 +117,7 @@ test('envia CSV, exige OP para relatório de OS e confirma a prévia', async () 
   const acoes=screen.getByRole('contentinfo',{name:/ações da prévia/i}),tabela=screen.getByRole('table')
   expect(acoes.compareDocumentPosition(tabela)&Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   await user.click(screen.getByRole('button',{name:/confirmar importação/i}));await confirmarNaJanela()
-  expect(await screen.findByText(/1 registro importado/i)).toBeInTheDocument()
+  expect(await screen.findByText(/1 OS nesta OP/i)).toBeInTheDocument()
   expect(screen.getByText(/1 receita criada/i)).toBeInTheDocument()
   expect(screen.getByText(/R\$\s*700,00 recebidos/i)).toBeInTheDocument()
   expect(screen.getByText(/01\/07\/2026 a 15\/07\/2026/i)).toBeInTheDocument()
@@ -132,7 +132,7 @@ test('cancela uma prévia retomada e permite corrigir o arquivo', async()=>{
     http.post('/api/porto/importacoes/previa',()=>HttpResponse.json({id:21,nomeArquivo:'retomada.csv',tipo:'PREVISAO_RECEBER',status:'AGUARDANDO_CONFERENCIA',totalLinhas:3,requerOrdemPagamento:false,erros:[],resumo:{linhasAnalisadas:3,opsUnicas:2,registrosNovos:1,registrosExistentes:1,registrosAtualizados:1,duplicidades:1,erros:0,valorTotal:300},linhas:[{hashRegistro:'h21',acao:'IMPORTAR',dados:{numero_op:'OP-21',valor_total:'100,00',data_pagamento:'31/08/2026'}}]},{status:201})),
     http.post('/api/porto/importacoes/21/cancelar',()=>HttpResponse.json({id:21,nomeArquivo:'retomada.csv',tipo:'PREVISAO_RECEBER',status:'CANCELADA',totalLinhas:1,requerOrdemPagamento:false,erros:[],linhas:[{hashRegistro:'h21',acao:'IMPORTAR',dados:{numero_op:'OP-21'}}]})),
   )
-  const user=userEvent.setup({ delay: null });render(<PortoImportacoesPage/>)
+  const user=userEvent.setup({ delay: null });render(<MemoryRouter><PortoImportacoesPage/></MemoryRouter>)
   await user.upload(screen.getByLabelText(/arquivo csv/i),new File(['csv'],'retomada.csv',{type:'text/csv'}))
   await user.click(screen.getByRole('button',{name:/analisar csv/i}))
   expect(await screen.findByText('OP-21')).toBeInTheDocument()
@@ -151,7 +151,7 @@ test('bloqueia erros e exige confirmação separada para divergência',async()=>
     http.post('/api/porto/importacoes/31/avaliar',()=>{avaliacao++;return HttpResponse.json({id:31,nomeArquivo:'os.csv',tipo:'OS_VINCULADAS',status:'AGUARDANDO_CONFERENCIA',totalLinhas:1,requerOrdemPagamento:true,erros:[],linhas:[{hashRegistro:'h31',acao:'DIVERGENCIA',mensagem:'A OS já está vinculada a outra OP.',dados:{numero_os:'OS-31',valor_total:'300'}}],analiseOrdemPagamento:{numero:'OP-31',existente:true,valorAtual:300,somaArquivo:300,diferenca:0,quantidadeReassociacoes:1,valorReassociacoes:300,reassociacoes:[{numeroOs:'OS-31',opAtual:'OP-ANTIGA',novaOp:'OP-31',valor:300}]}})}),
     http.post('/api/porto/importacoes/31/confirmar',async({request})=>{confirmouReassociacao=Boolean((await request.json() as {confirmarReassociacoes:boolean}).confirmarReassociacoes);return HttpResponse.json({importacaoId:31,tipo:'OS_VINCULADAS',importados:1,ignorados:0})}),
   )
-  const user=userEvent.setup({ delay: null });render(<PortoImportacoesPage/>)
+  const user=userEvent.setup({ delay: null });render(<MemoryRouter><PortoImportacoesPage/></MemoryRouter>)
   const input=screen.getByLabelText(/arquivo csv/i)
   await user.upload(input,new File(['csv com erro'],'os.csv',{type:'text/csv'}));await user.click(screen.getByRole('button',{name:/analisar csv/i}))
   expect(await screen.findByText(/corrija e reenvie/i)).toBeInTheDocument()
@@ -169,7 +169,7 @@ test('bloqueia erros e exige confirmação separada para divergência',async()=>
   expect(screen.getByRole('button',{name:/confirmar importação/i})).toBeDisabled()
   await user.click(screen.getByLabelText(/confirmo a reassociação/i))
   await user.click(screen.getByRole('button',{name:/confirmar importação/i}));await confirmarNaJanela()
-  expect(await screen.findByText(/1 registro importado/i)).toBeInTheDocument()
+  expect(await screen.findByText(/1 OS nesta OP/i)).toBeInTheDocument()
   expect(confirmouReassociacao).toBe(true)
 })
 
@@ -180,14 +180,14 @@ test('mostra divergência financeira e exige autorização e justificativa',asyn
     http.post('/api/porto/importacoes/55/avaliar',()=>HttpResponse.json({id:55,nomeArquivo:'valor.csv',tipo:'SERVICOS_GERAIS',status:'AGUARDANDO_CONFERENCIA',totalLinhas:1,requerOrdemPagamento:true,erros:[],linhas:[{hashRegistro:'v1',acao:'IMPORTAR',dados:{numero_os:'OS-55',valor_total:'700'}}],analiseOrdemPagamento:{numero:'06422281',existente:true,valorAtual:650,somaArquivo:700,diferenca:-50,quantidadeReassociacoes:0,valorReassociacoes:0,reassociacoes:[]}})),
     http.post('/api/porto/importacoes/55/confirmar',async({request})=>{confirmacao=await request.json() as Record<string,unknown>;return HttpResponse.json({importacaoId:55,tipo:'SERVICOS_GERAIS',importados:1,ignorados:0,receitasCriadas:1,receitasAtualizadas:0,valorTotalRecebido:700,erros:[]})}),
   )
-  const user=userEvent.setup({ delay: null });render(<PortoImportacoesPage/>);await user.upload(screen.getByLabelText(/arquivo csv/i),new File(['csv'],'valor.csv',{type:'text/csv'}));await user.click(screen.getByRole('button',{name:/analisar csv/i}))
+  const user=userEvent.setup({ delay: null });render(<MemoryRouter><PortoImportacoesPage/></MemoryRouter>);await user.upload(screen.getByLabelText(/arquivo csv/i),new File(['csv'],'valor.csv',{type:'text/csv'}));await user.click(screen.getByRole('button',{name:/analisar csv/i}))
   await user.type(await screen.findByLabelText(/número da op/i),'06422281');await user.tab();  expect(await screen.findByText(/valor atual da OP/i)).toBeInTheDocument()
   expect(screen.getByText(/R\$\s*650,00/i)).toBeInTheDocument()
   expect(screen.getByText(/R\$\s*700,00/i)).toBeInTheDocument()
   expect(screen.getByText(/-R\$\s*50,00/i)).toBeInTheDocument()
   const botao=screen.getByRole('button',{name:/confirmar importação/i});expect(botao).toBeDisabled()
   await user.click(screen.getByLabelText(/confirmo a atualização do valor/i));await user.selectOptions(screen.getByLabelText(/motivo da divergência/i),'DIVERGENCIA_VALOR');await user.type(screen.getByLabelText(/justificativa da divergência/i),'Valor conferido no arquivo pago.');await user.click(botao);await confirmarNaJanela()
-  expect(await screen.findByText(/1 registro importado/i)).toBeInTheDocument()
+  expect(await screen.findByText(/1 OS nesta OP/i)).toBeInTheDocument()
   expect(confirmacao).toMatchObject({numeroOrdemPagamento:'06422281',confirmarDivergencias:true,motivoDivergencia:'DIVERGENCIA_VALOR',justificativaDivergencia:'Valor conferido no arquivo pago.'})
 })
 
@@ -211,7 +211,7 @@ test('cola serviços, mostra resumo da prévia e confirma somente depois da aná
       ]})),
     http.post('/api/porto/importacoes/44/confirmar',async({request})=>{confirmacao=await request.json() as Record<string,unknown>;return HttpResponse.json({importacaoId:44,tipo:'SERVICOS_GERAIS',importados:2,ignorados:0,novos:2,atualizados:0,receitasCriadas:2,receitasAtualizadas:0,valorTotalRecebido:300.75,quinzena:'01/08/2026 a 15/08/2026',dataPagamento:'2026-08-14',erros:[]})}),
   )
-  const user=userEvent.setup({ delay: null });render(<PortoImportacoesPage/>)
+  const user=userEvent.setup({ delay: null });render(<MemoryRouter><PortoImportacoesPage/></MemoryRouter>)
   await user.click(screen.getByRole('button',{name:/colar ordem de pagamento/i}))
   const area=screen.getByLabelText(/conteúdo copiado da porto/i)
   await user.type(area,'Número da Ordem de Serviço\tValor Total\nOS 01/0000001-26\t100,50')
@@ -229,7 +229,7 @@ test('cola serviços, mostra resumo da prévia e confirma somente depois da aná
     const botaoConfirmar=screen.getByRole('button',{name:/confirmar importação/i})
   await waitFor(()=>expect(botaoConfirmar).toBeEnabled())
   await user.click(botaoConfirmar);await confirmarNaJanela()
-  expect(await screen.findByText(/2 registros importados/i)).toBeInTheDocument()
+  expect(await screen.findByText(/2 OS nesta OP/i)).toBeInTheDocument()
   expect(screen.getByText(/2 receitas criadas/i)).toBeInTheDocument()
   expect(screen.getByText(/R\$\s*300,75 recebidos/i)).toBeInTheDocument()
   expect(confirmacao).toMatchObject({numeroOrdemPagamento:'OP-GERAL-PAGA'})
@@ -264,7 +264,7 @@ test('habilita e confirma automaticamente OP 06422281 com período e 244 OS exis
       return HttpResponse.json({importacaoId:64,tipo:'SERVICOS_GERAIS',importados:244,ignorados:0,novos:0,atualizados:244,receitasCriadas:0,receitasAtualizadas:244,valorTotalRecebido:24400,quinzena:'01/07/2026 a 15/07/2026',dataPagamento:'2026-08-14',erros:[]})
     }),
   )
-  const user=userEvent.setup({ delay: null });render(<PortoImportacoesPage/>);await user.upload(screen.getByLabelText(/arquivo csv/i),new File(['244 OS'],'op-06422281.csv',{type:'text/csv'}));await user.click(screen.getByRole('button',{name:/analisar csv/i}))
+  const user=userEvent.setup({ delay: null });render(<MemoryRouter><PortoImportacoesPage/></MemoryRouter>);await user.upload(screen.getByLabelText(/arquivo csv/i),new File(['244 OS'],'op-06422281.csv',{type:'text/csv'}));await user.click(screen.getByRole('button',{name:/analisar csv/i}))
   expect(await screen.findByText((_,element)=>element?.tagName==='SPAN'&&element.textContent==='244 já existentes')).toBeInTheDocument()
     await user.type(screen.getByLabelText(/número da op/i),'06422281')
   const botao=screen.getByRole('button',{name:/confirmar importação/i})
@@ -272,7 +272,7 @@ test('habilita e confirma automaticamente OP 06422281 com período e 244 OS exis
   expect(avaliacao).toEqual({numeroOrdemPagamento:'06422281'})
   expect(avaliacao).not.toHaveProperty('ordemPagamentoId')
   await user.click(botao);await confirmarNaJanela()
-  expect(await screen.findByText(/244 registros importados/i)).toBeInTheDocument()
+  expect(await screen.findByText(/244 OS nesta OP/i)).toBeInTheDocument()
   expect(confirmacao).toMatchObject({numeroOrdemPagamento:'06422281'})
   expect(confirmacao).not.toHaveProperty('ordemPagamentoId')
 })
@@ -282,7 +282,7 @@ test('mostra na tela erro retornado pela validação automática da OP',async()=
     http.post('/api/porto/importacoes/previa',()=>HttpResponse.json({id:65,nomeArquivo:'erro-op.csv',tipo:'SERVICOS_GERAIS',status:'AGUARDANDO_CONFERENCIA',totalLinhas:1,requerOrdemPagamento:true,erros:[],linhas:[{hashRegistro:'erro-1',acao:'IGNORAR',dados:{numero_os:'OS-ERRO',valor_total:'100.00'}}]},{status:201})),
     http.post('/api/porto/importacoes/65/avaliar',()=>HttpResponse.json({detalhe:'Não foi possível validar a OP informada.'},{status:400})),
   )
-  const user=userEvent.setup({ delay: null });render(<PortoImportacoesPage/>);await user.upload(screen.getByLabelText(/arquivo csv/i),new File(['OS'],'erro-op.csv',{type:'text/csv'}));await user.click(screen.getByRole('button',{name:/analisar csv/i}))
+  const user=userEvent.setup({ delay: null });render(<MemoryRouter><PortoImportacoesPage/></MemoryRouter>);await user.upload(screen.getByLabelText(/arquivo csv/i),new File(['OS'],'erro-op.csv',{type:'text/csv'}));await user.click(screen.getByRole('button',{name:/analisar csv/i}))
   await user.type(screen.getByLabelText(/número da op/i),'06422281')
   expect(await screen.findByText('Não foi possível validar a OP informada.')).toBeInTheDocument()
   expect(screen.getByRole('button',{name:/confirmar importação/i})).toBeDisabled()
@@ -299,7 +299,7 @@ test('falha ao cancelar a prévia não oferece um botão que importa', async () 
     http.post('/api/porto/importacoes/84/confirmar', () => { confirmacoes++; return HttpResponse.json({ importacaoId: 84, tipo: 'PREVISAO_RECEBER', importados: 1, ignorados: 0 }) }),
   )
   const user = userEvent.setup({ delay: null })
-  render(<PortoImportacoesPage />)
+  render(<MemoryRouter><PortoImportacoesPage/></MemoryRouter>)
   await user.upload(screen.getByLabelText(/arquivo csv/i), new File(['csv'], 'cancelamento.csv', { type: 'text/csv' }))
   await user.click(screen.getByRole('button', { name: /analisar csv/i }))
   await screen.findByText('OP-CANCELA-1')
@@ -326,7 +326,7 @@ test('falha ao confirmar oferece repetir a própria confirmação', async () => 
     }),
   )
   const user = userEvent.setup({ delay: null })
-  render(<PortoImportacoesPage />)
+  render(<MemoryRouter><PortoImportacoesPage/></MemoryRouter>)
   await user.upload(screen.getByLabelText(/arquivo csv/i), new File(['csv'], 'repeticao.csv', { type: 'text/csv' }))
   await user.click(screen.getByRole('button', { name: /analisar csv/i }))
   await screen.findByText('OP-REPETE-1')
@@ -348,7 +348,7 @@ test('o aviso da importacao anterior some ao cancelar a prévia seguinte',async(
     http.post('/api/porto/importacoes/31/confirmar',()=>HttpResponse.json({importacaoId:31,tipo:'PREVISAO_RECEBER',importados:1,ignorados:0,receitasCriadas:0,receitasAtualizadas:0,valorTotalRecebido:0,erros:[],osSemSocorrista:['5655840/26','5665701/26']})),
     http.post('/api/porto/importacoes/31/cancelar',()=>HttpResponse.json({id:31,status:'CANCELADA'})),
   )
-  const user=userEvent.setup({ delay: null });render(<PortoImportacoesPage/>)
+  const user=userEvent.setup({ delay: null });render(<MemoryRouter><PortoImportacoesPage/></MemoryRouter>)
 
   await user.upload(screen.getByLabelText(/arquivo csv/i),new File(['csv'],'a.csv',{type:'text/csv'}))
   await user.click(screen.getByRole('button',{name:/analisar csv/i}))
@@ -375,7 +375,7 @@ test('importação colada que falha ao confirmar mantém o texto', async () => {
     http.post('/api/porto/importacoes/86/confirmar', () => HttpResponse.json({ detalhe: 'Instabilidade momentânea.' }, { status: 500 })),
   )
   const user = userEvent.setup({ delay: null })
-  render(<PortoImportacoesPage />)
+  render(<MemoryRouter><PortoImportacoesPage/></MemoryRouter>)
   await user.click(screen.getByRole('button', { name: /colar ordem de pagamento/i }))
   await user.type(screen.getByLabelText(/conteúdo copiado da porto/i), 'OP-FALHA-1\t100.00')
   await user.click(screen.getByRole('button', { name: /analisar conteúdo/i }))
@@ -401,7 +401,7 @@ test('escolher socorrista para as OS sem dono pede confirmação antes de aplica
     }, { status: 201 })),
   )
   const user = userEvent.setup({ delay: null })
-  render(<PortoImportacoesPage />)
+  render(<MemoryRouter><PortoImportacoesPage/></MemoryRouter>)
   await user.upload(screen.getByLabelText(/arquivo csv/i), new File(['csv'], 'orfas.csv', { type: 'text/csv' }))
   await user.click(screen.getByRole('button', { name: /analisar csv/i }))
   expect(await screen.findByText(/2 ordens de serviço vieram sem socorrista/i)).toBeInTheDocument()

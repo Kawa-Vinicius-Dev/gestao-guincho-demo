@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ConfirmarAcao, type PedidoConfirmacao } from '../../components/ConfirmarAcao'
+import { ResumoDaImportacao } from './ResumoDaImportacao'
+import type { ConfirmacaoPorto } from '../../types/modelos'
 import { Painel } from '../../components/ui/Pagina'
 import { confirmarImportacaoPorto, criarPreviaConteudoPorto } from '../../dados/porto'
 import { diasColados, LIMITE_DE_DIAS } from '../../dados/porto/diario'
@@ -23,6 +25,7 @@ export function ImportarDiario() {
   const [resumoColado, setResumoColado] = useState<{ inicio: string; fim: string; dias: number } | null>(null)
   const [erro, setErro] = useState(''), [mensagem, setMensagem] = useState('')
   const [carregando, setCarregando] = useState(false), [etapa, setEtapa] = useState('')
+  const [resumo, setResumo] = useState<ConfirmacaoPorto | null>(null)
   const [pedido, setPedido] = useState<PedidoConfirmacao | null>(null)
 
   async function analisar() {
@@ -49,10 +52,7 @@ export function ImportarDiario() {
     setCarregando(true); setEtapa('Importando o Diário…'); setErro('')
     try {
       const r = await confirmarImportacaoPorto(previa)
-      setMensagem(`${r.importados} ${r.importados === 1 ? 'serviço importado' : 'serviços importados'}`
-        + `${r.ignorados ? ` · ${r.ignorados} já existiam` : ''}`
-        + `${r.viaturasNovas?.length ? ` · ${r.viaturasNovas.length === 1 ? 'viatura nova cadastrada' : 'viaturas novas cadastradas'}: ${r.viaturasNovas.join(', ')}` : ''}`
-        + '. Os valores entram quando a OP chegar.')
+      setMensagem(''); setResumo(r)
       // Gravou: o texto colado sai.
       setPrevia(null); setConteudo(''); setResumoColado(null)
     } catch (e) { setErro((e as Error).message) }
@@ -92,6 +92,7 @@ export function ImportarDiario() {
     {carregando ? <span role="status">{etapa}</span> : null}
     {erro ? <div className="form-alert" role="alert">{erro}</div> : null}
     {mensagem ? <div className="success-notice">{mensagem}</div> : null}
+    {resumo ? <ResumoDaImportacao r={resumo} diario/> : null}
     <Painel etiqueta="Importação diária" titulo="Colar o Diário">
       <div className="porto-paste">
         <label className="field"><span>Consulta de serviços copiada da Porto</span>

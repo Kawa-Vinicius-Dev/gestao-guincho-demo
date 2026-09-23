@@ -14,7 +14,6 @@ import type { LinhaFaturamento } from './components/Graficos'
 import { listarVeiculos } from './dados/veiculos'
 import { FaturamentoPorGrupo } from './components/Graficos'
 import { lerExtrato } from './dados/extrato'
-import { DespesasDoPeriodo } from './financeiro/dre/DespesasDoPeriodo'
 import { data, moeda } from './utils/formatadores'
 import { usePeriodoGlobal } from './utils/periodoGlobal'
 import { porCompetencia } from './utils/modoDoPeriodo'
@@ -129,10 +128,10 @@ export default function DashboardPage(){
 
           {temKm
             ? <div className="grade-painel grade-8-4">
-                <PainelDeGastos dados={financeiro} inicio={inicio} fim={fim}/>
+                <PainelDeGastos dados={financeiro} inicio={inicio} fim={fim} lancamentos={lancamentos}/>
                 <PainelDeKm dados={financeiro}/>
               </div>
-            : <PainelDeGastos dados={financeiro} inicio={inicio} fim={fim}/>}
+            : <PainelDeGastos dados={financeiro} inicio={inicio} fim={fim} lancamentos={lancamentos}/>}
 
           {/* Faturamento e servicos num bloco so (Kawa, 23/09/2026: "quero
               simplificar"): a barra de cada socorrista e de cada viatura abre as OS
@@ -154,7 +153,6 @@ export default function DashboardPage(){
             + <strong>{moeda(financeiro.receitaOsCanceladas)}</strong> de {financeiro.osCanceladasComReceita} {financeiro.osCanceladasComReceita===1?'OS cancelada':'OS canceladas'}:
             a Porto pagou e o valor está nas receitas, mas {financeiro.osCanceladasComReceita===1?'ela saiu':'elas saíram'} dos serviços e das barras acima.
           </p>:null}
-          <DespesasDoPeriodo lancamentos={lancamentos}/>
         </>
       : null}
 

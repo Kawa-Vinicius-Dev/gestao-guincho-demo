@@ -1,8 +1,9 @@
 import { Link } from 'react-router-dom'
 import { DespesaAcumulada, GastosPorCategoria, ProporcaoKm } from '../components/Graficos'
 import { GradeIndicadores, Indicador } from '../components/ui/Pagina'
-import type { Dashboard } from '../types/modelos'
-import { moeda, percentual } from '../utils/formatadores'
+import type { Dashboard, LancamentoFinanceiro } from '../types/modelos'
+import { data, moeda, percentual } from '../utils/formatadores'
+import { LinkSocorrista, LinkViatura } from '../components/LinksDeDado'
 
 /**
  * Os blocos da Visao geral, na mesma linguagem do painel Porto: um numero domina,
@@ -99,7 +100,11 @@ export function IndicadoresDaOperacao({ dados }: { dados: Dashboard }) {
  * Para onde o dinheiro foi. A frase do cabecalho so aparece quando ha despesa;
  * sem despesa, o proprio grafico diz que o periodo esta vazio.
  */
-export function PainelDeGastos({ dados, inicio, fim }: { dados: Dashboard; inicio: string; fim: string }) {
+export function PainelDeGastos({ dados, inicio, fim, lancamentos = [] }: {
+  dados: Dashboard; inicio: string; fim: string
+  /** As despesas do periodo: cada categoria abre as dela (a lista separada saiu). */
+  lancamentos?: LancamentoFinanceiro[]
+}) {
   const categorias = dados.despesasPorCategoria ?? []
   const maior = categorias[0]
   return <section className="panel painel-gastos">
@@ -125,6 +130,7 @@ export function PainelDeGastos({ dados, inicio, fim }: { dados: Dashboard; inici
                 id: c.categoriaId, rotulo: c.categoria, valor: c.valor,
                 participacao: c.participacao,
               }))}/>
+            <GastosDaCategoria lancamentos={lancamentos}/>
           </section>
           <section aria-labelledby="titulo-trajetoria-gastos">
             <h3 id="titulo-trajetoria-gastos">Ao longo do período</h3>
@@ -151,3 +157,29 @@ export function PainelDeKm({ dados }: { dados: Dashboard }) {
   </section>
 }
 
+
+/**
+ * As despesas do periodo dentro da categoria delas (Kawa, 23/09/2026): era uma
+ * lista separada que repetia o grafico. Cada categoria abre os gastos, como na DRE.
+ */
+function GastosDaCategoria({ lancamentos }: { lancamentos: LancamentoFinanceiro[] }) {
+  const despesas = lancamentos.filter(l => l.tipo === 'DESPESA' && l.status !== 'REJEITADO')
+  if (!despesas.length) return null
+  const porCategoria = [...despesas.reduce((m, l) => {
+    const c = l.categoria || 'Sem categoria'
+    return m.set(c, [...(m.get(c) ?? []), l])
+  }, new Map<string, LancamentoFinanceiro[]>())]
+    .map(([categoria, itens]) => ({ categoria, itens: [...itens].sort((a, b) => a.data.localeCompare(b.data)), total: itens.reduce((t, l) => t + l.valor, 0) }))
+    .sort((a, b) => b.total - a.total)
+  return <div className="gastos-da-categoria" aria-label="Despesas por categoria, uma a uma">
+    <h4>Gasto por gasto</h4>
+    {porCategoria.map(c => <details key={c.categoria}>
+      <summary><span>{c.categoria}</span><small>{c.itens.length} {c.itens.length === 1 ? 'gasto' : 'gastos'}</small><strong>{moeda(c.total)}</strong></summary>
+      <ul>{c.itens.map(l => <li key={l.id}>
+        <span>{data(l.data)}</span>
+        <span>{l.descricao}{l.veiculo ? <> · <LinkViatura id={l.veiculoId} sigla={l.veiculo}/></> : null}{l.motorista ? <> · <LinkSocorrista id={l.motoristaId} nome={l.motorista}/></> : null}{l.realizado ? null : <em> · a pagar</em>}</span>
+        <strong>{moeda(l.valor)}</strong>
+      </li>)}</ul>
+    </details>)}
+  </div>
+}

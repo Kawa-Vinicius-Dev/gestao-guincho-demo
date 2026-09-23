@@ -6,6 +6,7 @@ import { MarcaJms } from './MarcaJms'
 import { ConfirmarSaida } from './ConfirmarSaida'
 import { AbasDaTela } from './navegacao/AbasDaTela'
 import { ondeEstou } from './navegacao/grupos'
+import { useContadoresDoMenu } from './contadoresDoMenu'
 
 // Menu enxuto (Kawa, 23/09/2026): o administrador ve so o item principal de
 // cada grupo; as demais telas viram abas no topo (components/navegacao/grupos).
@@ -83,9 +84,15 @@ function Estrela({fixado}:{fixado:boolean}){
  * A estrela e um botao separado de proposito - dentro do link, clicar nela
  * navegaria junto.
  */
-function ItemDoMenu({rota,titulo,fixado,aoFixar,aoNavegar}:{
+/** O que pede acao naquela tela: o contador aparece so quando ha algo. */
+const DICA_DO_CONTADOR: Record<string, string> = {
+  '/aprovacoes': 'aguardando aprovação',
+  '/porto/ordens-servico': 'OS do período com pendência (sem valor, socorrista ou viatura)',
+}
+
+function ItemDoMenu({rota,titulo,fixado,aoFixar,aoNavegar,contador=0}:{
   rota:string; titulo:string; fixado:boolean;
-  aoFixar:(rota:string)=>void; aoNavegar:()=>void
+  aoFixar:(rota:string)=>void; aoNavegar:()=>void; contador?:number
 }){
   // Fica aceso em qualquer aba do grupo: em Quilometragem, o item e Viaturas.
   const { pathname, search } = useLocation()
@@ -94,6 +101,8 @@ function ItemDoMenu({rota,titulo,fixado,aoFixar,aoNavegar}:{
     <NavLink to={rota} end={rota==='/'} onClick={aoNavegar}
       className={({isActive})=>(isActive||doGrupo)?'active':undefined}>
       <Icone rota={rota}/><span>{titulo}</span>
+      {contador>0?<span className="nav-contador" title={`${contador} ${DICA_DO_CONTADOR[rota]??'pendentes'}`}
+        aria-label={`${contador} ${DICA_DO_CONTADOR[rota]??'pendentes'}`}>{contador>99?'99+':contador}</span>:null}
     </NavLink>
     <button type="button" className={fixado?'nav-estrela fixada':'nav-estrela'}
       aria-pressed={fixado}
@@ -140,6 +149,7 @@ export function Layout() {
   },[aberto])
   const [saindo,setSaindo]=useState(false)
   const admin=usuario?.perfil==='ADMINISTRADOR'
+  const contadores=useContadoresDoMenu(admin)
 
   // Qual grupo contem a tela atual. E ele que abre quando nao ha escolha guardada,
   // e ele nunca fica fechado — esconder de onde a pessoa esta desorienta.
@@ -194,7 +204,7 @@ export function Layout() {
               <span className="nav-atalhos-titulo">Atalhos</span>
               <div className="nav-group-itens">
                 {atalhos.map(([to,label])=>
-                  <ItemDoMenu key={to} rota={to} titulo={label} fixado
+                  <ItemDoMenu key={to} rota={to} titulo={label} fixado contador={contadores[to]}
                     aoFixar={alternarFavorito} aoNavegar={()=>setAberto(false)}/>)}
               </div>
             </div>
@@ -207,11 +217,12 @@ export function Layout() {
             <button type="button" className="nav-group-titulo" aria-expanded={expandido}
               onClick={()=>alternarGrupo(grupo)}>
               <span>{grupos[grupo]}</span>
+              {!expandido&&disponiveis.some(([to])=>(contadores[to]??0)>0)?<i className="nav-grupo-ponto" aria-label="Há pendências neste grupo"/>:null}
               <i className="nav-seta" aria-hidden="true"/>
             </button>
             <div className="nav-group-itens" hidden={!expandido}>
               {disponiveis.map(([to,label])=>
-                <ItemDoMenu key={to} rota={to} titulo={label} fixado={fixados.has(to)}
+                <ItemDoMenu key={to} rota={to} titulo={label} fixado={fixados.has(to)} contador={contadores[to]}
                   aoFixar={alternarFavorito} aoNavegar={()=>setAberto(false)}/>)}
             </div>
           </div>
