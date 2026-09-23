@@ -61,10 +61,11 @@ exception when insufficient_privilege or raise_exception then
   if sqlerrm like 'FALHOU%' then raise; end if;
   raise notice 'PASSOU  | categoria nao liberada e recusada';
 end $$;
+insert into public.despesas (descricao,categoria_id,valor,data_lancamento,motorista_id,veiculo_id,criado_por,status,aprovada)
+ values ('Diesel',(select id from public.categorias where nome='Combustível'),80,'2026-09-12',1,1,
+         'aaaaaaaa-0000-0000-0000-000000000002','PENDENTE',false);
 select pg_temp.checar('na categoria liberada, lanca',
-  (with ins as (insert into public.despesas (descricao,categoria_id,valor,data_lancamento,motorista_id,veiculo_id,criado_por,status,aprovada)
-     values ('Diesel',(select id from public.categorias where nome='Combustível'),80,'2026-09-12',1,1,'aaaaaaaa-0000-0000-0000-000000000002','PENDENTE',false) returning 1)
-   select count(*)::text from ins), '1');
+  (select count(*)::text from public.despesas where descricao = 'Diesel'), '1');
 reset role;
 
 \echo 'TODOS OS TESTES PASSARAM'
