@@ -47,7 +47,7 @@ test('no Supabase, os dois blocos vem numa chamada so', async () => {
   const resumo = await lerDashboard('2026-09-01', '2026-09-30')
 
   expect(chamadas).toBe(1)
-  expect(corpo).toEqual({ p_inicio: '2026-09-01', p_fim: '2026-09-30' })
+  expect(corpo).toEqual({ p_inicio: '2026-09-01', p_fim: '2026-09-30', p_por_competencia: true })
   expect(resumo.financeiro.saldoRealizado).toBe(550)
   expect(resumo.financeiro.despesasAcumuladasPorDia?.at(-1)?.acumulado).toBe(450)
   expect(resumo.porto?.valorRecebido).toBe(980)

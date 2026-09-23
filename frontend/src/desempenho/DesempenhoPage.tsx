@@ -5,7 +5,7 @@ import { Carregando } from '../components/EstadoPagina'
 import { SeletorPeriodo } from '../components/SeletorPeriodo'
 import { CabecalhoPagina, Painel } from '../components/ui/Pagina'
 import { listarTodasAsOs, type LinhaOs } from '../dados/porto/listaOs'
-import { porCompetenciaDaOp } from '../utils/modoDoPeriodo'
+import { porCompetencia } from '../utils/modoDoPeriodo'
 import { listarQuilometragens } from '../dados/quilometragem'
 import { listarVeiculos } from '../dados/veiculos'
 import type { Quilometragem, Veiculo } from '../types/modelos'
@@ -86,7 +86,7 @@ export default function DesempenhoPage() {
     if (!periodo.inicio || !periodo.fim || periodo.inicio > periodo.fim) return
     setOss(null); setErro(''); setAberto(null)
     Promise.all([
-      listarTodasAsOs({ inicio: periodo.inicio, fim: periodo.fim, porCompetencia: porCompetenciaDaOp(periodo) }),
+      listarTodasAsOs({ inicio: periodo.inicio, fim: periodo.fim, porCompetencia: porCompetencia(periodo) }),
       listarQuilometragens({ inicio: periodo.inicio, fim: periodo.fim }).catch(() => []),
       listarVeiculos().catch(() => []),
     ]).then(([p, k, v]) => { setOss(p.itens); setKms(k); setVeiculos(v) })

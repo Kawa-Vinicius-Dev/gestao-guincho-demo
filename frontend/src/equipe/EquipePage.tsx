@@ -8,7 +8,7 @@ import { Link } from 'react-router-dom'
 import { listarVeiculos } from '../dados/veiculos'
 import { listarTodasAsOs, type LinhaOs } from '../dados/porto/listaOs'
 import { ServicosPorGrupo, contarServicos } from '../components/ServicosPorGrupo'
-import { porCompetenciaDaOp } from '../utils/modoDoPeriodo'
+import { porCompetencia } from '../utils/modoDoPeriodo'
 import './equipe.css'
 import { alternarAtivoMotorista, atualizarMotorista, criarMotorista, definirPercentualDoSocorrista, excluirMotorista, listarMotoristas } from '../dados/motoristas'
 import { ConfirmarExclusao } from '../components/ConfirmarExclusao'
@@ -40,7 +40,7 @@ export default function EquipePage(){
   const [servicos,setServicos]=useState<LinhaOs[]|null>(null)
   useEffect(()=>{if(!periodo.inicio||!periodo.fim||periodo.inicio>periodo.fim)return
     let valeu=true
-    listarTodasAsOs({inicio:periodo.inicio,fim:periodo.fim,porCompetencia:porCompetenciaDaOp(periodo)})
+    listarTodasAsOs({inicio:periodo.inicio,fim:periodo.fim,porCompetencia:porCompetencia(periodo)})
       .then(p=>{if(valeu)setServicos(p.itens)}).catch(()=>{if(valeu)setServicos(null)})
     return()=>{valeu=false}},[periodo.inicio,periodo.fim,periodo.op])
   const carregarContas=()=>{listarUsuarios().then(setContas).catch(()=>setContas([]))}

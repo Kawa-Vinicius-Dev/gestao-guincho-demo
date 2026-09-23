@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { http, HttpResponse } from 'msw'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { servidor } from '../test/servidor'
+import { rpcPeriodos } from '../test/periodos'
 
 const SUPA = 'https://projeto-teste.supabase.co'
 
@@ -68,7 +69,7 @@ const painel = (extra: Record<string, unknown> = {}) => ({
 function servidorDoPainel(dados: Record<string, unknown>) {
   servidor.use(
     http.post(`${SUPA}/rest/v1/rpc/porto_dashboard_alto_nivel`, () => HttpResponse.json(dados)),
-    http.get(`${SUPA}/rest/v1/porto_ops_conciliadas`, () => HttpResponse.json([])),
+    rpcPeriodos(SUPA, []),
   )
 }
 
@@ -231,7 +232,7 @@ test('trocar o agrupamento recarrega a série com o novo grão', async () => {
       grao = ((await request.json()) as { p_grao: string }).p_grao
       return HttpResponse.json(painel())
     }),
-    http.get(`${SUPA}/rest/v1/porto_ops_conciliadas`, () => HttpResponse.json([])),
+    rpcPeriodos(SUPA, []),
   )
   const Painel = await abrirPainel()
   const user = userEvent.setup({ delay: null })
@@ -249,11 +250,11 @@ test('trocar o agrupamento recarrega a série com o novo grão', async () => {
 // consultava uma OS e voltava reescolhia a OP toda vez.
 test('a OP escolhida continua escolhida ao voltar para a tela', async () => {
   servidorDoPainel(painel())
-  servidor.use(http.get(`${SUPA}/rest/v1/porto_ops_conciliadas`, () => HttpResponse.json([{
-    id: 7, numero: '06389821', valor_total: 74770, situacao_financeira: 'RECEBIDO',
+  servidor.use(rpcPeriodos(SUPA, [{
+    id: 7, numero: '06389821',
     periodo_inicio: '2026-03-30', periodo_fim: '2026-04-29',
     data_pagamento_programada: '2026-05-10',
-  }])))
+  }]))
   const Painel = await abrirPainel()
 
   const primeira = render(<MemoryRouter><Painel/></MemoryRouter>)

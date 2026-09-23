@@ -39,9 +39,9 @@ export function baixarArquivoCsv(conteudo: string, nomeArquivo: string) {
  * DRE do periodo em Excel ou PDF: resultado no topo, despesas por categoria e
  * resultado por viatura.
  */
-export async function baixarDre(inicio: string, fim: string, formato: Formato): Promise<void> {
+export async function baixarDre(inicio: string, fim: string, formato: Formato, porCompetencia = true): Promise<void> {
   if (!moduloNoSupabase('dashboard')) return csvPeloRender('dre', inicio, fim, `dre-${inicio}-a-${fim}.csv`)
-  const d = await lerIndicadores(inicio, fim)
+  const d = await lerIndicadores(inicio, fim, porCompetencia)
   const lucro = d.receitaRecebida - d.despesasPagas
   const margem = d.receitaRecebida ? (lucro / d.receitaRecebida) * 100 : 0
   const categorias = d.despesasPorCategoria ?? []

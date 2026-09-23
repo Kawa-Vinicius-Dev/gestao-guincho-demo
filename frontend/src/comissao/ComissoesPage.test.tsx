@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { http,HttpResponse } from 'msw'
 import { afterEach,beforeEach,expect,test,vi } from 'vitest'
 import { servidor } from '../test/servidor'
+import { rpcPeriodos } from '../test/periodos'
 
 /**
  * As telas de comissao falam direto com o Supabase, entao o teste precisa subir
@@ -49,8 +50,7 @@ const detalhe = {
   ],
 }
 
-const listaDeOps = () =>
-  http.get(`${URL_SUPABASE}/rest/v1/porto_ops_conciliadas`, () => HttpResponse.json(ops))
+const listaDeOps = () => rpcPeriodos(URL_SUPABASE, ops)
 
 /** O socorrista nao le a view de OPs: a lista dele vem por RPC, sem valor. */
 const meusPeriodos = (lista = ops) =>

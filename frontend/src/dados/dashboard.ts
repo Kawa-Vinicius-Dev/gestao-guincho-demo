@@ -51,17 +51,23 @@ export interface ResumoDashboard {
  */
 const VALIDADE_MS = 60_000
 
-const chave = (inicio: string, fim: string) => `${inicio}|${fim}`
+/**
+ * `porCompetencia` vem de utils/modoDoPeriodo: o mesmo periodo conta diferente
+ * pela competencia e pela data do servico, entao cada modo tem a sua entrada.
+ */
+const chave = (inicio: string, fim: string, porCompetencia: boolean) =>
+  `${inicio}|${fim}|${porCompetencia ? 'competencia' : 'data'}`
 
 /** O que ja se sabe sobre o periodo, para pintar antes da resposta chegar. */
-export function dashboardEmCache(inicio: string, fim: string): ResumoDashboard | undefined {
-  return entradaDoCacheFinanceiro<ResumoDashboard>(chave(inicio, fim))?.dados
+export function dashboardEmCache(inicio: string, fim: string, porCompetencia = true): ResumoDashboard | undefined {
+  return entradaDoCacheFinanceiro<ResumoDashboard>(chave(inicio, fim, porCompetencia))?.dados
 }
 
 export async function lerDashboard(
-  inicio: string, fim: string, opcoes: { forcar?: boolean } = {},
+  inicio: string, fim: string, opcoes: { forcar?: boolean; porCompetencia?: boolean } = {},
 ): Promise<ResumoDashboard> {
-  const k = chave(inicio, fim)
+  const porCompetencia = opcoes.porCompetencia ?? true
+  const k = chave(inicio, fim, porCompetencia)
   const guardado = entradaDoCacheFinanceiro<ResumoDashboard>(k)
   if (!opcoes.forcar && guardado && Date.now() - guardado.em < VALIDADE_MS) {
     return guardado.dados
@@ -69,16 +75,16 @@ export async function lerDashboard(
 
   const geracaoDoPedido = geracaoDoCacheFinanceiro()
   const dados = moduloNoSupabase('dashboard')
-    ? await peloSupabase(inicio, fim)
+    ? await peloSupabase(inicio, fim, porCompetencia)
     : await peloRender(inicio, fim)
 
   guardarNoCacheFinanceiro(k, dados, geracaoDoPedido)
   return dados
 }
 
-async function peloSupabase(inicio: string, fim: string): Promise<ResumoDashboard> {
+async function peloSupabase(inicio: string, fim: string, porCompetencia: boolean): Promise<ResumoDashboard> {
   const resposta = ou(
-    await supabase().rpc('dashboard_resumo', { p_inicio: inicio, p_fim: fim }),
+    await supabase().rpc('dashboard_resumo', { p_inicio: inicio, p_fim: fim, p_por_competencia: porCompetencia }),
     'Não foi possível carregar os indicadores.',
   ) as { financeiro: Dashboard; porto: ResumoPortoDashboard }
   return { financeiro: resposta.financeiro, porto: resposta.porto }
@@ -98,12 +104,12 @@ async function peloRender(inicio: string, fim: string): Promise<ResumoDashboard>
 }
 
 /** So os indicadores, para a DRE e a tela de Veiculos, que nao mostram Porto. */
-export async function lerIndicadores(inicio: string, fim: string): Promise<Dashboard> {
+export async function lerIndicadores(inicio: string, fim: string, porCompetencia = true): Promise<Dashboard> {
   if (!moduloNoSupabase('dashboard')) {
     return api<Dashboard>(`/api/dashboard?inicio=${inicio}&fim=${fim}`)
   }
   return ou(
-    await supabase().rpc('dashboard_financeiro', { p_inicio: inicio, p_fim: fim }),
+    await supabase().rpc('dashboard_financeiro', { p_inicio: inicio, p_fim: fim, p_por_competencia: porCompetencia }),
     'Não foi possível carregar os indicadores.',
   ) as Dashboard
 }

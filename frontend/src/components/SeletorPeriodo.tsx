@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { listarPeriodosDeOp } from '../dados/porto'
+import { listarPeriodosPorto } from '../dados/porto'
 import { globalDoPeriodoPorto, intervaloDoMes, type PeriodoGlobal } from '../utils/periodoGlobal'
-import { agruparPorPeriodo, rotuloPeriodo, type PeriodoPorto } from '../utils/periodos'
+import { LIMITE_DIAS_POR_DATA, passouDoLimite } from '../utils/modoDoPeriodo'
+import { rotuloPeriodo, type PeriodoPorto } from '../utils/periodos'
 import { Campo, Selecao } from './Campos'
 
 /**
@@ -32,7 +33,7 @@ export function SeletorPeriodo({ periodo, aoMudar }: { periodo: PeriodoGlobal; a
     return periodo.inicio === inicio && periodo.fim === fim
   })?.valor ?? ''
   useEffect(() => {
-    listarPeriodosDeOp().then(ops => setPeriodos(agruparPorPeriodo(ops))).catch(() => setPeriodos([]))
+    listarPeriodosPorto().then(setPeriodos).catch(() => setPeriodos([]))
   }, [])
   const escolhido = periodos.find(p => p.id === periodo.op
     && p.periodoInicio === periodo.inicio && p.periodoFim === periodo.fim)
@@ -55,5 +56,10 @@ export function SeletorPeriodo({ periodo, aoMudar }: { periodo: PeriodoGlobal; a
       <input aria-label="Data final" type="date" value={periodo.fim} min={periodo.inicio || undefined}
         onChange={e => aoMudar({ ...periodo, op: '', fim: e.target.value })}/>
     </Campo>
+    {passouDoLimite(periodo, Boolean(mesEscolhido))
+      ? <p className="aviso-periodo" role="status">
+          Acima de {LIMITE_DIAS_POR_DATA} dias, os serviços contam pela OP em que entraram, e não pela data do atendimento.
+        </p>
+      : null}
   </>
 }

@@ -141,17 +141,27 @@ test('abre filtrada pela OS do link, procurando fora do período', async () => {
   expect(screen.getByText(/procura em todo o histórico/i)).toBeInTheDocument()
 })
 
-test('filtra por competência em vez da data do serviço', async () => {
+// O modo sai do seletor, como em toda tela (Kawa, 23/09/2026): ate 8 dias
+// pela data do servico; periodo da OP, mes ou intervalo maior pela competencia.
+test('um dia filtra pela data do serviço', async () => {
+  sessionStorage.setItem('filtro:periodo', JSON.stringify({ inicio: '2026-09-07', fim: '2026-09-07' }))
   const pedidos: Record<string, unknown>[] = []
   servidorBase(corpo => pedidos.push(corpo))
-  const user = userEvent.setup({ delay: null })
   await abrir()
 
   await screen.findByText('01/4312215-26')
-  expect(pedidos[0]).toMatchObject({ p_por_competencia: false })
-  await user.click(screen.getByLabelText(/filtrar por competência/i))
+  expect(pedidos[0]).toMatchObject({ p_inicio: '2026-09-07', p_fim: '2026-09-07', p_por_competencia: false })
+})
 
-  await vi.waitFor(() => expect(pedidos.at(-1)).toMatchObject({ p_por_competencia: true }))
+test('o mês e o período da OP filtram pela competência', async () => {
+  sessionStorage.setItem('filtro:periodo', JSON.stringify({ inicio: '2026-09-01', fim: '2026-09-30' }))
+  const pedidos: Record<string, unknown>[] = []
+  servidorBase(corpo => pedidos.push(corpo))
+  await abrir()
+
+  await screen.findByText('01/4312215-26')
+  expect(pedidos[0]).toMatchObject({ p_por_competencia: true })
+  expect(screen.queryByLabelText(/filtrar por competência/i)).not.toBeInTheDocument()
 })
 
 test('informa o valor da Porto numa OS sem OP, depois de confirmar', async () => {

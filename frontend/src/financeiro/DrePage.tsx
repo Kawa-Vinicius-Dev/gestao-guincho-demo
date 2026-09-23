@@ -1,6 +1,6 @@
 import { SeletorPeriodo } from '../components/SeletorPeriodo'
 import { usePeriodoGlobal } from '../utils/periodoGlobal'
-import { porCompetenciaDaOp } from '../utils/modoDoPeriodo'
+import { porCompetencia } from '../utils/modoDoPeriodo'
 import { useEffect, useMemo, useState } from 'react'
 import { Carregando } from '../components/EstadoPagina'
 import { lerIndicadores } from '../dados/dashboard'
@@ -18,6 +18,7 @@ function Linha({ titulo, valor, nivel = 0, total = false, negativo = false }: { 
 export default function DrePage() {
   const [periodo,setPeriodo]=usePeriodoGlobal()
   const {inicio,fim}=periodo
+  const competencia=porCompetencia(periodo)
   const [financeiro,setFinanceiro]=useState<Dashboard|null>(null)
   const [extrato,setExtrato]=useState<LancamentoFinanceiro[]>([])
   const [erro,setErro]=useState('')
@@ -26,14 +27,14 @@ export default function DrePage() {
   const [carregando,setCarregando]=useState(true)
   const [exportando,setExportando]=useState('')
   async function exportar(formato:'excel'|'pdf'){setExportando(formato);setErro('')
-    try{await baixarDre(inicio,fim,formato)}catch(e){setErro((e as Error).message)}finally{setExportando('')}}
+    try{await baixarDre(inicio,fim,formato,competencia)}catch(e){setErro((e as Error).message)}finally{setExportando('')}}
   useEffect(()=>{
     if(!inicio||!fim||inicio>fim)return
     setCarregando(true)
-    Promise.all([lerIndicadores(inicio,fim),lerExtrato(inicio,fim).catch(()=>[] as LancamentoFinanceiro[])])
+    Promise.all([lerIndicadores(inicio,fim,competencia),lerExtrato(inicio,fim).catch(()=>[] as LancamentoFinanceiro[])])
       .then(([f,x])=>{setFinanceiro(f);setExtrato(x)}).catch(e=>setErro(e.message))
       .finally(()=>setCarregando(false))
-  },[inicio,fim])
+  },[inicio,fim,competencia])
   // Kawa, 23/09/2026: "a DRE precisa discriminar o que e essa despesa e o que
   // sao os lucros". Cada total abre por categoria, da maior para a menor.
   const calculo = useMemo(() => {
@@ -70,7 +71,7 @@ export default function DrePage() {
         <button className="button button-ghost" onClick={() => window.print()}>Imprimir DRE</button>
       </aside>
     </section>
-    {inicio&&fim&&inicio<=fim?<><ServicosDoPeriodo inicio={inicio} fim={fim} porCompetencia={porCompetenciaDaOp(periodo)}/><DespesasDoPeriodo lancamentos={extrato}/></>:null}
+    {inicio&&fim&&inicio<=fim?<><ServicosDoPeriodo inicio={inicio} fim={fim} porCompetencia={competencia}/><DespesasDoPeriodo lancamentos={extrato}/></>:null}
     </>}
   </div>
 }
