@@ -2,6 +2,9 @@ import { useCallback, useEffect, useState } from 'react'
 import { useAoVivo } from '../dados/aoVivo'
 import { listarPendenciasOsPorto } from '../dados/porto'
 import { contestacoesAContestar } from '../dados/porto/contestacoes'
+import { documentosPedindoAtencao } from '../dados/documentos'
+import { vistoriasPedindoAtencao } from '../dados/vistorias'
+import { hojeIso } from '../utils/formatadores'
 import { filaDeAprovacoes } from '../dados/turnos'
 import { porCompetencia } from '../utils/modoDoPeriodo'
 import { usePeriodoGlobal } from '../utils/periodoGlobal'
@@ -23,10 +26,19 @@ export function useContadoresDoMenu(admin: boolean): Record<string, number> {
         ? listarPendenciasOsPorto(periodo.inicio, periodo.fim, competencia)
             .then(l => l.filter(p => !p.apenasConferir).length).catch(() => 0)
         : Promise.resolve(0),
+      // Documentos vencidos ou vencendo em 30 dias (Kawa, 24/09/2026).
+      // e viaturas no mes da vistoria da Porto sem ela feita, ou reprovadas.
+      documentosPedindoAtencao(hojeIso()).catch(() => 0),
+      vistoriasPedindoAtencao(hojeIso()).catch(() => 0),
       // Casos que a Porto deve e ninguem contestou ainda (Kawa, 24/09/2026).
       contestacoesAContestar().catch(() => 0),
-    ]).then(([aprovacoes, pendencias, contestar]) =>
-      setContadores({ '/aprovacoes': aprovacoes, '/porto/ordens-servico': pendencias, '/porto/ordens-pagamento': contestar }))
+    ]).then(([aprovacoes, pendencias, documentos, vistorias, contestar]) =>
+      setContadores({
+        '/aprovacoes': aprovacoes,
+        '/porto/ordens-servico': pendencias,
+        '/veiculos': documentos + vistorias,
+        '/porto/ordens-pagamento': contestar,
+      }))
   }, [admin, periodo.inicio, periodo.fim, competencia])
   useEffect(() => { contar() }, [contar])
   useAoVivo(contar)

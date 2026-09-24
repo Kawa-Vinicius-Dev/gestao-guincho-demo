@@ -36,6 +36,8 @@ export const GRUPOS: Grupo[] = [
   { menu: '/veiculos', titulo: 'Viaturas', abas: [
     { rota: '/veiculos', rotulo: 'Viaturas' },
     { rota: '/quilometragem', rotulo: 'Quilometragem' },
+    // Validade do credenciamento: viaturas e socorristas (Kawa, 24/09/2026).
+    { rota: '/documentos', rotulo: 'Documentos' },
     { rota: '/desempenho', rotulo: 'Desempenho', busca: 'visao=viaturas' },
   ] },
   { menu: '/equipe', titulo: 'Socorristas', abas: [
