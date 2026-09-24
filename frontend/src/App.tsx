@@ -29,6 +29,7 @@ const PortoOss=lazy(()=>import('./porto/PortoOrdensServicoPage'))
 const PortoPendenciasOs=lazy(()=>import('./porto/PortoPendenciasOsPage'))
 const PortoDevolvidos=lazy(()=>import('./porto/PortoPendenciasPage'))
 const PortoRelatorios=lazy(()=>import('./porto/PortoRelatoriosPage'))
+const PortoContestacoes=lazy(()=>import('./porto/PortoContestacoesPage'))
 const Configuracoes=lazy(()=>import('./configuracoes/ConfiguracoesPage'))
 const TrocarSenha=lazy(()=>import('./configuracoes/TrocarSenhaPage'))
 const NaoEncontrado=lazy(()=>import('./NaoEncontradoPage'))
@@ -107,6 +108,7 @@ export default function App(){
         <Route path="/porto/pendencias" element={<PortoPendenciasOs/>}/>
         <Route path="/porto/devolvidos" element={<PortoDevolvidos/>}/>
         <Route path="/porto/relatorios" element={<PortoRelatorios/>}/>
+        <Route path="/porto/contestacoes" element={<PortoContestacoes/>}/>
         <Route path="/usuarios" element={<Equipe/>}/>
         <Route path="/configuracoes" element={<Configuracoes/>}/>
       </Route>
