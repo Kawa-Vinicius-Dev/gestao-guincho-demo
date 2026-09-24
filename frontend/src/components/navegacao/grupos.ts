@@ -56,6 +56,8 @@ export const GRUPOS: Grupo[] = [
   ] },
   { menu: '/porto/ordens-pagamento', titulo: 'OPs', abas: [
     { rota: '/porto/ordens-pagamento', rotulo: 'Ordens de pagamento' },
+    // O que a Porto deixou de pagar ou pagou a menos (Kawa, 24/09/2026).
+    { rota: '/porto/contestacoes', rotulo: 'Contestações' },
     { rota: '/porto/relatorios', rotulo: 'Relatórios' },
   ] },
 ]

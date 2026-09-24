@@ -2073,3 +2073,24 @@ input,textarea,select,[contenteditable]:not([contenteditable=false]){caret-color
 .periodo-dias{align-self:end;padding:0 0 11px;color:var(--muted);font-size:13px;font-weight:600}
 .periodo-dias.invalido{color:#b42318}
 .app-shell .report-actions>article.relatorio-operacional{gap:12px}
+
+/* Contestacoes da Porto */
+.celula-apoio{display:block;margin-top:2px;color:var(--muted);font-size:12px;font-weight:400;max-width:26ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.prazo-vencido{color:#b42318;font-weight:600}
+.acoes-contestacao{white-space:nowrap;text-align:right}
+.acoes-contestacao .button+.button{margin-left:6px}
+.resumo-contestacao{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0;padding:12px 14px;border-radius:10px;background:var(--superficie-2)}
+.resumo-contestacao dt{color:var(--muted);font-size:12px}
+.resumo-contestacao dd{margin:2px 0 0;font-weight:700;color:var(--ink)}
+.painel-apoio{margin:0 0 12px;color:var(--muted);font-size:13px}
+.celula-preco{display:flex;align-items:center;gap:8px}
+.celula-preco .campo-sem-rotulo{width:160px}
+.celula-preco .campo-sem-rotulo>span:first-child{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.botao-texto{padding:0;border:0;background:none;cursor:pointer;font:inherit}
+
+/* Manutencao: quanto do intervalo de troca a viatura ja rodou. */
+.celula-uso{min-width:170px}
+.barra-uso{height:8px;border-radius:99px;background:var(--superficie-2);overflow:hidden;box-shadow:inset 0 0 0 1px var(--line)}
+.barra-uso>span{display:block;height:100%;border-radius:99px;background:var(--ok-texto)}
+.barra-uso.uso-proxima>span{background:#d97706}
+.barra-uso.uso-vencida>span{background:#b42318}

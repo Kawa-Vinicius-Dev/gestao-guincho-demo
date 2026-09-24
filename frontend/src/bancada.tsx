@@ -298,6 +298,31 @@ window.fetch = (async (entrada: RequestInfo | URL, init?: RequestInit) => {
     { id: 7, veiculo_id: 1, turno_id: 31, motorista_id: 1, descricao: 'Retrovisor direito quebrado', visto_em: '2026-09-22', resolvido_em: null, observacao: null, veiculos: { identificacao: 'L168' }, motoristas: { nome: 'DJALMA BEZERRA' } },
     { id: 8, veiculo_id: 2, turno_id: null, motorista_id: null, descricao: 'Lona traseira rasgada', visto_em: '2026-09-18', resolvido_em: null, observacao: null, veiculos: { identificacao: 'L204' }, motoristas: null },
   ])
+  if (url.includes('porto_detectar_contestacoes')) return responder(2)
+  if (url.includes('porto_especialidades_vistas')) return responder([
+    { especialidade: 'REMOCAO', servicos: 212, valor_mais_comum: '205.00', valor_tabela: '205.00' },
+    { especialidade: 'SOCORRO MECANICO', servicos: 140, valor_mais_comum: '150.00', valor_tabela: null },
+    { especialidade: 'TROCA DE PNEU', servicos: 61, valor_mais_comum: '120.00', valor_tabela: '120.00' },
+  ])
+  if (url.includes('/rest/v1/porto_contestacoes')) {
+    const os = (id: number, numero: string, nome: string, sigla: string, dia: string, op: string | null = null) => ({
+      id, numero, data_atendimento: dia, especialidade: 'REMOCAO', sigla_viatura: sigla, motorista_id: id,
+      motoristas: { nome }, ordens_pagamento_porto: op ? { numero: op } : null })
+    return responder([
+      { id: 1, tipo: 'NAO_PAGA', situacao: 'A_CONTESTAR', valor_esperado: '205.00', valor_pago: '0.00', prazo: '2026-09-28',
+        contestada_em: null, protocolo: null, observacao: null, resolvida_em: null, valor_recuperado: null,
+        ordens_servico_porto: os(1, '5673329/26', 'DJALMA BEZERRA', 'L168', '2026-09-03') },
+      { id: 2, tipo: 'PAGA_A_MENOS', situacao: 'A_CONTESTAR', valor_esperado: '205.00', valor_pago: '150.00', prazo: '2026-10-18',
+        contestada_em: null, protocolo: null, observacao: null, resolvida_em: null, valor_recuperado: null,
+        ordens_servico_porto: os(2, '5673528/26', 'JEFERSON MARTINS', 'L204', '2026-09-08', '06438807') },
+      { id: 3, tipo: 'NAO_PAGA', situacao: 'CONTESTADA', valor_esperado: null, valor_pago: '0.00', prazo: '2026-09-20',
+        contestada_em: '2026-09-15', protocolo: 'PRT-4471', observacao: null, resolvida_em: null, valor_recuperado: null,
+        ordens_servico_porto: os(3, '5671002/26', 'NATANAEL FREITAS', 'L311', '2026-09-01') },
+      { id: 4, tipo: 'NAO_PAGA', situacao: 'ACEITA', valor_esperado: '180.00', valor_pago: '180.00', prazo: '2026-10-01',
+        contestada_em: '2026-09-10', protocolo: null, observacao: 'Paga na OP 06438808', resolvida_em: '2026-09-22', valor_recuperado: '180.00',
+        ordens_servico_porto: os(4, '5670000/26', 'QEBSON RAMOS', 'L168', '2026-08-28', '06438808') },
+    ])
+  }
   if (url.includes('porto_resumo_ops')) {
     const total = ops.reduce((t, op) => t + op.valor_total, 0)
     return responder({ ...resumoOps, quantidadeTotalOps: ops.length, valorTotalPrevisto: total,
@@ -388,6 +413,8 @@ const Pagina = tela === 'frota'
   ? (await import('./porto/PortoRelatoriosPage')).default
   : tela === 'manutencao'
   ? (await import('./frota/ManutencaoPage')).default
+  : tela === 'contestacoes'
+  ? (await import('./porto/PortoContestacoesPage')).default
   : tela === 'aprovacoes'
     ? (await import('./aprovacoes/AprovacoesPage')).default
     : tela === 'pendencias'
