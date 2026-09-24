@@ -1,6 +1,7 @@
 import type { LinhaFaturamento } from '../components/Graficos'
 import type { Dashboard, LancamentoFinanceiro, Veiculo } from '../types/modelos'
 import { nomesCurtos } from '../utils/nomes'
+import { resultadoComRateio, type ResultadoDaFrota } from './resultadoViaturas'
 import type { Relatorio } from './exportar'
 import { faturamentoPorGrupo } from './porto/faturamento'
 import { valorDaOs, type LinhaOs } from './porto/listaOs'
@@ -42,6 +43,8 @@ export interface MontagemDre {
     porViatura: LinhaFaturamento[]
   }
   despesas: CategoriaDaDre[]
+  /** Resultado de cada viatura com as despesas gerais rateadas pela receita. */
+  viaturas: ResultadoDaFrota
 }
 
 export function diasDoPeriodo(inicio: string, fim: string): number {
@@ -94,6 +97,7 @@ export function montarDre(
       porViatura: faturamentoPorGrupo(servicos, 'viatura', veiculos),
     },
     despesas,
+    viaturas: resultadoComRateio(financeiro),
   }
 }
 
@@ -202,6 +206,18 @@ export function relatorioDaDre(m: MontagemDre, inicio: string, fim: string, nume
           os.numeroOp ?? 'Aguardando OP', os.semValor ? 'Sem valor' : valorDaOs(os)]),
         totais: ['Total', `${m.servicos.total} serviços`, null, null, null, null, m.servicos.valor],
         vazio: 'Nenhum serviço no período.',
+      },
+      {
+        titulo: 'Viaturas', aba: 'Viaturas',
+        colunas: [
+          { titulo: 'Viatura', largura: 12 }, { titulo: 'Receita', tipo: 'moeda', largura: 16 },
+          { titulo: 'Despesas da viatura', tipo: 'moeda', largura: 20 }, { titulo: 'Despesas gerais (rateio)', tipo: 'moeda', largura: 24 },
+          { titulo: 'Resultado', tipo: 'moeda', largura: 16 }, { titulo: 'Margem', tipo: 'percentual', largura: 10 },
+        ],
+        linhas: m.viaturas.viaturas.map(v => [v.veiculo, v.receitas, v.despesasProprias, v.rateio, v.resultado, v.margem]),
+        totais: ['Total', m.viaturas.viaturas.reduce((t, v) => t + v.receitas, 0), m.viaturas.viaturas.reduce((t, v) => t + v.despesasProprias, 0),
+          m.viaturas.despesasGerais, m.viaturas.viaturas.reduce((t, v) => t + v.resultado, 0), null],
+        vazio: 'Nenhuma viatura com lançamentos no período.',
       },
       {
         titulo: 'Despesas', aba: 'Despesas',
