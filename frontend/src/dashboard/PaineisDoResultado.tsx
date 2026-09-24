@@ -28,7 +28,7 @@ export function ResultadoDoPeriodo({ dados, atualizando }: { dados: Dashboard; a
   const servicos = dados.servicosDoPeriodo ?? 0
 
   return <div className={`destaque-corpo${atualizando ? ' atualizando' : ''}`}>
-    <div className="destaque-numero">
+    <Link className="destaque-numero destaque-link" to="/dre" title="Abrir a DRE do período">
       <span>Lucro</span>
       <strong className={negativo ? 'destaque-negativo' : undefined}>{moeda(lucro)}</strong>
       <small>
@@ -37,18 +37,18 @@ export function ResultadoDoPeriodo({ dados, atualizando }: { dados: Dashboard; a
           : null}
         receitas − despesas
       </small>
-    </div>
+    </Link>
 
     <div className="resultado-partes">
-      <div className="resultado-parte resultado-receitas">
+      <Link className="resultado-parte resultado-receitas resultado-parte-link" to="/lancamentos?atalho=RECEITAS" title="Ver as receitas no Extrato">
         <span className="resultado-parte-nome">Receitas</span>
         <strong>{moeda(dados.receitaRecebida)}</strong>
         <span className="resultado-trilho" aria-hidden="true">
           <span style={{ width: largura(dados.receitaRecebida) }}/>
         </span>
         <small>{servicos ? `${servicos} ${servicos === 1 ? 'serviço' : 'serviços'}` : 'Nenhuma receita'}</small>
-      </div>
-      <div className="resultado-parte resultado-despesas">
+      </Link>
+      <Link className="resultado-parte resultado-despesas resultado-parte-link" to="/lancamentos?atalho=DESPESAS" title="Ver as despesas no Extrato">
         <span className="resultado-parte-nome">Despesas</span>
         <strong>{moeda(dados.despesasPagas)}</strong>
         <span className="resultado-trilho" aria-hidden="true">
@@ -59,7 +59,7 @@ export function ResultadoDoPeriodo({ dados, atualizando }: { dados: Dashboard; a
             ? `${percentual(dados.despesasPagas / dados.receitaRecebida * 100)} das receitas`
             : 'Sem receita no período'
           : 'Nenhuma despesa'}</small>
-      </div>
+      </Link>
       {dados.receitaPrevista > 0
         ? <div className="resultado-a-receber">
             <span>A receber</span>

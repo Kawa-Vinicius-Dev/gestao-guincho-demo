@@ -75,9 +75,12 @@ type IndicadorProps = {
   tom?: TomIndicador
   /** Quando existe, o card inteiro vira link para a lista que ele resume. */
   link?: string
+  /** Filtro na propria tela: o card vira botao, e `ativo` marca o filtro aplicado. */
+  aoClicar?: () => void
+  ativo?: boolean
 }
 
-export function Indicador({ rotulo, valor, apoio, tom = 'neutro', link }: IndicadorProps) {
+export function Indicador({ rotulo, valor, apoio, tom = 'neutro', link, aoClicar, ativo }: IndicadorProps) {
   const corpo = <>
     <span>{rotulo}</span>
     <strong>{valor}</strong>
@@ -85,6 +88,10 @@ export function Indicador({ rotulo, valor, apoio, tom = 'neutro', link }: Indica
   </>
   // Card que representa um conjunto de linhas abre esse conjunto: quem ve "12 sem
   // valor" quer saber quais sao, e o caminho ate a lista filtrada era manual.
+  if (aoClicar) {
+    return <button type="button" aria-pressed={Boolean(ativo)} onClick={aoClicar}
+      className={`indicador indicador-${tom} indicador-link indicador-botao${ativo ? ' indicador-ativo' : ''}`}>{corpo}</button>
+  }
   return link
     ? <Link className={`indicador indicador-${tom} indicador-link`} to={link}>{corpo}</Link>
     : <article className={`indicador indicador-${tom}`}>{corpo}</article>

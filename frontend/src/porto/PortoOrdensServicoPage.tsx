@@ -301,6 +301,8 @@ export default function PortoOrdensServicoPage() {
       <Indicador rotulo="Valor previsto" valor={dados ? moeda(dados.valorPrevisto) : '—'}
         apoio={dados && dados.valorPrevisto !== dados.valorTotal ? `${moeda(dados.valorTotal)} já pagos pela OP` : 'Oficial da OP mais o informado'}/>
       <Indicador rotulo="Sem valor" valor={dados ? dados.semValor.toLocaleString('pt-BR') : '—'}
+        aoClicar={() => setSituacao(situacao === 'AGUARDANDO_ANALISE' ? '' : 'AGUARDANDO_ANALISE')}
+        ativo={situacao === 'AGUARDANDO_ANALISE'}
         apoio={dados?.semValor ? 'Aguardando a análise da Porto' : 'Todas com valor'}/>
       <Indicador rotulo="Comissão" valor={dados ? moeda(dados.comissaoTotal) : '—'} link="/comissoes" apoio="Pela % de cada OP, nas OS já pagas"/>
     </GradeIndicadores>

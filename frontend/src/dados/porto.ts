@@ -120,8 +120,17 @@ export async function listarOrdensPagamentoPorto(
   // sendo de abril, que e quando os servicos aconteceram.
   if (inicio) q = q.gte('periodo_fim', inicio)
   if (fim) q = q.lte('periodo_fim', fim)
-  const numero = params?.get('numeroOp')
+  // A tela manda `numero`; links antigos, `numeroOp`. Antes so o segundo valia,
+  // e a busca por numero na tela de OPs nao filtrava nada.
+  const numero = params?.get('numero') || params?.get('numeroOp')
   if (numero) q = q.ilike('numero', `%${numero}%`)
+  // O filtro de conciliacao existia na tela e tambem era ignorado.
+  const conciliacao = params?.get('statusConciliacao')
+  if (conciliacao) q = q.eq('status_conciliacao', conciliacao)
+  // Mesma regra do resumo (porto_resumo_ops): abaixo, acima ou recebida com diferenca.
+  if (params?.get('comDivergencia') === 'true') {
+    q = q.in('status_conciliacao', ['VALOR_ABAIXO', 'VALOR_ACIMA', 'RECEBIDA_COM_DIVERGENCIA'])
+  }
 
   const linhas = ou(
     await q.order('data_pagamento_programada', { ascending: false, nullsFirst: false })

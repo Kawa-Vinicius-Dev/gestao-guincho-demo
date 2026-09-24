@@ -107,12 +107,18 @@ export function GastosPorCategoria({linhas,total}:{linhas:LinhaCategoria[];total
         style={{width:`${fatia.valor>0?Math.max(fatia.participacao,1):0}%`,backgroundColor:fatia.cor}}/>)}
     </div>
     <ol aria-label="Despesas por categoria">
-      {fatias.map(fatia=><li key={fatia.id}>
-        <i style={{backgroundColor:fatia.cor}} aria-hidden="true"/>
-        <span title={fatia.rotulo}>{fatia.rotulo}</span>
-        <small>{percentual(fatia.participacao)}</small>
-        <strong>{moeda(fatia.valor)}</strong>
-      </li>)}
+      {fatias.map(fatia=>{
+        const corpo=<>
+          <i style={{backgroundColor:fatia.cor}} aria-hidden="true"/>
+          <span title={fatia.rotulo}>{fatia.rotulo}</span>
+          <small>{percentual(fatia.participacao)}</small>
+          <strong>{moeda(fatia.valor)}</strong>
+        </>
+        // "Outros" junta varias categorias: nao ha uma lista unica para abrir.
+        return <li key={fatia.id}>{fatia.id==='outros'?corpo
+          :<Link className="gasto-link" to={`/lancamentos?atalho=DESPESAS&busca=${encodeURIComponent(fatia.rotulo)}`}
+              title={`Ver os gastos de ${fatia.rotulo} no Extrato`}>{corpo}</Link>}</li>
+      })}
     </ol>
   </div>
 }

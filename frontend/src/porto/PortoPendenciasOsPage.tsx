@@ -127,21 +127,21 @@ export default function PortoPendenciasOsPage() {
     {carregando ? <Carregando/> : null}
 
       <GradeIndicadores>
-        <Indicador rotulo="Com pendência" valor={itens.length}
+        <Indicador rotulo="Com pendência" aoClicar={() => setFiltro('TODAS')} ativo={filtro === 'TODAS'} valor={itens.length}
           apoio={itens.length ? 'Ordens de serviço a acertar' : 'Fechamento limpo'}/>
-        <Indicador rotulo="Sem valor" valor={semValor}
+        <Indicador rotulo="Sem valor" aoClicar={() => setFiltro('VALOR')} ativo={filtro === 'VALOR'} valor={semValor}
           tom={semValor ? 'atencao' : 'neutro'}
           apoio="A Porto só precifica na OP"/>
-        <Indicador rotulo="Sem socorrista" valor={semSocorrista}
+        <Indicador rotulo="Sem socorrista" aoClicar={() => setFiltro('SOCORRISTA')} ativo={filtro === 'SOCORRISTA'} valor={semSocorrista}
           tom={semSocorrista ? 'alerta' : 'neutro'}
           apoio={semSocorrista ? 'Sem socorrista não há comissão' : 'Todas com dono'}/>
-        <Indicador rotulo="Sem viatura" valor={semViatura}
+        <Indicador rotulo="Sem viatura" aoClicar={() => setFiltro('VIATURA')} ativo={filtro === 'VIATURA'} valor={semViatura}
           tom={semViatura ? 'atencao' : 'neutro'}
           apoio="A viatura chega pelo painel do dia"/>
-        <Indicador rotulo="Aguardando próxima OP" valor={proximaOp}
+        <Indicador rotulo="Aguardando próxima OP" aoClicar={() => setFiltro('PROXIMA_OP')} ativo={filtro === 'PROXIMA_OP'} valor={proximaOp}
           tom={proximaOp ? 'atencao' : 'neutro'}
           apoio={proximaOp ? 'Não vieram na OP deste período' : 'Nada ficou para trás'}/>
-        <Indicador rotulo="Valor divergente" valor={divergentes.length}
+        <Indicador rotulo="Valor divergente" aoClicar={() => setFiltro('DIVERGENTE')} ativo={filtro === 'DIVERGENTE'} valor={divergentes.length}
           tom={divergentes.length ? 'alerta' : 'neutro'}
           apoio={divergentes.length
             ? `${moeda(valorDivergencia)} entre o informado e a OP`

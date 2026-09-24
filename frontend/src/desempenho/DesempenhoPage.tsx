@@ -10,7 +10,7 @@ import { listarQuilometragens } from '../dados/quilometragem'
 import { listarVeiculos } from '../dados/veiculos'
 import type { Quilometragem, Veiculo } from '../types/modelos'
 import { data, moeda, moedaCurta, numero } from '../utils/formatadores'
-import { usePeriodoGlobal } from '../utils/periodoGlobal'
+import { intervaloDoMes, usePeriodoGlobal } from '../utils/periodoGlobal'
 import { ETIQUETAS_SITUACAO } from '../porto/situacaoOs'
 import { nomesCurtos } from '../utils/nomes'
 import { GraficoMesAMes } from './GraficoMesAMes'
@@ -203,6 +203,7 @@ export default function DesempenhoPage() {
       titulo={`${visao === 'viaturas' ? 'Viaturas' : 'Socorristas'} por mês · ${MEDIDAS[visao].find(([m]) => m === medidaValida)?.[1].toLowerCase()}`}>
       {/* O grafico primeiro, para ver a evolucao; a tabela embaixo, com os numeros. */}
       <GraficoMesAMes meses={meses.map(nomeDoMes)} formatar={formatarCelula}
+        aoClicarMes={i => setPeriodo({ ...intervaloDoMes(meses[i]), op: '' })}
         formatarEixo={v => medidaValida === 'servicos' ? numero(v) : medidaValida === 'km' ? `${numero(v)} km` : moedaCurta(v)}
         descricao={`${visao === 'viaturas' ? 'Viaturas' : 'Socorristas'} por mês, em ${MEDIDAS[visao].find(([m]) => m === medidaValida)?.[1].toLowerCase()}`}
         series={ordenados.map(g => ({ chave: g.chave, rotulo: g.rotulo, semDono: g.chave === 'sem', valores: meses.map(m => noMes(g, m)) }))}/>

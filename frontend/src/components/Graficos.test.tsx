@@ -1,18 +1,19 @@
 import { render, screen, within } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import { expect, test } from 'vitest'
 import { ResultadoDoPeriodo } from '../dashboard/PaineisDoResultado'
 import type { Dashboard } from '../types/modelos'
 import { DespesaAcumulada, GastosPorCategoria, ProducaoXRecebimentos } from './Graficos'
 
 test('rosca mantém valores exatos e agrupa só o que excede cinco categorias', () => {
-  render(<GastosPorCategoria total={1000} linhas={[
+  render(<MemoryRouter><GastosPorCategoria total={1000} linhas={[
     { id:1, rotulo:'Combustível', valor:400, participacao:40 },
     { id:2, rotulo:'Manutenção', valor:200, participacao:20 },
     { id:3, rotulo:'Comissão', valor:150, participacao:15 },
     { id:4, rotulo:'Alimentação', valor:100, participacao:10 },
     { id:5, rotulo:'Pedágio', valor:80, participacao:8 },
     { id:6, rotulo:'Limpeza', valor:70, participacao:7 },
-  ]}/>)
+  ]}/></MemoryRouter>)
 
   const lista=screen.getByRole('list',{name:'Despesas por categoria'})
   expect(within(lista).getAllByRole('listitem')).toHaveLength(6)
@@ -60,7 +61,7 @@ test('a receber não soma de novo o valor que já está em atraso', () => {
     resultadoPorSocorrista:[],
   } satisfies Dashboard
 
-  render(<ResultadoDoPeriodo dados={dados}/>)
+  render(<MemoryRouter><ResultadoDoPeriodo dados={dados}/></MemoryRouter>)
 
   const cartao=screen.getByText('A receber').closest('div')
   expect(cartao).toHaveTextContent('R$ 300,00')
