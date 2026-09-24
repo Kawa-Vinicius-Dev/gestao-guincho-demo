@@ -72,6 +72,22 @@ test('o km morto acompanha o km produtivo que o administrador reconhece', async 
   expect(screen.getByText(/32 km/)).toBeInTheDocument()
 })
 
+test('o km produtivo ja abre com a soma do km que o socorrista lancou nos servicos', async () => {
+  servidor.use(
+    http.post(`${SUPA}/rest/v1/rpc/fila_de_aprovacoes`, () => HttpResponse.json(fila)),
+    http.get(`${SUPA}/rest/v1/servicos_do_turno`, () => HttpResponse.json([
+      { id: 1, turno_id: 2, numero_os: '1111111-26', km: 60 },
+      { id: 2, turno_id: 2, numero_os: '2222222-26', km: 42.5 },
+    ])),
+  )
+  await abrir()
+
+  expect(await screen.findByLabelText('Km produtivo (soma dos serviços)')).toHaveValue('102,5')
+  expect(screen.getByText('2 · 102,5 km')).toBeInTheDocument()
+  // 182 rodados menos 102,5 em servico.
+  expect(screen.getByText(/79,5 km/)).toBeInTheDocument()
+})
+
 test('aprovar o turno avisa que o km entra no sistema', async () => {
   servidor.use(http.post(`${SUPA}/rest/v1/rpc/fila_de_aprovacoes`, () => HttpResponse.json(fila)))
   const user = userEvent.setup({ delay: null })

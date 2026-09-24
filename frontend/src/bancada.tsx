@@ -344,6 +344,13 @@ window.fetch = (async (entrada: RequestInfo | URL, init?: RequestInit) => {
       quantidadeRecebidas: ops.length, valorRecebido: total, valorMedioPorOp: total / ops.length })
   }
   if (url.includes('porto_listar_os')) return responder(tela === 'desempenho' ? osDeTresMeses : listaDeOs)
+  // Km dos servicos: com turno aberto e dois servicos ja lancados.
+  if (url.includes('meu_turno_do_dia') && tela === 'km-dos-servicos') return responder({ ...turnoDoDia, turnoAberto: {
+    id: 9, data: '2026-09-17', abertoEm: '2026-09-17T08:02:00Z', veiculoId: 2, veiculo: 'L168',
+    hodometroInicial: 148320, temFotoAbertura: true, deDiaAnterior: false, observacoes: null } })
+  if (url.includes('servicos_do_turno')) return responder(tela === 'aprovacoes'
+    ? [{ id: 3, turno_id: 2, numero_os: '4816002-26', km: 64 }, { id: 4, turno_id: 2, numero_os: '4816110-26', km: 57.5 }]
+    : [{ id: 1, turno_id: 9, numero_os: '4817263-26', km: 38 }, { id: 2, turno_id: 9, numero_os: '4817590-26', km: 52.5 }])
   if (url.includes('meu_turno_do_dia')) return responder(turnoDoDia)
   if (url.includes('fila_de_aprovacoes')) return responder(filaAprovacoes)
   if (url.includes('porto_pendencias_os')) return responder(pendencias)
@@ -439,6 +446,8 @@ const Pagina = tela === 'frota'
   ? (await import('./porto/PortoOrdensServicoPage')).default
   : tela === 'turno'
   ? (await import('./socorrista/TurnoPage')).default
+  : tela === 'km-dos-servicos'
+  ? (await import('./socorrista/ServicosPage')).default
   : tela === 'relatorios'
   ? (await import('./porto/PortoRelatoriosPage')).default
   : tela === 'manutencao'

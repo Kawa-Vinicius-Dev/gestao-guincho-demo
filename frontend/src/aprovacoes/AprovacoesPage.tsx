@@ -10,6 +10,7 @@ import { ConfirmarExclusao } from '../components/ConfirmarExclusao'
 import type { Despesa } from '../types/modelos'
 import {
   apagarFotosDoTurno, aprovarTurno, baixarFoto, checklistsDosTurnos, devolverTurno, filaDeAprovacoes,
+  servicosDoTurno, somaDosKm, type ServicoDoTurno,
   limparChecklistsAntigos, linkDaFoto, FOTOS_DO_CHECKLIST,
   type Checklist, type FilaDeAprovacoes, type ItemDaFila,
 } from '../dados/turnos'
@@ -127,16 +128,19 @@ function ChecklistDoTurno({ checklist, titulo }: { checklist: Checklist; titulo:
   </>
 }
 
-function LinhaTurno({ item, checklist, aoResolver }: {
-  item: ItemDaFila; checklist?: Checklist; aoResolver: () => void
+function LinhaTurno({ item, checklist, servicos, aoResolver }: {
+  item: ItemDaFila; checklist?: Checklist; servicos: ServicoDoTurno[]; aoResolver: () => void
 }) {
   const rodado = item.kmRodado ?? 0
-  const [kmProdutivo, setKmProdutivo] = useState('0')
+  // O km produtivo vem da soma do km do GPS que o socorrista lancou em cada
+  // servico (Kawa, 24/09/2026). Continua editavel: e o administrador que aprova.
+  const kmServicos = somaDosKm(servicos)
+  const [kmProdutivo, setKmProdutivo] = useState(String(kmServicos).replace('.', ','))
   const [confirmar, setConfirmar] = useState(false)
   const [devolvendo, setDevolvendo] = useState(false)
   const [motivo, setMotivo] = useState('')
 
-  const produtivo = Number(kmProdutivo || 0)
+  const produtivo = Number(kmProdutivo.replace(',', '.') || 0)
   const morto = rodado - produtivo
   const custo = (item.custoPorKm ?? 0) * Math.max(morto, 0)
 
@@ -154,12 +158,20 @@ function LinhaTurno({ item, checklist, aoResolver }: {
       <div><dt>Odômetro chegada</dt><dd>{numero.format(item.hodometroFinal ?? 0)}</dd></div>
       <div><dt>Km rodado</dt><dd className="aprovacao-destaque">{numero.format(rodado)} km</dd></div>
       <div><dt>OS no dia</dt><dd>{item.osNoDia ?? 0}</dd></div>
+      <div><dt>Serviços lançados</dt><dd>{servicos.length
+        ? `${servicos.length} · ${numero.format(kmServicos)} km` : 'nenhum'}</dd></div>
     </dl>
 
     <div className="aprovacao-km">
-      <label htmlFor={`km-${item.id}`}>Km produtivo reconhecido</label>
-      <input id={`km-${item.id}`} type="text" inputMode="numeric" value={kmProdutivo}
-        onChange={e => setKmProdutivo(e.target.value.replace(/[^\d]/g, ''))} />
+      <label htmlFor={`km-${item.id}`}>{servicos.length ? 'Km produtivo (soma dos serviços)' : 'Km produtivo reconhecido'}</label>
+      <input id={`km-${item.id}`} type="text" inputMode="decimal" value={kmProdutivo}
+        onChange={e => setKmProdutivo(e.target.value.replace(/[^\d,]/g, ''))} />
+      {kmServicos > rodado
+        ? <p className="aprovacao-apoio" role="alert">
+            Os serviços somam <strong>{numero.format(kmServicos)} km</strong>, mais do que o caminhão rodou.
+            Confira no sistema da Porto e ajuste o km produtivo.
+          </p>
+        : null}
       <p className="aprovacao-apoio">
         Km morto: <strong>{numero.format(Math.max(morto, 0))} km</strong>
         {item.custoPorKm ? <> · custo {dinheiro.format(custo)}</> : null}
@@ -307,12 +319,18 @@ export default function AprovacoesPage() {
   const [fila, setFila] = useState<FilaDeAprovacoes | null>(null)
   const [erro, setErro] = useState('')
   const [checklists, setChecklists] = useState<Map<number, Checklist>>(new Map())
+  const [servicos, setServicos] = useState<Map<number, ServicoDoTurno[]>>(new Map())
 
   const carregar = useCallback(() => {
     setErro('')
-    filaDeAprovacoes().then(f => {
-      setFila(f)
+    filaDeAprovacoes().then(async f => {
       const ids = f.itens.filter(i => i.tipo === 'TURNO').map(i => i.id)
+      // Antes de mostrar a fila: o km produtivo ja abre preenchido com a soma.
+      const lancados = await servicosDoTurno(ids).catch(() => [] as ServicoDoTurno[])
+      const porTurno = new Map<number, ServicoDoTurno[]>()
+      for (const s of lancados) porTurno.set(s.turnoId, [...(porTurno.get(s.turnoId) ?? []), s])
+      setServicos(porTurno)
+      setFila(f)
       checklistsDosTurnos(ids).then(setChecklists).catch(() => setChecklists(new Map()))
     }).catch(e => setErro((e as Error).message))
   }, [])
@@ -355,7 +373,7 @@ export default function AprovacoesPage() {
     {turnos.length
       ? <Painel titulo="Turnos" etiqueta="Quilometragem">
           <div className="aprovacoes-lista">
-            {turnos.map(i => <LinhaTurno key={`t${i.id}`} item={i} checklist={checklists.get(i.id)} aoResolver={carregar} />)}
+            {turnos.map(i => <LinhaTurno key={`t${i.id}`} item={i} checklist={checklists.get(i.id)} servicos={servicos.get(i.id) ?? []} aoResolver={carregar} />)}
           </div>
         </Painel>
       : null}
