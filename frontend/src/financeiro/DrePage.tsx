@@ -3,6 +3,7 @@ import { usePeriodoGlobal } from '../utils/periodoGlobal'
 import { porCompetencia } from '../utils/modoDoPeriodo'
 import { useEffect, useMemo, useState } from 'react'
 import { Carregando } from '../components/EstadoPagina'
+import { Link } from 'react-router-dom'
 import { LinkSocorrista, LinkViatura } from '../components/LinksDeDado'
 import { lerIndicadores } from '../dados/dashboard'
 import { lerExtrato } from '../dados/extrato'
@@ -14,8 +15,8 @@ import type { Dashboard, LancamentoFinanceiro, Veiculo } from '../types/modelos'
 import { data, moeda, percentual } from '../utils/formatadores'
 import './dre/dre.css'
 
-function Linha({ titulo, valor, nivel = 0, total = false, negativo = false }: { titulo: string; valor: number; nivel?: number; total?: boolean; negativo?: boolean }) {
-  return <div className={`dre-line ${total ? 'dre-total' : ''}`} style={{ paddingLeft: `${22 + nivel * 18}px` }}><span>{negativo ? '(−) ' : ''}{titulo}</span><strong className={valor < 0 ? 'negative' : ''}>{moeda(Math.abs(valor))}</strong></div>
+function Linha({ titulo, valor, nivel = 0, total = false, negativo = false, link }: { titulo: string; valor: number; nivel?: number; total?: boolean; negativo?: boolean; link?: string }) {
+  return <div className={`dre-line ${total ? 'dre-total' : ''}`} style={{ paddingLeft: `${22 + nivel * 18}px` }}><span>{negativo ? '(−) ' : ''}{link ? <Link className="link-dado" to={link}>{titulo}</Link> : titulo}</span><strong className={valor < 0 ? 'negative' : ''}>{moeda(Math.abs(valor))}</strong></div>
 }
 
 /**
@@ -63,8 +64,8 @@ export default function DrePage() {
         <header><span>Demonstração do resultado</span><strong>Valor</strong></header>
         <div className="dre-group">
           <Linha titulo="Receita bruta" valor={dre.receitaBruta} total/>
-          <Linha titulo="Serviços da Porto" valor={dre.receitaServicos} nivel={1}/>
-          {dre.receitasAvulsas.map(r=><Linha key={r.categoria} titulo={r.categoria} valor={r.valor} nivel={1}/>)}
+          <Linha titulo="Serviços da Porto" valor={dre.receitaServicos} nivel={1} link="/porto/ordens-servico"/>
+          {dre.receitasAvulsas.map(r=><Linha key={r.categoria} titulo={r.categoria} valor={r.valor} nivel={1} link={`/lancamentos?atalho=RECEITAS&busca=${encodeURIComponent(r.categoria)}`}/>)}
         </div>
         <div className="dre-group">
           <Linha titulo="Despesas pagas" valor={dre.totalDespesas} total negativo/>
@@ -74,6 +75,7 @@ export default function DrePage() {
             <ul className="dre-gastos">{d.itens.map(l=><li key={l.id}>
               <span>{data(l.data)}</span><span>{l.descricao}{l.veiculo?<> · <LinkViatura id={l.veiculoId} sigla={l.veiculo}/></>:null}{l.motorista?<> · <LinkSocorrista id={l.motoristaId} nome={l.motorista}/></>:null}</span>
               <strong>{moeda(l.valor)}</strong></li>)}</ul>
+            <Link className="link-dado dre-ver-extrato" to={`/lancamentos?atalho=DESPESAS&busca=${encodeURIComponent(d.categoria)}`}>Ver os gastos de {d.categoria} no Extrato</Link>
           </details>)}
         </div>
         <div className="dre-final"><span>Lucro operacional</span><strong>{moeda(dre.lucro)}</strong></div>

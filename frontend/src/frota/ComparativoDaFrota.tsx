@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { Painel } from '../components/ui/Pagina'
 import type { ResultadoDaFrota } from '../dados/resultadoViaturas'
 import { moeda } from '../utils/formatadores'
@@ -28,8 +29,10 @@ export function ComparativoDaFrota({ frota, selecionado, aoEscolher }: {
         return <tr key={v.veiculoId} className={v.veiculoId === selecionado ? 'esta-escolhida' : undefined}>
           <td><button type="button" className="link-dado botao-texto" title={`Abrir a viatura ${v.veiculo}`}
             onClick={() => { aoEscolher(v.veiculoId); window.scrollTo({ top: 0, behavior: 'smooth' }) }}>{v.veiculo}</button></td>
-          <td className="col-numero">{moeda(v.receitas)}</td>
-          <td className="col-numero">{moeda(v.despesasProprias)}</td>
+          <td className="col-numero"><Link className="link-dado" title={`Ver as receitas da ${v.veiculo} no Extrato`}
+            to={`/lancamentos?atalho=RECEITAS&veiculo=${v.veiculoId}`}>{moeda(v.receitas)}</Link></td>
+          <td className="col-numero"><Link className="link-dado" title={`Ver as despesas da ${v.veiculo} no Extrato`}
+            to={`/lancamentos?atalho=DESPESAS&veiculo=${v.veiculoId}`}>{moeda(v.despesasProprias)}</Link></td>
           <td className="col-numero">{moeda(v.rateio)}</td>
           <td className="celula-resultado">
             <div className="barra-resultado" role="img" aria-label={`Resultado ${moeda(v.resultado)}`}>
