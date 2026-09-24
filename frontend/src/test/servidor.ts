@@ -11,6 +11,8 @@ export const URL_SUPABASE = 'https://projeto-teste.supabase.co'
  */
 export const servidor = setupServer(
   http.get(`${URL_SUPABASE}/rest/v1/:tabela`, () => HttpResponse.json([])),
+  // Contagem (select com head: true): sem linhas, total zero.
+  http.head(`${URL_SUPABASE}/rest/v1/:tabela`, () => new HttpResponse(null, { headers: { 'Content-Range': '*/0' } })),
   http.get(`${URL_SUPABASE}/auth/v1/user`, () => HttpResponse.json({}, { status: 401 })),
   // Consultas que quase toda tela faz ao abrir, vazias.
   rpcVazia('porto_periodos', []),

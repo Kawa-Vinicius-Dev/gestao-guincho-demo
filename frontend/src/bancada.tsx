@@ -287,6 +287,12 @@ window.fetch = (async (entrada: RequestInfo | URL, init?: RequestInit) => {
     new Response(JSON.stringify(corpo), { headers: { 'Content-Type': 'application/json' } })
 
   if (url.includes('extrato_financeiro')) return responder(extrato)
+  if (url.includes('/rest/v1/documentos')) return responder([
+    { id: 1, tipo: 'CRLV', vence_em: '2026-09-18', observacao: null, veiculo_id: 1, motorista_id: null, veiculos: { identificacao: 'L168' }, motoristas: null },
+    { id: 2, tipo: 'Seguro', vence_em: '2026-10-12', observacao: 'Apólice 55.221 · Porto Seguro', veiculo_id: 2, motorista_id: null, veiculos: { identificacao: 'L204' }, motoristas: null },
+    { id: 3, tipo: 'CNH', vence_em: '2026-10-02', observacao: null, veiculo_id: null, motorista_id: 1, veiculos: null, motoristas: { nome: 'DJALMA BEZERRA' } },
+    { id: 4, tipo: 'Curso da Porto', vence_em: '2027-04-30', observacao: null, veiculo_id: null, motorista_id: 2, veiculos: null, motoristas: { nome: 'JEFERSON MARTINS' } },
+  ])
   if (url.includes('porto_resumo_ops')) {
     const total = ops.reduce((t, op) => t + op.valor_total, 0)
     return responder({ ...resumoOps, quantidadeTotalOps: ops.length, valorTotalPrevisto: total,
@@ -375,6 +381,8 @@ const Pagina = tela === 'frota'
   ? (await import('./socorrista/TurnoPage')).default
   : tela === 'relatorios'
   ? (await import('./porto/PortoRelatoriosPage')).default
+  : tela === 'documentos'
+  ? (await import('./frota/DocumentosPage')).default
   : tela === 'aprovacoes'
     ? (await import('./aprovacoes/AprovacoesPage')).default
     : tela === 'pendencias'

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useAoVivo } from '../dados/aoVivo'
 import { listarPendenciasOsPorto } from '../dados/porto'
+import { documentosPedindoAtencao } from '../dados/documentos'
+import { hojeIso } from '../utils/formatadores'
 import { filaDeAprovacoes } from '../dados/turnos'
 import { porCompetencia } from '../utils/modoDoPeriodo'
 import { usePeriodoGlobal } from '../utils/periodoGlobal'
@@ -22,8 +24,10 @@ export function useContadoresDoMenu(admin: boolean): Record<string, number> {
         ? listarPendenciasOsPorto(periodo.inicio, periodo.fim, competencia)
             .then(l => l.filter(p => !p.apenasConferir).length).catch(() => 0)
         : Promise.resolve(0),
-    ]).then(([aprovacoes, pendencias]) =>
-      setContadores({ '/aprovacoes': aprovacoes, '/porto/ordens-servico': pendencias }))
+      // Documentos vencidos ou vencendo em 30 dias (Kawa, 24/09/2026).
+      documentosPedindoAtencao(hojeIso()).catch(() => 0),
+    ]).then(([aprovacoes, pendencias, documentos]) =>
+      setContadores({ '/aprovacoes': aprovacoes, '/porto/ordens-servico': pendencias, '/veiculos': documentos }))
   }, [admin, periodo.inicio, periodo.fim, competencia])
   useEffect(() => { contar() }, [contar])
   useAoVivo(contar)
