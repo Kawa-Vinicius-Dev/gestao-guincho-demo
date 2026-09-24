@@ -2,7 +2,7 @@ import { lerIndicadores } from './dashboard'
 import { resumirComissoes } from './comissoes'
 import { moeda } from '../utils/formatadores'
 import { baixarRelatorio, type Formato } from './exportar'
-import { diasDoPeriodo, montarDre, relatorioDaDre } from './dre'
+import { montarDre, relatorioDaDre } from './dre'
 import { lerExtrato } from './extrato'
 import { listarTodasAsOs } from './porto/listaOs'
 import { listarVeiculos } from './veiculos'
@@ -49,7 +49,7 @@ export async function baixarDre(inicio: string, fim: string, formato: Formato, p
     listarTodasAsOs({ inicio, fim, porCompetencia }).then(p => p.itens),
     listarVeiculos().catch(() => []),
   ])
-  const dre = montarDre(financeiro, extrato, servicos, diasDoPeriodo(inicio, fim), veiculos)
+  const dre = montarDre(financeiro, extrato, servicos, veiculos)
   // Periodo escolhido pela OP: os numeros dela entram no nome do arquivo.
   const numeros = opId
     ? (await listarPeriodosPorto().catch(() => [])).find(p => p.id === opId)?.numeros ?? []

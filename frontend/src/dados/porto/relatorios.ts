@@ -3,7 +3,7 @@ import { baixarRelatorio, type Formato, type Relatorio } from '../exportar'
 import { data as formatarData, moeda } from '../../utils/formatadores'
 import { detalharOrdemPagamentoPorto, listarOrdensPagamentoPorto } from '../porto'
 import { ou, supabase } from '../cliente'
-import { listarTodasAsOs, valorDaOs, type LinhaOs } from './listaOs'
+import { listarTodasAsOs, type LinhaOs } from './listaOs'
 import { nomesCurtos } from '../../utils/nomes'
 /**
  * Exportacoes do modulo Porto, em Excel e PDF organizados (ver dados/exportar).
@@ -90,85 +90,95 @@ export async function baixarRelatorioOpPorto(id: number, formato: Formato): Prom
 }
 
 /**
- * Relatorio diario dos servicos prestados.
+ * Relatorio operacional: os servicos prestados de uma data a outra.
  *
- * E o fechamento do dia de quem opera: o que a equipe atendeu, com quem estava
- * na viatura e quanto cada servico vale, somado por socorrista e por
- * especialidade.
+ * Kawa, 23/09/2026: controle da operacao, nao do dinheiro. Conta pela data do
+ * atendimento, lista todos os servicos (OS, data, especialidade, socorrista,
+ * viatura e situacao) e nao mostra valor nenhum. As canceladas aparecem
+ * marcadas e contadas a parte: o servico aconteceu, mas saiu da producao.
  *
- * Os servicos, o valor e o "sem valor" vem da mesma lista das outras telas
- * (porto_listar_os): o valor e o da OP, ou o informado a mao antes dela. Servico
- * sem valor aparece como "a precificar", e nao como R$ 0,00 — zero seria uma
- * afirmacao errada. A lista antiga lia so o valor da OP e mostrava "a precificar"
- * ate no servico com valor informado.
+ * O resumo vem primeiro, em uma folha; a lista continua nas folhas seguintes
+ * quando o periodo e grande, e a tela avisa antes quantas folhas serao.
  */
-export async function relatorioDiarioPorto(dia: string): Promise<Relatorio> {
-  const [pagina, extras] = await Promise.all([
-    listarTodasAsOs({ inicio: dia, fim: dia }),
-    // A hora e os cancelados nao vem na lista: uma leitura curta, so disso.
-    supabase().from('ordens_servico_porto').select('id,data_hora_atendimento,status_operacional').eq('data_atendimento', dia),
+export async function relatorioOperacional(inicio: string, fim: string): Promise<Relatorio> {
+  const [pagina, canceladas] = await Promise.all([
+    listarTodasAsOs({ inicio, fim, porCompetencia: false }),
+    // A lista padrao nao traz as canceladas: uma leitura curta, so delas.
+    supabase().from('ordens_servico_porto')
+      .select('id,numero,data_atendimento,especialidade,sigla_viatura,motoristas(nome)')
+      .gte('data_atendimento', inicio).lte('data_atendimento', fim).eq('status_operacional', 'CANCELADO'),
   ])
-  const linhasExtras = (ou(extras, 'Não foi possível carregar o dia.') ?? []) as
-    { id: number; data_hora_atendimento: string | null; status_operacional: string }[]
-  const horaPorId = new Map(linhasExtras.map(l => [l.id, l.data_hora_atendimento]))
-  const cancelados = linhasExtras.filter(l => l.status_operacional === 'CANCELADO').length
-  const validos = [...pagina.itens].sort((a, b) =>
-    (horaPorId.get(a.id) ?? '').localeCompare(horaPorId.get(b.id) ?? '') || a.numero.localeCompare(b.numero))
-  const soma = (lista: LinhaOs[]) => lista.reduce((total, os) => total + valorDaOs(os), 0)
-  const valorOuPendente = (os: LinhaOs) => (os.semValor ? 'a precificar' : valorDaOs(os))
-  const totalOuPendente = (total: number) => (total > 0 ? total : 'a precificar')
-  // Hora de Brasilia: o banco devolve o instante em UTC.
-  const hora = (instante?: string | null) => instante
-    ? new Date(instante).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })
-    : ''
-  const curtos = nomesCurtos(validos.map(os => os.motorista))
+  type Cancelada = { id: number; numero: string; data_atendimento: string | null; especialidade: string | null
+    sigla_viatura: string | null; motoristas: { nome: string } | { nome: string }[] | null }
+  const idsDaLista = new Set(pagina.itens.map(os => os.id))
+  const listaCanceladas = ((ou(canceladas, 'Não foi possível carregar as OS canceladas.') ?? []) as Cancelada[])
+    .filter(c => !idsDaLista.has(c.id))
+  const nomeDe = (c: Cancelada) => (Array.isArray(c.motoristas) ? c.motoristas[0] : c.motoristas)?.nome
 
-  const agrupar = (chave: (os: LinhaOs) => string) => {
-    const grupos = new Map<string, LinhaOs[]>()
-    for (const os of validos) {
-      const nome = chave(os) || 'Não informado'
-      grupos.set(nome, [...(grupos.get(nome) ?? []), os])
+  const curtos = nomesCurtos([...pagina.itens.map(os => os.motorista), ...listaCanceladas.map(nomeDe)])
+  const socorrista = (nome?: string | null) => (nome ? curtos.get(nome) ?? nome : 'Sem socorrista')
+  const naOp = pagina.itens.filter(os => os.numeroOp).length
+
+  const linhas: { data: string; numero: string; linha: (string | null | undefined)[] }[] = [
+    ...pagina.itens.map(os => ({ data: os.dataAtendimento ?? '', numero: os.numero, linha: [
+      os.dataAtendimento, os.numero, os.especialidade, socorrista(os.motorista), os.viatura ?? 'Sem viatura',
+      os.numeroOp ? `OP ${os.numeroOp}` : 'Aguardando OP'] })),
+    ...listaCanceladas.map(c => ({ data: c.data_atendimento ?? '', numero: c.numero, linha: [
+      c.data_atendimento, c.numero, c.especialidade, socorrista(nomeDe(c)), c.sigla_viatura ?? 'Sem viatura', 'Cancelada'] })),
+  ].sort((a, b) => a.data.localeCompare(b.data) || a.numero.localeCompare(b.numero))
+
+  const contar = (chave: (os: LinhaOs) => string | undefined) => {
+    const grupos = new Map<string, number>()
+    for (const os of pagina.itens) {
+      const nome = chave(os)?.trim() || 'Não informado'
+      grupos.set(nome, (grupos.get(nome) ?? 0) + 1)
     }
-    return [...grupos.entries()]
-      .sort((a, b) => soma(b[1]) - soma(a[1]) || b[1].length - a[1].length)
-      .map(([nome, lista]) => [nome, lista.length, totalOuPendente(soma(lista))])
+    const ordenadas = [...grupos].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    // Quadro curto: os que mais atenderam e "Outros", para o resumo caber no topo.
+    return ordenadas.length <= 8 ? ordenadas
+      : [...ordenadas.slice(0, 7), [`Outros (${ordenadas.length - 7})`, ordenadas.slice(7).reduce((t, g) => t + g[1], 0)]]
   }
+  const mesmoDia = inicio === fim
 
   return {
-    titulo: `Serviços prestados em ${formatarData(dia)}`,
+    titulo: 'Relatório operacional',
+    subtitulo: mesmoDia ? `Serviços de ${formatarData(inicio)}` : `Serviços de ${formatarData(inicio)} a ${formatarData(fim)}`,
+    compacto: true,
+    retrato: true,
     resumo: [
-      ['Serviços', String(validos.length)],
-      ['Valor conhecido', soma(validos) > 0 ? moeda(soma(validos)) : 'a precificar'],
-      ['Sem valor ainda', String(validos.filter(os => os.semValor).length)],
-      ...(cancelados ? [['Cancelados', String(cancelados)] as [string, string]] : []),
+      ['Serviços', String(pagina.itens.length)],
+      ['Já na OP', String(naOp)],
+      ['Aguardando OP', String(pagina.itens.length - naOp)],
+      ['Canceladas', String(listaCanceladas.length)],
+      ['Sem viatura', String(pagina.itens.filter(os => !os.viatura).length)],
+      ['Contagem', 'pela data do atendimento; canceladas fora do total'],
     ],
     secoes: [
       {
-        titulo: 'Serviços',
+        titulo: 'Por especialidade', metade: true,
+        colunas: [{ titulo: 'Especialidade', largura: 28 }, { titulo: 'Serviços', tipo: 'numero', largura: 10 }],
+        linhas: contar(os => os.especialidade),
+        totais: ['Total', pagina.itens.length],
+      },
+      {
+        titulo: 'Por socorrista', metade: true,
+        colunas: [{ titulo: 'Socorrista', largura: 24 }, { titulo: 'Serviços', tipo: 'numero', largura: 10 }],
+        linhas: contar(os => (os.motorista ? socorrista(os.motorista) : 'Sem socorrista')),
+        totais: ['Total', pagina.itens.length],
+      },
+      {
+        titulo: 'Serviços prestados',
         colunas: [
-          { titulo: 'OS', largura: 16 }, { titulo: 'Hora', largura: 8 }, { titulo: 'Especialidade', largura: 20 },
-          { titulo: 'Viatura', largura: 11 }, { titulo: 'Socorrista', largura: 22 }, { titulo: 'Valor', tipo: 'moeda', largura: 14 },
+          { titulo: 'Data', tipo: 'data', largura: 12 }, { titulo: 'OS', largura: 16 },
+          { titulo: 'Especialidade', largura: 24 }, { titulo: 'Socorrista', largura: 18 },
+          { titulo: 'Viatura', largura: 11 }, { titulo: 'Situação', largura: 16 },
         ],
-        linhas: validos.map(os => [os.numero, hora(horaPorId.get(os.id)), os.especialidade, os.viatura ?? 'Sem viatura',
-          curtos.get(os.motorista ?? '') ?? os.motorista ?? os.socorristaNoArquivo ?? 'Sem socorrista', valorOuPendente(os)]),
-        totais: ['Total', null, null, null, `${validos.length} serviços`, soma(validos)],
-        vazio: 'Nenhum serviço neste dia.',
-      },
-      {
-        titulo: 'Por socorrista',
-        colunas: [{ titulo: 'Socorrista', largura: 22 }, { titulo: 'Serviços', tipo: 'numero' }, { titulo: 'Valor', tipo: 'moeda', largura: 14 }],
-        linhas: agrupar(os => curtos.get(os.motorista ?? '') ?? os.motorista ?? os.socorristaNoArquivo ?? ''),
-      },
-      {
-        titulo: 'Por especialidade',
-        colunas: [{ titulo: 'Especialidade', largura: 32 }, { titulo: 'Serviços', tipo: 'numero' }, { titulo: 'Valor', tipo: 'moeda', largura: 14 }],
-        linhas: agrupar(os => os.especialidade ?? ''),
+        linhas: linhas.map(l => l.linha),
+        totais: ['Total', `${pagina.itens.length} serviços`, null, null, null,
+          listaCanceladas.length ? `+ ${listaCanceladas.length} cancelada${listaCanceladas.length === 1 ? '' : 's'}` : null],
+        vazio: 'Nenhum serviço no período.',
       },
     ],
-    nomeArquivo: `servicos-prestados-${dia}`,
+    nomeArquivo: mesmoDia ? `operacional-${inicio}` : `operacional-${inicio}-a-${fim}`,
   }
-}
-
-export async function baixarRelatorioDiarioPorto(dia: string, formato: Formato): Promise<void> {
-  await baixarRelatorio(await relatorioDiarioPorto(dia), formato)
 }

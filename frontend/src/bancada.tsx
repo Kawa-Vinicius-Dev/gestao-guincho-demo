@@ -373,6 +373,8 @@ const Pagina = tela === 'frota'
   ? (await import('./porto/PortoOrdensServicoPage')).default
   : tela === 'turno'
   ? (await import('./socorrista/TurnoPage')).default
+  : tela === 'relatorios'
+  ? (await import('./porto/PortoRelatoriosPage')).default
   : tela === 'aprovacoes'
     ? (await import('./aprovacoes/AprovacoesPage')).default
     : tela === 'pendencias'

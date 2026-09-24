@@ -2064,3 +2064,12 @@ input,textarea,select,[contenteditable]:not([contenteditable=false]){caret-color
 /* Despesa fixa: o que passar do valor dela vira Juros. */
 .nota-juros{margin:0;padding:9px 12px;border-radius:7px;background:var(--superficie-2);color:var(--muted);font-size:12.5px}
 .nota-juros strong{color:var(--ink)}
+
+/* Relatorio operacional: atalhos de periodo e quantos dias o De-ate cobre. */
+.atalhos-periodo{display:flex;flex-wrap:wrap;gap:6px}
+.atalho-periodo{height:30px;padding:0 12px;border:1px solid var(--line);border-radius:99px;background:var(--superficie);color:var(--ink);font-size:12.5px;font-weight:600;cursor:pointer}
+.atalho-periodo:hover{border-color:var(--blue-600);color:var(--blue-600)}
+.atalho-periodo.esta-marcado{border-color:var(--blue-600);background:var(--blue-50);color:var(--blue-600)}
+.periodo-dias{align-self:end;padding:0 0 11px;color:var(--muted);font-size:13px;font-weight:600}
+.periodo-dias.invalido{color:#b42318}
+.app-shell .report-actions>article.relatorio-operacional{gap:12px}

@@ -6,7 +6,7 @@ import { Carregando } from '../components/EstadoPagina'
 import { LinkSocorrista, LinkViatura } from '../components/LinksDeDado'
 import { lerIndicadores } from '../dados/dashboard'
 import { lerExtrato } from '../dados/extrato'
-import { diasDoPeriodo, DIAS_PARA_DETALHAR, montarDre } from '../dados/dre'
+import { montarDre } from '../dados/dre'
 import { listarTodasAsOs, type LinhaOs } from '../dados/porto/listaOs'
 import { baixarDre } from '../dados/relatorios'
 import { listarVeiculos } from '../dados/veiculos'
@@ -47,7 +47,7 @@ export default function DrePage() {
       .finally(()=>setCarregando(false))
   },[inicio,fim,competencia])
 
-  const dre=useMemo(()=>financeiro&&inicio&&fim?montarDre(financeiro,extrato,servicos,diasDoPeriodo(inicio,fim),veiculos):null,
+  const dre=useMemo(()=>financeiro&&inicio&&fim?montarDre(financeiro,extrato,servicos,veiculos):null,
     [financeiro,extrato,servicos,veiculos,inicio,fim])
 
   return <div className="page-enter">
@@ -57,7 +57,7 @@ export default function DrePage() {
     {carregando||!dre?<Carregando/>:<>
     <section className="dre-hero"><div><span>Lucro operacional</span><strong>{moeda(dre.lucro)}</strong><small>Receitas recebidas menos despesas pagas</small></div><div><span>Margem líquida operacional</span><strong>{dre.margem===null?'—':percentual(dre.margem)}</strong><small>{dre.margem===null?'Sem receita no período':'Lucro sobre a receita recebida'}</small></div></section>
     {/* Os servicos estao no arquivo da DRE, nao na tela: a linha diz quantos e onde ver. */}
-    <p className="dre-aviso-servicos"><strong>{dre.servicos.total} {dre.servicos.total===1?'serviço':'serviços'} no período</strong>{dre.servicos.semValor?` (${dre.servicos.semValor} sem valor)`:''} · detalhe por socorrista e por viatura no Excel e no PDF da DRE.</p>
+    <p className="dre-aviso-servicos"><strong>{dre.servicos.total} {dre.servicos.total===1?'serviço':'serviços'} no período</strong>{dre.servicos.semValor?` (${dre.servicos.semValor} sem valor)`:''} · resumo por especialidade, socorrista e viatura no PDF; um a um no Excel da DRE.</p>
     <section className="dre-layout">
       <article className="panel dre-sheet">
         <header><span>Demonstração do resultado</span><strong>Valor</strong></header>
@@ -82,8 +82,8 @@ export default function DrePage() {
         <span className="eyebrow">Leitura da DRE</span><h2>Faturar não é lucrar.</h2>
         <p>A receita mostra os valores recebidos. As despesas entram quando estão pagas. Serviço sem valor aparece na lista, mas só vira receita quando a OP chega.</p>
         {/* Os servicos feitos no periodo vao no arquivo da DRE, nao na tela (Kawa, 23/09/2026). */}
-        <div><span>1</span><p><strong>Serviços no arquivo</strong>O Excel e o PDF trazem os serviços feitos no período, por socorrista.</p></div>
-        <div><span>2</span><p><strong>Até {DIAS_PARA_DETALHAR} dias, um a um</strong>Em períodos maiores, resumidos por socorrista e por viatura.</p></div>
+        <div><span>1</span><p><strong>Uma folha A4</strong>O PDF resume serviços, receitas, despesas e resultado, por especialidade, socorrista e viatura.</p></div>
+        <div><span>2</span><p><strong>Detalhe no Excel</strong>Serviço por serviço e gasto por gasto ficam em abas próprias, para conferir.</p></div>
         <button className="button button-primary" disabled={exportando!==''} onClick={()=>void exportar('excel')}>{exportando==='excel'?'Gerando Excel…':'Exportar Excel'}</button>
         <button className="button button-ghost" disabled={exportando!==''} onClick={()=>void exportar('pdf')}>{exportando==='pdf'?'Gerando PDF…':'Exportar PDF'}</button>
       </aside>
