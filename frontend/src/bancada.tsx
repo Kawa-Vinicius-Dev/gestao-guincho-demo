@@ -287,6 +287,32 @@ window.fetch = (async (entrada: RequestInfo | URL, init?: RequestInit) => {
     new Response(JSON.stringify(corpo), { headers: { 'Content-Type': 'application/json' } })
 
   if (url.includes('extrato_financeiro')) return responder(extrato)
+  if (url.includes('manutencao_da_frota')) return responder([
+    { id: 1, veiculo_id: 1, viatura: 'L168', item: 'Troca de óleo', intervalo_km: 10000, ultimo_km: '140000', ultima_data: '2026-06-10', km_atual: '150400', faltam_km: '-400' },
+    { id: 2, veiculo_id: 2, viatura: 'L204', item: 'Troca de óleo', intervalo_km: 10000, ultimo_km: '84000', ultima_data: '2026-07-02', km_atual: '93250', faltam_km: '750' },
+    { id: 3, veiculo_id: 1, viatura: 'L168', item: 'Pneus', intervalo_km: 40000, ultimo_km: '120000', ultima_data: null, km_atual: '150400', faltam_km: '9600' },
+    { id: 4, veiculo_id: 3, viatura: 'L311', item: 'Revisão', intervalo_km: 20000, ultimo_km: '60000', ultima_data: '2026-05-20', km_atual: '66100', faltam_km: '13900' },
+  ])
+  if (url.includes('km_atual_das_viaturas')) return responder([{ veiculo_id: 1, km_atual: '150400' }, { veiculo_id: 2, km_atual: '93250' }])
+  if (url.includes('/rest/v1/viatura_danos')) return responder([
+    { id: 7, veiculo_id: 1, turno_id: 31, motorista_id: 1, descricao: 'Retrovisor direito quebrado', visto_em: '2026-09-22', resolvido_em: null, observacao: null, veiculos: { identificacao: 'L168' }, motoristas: { nome: 'DJALMA BEZERRA' } },
+    { id: 8, veiculo_id: 2, turno_id: null, motorista_id: null, descricao: 'Lona traseira rasgada', visto_em: '2026-09-18', resolvido_em: null, observacao: null, veiculos: { identificacao: 'L204' }, motoristas: null },
+  ])
+  if (url.includes('/rest/v1/veiculos') && tela === 'documentos') return responder([
+    { id: 1, identificacao: 'L168', placa: 'FLS9B63', modelo: 'Delivery 11.180', custo_por_km: 2.5, sigla_porto: 'L168', ativo: true },
+    { id: 2, identificacao: 'L204', placa: 'GHT2A48', modelo: 'Accelo 1017', custo_por_km: 2.7, sigla_porto: 'L204', ativo: true },
+    { id: 3, identificacao: 'L311', placa: 'EXC4C11', modelo: 'Tector 9.190', custo_por_km: 2.9, sigla_porto: 'L311', ativo: true },
+    { id: 4, identificacao: 'L402', placa: null, modelo: null, custo_por_km: 2.5, sigla_porto: 'L402', ativo: true },
+  ])
+  if (url.includes('/rest/v1/vistorias_periodicas')) return responder([
+    { id: 1, veiculo_id: 2, referencia: '2026-08-01', feita_em: '2026-08-04', resultado: 'APROVADA', observacao: null },
+  ])
+  if (url.includes('/rest/v1/documentos')) return responder([
+    { id: 1, tipo: 'CRLV', vence_em: '2026-09-18', observacao: null, veiculo_id: 1, motorista_id: null, veiculos: { identificacao: 'L168' }, motoristas: null },
+    { id: 2, tipo: 'Seguro', vence_em: '2026-10-12', observacao: 'Apólice 55.221 · Porto Seguro', veiculo_id: 2, motorista_id: null, veiculos: { identificacao: 'L204' }, motoristas: null },
+    { id: 3, tipo: 'CNH', vence_em: '2026-10-02', observacao: null, veiculo_id: null, motorista_id: 1, veiculos: null, motoristas: { nome: 'DJALMA BEZERRA' } },
+    { id: 4, tipo: 'Curso da Porto', vence_em: '2027-04-30', observacao: null, veiculo_id: null, motorista_id: 2, veiculos: null, motoristas: { nome: 'JEFERSON MARTINS' } },
+  ])
   if (url.includes('porto_detectar_contestacoes')) return responder(2)
   if (url.includes('porto_especialidades_vistas')) return responder([
     { especialidade: 'REMOCAO', servicos: 212, valor_mais_comum: '205.00', valor_tabela: '205.00' },
@@ -402,6 +428,10 @@ const Pagina = tela === 'frota'
   ? (await import('./socorrista/AtendimentoPage')).default
   : tela === 'relatorios'
   ? (await import('./porto/PortoRelatoriosPage')).default
+  : tela === 'manutencao'
+  ? (await import('./frota/ManutencaoPage')).default
+  : tela === 'documentos'
+  ? (await import('./frota/DocumentosPage')).default
   : tela === 'contestacoes'
   ? (await import('./porto/PortoContestacoesPage')).default
   : tela === 'aprovacoes'

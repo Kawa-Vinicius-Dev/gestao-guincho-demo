@@ -2104,3 +2104,10 @@ input,textarea,select,[contenteditable]:not([contenteditable=false]){caret-color
 .assinatura-rodape{display:flex;align-items:center;justify-content:space-between;gap:12px;color:var(--muted);font-size:14px}
 .assinatura-limpar{min-height:40px;padding:0 18px}
 .prova-atendimento{display:block;margin-top:3px;font-size:12px;font-weight:600}
+
+/* Manutencao: quanto do intervalo de troca a viatura ja rodou. */
+.celula-uso{min-width:170px}
+.barra-uso{height:8px;border-radius:99px;background:var(--superficie-2);overflow:hidden;box-shadow:inset 0 0 0 1px var(--line)}
+.barra-uso>span{display:block;height:100%;border-radius:99px;background:var(--ok-texto)}
+.barra-uso.uso-proxima>span{background:#d97706}
+.barra-uso.uso-vencida>span{background:#b42318}

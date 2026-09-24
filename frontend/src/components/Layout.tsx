@@ -61,6 +61,8 @@ const icones: Record<string,string> = {
   '/despesas':'M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h4',
   '/quilometragem':'M3 17a9 9 0 0 1 18 0M12 17l5-6M3 17h18',
   '/veiculos':'M3 7h11v9H3zM14 10h4l3 3v3h-7zM7 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM18 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4z',
+  '/manutencao':'M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z',
+  '/documentos':'M6 3h8l4 4v14H6zM14 3v4h4M9 12l2 2 4-4',
   '/desempenho':'M4 20V10M10 20V4M16 20v-7M22 20H2',
   '/equipe':'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21v-1a8 8 0 0 1 16 0v1',
   '/minha-comissao':'M3 8h16a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM3 8V7a2 2 0 0 1 2-2h11M17 14h2',
