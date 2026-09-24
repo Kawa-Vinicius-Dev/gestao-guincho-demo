@@ -46,6 +46,8 @@ export const GRUPOS: Grupo[] = [
   { menu: '/porto/ordens-servico', titulo: 'Serviços', abas: [
     { rota: '/porto/ordens-servico', rotulo: 'Todas as OS' },
     { rota: '/porto/pendencias', rotulo: 'Pendências' },
+    // A prova colhida no local pelo socorrista (Kawa, 24/09/2026).
+    { rota: '/porto/atendimentos', rotulo: 'Atendimentos' },
     { rota: '/contas-receber', rotulo: 'A receber' },
     { rota: '/porto/diario', rotulo: 'Calendário' },
     // Devolvidos saiu do menu (Kawa, 23/09/2026): era a pendencia antiga de
