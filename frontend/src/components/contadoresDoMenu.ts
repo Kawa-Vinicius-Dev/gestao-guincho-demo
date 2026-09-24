@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useAoVivo } from '../dados/aoVivo'
 import { listarPendenciasOsPorto } from '../dados/porto'
+import { danosEmAberto } from '../dados/manutencao'
 import { contestacoesAContestar } from '../dados/porto/contestacoes'
 import { documentosPedindoAtencao } from '../dados/documentos'
 import { vistoriasPedindoAtencao } from '../dados/vistorias'
@@ -32,11 +33,13 @@ export function useContadoresDoMenu(admin: boolean): Record<string, number> {
       vistoriasPedindoAtencao(hojeIso()).catch(() => 0),
       // Casos que a Porto deve e ninguem contestou ainda (Kawa, 24/09/2026).
       contestacoesAContestar().catch(() => 0),
-    ]).then(([aprovacoes, pendencias, documentos, vistorias, contestar]) =>
+      // Danos das viaturas ainda sem conserto (Kawa, 24/09/2026).
+      danosEmAberto().catch(() => 0),
+    ]).then(([aprovacoes, pendencias, documentos, vistorias, contestar, danos]) =>
       setContadores({
         '/aprovacoes': aprovacoes,
         '/porto/ordens-servico': pendencias,
-        '/veiculos': documentos + vistorias,
+        '/veiculos': documentos + vistorias + danos,
         '/porto/ordens-pagamento': contestar,
       }))
   }, [admin, periodo.inicio, periodo.fim, competencia])

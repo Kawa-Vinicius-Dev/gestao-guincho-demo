@@ -2087,3 +2087,10 @@ input,textarea,select,[contenteditable]:not([contenteditable=false]){caret-color
 .celula-preco .campo-sem-rotulo{width:160px}
 .celula-preco .campo-sem-rotulo>span:first-child{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 .botao-texto{padding:0;border:0;background:none;cursor:pointer;font:inherit}
+
+/* Manutencao: quanto do intervalo de troca a viatura ja rodou. */
+.celula-uso{min-width:170px}
+.barra-uso{height:8px;border-radius:99px;background:var(--superficie-2);overflow:hidden;box-shadow:inset 0 0 0 1px var(--line)}
+.barra-uso>span{display:block;height:100%;border-radius:99px;background:var(--ok-texto)}
+.barra-uso.uso-proxima>span{background:#d97706}
+.barra-uso.uso-vencida>span{background:#b42318}
