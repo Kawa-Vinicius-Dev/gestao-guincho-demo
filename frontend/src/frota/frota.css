@@ -1,4 +1,9 @@
-/* Viaturas: quatro cartoes no resumo, sem buraco na segunda linha. */
-.fleet-summary.fleet-summary-4{grid-template-columns:repeat(4,minmax(0,1fr))}
-@media(max-width:1100px){.fleet-summary.fleet-summary-4{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:560px){.fleet-summary.fleet-summary-4{grid-template-columns:minmax(0,1fr)}}
+/* Tela de viaturas reorganizada (Kawa, 24/09/2026). */
+.fleet-list-titulo{grid-column:1/-1;display:flex;justify-content:space-between;margin:0 4px 2px;color:var(--muted);font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+.fleet-layout .fleet-list button{grid-template-columns:44px minmax(0,1fr) auto;min-height:72px}
+.fleet-item-nome,.fleet-item-valor{min-width:0}
+.fleet-item-nome strong,.fleet-item-nome small{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.fleet-item-valor{text-align:right;white-space:nowrap}
+.fleet-layout .fleet-list span.fleet-item-valor strong{font-size:14px}
+/* Cada linha de quadros ocupa a largura toda: sem quadro sobrando sozinho. */
+.fleet-detail .vehicle-metrics.vehicle-metrics-linha{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
