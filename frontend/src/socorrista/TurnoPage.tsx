@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 import { ConfirmarAcao } from '../components/ConfirmarAcao'
+import { BlocoFoto } from './BlocoFoto'
 import { Carregando, ErroPagina } from '../components/EstadoPagina'
 import {
   abrirTurno, enviarChecklist, enviarFotoAbertura, fecharTurno, meuTurnoDoDia, FOTOS_DO_CHECKLIST,
@@ -173,31 +175,6 @@ function faltaNoChecklist(c: EstadoChecklist) {
   if (c.temDano === null) return 'Diga se viu algum dano.'
   if (c.temDano && !c.danos.every(d => d.foto && d.descricao.trim())) return 'Tire a foto do dano e diga onde é.'
   return ''
-}
-
-/** Um bloco de foto: toque abre a camera; pronto, mostra a miniatura com ✓. */
-function BlocoFoto({ id, rotulo, arquivo, aoEscolher }: {
-  id: string; rotulo: string; arquivo: File | null | undefined; aoEscolher: (f: File) => void
-}) {
-  const entrada = useRef<HTMLInputElement>(null)
-  const [previa, setPrevia] = useState('')
-  useEffect(() => {
-    if (!arquivo) { setPrevia(''); return }
-    const url = URL.createObjectURL(arquivo)
-    setPrevia(url)
-    return () => URL.revokeObjectURL(url)
-  }, [arquivo])
-
-  return <>
-    <input ref={entrada} id={id} type="file" accept="image/*" capture="environment"
-      className="socorrista-arquivo" aria-label={rotulo}
-      onChange={e => { const f = e.target.files?.[0]; if (f) aoEscolher(f); e.target.value = '' }} />
-    <button type="button" className={`checklist-bloco${previa ? ' esta-pronto' : ''}`}
-      onClick={() => entrada.current?.click()}>
-      {previa ? <img src={previa} alt="" /> : <span className="checklist-camera" aria-hidden="true">📷</span>}
-      <span className="checklist-rotulo">{previa ? '✓ ' : ''}{rotulo}</span>
-    </button>
-  </>
 }
 
 function ChecklistDaViatura({ estado, aoMudar }: {
@@ -563,7 +540,13 @@ export default function TurnoPage() {
       : aberto && aberto.faltaChecklist
         ? <FaltaChecklist turno={aberto} checklist={checklist} aoMudarChecklist={setChecklist} aoEnviar={carregar} />
       : aberto
-        ? <FecharTurno turno={aberto} aoFechar={carregar} />
+        ? <>
+            <Link to="/atendimento" className="socorrista-cartao atendimento-atalho">
+              <strong>Registrar atendimento</strong>
+              <span>Número da OS, chegada, fotos do veículo e assinatura do segurado. É a prova se a Porto não pagar.</span>
+            </Link>
+            <FecharTurno turno={aberto} aoFechar={carregar} />
+          </>
         : <AbrirTurno dados={dados} aoAbrir={carregar} checklist={checklist} aoMudarChecklist={setChecklist} />}
 
     {dados.ultimosTurnos.length
