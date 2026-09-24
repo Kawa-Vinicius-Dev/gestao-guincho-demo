@@ -36,6 +36,10 @@ export const GRUPOS: Grupo[] = [
   { menu: '/veiculos', titulo: 'Viaturas', abas: [
     { rota: '/veiculos', rotulo: 'Viaturas' },
     { rota: '/quilometragem', rotulo: 'Quilometragem' },
+    // Troca por km e danos do checklist (Kawa, 24/09/2026).
+    { rota: '/manutencao', rotulo: 'Manutenção' },
+    // Validade do credenciamento: viaturas e socorristas (Kawa, 24/09/2026).
+    { rota: '/documentos', rotulo: 'Documentos' },
     { rota: '/desempenho', rotulo: 'Desempenho', busca: 'visao=viaturas' },
   ] },
   { menu: '/equipe', titulo: 'Socorristas', abas: [
@@ -46,6 +50,8 @@ export const GRUPOS: Grupo[] = [
   { menu: '/porto/ordens-servico', titulo: 'Serviços', abas: [
     { rota: '/porto/ordens-servico', rotulo: 'Todas as OS' },
     { rota: '/porto/pendencias', rotulo: 'Pendências' },
+    // A prova colhida no local pelo socorrista (Kawa, 24/09/2026).
+    { rota: '/porto/atendimentos', rotulo: 'Atendimentos' },
     { rota: '/contas-receber', rotulo: 'A receber' },
     { rota: '/porto/diario', rotulo: 'Calendário' },
     // Devolvidos saiu do menu (Kawa, 23/09/2026): era a pendencia antiga de

@@ -37,7 +37,7 @@ const PAGA: TipoRelatorio[] = ['OS_VINCULADAS', 'SERVICOS_GERAIS']
  */
 const NUMERO_OS = /^(?:\[)?(?:\d{1,2}[/-])?(\d{4,})[-/](\d{2})(?:\](?:\([^)]*\))?)?$/
 
-const normalizarNumero = (valor: string) => {
+export const normalizarNumero = (valor: string) => {
   const limpo = valor.trim()
   const m = limpo.match(NUMERO_OS)
   return m ? `${m[1]}${m[2]}` : limpo.replace(/[^0-9]/g, '')
