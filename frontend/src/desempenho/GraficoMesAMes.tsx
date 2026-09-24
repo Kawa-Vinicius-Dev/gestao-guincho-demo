@@ -25,10 +25,12 @@ function passo(maximo: number) {
   return [1, 2, 2.5, 5, 10].map(f => f * potencia).find(p => p >= bruto) ?? bruto
 }
 
-export function GraficoMesAMes({ meses, series, formatar, formatarEixo = formatar, descricao }: {
+export function GraficoMesAMes({ meses, series, formatar, formatarEixo = formatar, descricao, aoClicarMes }: {
   meses: string[]; series: SerieMensal[]; formatar: (v: number) => string
   /** O eixo leva o valor curto (R$ 12 mil); a dica, o valor inteiro. */
   formatarEixo?: (v: number) => string; descricao: string
+  /** Clicar num mes (coluna ou nome) leva a tela para aquele mes (Kawa, 24/09/2026). */
+  aoClicarMes?: (indice: number) => void
 }) {
   const [foco, setFoco] = useState<{ serie: number; mes: number } | null>(null)
   const area = useRef<HTMLDivElement>(null)
@@ -91,21 +93,27 @@ export function GraficoMesAMes({ meses, series, formatar, formatarEixo = formata
           <text x={M.esq - 8} y={y(t)} dy="0.32em" textAnchor="end" className="eixo-texto">{formatarEixo(t)}</text>
         </g>)}
         {meses.map((mes, i) => <text key={mes} x={M.esq + i * larguraMes + larguraMes / 2} y={H - 8}
-          textAnchor="middle" className="eixo-texto">{mes}</text>)}
+          textAnchor="middle" className={`eixo-texto${aoClicarMes ? ' eixo-clicavel' : ''}`}
+          onClick={aoClicarMes ? () => aoClicarMes(i) : undefined}>{mes}</text>)}
         {meses.map((_, i) => todas.map((s, j) => <path key={`${s.chave}-${i}`} d={coluna(x(i, j), s.valores[i] ?? 0)}
           fill={cor(s)} opacity={foco && (foco.serie !== j || foco.mes !== i) ? 0.35 : 1}/>))}
         {/* Alvo de hover maior que a coluna: a faixa inteira dela. */}
         {meses.map((_, i) => todas.map((s, j) => <rect key={`alvo-${s.chave}-${i}`} x={x(i, j) - 1} y={M.topo}
           width={larguraBarra + 2} height={alturaPlot} fill="transparent"
-          onMouseEnter={() => setFoco({ serie: j, mes: i })}>
-          <title>{`${s.rotulo} · ${meses[i]}: ${formatar(s.valores[i] ?? 0)}`}</title>
+          className={aoClicarMes ? 'alvo-clicavel' : undefined}
+          onMouseEnter={() => setFoco({ serie: j, mes: i })} onClick={aoClicarMes ? () => aoClicarMes(i) : undefined}>
+          <title>{`${s.rotulo} · ${meses[i]}: ${formatar(s.valores[i] ?? 0)}${aoClicarMes ? ' · clique para ver só este mês' : ''}`}</title>
         </rect>))}
       </svg>
       {ativo && foco ? <div className="grafico-mes-dica" role="status"
         style={{ left: `${(x(foco.mes, foco.serie) + larguraBarra / 2) / W * 100}%`, top: `${y(ativo.v) / H * 100}%` }}>
         <span><i style={{ background: cor(ativo.s) }} aria-hidden="true"/>{ativo.s.rotulo}</span>
-        <strong>{formatar(ativo.v)}</strong><small>{meses[foco.mes]}</small>
+        <strong>{formatar(ativo.v)}</strong><small>{meses[foco.mes]}{aoClicarMes ? ' · clique para abrir' : ''}</small>
       </div> : null}
     </div>
+    {aoClicarMes ? <div className="grafico-mes-atalhos" role="group" aria-label="Ver um mês">
+      <span className="grafico-mes-atalhos-rotulo">Ver só o mês:</span>
+      {meses.map((mes, i) => <button key={mes} type="button" className="atalho-periodo" onClick={() => aoClicarMes(i)}>{mes}</button>)}
+    </div> : null}
   </figure>
 }

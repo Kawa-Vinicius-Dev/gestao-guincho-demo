@@ -54,9 +54,10 @@ export default function LancamentosPage() {
   // `true` para uma nova, a propria receita para editar.
   const [receitaAberta,setReceitaAberta]=useState<Receita|true|null>(null)
   const [excluindoReceita,setExcluindoReceita]=useState<LancamentoFinanceiro|null>(null)
-  const [atalho,setAtalho]=useState<Atalho>('')
-  const [pesquisa,setPesquisa]=useState('')
-  const [veiculoFiltro,setVeiculoFiltro]=useState('')
+  // Link de outra tela (Visao geral, categoria de gasto) ja abre filtrado.
+  const [atalho,setAtalho]=useState<Atalho>(()=>{const a=new URLSearchParams(window.location.search).get('atalho');return ATALHOS.some(x=>x.valor===a)?a as Atalho:''})
+  const [pesquisa,setPesquisa]=useState(()=>new URLSearchParams(window.location.search).get('busca')??'')
+  const [veiculoFiltro,setVeiculoFiltro]=useState(()=>new URLSearchParams(window.location.search).get('veiculo')??'')
   const [mensagem,setMensagem]=useState('')
   const [carregando,setCarregando]=useState(true)
 

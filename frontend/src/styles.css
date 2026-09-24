@@ -2088,6 +2088,23 @@ input,textarea,select,[contenteditable]:not([contenteditable=false]){caret-color
 .celula-preco .campo-sem-rotulo>span:first-child{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 .botao-texto{padding:0;border:0;background:none;cursor:pointer;font:inherit}
 
+/* Quadro que filtra na propria tela: e botao, e marca o filtro ativo. */
+.indicador-botao{width:100%;border:0;font:inherit;text-align:left;cursor:pointer;align-items:stretch}
+.indicador-botao.indicador-ativo{background:var(--blue-50);box-shadow:inset 0 -3px 0 var(--blue-600)}
+
+/* Visao geral: numeros que levam ao detalhe (Extrato, DRE). */
+.destaque-link,.resultado-parte-link{color:inherit;text-decoration:none;border-radius:10px;transition:background .15s}
+.destaque-link:hover,.resultado-parte-link:hover{background:var(--superficie-2);box-shadow:0 0 0 6px var(--superficie-2)}
+.destaque-link:focus-visible,.resultado-parte-link:focus-visible{outline:2px solid var(--blue-600);outline-offset:2px}
+.gasto-link{display:contents;color:inherit;text-decoration:none}
+.gasto-link:hover span{text-decoration:underline}
+
+/* Grafico mes a mes: o mes e clicavel e leva a tela para ele. */
+.grafico-mes-a-mes .alvo-clicavel,.grafico-mes-a-mes .eixo-clicavel{cursor:pointer}
+.grafico-mes-a-mes .eixo-clicavel:hover{fill:var(--blue-600);text-decoration:underline}
+.grafico-mes-atalhos{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.grafico-mes-atalhos-rotulo{align-self:center;color:var(--muted);font-size:12.5px;font-weight:600}
+
 /* Comparativo das viaturas: resultado depois das despesas gerais. */
 .comparativo-frota tr.esta-escolhida td{background:var(--blue-50)}
 .celula-resultado{min-width:220px}

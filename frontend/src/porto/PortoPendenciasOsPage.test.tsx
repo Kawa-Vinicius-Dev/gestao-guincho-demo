@@ -112,3 +112,15 @@ test('o filtro separa as duas situações novas', async () => {
   expect(screen.getByText('01/2-26')).toBeInTheDocument()
   expect(screen.queryByText('01/3-26')).not.toBeInTheDocument()
 })
+
+// Kawa, 24/09/2026: o quadro e o filtro — clicar em "Valor divergente" mostra so ela.
+test('clicar no quadro filtra a lista', async () => {
+  const user = userEvent.setup({ delay: null })
+  await abrir()
+
+  await user.click(await screen.findByRole('button', { name: /Valor divergente/ }))
+
+  expect(screen.getByRole('button', { name: /Valor divergente/ })).toHaveAttribute('aria-pressed', 'true')
+  expect(screen.getByText('01/3-26')).toBeInTheDocument()
+  expect(screen.queryByText('01/1-26')).not.toBeInTheDocument()
+})

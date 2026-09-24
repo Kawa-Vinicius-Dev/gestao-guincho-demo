@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } fro
 import { Link, useSearchParams } from 'react-router-dom'
 import { SeletorPeriodo } from '../components/SeletorPeriodo'
 import './frota.css'
-import { usePeriodoGlobal } from '../utils/periodoGlobal'
+import { usePeriodoGlobal, intervaloDoMes } from '../utils/periodoGlobal'
 import { lerIndicadores } from '../dados/dashboard'
 import { listarOs, listarTodasAsOs, valorDaOs, type LinhaOs } from '../dados/porto/listaOs'
 import { GraficoMesAMes } from '../desempenho/GraficoMesAMes'
@@ -106,7 +106,7 @@ export default function FrotasPage(){
           const custo=meses.map(m=>historico.filter(l=>l.tipo==='DESPESA'&&l.realizado&&l.data.slice(0,7)===m).reduce((t,l)=>t+l.valor,0))
           const servicos=meses.map(m=>daViatura.filter(os=>mesDa(os)===m).length)
           return <Painel semRespiro etiqueta="Mês a mês" titulo={`${veiculo.identificacao} · faturamento e custo`}>
-            <GraficoMesAMes meses={meses.map((m,i)=>`${nomeDoMes(m)} · ${servicos[i]} serv.`)} formatar={moeda} formatarEixo={moedaCurta}
+            <GraficoMesAMes meses={meses.map((m,i)=>`${nomeDoMes(m)} · ${servicos[i]} serv.`)} aoClicarMes={i=>setPeriodo({...intervaloDoMes(meses[i]),op:''})} formatar={moeda} formatarEixo={moedaCurta}
               descricao={`Faturamento e custo da viatura ${veiculo.identificacao} por mês`}
               series={[{chave:'1-faturamento',rotulo:'Faturamento',valores:faturamento},{chave:'2-custo',rotulo:'Custo',valores:custo}]}/>
           </Painel>

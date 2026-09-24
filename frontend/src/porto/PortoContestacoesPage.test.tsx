@@ -2,7 +2,7 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { MemoryRouter } from 'react-router-dom'
-import { expect, test, vi } from 'vitest'
+import { afterEach, expect, test, vi } from 'vitest'
 import { URL_SUPABASE, servidor } from '../test/servidor'
 
 /**
@@ -24,6 +24,8 @@ const casos = [
     valor_recuperado: '180.00', ordens_servico_porto: os('5670000/26') },
 ]
 
+afterEach(() => { vi.useRealTimers() })
+
 async function abrir(filtro = '') {
   vi.useFakeTimers({ toFake: ['Date'] })
   vi.setSystemTime(new Date('2026-09-24T12:00:00'))
@@ -41,7 +43,8 @@ async function abrir(filtro = '') {
   const { default: Pagina } = await import('./PortoContestacoesPage')
   render(<MemoryRouter initialEntries={[`/porto/contestacoes${filtro}`]}><Pagina /></MemoryRouter>)
   await screen.findByRole('heading', { name: 'Contestações' })
-  vi.useRealTimers()
+  // A data fica fixa ate o fim do teste (afterEach): os dados podem chegar depois
+  // do titulo, e o "no mes" do topo precisa do mesmo hoje.
   return () => enviado
 }
 

@@ -201,12 +201,18 @@ export default function PortoOrdensPagamentoPage() {
         repetiam o total ou mostravam zero, e sairam. */}
     <GradeIndicadores>
       <Indicador rotulo="OPs" valor={resumo.quantidadeTotalOps.toLocaleString('pt-BR')}
+        aoClicar={() => void carregar(new URLSearchParams())}
+        ativo={!parametros.get('statusConciliacao') && !parametros.get('comDivergencia') && !parametros.get('numero')}
         apoio={resumo.quantidadeTotalOps ? `${resumo.quantidadeOrdensServico.toLocaleString('pt-BR')} serviços pagos` : '—'}/>
       <Indicador rotulo="Valor das OPs" valor={moeda(resumo.valorTotalPrevisto)}
         apoio={resumo.quantidadeTotalOps ? `Média de ${moeda(resumo.valorMedioPorOp)} por OP` : '—'}/>
       <Indicador rotulo="Conferidas" valor={`${resumo.quantidadeConciliadas} de ${resumo.quantidadeTotalOps}`}
+        aoClicar={() => void carregar(new URLSearchParams({ statusConciliacao: 'CONCILIADA' }))}
+        ativo={parametros.get('statusConciliacao') === 'CONCILIADA'}
         apoio="Valor da OP igual à soma das OS"/>
       <Indicador rotulo="Com divergência" valor={resumo.quantidadeComDivergencia}
+        aoClicar={() => void carregar(new URLSearchParams({ comDivergencia: 'true' }))}
+        ativo={parametros.get('comDivergencia') === 'true'}
         tom={resumo.quantidadeComDivergencia ? 'alerta' : 'neutro'}
         apoio={resumo.quantidadeComDivergencia ? `${moeda(resumo.valorTotalDivergencias)} de diferença` : 'Nenhuma diferença'}/>
     </GradeIndicadores>
