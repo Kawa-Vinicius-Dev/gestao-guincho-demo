@@ -36,6 +36,8 @@ export const GRUPOS: Grupo[] = [
   { menu: '/veiculos', titulo: 'Viaturas', abas: [
     { rota: '/veiculos', rotulo: 'Viaturas' },
     { rota: '/quilometragem', rotulo: 'Quilometragem' },
+    // Troca por km e danos do checklist (Kawa, 24/09/2026).
+    { rota: '/manutencao', rotulo: 'Manutenção' },
     { rota: '/desempenho', rotulo: 'Desempenho', busca: 'visao=viaturas' },
   ] },
   { menu: '/equipe', titulo: 'Socorristas', abas: [
