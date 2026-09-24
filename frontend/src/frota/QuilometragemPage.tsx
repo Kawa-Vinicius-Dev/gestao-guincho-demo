@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { LinkSocorrista, LinkViatura } from '../components/LinksDeDado'
 import { SeletorPeriodo } from '../components/SeletorPeriodo'
 import { usePeriodoGlobal } from '../utils/periodoGlobal'
-import { atualizarQuilometragem, criarQuilometragem, excluirQuilometragem, listarQuilometragens } from '../dados/quilometragem'
+import { atualizarQuilometragem, excluirQuilometragem, listarQuilometragens } from '../dados/quilometragem'
 import { ConfirmarExclusao } from '../components/ConfirmarExclusao'
 import { useAuth } from '../auth/AuthContext'
 import { listarMotoristas } from '../dados/motoristas'
@@ -85,12 +85,13 @@ export default function QuilometragemPage() {
         confirmarExcesso: form.get('confirmarExcesso') === 'on',
         observacoes: String(form.get('observacoes')||'')||null,
       }
+      // Registro novo so nasce da aprovacao do turno (Kawa, 24/09/2026): aqui so se corrige.
+      if (!editando) return
       // O custo do km fica o do registro; so muda se a viatura mudou.
-      if (editando) await atualizarQuilometragem(editando.id, { ...dados, custoPorKm: dados.veiculoId === editando.veiculoId ? editando.custoPorKm : dados.custoPorKm })
-      else await criarQuilometragem(dados)
+      await atualizarQuilometragem(editando.id, { ...dados, custoPorKm: dados.veiculoId === editando.veiculoId ? editando.custoPorKm : dados.custoPorKm })
       await carregar()
       setModal(false)
-      setMensagem(editando ? 'Quilometragem atualizada.' : 'Quilometragem registrada na base oficial.')
+      setMensagem('Quilometragem atualizada.')
       setEditando(null)
     } catch (erro) {
       setErro((erro as Error).message)
@@ -98,15 +99,14 @@ export default function QuilometragemPage() {
   }
 
   return <div className="page-enter">
-    <header className="page-heading"><div><span className="eyebrow">Eficiência operacional</span><h1>Quilometragem</h1><p>Km rodado, km pago e km morto de cada viatura no período.</p></div>
-      <div className="heading-actions"><button className="button button-primary" onClick={() => { setEditando(null); setModal(true) }}>+ Registrar quilometragem</button></div></header>
+    <header className="page-heading"><div><span className="eyebrow">Eficiência operacional</span><h1>Quilometragem</h1><p>Km rodado, km em serviço e km morto de cada viatura no período. Cada linha nasce da aprovação do turno do socorrista.</p></div></header>
     <section className="panel painel-filtros"><form className="ledger-filters" onSubmit={e=>e.preventDefault()}><SeletorPeriodo periodo={periodo} aoMudar={setPeriodo}/></form></section>
     {erro && !modal ? <div className="form-alert" role="alert">{erro}</div> : null}
     {mensagem ? <div className="success-notice">{mensagem}</div> : null}
 
     <section className="km-definitions">
       <article><span className="km-symbol paid">KM</span><div><strong>Km rodado</strong><p>Diferença oficial entre os hodômetros final e inicial.</p></div></article>
-      <article><span className="km-symbol dead">0</span><div><strong>Km morto</strong><p>A diferença entre o km rodado e o km pago.</p></div></article>
+      <article><span className="km-symbol dead">0</span><div><strong>Km morto</strong><p>O km rodado menos o km em serviço que o socorrista lançou.</p></div></article>
     </section>
 
     <section className="km-overview">
@@ -123,7 +123,7 @@ export default function QuilometragemPage() {
     </section>
 
     <section className="panel km-ledger"><header className="panel-title"><div><span className="eyebrow">Diário de bordo</span><h2>Registros do período</h2></div></header>
-      {carregando ? <Carregando/> : registrosDoMes.length ? <div className="table-scroll"><table><thead><tr><th>Data</th><th>Veículo</th><th>Socorrista</th><th>Hodômetros</th><th>Km rodado</th><th>Km remunerado</th><th>Km morto</th><th>Custo</th>{admin ? <th/> : null}</tr></thead><tbody>
+      {carregando ? <Carregando/> : registrosDoMes.length ? <div className="table-scroll"><table><thead><tr><th>Data</th><th>Veículo</th><th>Socorrista</th><th>Hodômetros</th><th>Km rodado</th><th>Km em serviço</th><th>Km morto</th><th>Custo</th>{admin ? <th/> : null}</tr></thead><tbody>
         {registrosDoMes.map(item => <tr key={item.id}><td>{data(item.data)}</td><td><strong><LinkViatura id={item.veiculoId} sigla={item.veiculo}/></strong></td><td><LinkSocorrista id={item.motoristaId} nome={item.motorista}/></td><td>{numero(item.hodometroInicial)} → {numero(item.hodometroFinal)}</td><td>{numero(item.quilometragemTotal)} km</td><td>{numero(item.quilometragemRemunerada)} km</td><td><strong>{numero(item.kmMorto)} km</strong></td><td>{moeda(item.custoKmMorto)}</td>{admin ? <td><span className="acoes-da-linha"><button className="table-action" onClick={() => { setEditando(item); setModal(true) }}>Editar</button><button className="table-action table-action-danger" onClick={() => setExcluindo(item)}>Excluir</button></span></td> : null}</tr>)}
       </tbody></table></div> : <Vazio titulo="Sem registros no período" descricao="Selecione outra competência ou registre a primeira quilometragem."/>}
     </section>

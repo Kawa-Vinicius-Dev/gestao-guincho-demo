@@ -1,5 +1,6 @@
 import { ApiError } from './erros'
 import { erroDoBanco, ou, supabase } from './cliente'
+import { normalizarNumero } from './porto/importacao'
 
 /**
  * Turno do socorrista.
@@ -399,3 +400,48 @@ export async function limparChecklistsAntigos(): Promise<void> {
     // Tenta de novo na proxima vez que a tela abrir.
   }
 }
+
+// ---------------------------------------------------------------------------
+// Km dos servicos (Kawa, 24/09/2026)
+// ---------------------------------------------------------------------------
+
+/**
+ * O km do GPS de cada servico, que o socorrista digita pelo numero da OS: da
+ * saida para o chamado ate a entrega. A soma do turno e o km produtivo; o resto
+ * do que o caminhao rodou e km morto. Nao passa por aprovacao.
+ */
+export interface ServicoDoTurno {
+  id: number
+  turnoId: number
+  numeroOs: string
+  km: number
+}
+
+export async function servicosDoTurno(turnoIds: number[]): Promise<ServicoDoTurno[]> {
+  if (!turnoIds.length) return []
+  const linhas = ou(
+    await supabase().from('servicos_do_turno').select('id,turno_id,numero_os,km')
+      .in('turno_id', turnoIds).order('criado_em'),
+    'Não foi possível carregar os serviços do turno.',
+  ) as { id: number; turno_id: number; numero_os: string; km: number | string }[]
+  return (linhas ?? []).map(l => ({ id: l.id, turnoId: l.turno_id, numeroOs: l.numero_os, km: Number(l.km) }))
+}
+
+/** Lanca no turno aberto; a mesma OS de novo corrige o km. */
+export async function lancarServico(numeroOs: string, km: number): Promise<void> {
+  ou(
+    await supabase().rpc('lancar_servico_do_turno', {
+      p_numero_os: numeroOs.trim(),
+      p_numero_normalizado: normalizarNumero(numeroOs),
+      p_km: km,
+    }),
+    'Não foi possível lançar o serviço.',
+  )
+}
+
+export async function removerServico(id: number): Promise<void> {
+  ou(await supabase().rpc('remover_servico_do_turno', { p_id: id }), 'Não foi possível tirar o serviço.')
+}
+
+export const somaDosKm = (servicos: ServicoDoTurno[]) =>
+  Math.round(servicos.reduce((soma, s) => soma + s.km, 0) * 10) / 10

@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 import { ConfirmarAcao } from '../components/ConfirmarAcao'
 import { BlocoFoto } from './BlocoFoto'
 import { Carregando, ErroPagina } from '../components/EstadoPagina'
 import {
-  abrirTurno, enviarChecklist, enviarFotoAbertura, fecharTurno, meuTurnoDoDia, FOTOS_DO_CHECKLIST,
-  type ChaveDoChecklist, type MeuTurnoDoDia, type ViaturaDoTurno,
+  abrirTurno, enviarChecklist, enviarFotoAbertura, fecharTurno, meuTurnoDoDia, servicosDoTurno, somaDosKm,
+  FOTOS_DO_CHECKLIST, type ChaveDoChecklist, type MeuTurnoDoDia, type ServicoDoTurno, type TurnoAberto,
+  type ViaturaDoTurno,
 } from '../dados/turnos'
 
 /**
@@ -338,10 +340,12 @@ function AbrirTurno({
 }
 
 function FecharTurno({
-  turno, aoFechar,
+  turno, aoFechar, servicos,
 }: {
   turno: { id: number; veiculo: string; hodometroInicial: number; data: string; deDiaAnterior: boolean }
   aoFechar: () => void
+  /** Os servicos lancados no turno aberto; o turno devolvido nao tem. */
+  servicos?: ServicoDoTurno[]
 }) {
   const [hodometro, setHodometro] = useState('')
   const [foto, setFoto] = useState<File | null>(null)
@@ -349,6 +353,12 @@ function FecharTurno({
 
   const rodado = hodometro ? Number(hodometro) - turno.hodometroInicial : null
   const pronto = hodometro.length > 0 && foto !== null && rodado !== null && rodado >= 0
+  const kmServicos = servicos ? somaDosKm(servicos) : 0
+  // Pede os servicos, mas deixa fechar: dia sem chamado existe (Kawa, 24/09/2026).
+  const avisoServicos = !servicos ? ''
+    : !servicos.length ? ' Você não lançou nenhum serviço neste turno. Se fez algum, lance antes em Km dos serviços.'
+    : rodado !== null && kmServicos > rodado ? ` Os serviços somam ${formatarKm(kmServicos)}, mais do que o caminhão rodou. Confira os km.`
+    : ''
 
   return <section className="socorrista-cartao">
     <h2>Fechar turno</h2>
@@ -397,11 +407,14 @@ function FecharTurno({
     {confirmar && foto
       ? <ConfirmarAcao
           titulo="Fechar o turno?"
-          efeito="O turno vai para a administração conferir. O km só entra no sistema depois que for aprovado."
+          efeito={`O turno vai para a administração conferir. O km só entra no sistema depois que for aprovado.${avisoServicos}`}
           resumo={[
             ['Viatura', turno.veiculo],
             ['Odômetro na chegada', formatarKm(Number(hodometro))],
             ['Km rodado no turno', formatarKm(rodado)],
+            ...(servicos ? [['Km dos serviços', servicos.length
+              ? `${servicos.length} ${servicos.length === 1 ? 'serviço' : 'serviços'} · ${formatarKm(kmServicos)}`
+              : 'Nenhum lançado'] as [string, string]] : []),
           ]}
           textoConfirmar="Fechar turno"
           aoConfirmar={async () => {
@@ -412,6 +425,27 @@ function FecharTurno({
         />
       : null}
   </section>
+}
+
+/**
+ * Turno aberto e em dia: o atalho para lancar o km dos servicos e o fechamento,
+ * que confere se eles foram lancados.
+ */
+function TurnoEmAndamento({ turno, aoFechar }: { turno: TurnoAberto; aoFechar: () => void }) {
+  const [servicos, setServicos] = useState<ServicoDoTurno[] | undefined>(undefined)
+  useEffect(() => {
+    servicosDoTurno([turno.id]).then(setServicos).catch(() => setServicos(undefined))
+  }, [turno.id])
+
+  return <>
+    <Link to="/km-dos-servicos" className="socorrista-cartao servicos-atalho">
+      <strong>Km dos serviços</strong>
+      <span>{servicos?.length
+        ? `${servicos.length} ${servicos.length === 1 ? 'serviço lançado' : 'serviços lançados'} · ${formatarKm(somaDosKm(servicos))}. Toque para lançar mais.`
+        : 'Lance o número da OS e o km do GPS de cada serviço do turno.'}</span>
+    </Link>
+    <FecharTurno turno={turno} aoFechar={aoFechar} servicos={servicos} />
+  </>
 }
 
 /**
@@ -539,7 +573,7 @@ export default function TurnoPage() {
       : aberto && aberto.faltaChecklist
         ? <FaltaChecklist turno={aberto} checklist={checklist} aoMudarChecklist={setChecklist} aoEnviar={carregar} />
       : aberto
-        ? <FecharTurno turno={aberto} aoFechar={carregar} />
+        ? <TurnoEmAndamento turno={aberto} aoFechar={carregar} />
         : <AbrirTurno dados={dados} aoAbrir={carregar} checklist={checklist} aoMudarChecklist={setChecklist} />}
 
     {dados.ultimosTurnos.length

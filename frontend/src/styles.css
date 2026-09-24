@@ -2121,3 +2121,16 @@ input,textarea,select,[contenteditable]:not([contenteditable=false]){caret-color
 .barra-uso>span{display:block;height:100%;border-radius:99px;background:var(--ok-texto)}
 .barra-uso.uso-proxima>span{background:#d97706}
 .barra-uso.uso-vencida>span{background:#b42318}
+
+/* Km dos servicos (celular do socorrista): numero da OS e km do GPS. */
+.servico-numero{width:100%;height:60px;padding:0 14px;border:1.5px solid var(--controle-borda);border-radius:12px;background:var(--superficie-2);color:var(--ink);font-size:22px;font-weight:600;letter-spacing:.04em;text-align:center;font-variant-numeric:tabular-nums}
+.servico-numero:focus{outline:none;border-color:var(--blue-600)}
+.servicos-lancado{color:var(--ok-texto);font-weight:600}
+.servicos-lista li{grid-template-columns:1fr auto auto}
+.servicos-tirar{min-height:40px;padding:0 14px;border:1px solid var(--controle-borda);border-radius:12px;background:var(--superficie);color:var(--ink);font-size:14px;font-weight:600}
+.servicos-total{display:flex;align-items:center;justify-content:space-between;margin:12px 0 0;padding-top:12px;border-top:1px solid var(--linha-suave);font-size:16px}
+.servicos-total strong{font-size:20px;font-variant-numeric:tabular-nums}
+.servicos-ir-turno{display:flex;align-items:center;justify-content:center;text-decoration:none}
+.servicos-atalho{display:grid;gap:6px;border:2px solid var(--blue-600);color:var(--ink);text-decoration:none}
+.servicos-atalho strong{color:var(--blue-600);font-size:18px}
+.servicos-atalho span{color:var(--muted);font-size:14px}
