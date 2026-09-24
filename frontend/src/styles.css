@@ -2088,6 +2088,16 @@ input,textarea,select,[contenteditable]:not([contenteditable=false]){caret-color
 .celula-preco .campo-sem-rotulo>span:first-child{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 .botao-texto{padding:0;border:0;background:none;cursor:pointer;font:inherit}
 
+/* Comparativo das viaturas: resultado depois das despesas gerais. */
+.comparativo-frota tr.esta-escolhida td{background:var(--blue-50)}
+.celula-resultado{min-width:220px}
+.celula-resultado strong{display:block;margin-top:4px;font-variant-numeric:tabular-nums}
+.barra-resultado{position:relative;height:10px;border-radius:99px;background:var(--superficie-2)}
+.barra-resultado::after{content:'';position:absolute;left:50%;top:-3px;bottom:-3px;width:1px;background:var(--line)}
+.barra-resultado span{position:absolute;top:0;bottom:0;border-radius:99px}
+.barra-resultado span.positivo{background:var(--ok-texto)}
+.barra-resultado span.negativo{background:#b42318}
+
 /* Registro do atendimento (celular): campos grandes, assinatura com o dedo. */
 .atendimento-campo-grande{width:100%;min-height:56px;padding:0 16px;border:2px solid var(--controle-borda);border-radius:16px;background:var(--superficie);color:var(--ink);font-size:18px}
 .atendimento-campo-grande:focus{outline:none;border-color:var(--blue-600)}

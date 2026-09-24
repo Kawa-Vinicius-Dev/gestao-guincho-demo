@@ -53,7 +53,7 @@ test('a folha da DRE resume; serviço a serviço fica só no Excel', () => {
   expect(relatorio.folhaUnica).toBe(true)
   expect(relatorio.secoes.filter(s => !s.aba).map(s => s.titulo)).toEqual([
     'Demonstrativo', 'Serviços por especialidade', 'Serviços por socorrista', 'Serviços por viatura', 'Conferência'])
-  expect(relatorio.secoes.filter(s => s.aba).map(s => s.aba)).toEqual(['Serviços', 'Despesas'])
+  expect(relatorio.secoes.filter(s => s.aba).map(s => s.aba)).toEqual(['Serviços', 'Viaturas', 'Despesas'])
   expect(relatorio.resumo?.at(-1)).toEqual(['Situação', 'DRE parcial: 1 de 3 serviços aguardando OP'])
 })
 

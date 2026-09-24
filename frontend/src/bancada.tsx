@@ -348,6 +348,21 @@ window.fetch = (async (entrada: RequestInfo | URL, init?: RequestInit) => {
   if (url.includes('fila_de_aprovacoes')) return responder(filaAprovacoes)
   if (url.includes('porto_pendencias_os')) return responder(pendencias)
   if (url.includes('porto_dashboard_alto_nivel')) return responder(painel)
+  // Frota: um exemplo com quatro viaturas, para o comparativo (dados inventados).
+  if (url.includes('dashboard_financeiro') && tela === 'frota') return responder({
+    ...visaoGeral.financeiro, despesasPagas: 21000,
+    resultadoPorVeiculo: [
+      { kmMorto: 120, veiculo: 'L168', despesas: 4200, receitas: 31500, resultado: 27300, veiculoId: 1, custoKmMorto: 300 },
+      { kmMorto: 80, veiculo: 'L204', despesas: 3900, receitas: 22800, resultado: 18900, veiculoId: 2, custoKmMorto: 216 },
+      { kmMorto: 210, veiculo: 'L311', despesas: 5100, receitas: 6200, resultado: 1100, veiculoId: 3, custoKmMorto: 609 },
+      { kmMorto: 40, veiculo: 'L402', despesas: 1800, receitas: 14270, resultado: 12470, veiculoId: 4, custoKmMorto: 100 },
+    ] })
+  if (url.includes('/rest/v1/veiculos') && tela === 'frota') return responder([
+    { id: 1, identificacao: 'L168', placa: 'FLS9B63', modelo: 'Delivery 11.180', custo_por_km: 2.5, sigla_porto: 'L168', ativo: true },
+    { id: 2, identificacao: 'L204', placa: 'GHT2A48', modelo: 'Accelo 1017', custo_por_km: 2.7, sigla_porto: 'L204', ativo: true },
+    { id: 3, identificacao: 'L311', placa: 'EXC4C11', modelo: 'Tector 9.190', custo_por_km: 2.9, sigla_porto: 'L311', ativo: true },
+    { id: 4, identificacao: 'L402', placa: 'QWE5F66', modelo: 'Aumark S 916', custo_por_km: 2.5, sigla_porto: 'L402', ativo: true },
+  ])
   if (url.includes('dashboard_resumo')) return responder(visaoGeral)
   if (url.includes('comissao_das_ops')) return responder(comissao)
   if (url.includes('meus_periodos_de_op')) return responder([
