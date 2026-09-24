@@ -26,8 +26,26 @@ begin
 exception when check_violation then raise notice 'PASSOU  | documento tem um dono so';
 end $$;
 
+\echo '===== Vistoria periodica ====='
+insert into public.vistorias_periodicas (veiculo_id, referencia, feita_em) values (1, '2026-10-01', '2026-10-03');
+select pg_temp.checar('vistoria registrada, aprovada por padrao',
+  (select resultado from public.vistorias_periodicas), 'APROVADA');
+do $$
+begin
+  insert into public.vistorias_periodicas (veiculo_id, referencia, feita_em) values (1, '2026-10-01', '2026-10-05');
+  raise exception 'FALHOU  | aceitou duas vistorias no mesmo mes';
+exception when unique_violation then raise notice 'PASSOU  | uma vistoria por mes';
+end $$;
+do $$
+begin
+  insert into public.vistorias_periodicas (veiculo_id, referencia, feita_em) values (1, '2026-11-15', '2026-11-15');
+  raise exception 'FALHOU  | aceitou referencia fora do dia 1';
+exception when check_violation then raise notice 'PASSOU  | referencia e o mes (dia 1)';
+end $$;
+
 set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000002';
 select pg_temp.checar('socorrista nao ve', (select count(*)::text from public.documentos), '0');
+select pg_temp.checar('nem as vistorias', (select count(*)::text from public.vistorias_periodicas), '0');
 reset role;
 
 \echo 'TODOS OS TESTES PASSARAM'

@@ -11,6 +11,10 @@ import {
   situacaoDoDocumento, TIPOS_DA_VIATURA, TIPOS_DO_SOCORRISTA, type Documento,
 } from '../dados/documentos'
 import { listarMotoristas } from '../dados/motoristas'
+import {
+  DIAS_PARA_CORRIGIR, finalDaPlaca, listarVistorias, mesesDaVistoria, nomeDoMes, registrarVistoria, vistoriaDaViatura,
+  type RegistroVistoria, type VistoriaDaViatura,
+} from '../dados/vistorias'
 import { listarVeiculos } from '../dados/veiculos'
 import type { Motorista, Veiculo } from '../types/modelos'
 import { data, hojeIso } from '../utils/formatadores'
@@ -43,10 +47,13 @@ export default function DocumentosPage() {
   const [aviso, setAviso] = useState('')
   const [editando, setEditando] = useState<Documento | 'novo' | null>(null)
   const [excluindo, setExcluindo] = useState<Documento | null>(null)
+  const [vistorias, setVistorias] = useState<RegistroVistoria[]>([])
+  const [registrando, setRegistrando] = useState<{ veiculo: Veiculo; vistoria: VistoriaDaViatura } | null>(null)
 
   const carregar = useCallback(() => {
     setErro('')
     listarDocumentos().then(setLista).catch(e => setErro((e as Error).message))
+    listarVistorias().then(setVistorias).catch(() => setVistorias([]))
   }, [])
   useEffect(() => {
     carregar()
@@ -63,6 +70,9 @@ export default function DocumentosPage() {
     const s = situacaoDoDocumento(d.venceEm, hoje)
     return filtro === 'todos' || (filtro === 'atencao' ? s !== 'EM_DIA' : s === filtro)
   }), [lista, filtro, hoje])
+
+  const situacoesVistoria = veiculos.map(v => ({ veiculo: v, vistoria: vistoriaDaViatura(v.placa, vistorias.filter(r => r.veiculoId === v.id), hoje) }))
+  const vistoriasPendentes = situacoesVistoria.filter(s => s.vistoria.situacao === 'PENDENTE' || s.vistoria.situacao === 'REPROVADA').length
 
   if (erro && !lista) return <ErroPagina mensagem={erro} tentarNovamente={carregar} />
   if (!lista) return <Carregando />
@@ -85,7 +95,60 @@ export default function DocumentosPage() {
         tom={contagem.VENCE_LOGO ? 'atencao' : 'neutro'} apoio="Hora de renovar" />
       <Indicador rotulo="Em dia" valor={contagem.EM_DIA} link={link('EM_DIA')}
         tom={contagem.EM_DIA ? 'positivo' : 'neutro'} apoio={`${lista.length} documentos no total`} />
+      <Indicador rotulo="Vistoria da Porto" valor={vistoriasPendentes} link="/documentos#vistorias"
+        tom={vistoriasPendentes ? 'atencao' : 'neutro'} apoio="Pendente no mês ou reprovada" />
     </GradeIndicadores>
+
+    <div id="vistorias">
+      <Painel titulo="Vistoria periódica da Porto" etiqueta="Pelo final da placa">
+        <p className="painel-apoio">
+          Placa com final ímpar: janeiro, abril, julho e outubro. Final par: fevereiro, maio, agosto e novembro.
+          Reprovada por falta de item, são {DIAS_PARA_CORRIGIR} dias corridos para corrigir e refazer, senão a Porto pode bloquear a viatura.
+        </p>
+        {!situacoesVistoria.length
+          ? <Vazio titulo="Nenhuma viatura ativa" descricao="Cadastre as viaturas com a placa para o calendário aparecer." />
+          : <div className="table-scroll"><table>
+              <thead><tr><th>Viatura</th><th>Meses de vistoria</th><th>Situação</th><th aria-label="Ações"></th></tr></thead>
+              <tbody>{situacoesVistoria.map(({ veiculo, vistoria }) => {
+                const final = finalDaPlaca(veiculo.placa)
+                const mesRef = vistoria.referencia ? nomeDoMes(Number(vistoria.referencia.slice(5, 7))) : ''
+                const proximo = vistoria.proximoMes ? nomeDoMes(Number(vistoria.proximoMes.slice(5, 7))) : ''
+                return <tr key={veiculo.id}>
+                  <td><LinkViatura id={veiculo.id} sigla={veiculo.identificacao} />
+                    <small className="celula-apoio">{veiculo.placa ? `Placa ${veiculo.placa}` : 'Sem placa cadastrada'}</small></td>
+                  <td>{final === null ? '—' : mesesDaVistoria(final).map(nomeDoMes).map(m => m.slice(0, 3)).join(' · ')}
+                    {final === null ? null : <small className="celula-apoio">final {final} · {final % 2 ? 'ímpar' : 'par'}</small>}</td>
+                  <td>{vistoria.situacao === 'SEM_PLACA'
+                      ? <span className="celula-apoio">Cadastre a placa da viatura</span>
+                      : <>
+                          <Etiqueta tom={vistoria.situacao === 'PENDENTE' ? 'atencao'
+                            : vistoria.situacao === 'REPROVADA' ? 'alerta'
+                            : vistoria.situacao === 'SEM_REGISTRO' ? 'neutro' : 'ok'}>
+                            {vistoria.situacao === 'PENDENTE' ? `Fazer em ${mesRef}`
+                              : vistoria.situacao === 'REPROVADA' ? 'Reprovada'
+                              : vistoria.situacao === 'SEM_REGISTRO' ? `Sem registro em ${mesRef}`
+                              : vistoria.situacao === 'FEITA' ? `Feita em ${data(vistoria.registro!.feitaEm)}` : 'Em dia'}
+                          </Etiqueta>
+                          <small className="celula-apoio">
+                            {vistoria.situacao === 'REPROVADA' && vistoria.corrigirAte
+                              ? `corrigir e refazer até ${data(vistoria.corrigirAte)}`
+                              : vistoria.situacao === 'PENDENTE' ? `a seguinte em ${proximo}`
+                              : `próxima em ${proximo}`}
+                          </small>
+                        </>}</td>
+                  <td className="acoes-contestacao">
+                    {vistoria.situacao === 'PENDENTE' || vistoria.situacao === 'REPROVADA' || vistoria.situacao === 'SEM_REGISTRO'
+                      ? <button type="button" className={`button button-sm ${vistoria.situacao === 'SEM_REGISTRO' ? 'button-ghost' : 'button-primary'}`}
+                          onClick={() => setRegistrando({ veiculo, vistoria })}>
+                          {vistoria.situacao === 'REPROVADA' ? 'Refiz a vistoria' : 'Registrar vistoria'}
+                        </button>
+                      : null}
+                  </td>
+                </tr>
+              })}</tbody>
+            </table></div>}
+      </Painel>
+    </div>
 
     <Painel titulo="Documentos" aoLado={
       <div className="atalhos-periodo" role="group" aria-label="Filtrar documentos">
@@ -124,6 +187,11 @@ export default function DocumentosPage() {
       ? <FormDocumento documento={editando === 'novo' ? null : editando} veiculos={veiculos} motoristas={motoristas}
           aoFechar={() => setEditando(null)}
           aoSalvar={mensagem => { setEditando(null); setAviso(mensagem); carregar() }} />
+      : null}
+    {registrando
+      ? <FormVistoria veiculo={registrando.veiculo} vistoria={registrando.vistoria} hoje={hoje}
+          aoFechar={() => setRegistrando(null)}
+          aoSalvar={mensagem => { setRegistrando(null); setAviso(mensagem); carregar() }} />
       : null}
     {excluindo
       ? <ConfirmarExclusao coisa="documento" nome={`${excluindo.tipo} de ${excluindo.veiculo ?? excluindo.motorista ?? '—'}`}
@@ -189,6 +257,57 @@ function FormDocumento({ documento, veiculos, motoristas, aoFechar, aoSalvar }: 
       {erro ? <div className="form-alert field-wide" role="alert">{erro}</div> : null}
       <AcoesModal aoCancelar={aoFechar}>
         <button className="button button-primary" disabled={salvando}>{salvando ? 'Salvando…' : 'Salvar documento'}</button>
+      </AcoesModal>
+    </form>
+  </Modal>
+}
+
+function FormVistoria({ veiculo, vistoria, hoje, aoFechar, aoSalvar }: {
+  veiculo: Veiculo; vistoria: VistoriaDaViatura; hoje: string
+  aoFechar: () => void; aoSalvar: (mensagem: string) => void
+}) {
+  const [erro, setErro] = useState('')
+  const [salvando, setSalvando] = useState(false)
+  const [resultado, setResultado] = useState<'APROVADA' | 'REPROVADA'>('APROVADA')
+  const referencia = vistoria.referencia ?? hoje.slice(0, 8) + '01'
+  const mes = nomeDoMes(Number(referencia.slice(5, 7)))
+
+  async function salvar(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    const f = new FormData(e.currentTarget)
+    setSalvando(true); setErro('')
+    try {
+      await registrarVistoria({ veiculoId: veiculo.id, referencia, feitaEm: String(f.get('feitaEm') ?? hoje), resultado,
+        observacao: String(f.get('observacao') ?? '') })
+      aoSalvar(resultado === 'APROVADA'
+        ? `Vistoria de ${mes} da ${veiculo.identificacao} registrada como aprovada.`
+        : `Vistoria de ${mes} da ${veiculo.identificacao} reprovada: ${DIAS_PARA_CORRIGIR} dias para corrigir e refazer.`)
+    } catch (x) { setErro((x as Error).message) } finally { setSalvando(false) }
+  }
+
+  return <Modal etiqueta="Vistoria da Porto" titulo={`${veiculo.identificacao} · vistoria de ${mes}`} aoFechar={aoFechar}>
+    <form className="form-grid two-columns" onSubmit={salvar}>
+      <div className="field field-wide">
+        <span>Resultado</span>
+        <div className="atalhos-periodo" role="radiogroup" aria-label="Resultado">
+          {(['APROVADA', 'REPROVADA'] as const).map(r =>
+            <button key={r} type="button" role="radio" aria-checked={resultado === r}
+              className={`atalho-periodo${resultado === r ? ' esta-marcado' : ''}`} onClick={() => setResultado(r)}>
+              {r === 'APROVADA' ? 'Aprovada' : 'Reprovada'}
+            </button>)}
+        </div>
+      </div>
+      <Campo rotulo="Feita em"><input name="feitaEm" type="date" required defaultValue={hoje} max={hoje} /></Campo>
+      <Campo rotulo="Observação">
+        <input name="observacao" autoComplete="off"
+          placeholder={resultado === 'REPROVADA' ? 'O que a Porto pediu para corrigir' : 'Opcional'} />
+      </Campo>
+      {resultado === 'REPROVADA'
+        ? <p className="painel-apoio field-wide">A viatura fica marcada como reprovada, com {DIAS_PARA_CORRIGIR} dias corridos para corrigir. Quando refizer, registre de novo aqui.</p>
+        : null}
+      {erro ? <div className="form-alert field-wide" role="alert">{erro}</div> : null}
+      <AcoesModal aoCancelar={aoFechar}>
+        <button className="button button-primary" disabled={salvando}>{salvando ? 'Salvando…' : 'Salvar vistoria'}</button>
       </AcoesModal>
     </form>
   </Modal>

@@ -10,7 +10,11 @@ import { ou, supabase } from './cliente'
 /** Com quantos dias de antecedencia o documento passa a pedir atencao. */
 export const DIAS_DE_AVISO = 30
 
-export const TIPOS_DA_VIATURA = ['CRLV', 'Seguro', 'Tacógrafo', 'Vistoria da Porto', 'Licença ambiental']
+// Os que o Manual de Frota da Porto (abril/2026) cobra. A vistoria periodica nao
+// entra aqui: o calendario dela sai da placa (dados/vistorias).
+export const TIPOS_DA_VIATURA = [
+  'CRLV', 'Seguro Casco + RCF', 'Registro ANTT (RNTRC)', 'AETC (caminhão em SP)', 'Tacógrafo', 'Licença ambiental',
+]
 export const TIPOS_DO_SOCORRISTA = ['CNH', 'Curso da Porto', 'Exame toxicológico', 'ASO (saúde ocupacional)']
 
 export type SituacaoDocumento = 'VENCIDO' | 'VENCE_LOGO' | 'EM_DIA'

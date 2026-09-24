@@ -287,6 +287,15 @@ window.fetch = (async (entrada: RequestInfo | URL, init?: RequestInit) => {
     new Response(JSON.stringify(corpo), { headers: { 'Content-Type': 'application/json' } })
 
   if (url.includes('extrato_financeiro')) return responder(extrato)
+  if (url.includes('/rest/v1/veiculos') && tela === 'documentos') return responder([
+    { id: 1, identificacao: 'L168', placa: 'FLS9B63', modelo: 'Delivery 11.180', custo_por_km: 2.5, sigla_porto: 'L168', ativo: true },
+    { id: 2, identificacao: 'L204', placa: 'GHT2A48', modelo: 'Accelo 1017', custo_por_km: 2.7, sigla_porto: 'L204', ativo: true },
+    { id: 3, identificacao: 'L311', placa: 'EXC4C11', modelo: 'Tector 9.190', custo_por_km: 2.9, sigla_porto: 'L311', ativo: true },
+    { id: 4, identificacao: 'L402', placa: null, modelo: null, custo_por_km: 2.5, sigla_porto: 'L402', ativo: true },
+  ])
+  if (url.includes('/rest/v1/vistorias_periodicas')) return responder([
+    { id: 1, veiculo_id: 2, referencia: '2026-08-01', feita_em: '2026-08-04', resultado: 'APROVADA', observacao: null },
+  ])
   if (url.includes('/rest/v1/documentos')) return responder([
     { id: 1, tipo: 'CRLV', vence_em: '2026-09-18', observacao: null, veiculo_id: 1, motorista_id: null, veiculos: { identificacao: 'L168' }, motoristas: null },
     { id: 2, tipo: 'Seguro', vence_em: '2026-10-12', observacao: 'Apólice 55.221 · Porto Seguro', veiculo_id: 2, motorista_id: null, veiculos: { identificacao: 'L204' }, motoristas: null },

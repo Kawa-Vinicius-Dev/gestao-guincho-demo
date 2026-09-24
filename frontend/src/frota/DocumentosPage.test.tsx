@@ -20,10 +20,14 @@ async function abrir(caminho = '/documentos') {
   vi.useFakeTimers({ toFake: ['Date'] })
   vi.setSystemTime(new Date('2026-09-24T12:00:00'))
   let criado: unknown = null
+  let vistoria: unknown = null
   servidor.use(
     http.get(`${URL_SUPABASE}/rest/v1/documentos`, () => HttpResponse.json(documentos)),
     http.post(`${URL_SUPABASE}/rest/v1/documentos`, async ({ request }) => {
       criado = await request.json(); return HttpResponse.json([{ id: 9 }], { status: 201 })
+    }),
+    http.post(`${URL_SUPABASE}/rest/v1/vistorias_periodicas`, async ({ request }) => {
+      vistoria = await request.json(); return HttpResponse.json([{ id: 5 }], { status: 201 })
     }),
     http.get(`${URL_SUPABASE}/rest/v1/veiculos`, () => HttpResponse.json([
       { id: 2, identificacao: 'L168', placa: 'ABC1D23', modelo: null, custo_por_km: 2.5, sigla_porto: 'L168', ativo: true }])),
@@ -32,7 +36,7 @@ async function abrir(caminho = '/documentos') {
   render(<MemoryRouter initialEntries={[caminho]}><Pagina /></MemoryRouter>)
   await screen.findByRole('heading', { name: 'Documentos', level: 1 })
   vi.useRealTimers()
-  return () => criado
+  return Object.assign(() => criado, { vistoria: () => vistoria })
 }
 
 test('conta vencidos e os que vencem em 30 dias, e diz quanto falta', async () => {
@@ -47,7 +51,7 @@ test('conta vencidos e os que vencem em 30 dias, e diz quanto falta', async () =
 test('o filtro da URL mostra só os vencidos', async () => {
   await abrir('/documentos?filtro=VENCIDO')
 
-  const tabela = screen.getByRole('table')
+  const tabela = screen.getAllByRole('table').at(-1)!
   expect(within(tabela).getByText('CRLV')).toBeInTheDocument()
   expect(within(tabela).queryByText('CNH')).not.toBeInTheDocument()
 })
@@ -64,4 +68,21 @@ test('cadastra o documento de uma viatura', async () => {
 
   expect(await screen.findByText('Documento Tacógrafo cadastrado.')).toBeInTheDocument()
   expect(criado()).toMatchObject({ tipo: 'Tacógrafo', vence_em: '2027-01-15', veiculo_id: 2, motorista_id: null })
+})
+
+// Manual de Frota da Porto: placa final 3 (impar) vistoria em julho; em setembro,
+// sem registro de julho, a tela pede o registro.
+test('vistoria da Porto sai da placa e se registra na tela', async () => {
+  const abertos = await abrir()
+  const user = userEvent.setup({ delay: null })
+
+  const linha = (await screen.findByText('Placa ABC1D23')).closest('tr')!
+  expect(within(linha).getByText('jan · abr · jul · out')).toBeInTheDocument()
+  expect(within(linha).getByText('Sem registro em julho')).toBeInTheDocument()
+  await user.click(within(linha).getByRole('button', { name: 'Registrar vistoria' }))
+  await user.click(screen.getByRole('radio', { name: 'Reprovada' }))
+  await user.click(screen.getByRole('button', { name: 'Salvar vistoria' }))
+
+  expect(await screen.findByText(/reprovada: 5 dias para corrigir e refazer/)).toBeInTheDocument()
+  expect(abertos.vistoria()).toMatchObject({ veiculo_id: 2, referencia: '2026-07-01', resultado: 'REPROVADA' })
 })
