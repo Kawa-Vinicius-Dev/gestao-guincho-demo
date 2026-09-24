@@ -2137,3 +2137,7 @@ input,textarea,select,[contenteditable]:not([contenteditable=false]){caret-color
 
 /* DRE: cada categoria de gasto leva ao Extrato ja pesquisado. */
 .dre-ver-extrato{display:inline-block;margin:6px 0 10px 40px;font-size:13px;font-weight:600}
+
+/* Rodape do menu: o administrador chega ao Sobre e suporte da ANAIV. */
+.sidebar-foot .sidebar-sobre{display:block;margin-top:6px;color:#9fb4c8;font-size:12px;text-decoration:none}
+.sidebar-foot .sidebar-sobre:hover{color:#fff;text-decoration:underline}
