@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useAoVivo } from '../dados/aoVivo'
 import { listarPendenciasOsPorto } from '../dados/porto'
+import { contestacoesAContestar } from '../dados/porto/contestacoes'
 import { documentosPedindoAtencao } from '../dados/documentos'
 import { vistoriasPedindoAtencao } from '../dados/vistorias'
 import { hojeIso } from '../utils/formatadores'
@@ -29,8 +30,15 @@ export function useContadoresDoMenu(admin: boolean): Record<string, number> {
       // e viaturas no mes da vistoria da Porto sem ela feita, ou reprovadas.
       documentosPedindoAtencao(hojeIso()).catch(() => 0),
       vistoriasPedindoAtencao(hojeIso()).catch(() => 0),
-    ]).then(([aprovacoes, pendencias, documentos, vistorias]) =>
-      setContadores({ '/aprovacoes': aprovacoes, '/porto/ordens-servico': pendencias, '/veiculos': documentos + vistorias }))
+      // Casos que a Porto deve e ninguem contestou ainda (Kawa, 24/09/2026).
+      contestacoesAContestar().catch(() => 0),
+    ]).then(([aprovacoes, pendencias, documentos, vistorias, contestar]) =>
+      setContadores({
+        '/aprovacoes': aprovacoes,
+        '/porto/ordens-servico': pendencias,
+        '/veiculos': documentos + vistorias,
+        '/porto/ordens-pagamento': contestar,
+      }))
   }, [admin, periodo.inicio, periodo.fim, competencia])
   useEffect(() => { contar() }, [contar])
   useAoVivo(contar)
