@@ -68,6 +68,7 @@ const icones: Record<string,string> = {
   '/porto/ordens-servico':'M6 3h8l4 4v14H6zM14 3v4h4M9 13h6M9 16h4',
   '/porto/pendencias':'M12 4 21 20H3zM12 10v4M12 17.5h.01',
   '/porto/devolvidos':'M9 14 4 9l5-5M4 9h11a5 5 0 0 1 0 10H9',
+  '/porto/contestacoes':'M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6zM12 8v5M12 16h.01',
   '/porto/relatorios':'M6 3h8l4 4v14H6zM14 3v4h4M9 17v-3M12 17v-6M15 17v-2',
   '/configuracoes':'M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1',
 }

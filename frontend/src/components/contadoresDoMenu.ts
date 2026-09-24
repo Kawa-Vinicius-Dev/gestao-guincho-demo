@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useAoVivo } from '../dados/aoVivo'
 import { listarPendenciasOsPorto } from '../dados/porto'
+import { contestacoesAContestar } from '../dados/porto/contestacoes'
 import { filaDeAprovacoes } from '../dados/turnos'
 import { porCompetencia } from '../utils/modoDoPeriodo'
 import { usePeriodoGlobal } from '../utils/periodoGlobal'
@@ -22,8 +23,10 @@ export function useContadoresDoMenu(admin: boolean): Record<string, number> {
         ? listarPendenciasOsPorto(periodo.inicio, periodo.fim, competencia)
             .then(l => l.filter(p => !p.apenasConferir).length).catch(() => 0)
         : Promise.resolve(0),
-    ]).then(([aprovacoes, pendencias]) =>
-      setContadores({ '/aprovacoes': aprovacoes, '/porto/ordens-servico': pendencias }))
+      // Casos que a Porto deve e ninguem contestou ainda (Kawa, 24/09/2026).
+      contestacoesAContestar().catch(() => 0),
+    ]).then(([aprovacoes, pendencias, contestar]) =>
+      setContadores({ '/aprovacoes': aprovacoes, '/porto/ordens-servico': pendencias, '/porto/ordens-pagamento': contestar }))
   }, [admin, periodo.inicio, periodo.fim, competencia])
   useEffect(() => { contar() }, [contar])
   useAoVivo(contar)
