@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
-import { Link } from 'react-router-dom'
 import { ConfirmarAcao } from '../components/ConfirmarAcao'
 import { BlocoFoto } from './BlocoFoto'
 import { Carregando, ErroPagina } from '../components/EstadoPagina'
@@ -540,13 +539,7 @@ export default function TurnoPage() {
       : aberto && aberto.faltaChecklist
         ? <FaltaChecklist turno={aberto} checklist={checklist} aoMudarChecklist={setChecklist} aoEnviar={carregar} />
       : aberto
-        ? <>
-            <Link to="/atendimento" className="socorrista-cartao atendimento-atalho">
-              <strong>Registrar atendimento</strong>
-              <span>Número da OS, chegada, fotos do veículo e assinatura do segurado. É a prova se a Porto não pagar.</span>
-            </Link>
-            <FecharTurno turno={aberto} aoFechar={carregar} />
-          </>
+        ? <FecharTurno turno={aberto} aoFechar={carregar} />
         : <AbrirTurno dados={dados} aoAbrir={carregar} checklist={checklist} aoMudarChecklist={setChecklist} />}
 
     {dados.ultimosTurnos.length
