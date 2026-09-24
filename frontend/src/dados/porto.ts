@@ -596,8 +596,8 @@ export async function criarPreviaComposicaoPorto(
  * ------------------------------------------------------------------ */
 
 /** Fechamento do dia: servicos prestados, por socorrista e por especialidade. */
-export async function baixarRelatorioDiarioPorto(dia: string, formato: 'excel' | 'pdf' = 'excel'): Promise<void> {
-  return relatoriosPorto.baixarRelatorioDiarioPorto(dia, formato)
+export async function relatorioOperacional(inicio: string, fim: string) {
+  return relatoriosPorto.relatorioOperacional(inicio, fim)
 }
 
 export async function baixarRelatorioPorto(

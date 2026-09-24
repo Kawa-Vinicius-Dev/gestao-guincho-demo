@@ -9,14 +9,14 @@ import { data as formatarData, moeda } from '../utils/formatadores'
 /**
  * A DRE, montada num lugar so para a tela e para o Excel/PDF.
  *
- * Kawa, 23/09/2026: "a DRE tem que conter tudo detalhadamente" — os servicos
- * prestados (com valor, ou "sem valor" enquanto a OP nao chega) e as despesas
- * discriminadas por gasto, de forma simplificada. O tamanho depende do periodo:
- * ate 8 dias, servico por servico ("a diaria vai imprimir um a um? sim"); acima
- * disso, o resumo por socorrista e por viatura ("o mensal vai imprimir 500
- * servicos um a um? fica ruim").
+ * Kawa, 23/09/2026: a DRE exportada cabe em uma folha A4, "sem muita burocracia":
+ * resumo de servicos, receitas, despesas e resultado, com detalhe suficiente
+ * para conferir. Servico por servico nao entra na folha em periodo nenhum — a
+ * lista um a um e do relatorio operacional; aqui ela vai numa aba do Excel.
  */
-export const DIAS_PARA_DETALHAR = 8
+
+/** Quantas linhas cada quadro de resumo mostra na folha; o resto vira "Outros". */
+const LINHAS_POR_QUADRO = 8
 
 export interface CategoriaDaDre {
   categoria: string
@@ -37,8 +37,6 @@ export interface MontagemDre {
     comValor: number
     semValor: number
     valor: number
-    /** Periodo curto: a lista inteira, um a um. */
-    detalhado: boolean
     lista: LinhaOs[]
     porSocorrista: LinhaFaturamento[]
     porViatura: LinhaFaturamento[]
@@ -51,8 +49,7 @@ export function diasDoPeriodo(inicio: string, fim: string): number {
 }
 
 export function montarDre(
-  financeiro: Dashboard, extrato: LancamentoFinanceiro[], servicos: LinhaOs[],
-  dias: number, veiculos: Veiculo[] = [],
+  financeiro: Dashboard, extrato: LancamentoFinanceiro[], servicos: LinhaOs[], veiculos: Veiculo[] = [],
 ): MontagemDre {
   const receitaBruta = financeiro.receitaRecebida
   const totalDespesas = financeiro.despesasPagas
@@ -92,7 +89,6 @@ export function montarDre(
       comValor: servicos.length - semValor,
       semValor,
       valor: servicos.reduce((t, os) => t + valorDaOs(os), 0),
-      detalhado: dias <= DIAS_PARA_DETALHAR,
       lista: [...servicos].sort((a, b) => (a.dataAtendimento ?? '').localeCompare(b.dataAtendimento ?? '') || a.numero.localeCompare(b.numero)),
       porSocorrista: faturamentoPorGrupo(servicos, 'socorrista'),
       porViatura: faturamentoPorGrupo(servicos, 'viatura', veiculos),
@@ -101,74 +97,120 @@ export function montarDre(
   }
 }
 
-/** A mesma DRE da tela, em Excel ou PDF. */
+/** As maiores linhas e, se sobrar, uma linha "Outros" com a soma do resto. */
+function comOutros(linhas: [string, number, number][], rotuloOutros = 'Outros'): [string, number, number][] {
+  if (linhas.length <= LINHAS_POR_QUADRO) return linhas
+  const resto = linhas.slice(LINHAS_POR_QUADRO - 1)
+  return [...linhas.slice(0, LINHAS_POR_QUADRO - 1),
+    [`${rotuloOutros} (${resto.length})`, resto.reduce((t, l) => t + l[1], 0), resto.reduce((t, l) => t + l[2], 0)]]
+}
+
+/**
+ * A DRE em uma folha A4 (PDF) e, no Excel, a mesma folha na primeira aba com os
+ * servicos e os gastos um a um em abas proprias, para conferir.
+ *
+ * Quando nenhum servico do periodo tem valor ainda (a OP nao chegou), o arquivo
+ * diz "parcial": os servicos aparecem em quantidade, sem virar R$ 0,00.
+ */
 export function relatorioDaDre(m: MontagemDre, inicio: string, fim: string, numerosOps: string[] = []): Relatorio {
   const curtos = nomesCurtos(m.servicos.lista.map(os => os.motorista))
   const ordenar = (linhas: LinhaFaturamento[]) =>
     [...linhas].sort((a, b) => Number(a.semVinculo) - Number(b.semVinculo) || b.valor - a.valor)
-  const resumoPor = (titulo: string, linhas: LinhaFaturamento[]) => ({
-    titulo,
-    colunas: [{ titulo: titulo.replace('Serviços por ', '').replace(/^./, c => c.toUpperCase()), largura: 26 },
-      { titulo: 'Serviços', tipo: 'numero' as const, largura: 10 }, { titulo: 'Valor', tipo: 'moeda' as const, largura: 16 },
-      { titulo: 'Observação', largura: 24 }],
-    linhas: ordenar(linhas).map(l => [l.rotulo, l.quantidade ?? 0, l.valor, (l.detalhe ?? '').split(' · ')[1] ?? '']),
-    totais: ['Total', m.servicos.total, m.servicos.valor, m.servicos.semValor ? `${m.servicos.semValor} sem valor` : ''],
+  const quadro = (titulo: string, rotulo: string, linhas: [string, number, number][]) => ({
+    titulo, metade: true,
+    colunas: [{ titulo: rotulo, largura: 24 }, { titulo: 'Serviços', tipo: 'numero' as const, largura: 10 },
+      { titulo: 'Valor', tipo: 'moeda' as const, largura: 16 }],
+    linhas: comOutros(linhas),
+    totais: ['Total', m.servicos.total, m.servicos.valor],
     vazio: 'Nenhum serviço no período.',
   })
 
+  const porEspecialidade = new Map<string, [number, number]>()
+  for (const os of m.servicos.lista) {
+    const nome = os.especialidade?.trim() || 'Não informada'
+    const [q, v] = porEspecialidade.get(nome) ?? [0, 0]
+    porEspecialidade.set(nome, [q + 1, v + valorDaOs(os)])
+  }
+
+  const semViatura = m.servicos.lista.filter(os => !os.viatura).length
+  const semSocorrista = m.servicos.lista.filter(os => !os.motoristaId).length
+  const situacao = !m.servicos.total ? 'Sem serviços no período'
+    : !m.servicos.semValor ? 'DRE completa: todos os serviços com valor'
+    : !m.servicos.comValor ? 'DRE parcial: nenhuma OP chegou para estes serviços ainda'
+    : `DRE parcial: ${m.servicos.semValor} de ${m.servicos.total} serviços aguardando OP`
+
+  // Categorias de despesa: as maiores e "Outras", para o demonstrativo caber na folha.
+  const categorias = m.despesas.length <= LINHAS_POR_QUADRO ? m.despesas
+    : [...m.despesas.slice(0, LINHAS_POR_QUADRO - 1), {
+        categoria: `Outras (${m.despesas.length - LINHAS_POR_QUADRO + 1})`,
+        valor: m.despesas.slice(LINHAS_POR_QUADRO - 1).reduce((t, d) => t + d.valor, 0), itens: [],
+      }]
+
   return {
     titulo: 'DRE - Demonstrativo de resultado',
-    subtitulo: `Período: ${formatarData(inicio)} a ${formatarData(fim)}`,
+    subtitulo: `Período: ${formatarData(inicio)} a ${formatarData(fim)}${numerosOps.length ? ` · OP ${numerosOps.join(', ')}` : ''}`,
+    folhaUnica: true,
     resumo: [
-      ['Receitas recebidas', moeda(m.receitaBruta)],
-      ['Despesas pagas', moeda(m.totalDespesas)],
-      ['Lucro operacional', moeda(m.lucro)],
-      ['Margem', m.margem === null ? '—' : `${m.margem.toFixed(1).replace('.', ',')}%`],
-      ['Serviços prestados', `${m.servicos.total}${m.servicos.semValor ? ` (${m.servicos.semValor} sem valor)` : ''}`],
+      ['Serviços', `${m.servicos.total}${m.servicos.semValor ? ` (${m.servicos.semValor} sem valor)` : ''}`],
+      ['Receitas', moeda(m.receitaBruta)],
+      ['Despesas', moeda(m.totalDespesas)],
+      ['Resultado', `${moeda(m.lucro)}${m.margem === null ? '' : ` · ${m.margem.toFixed(1).replace('.', ',')}%`}`],
+      ['Situação', situacao],
     ],
     secoes: [
       {
-        titulo: 'Resultado',
+        titulo: 'Demonstrativo',
         colunas: [{ titulo: 'Linha', largura: 40 }, { titulo: 'Valor', tipo: 'moeda', largura: 18 }],
         linhas: [
           ['Receita bruta', m.receitaBruta],
           ['   Serviços da Porto', m.receitaServicos],
           ...m.receitasAvulsas.map(r => [`   ${r.categoria}`, r.valor]),
-          ['(−) Despesas pagas', -m.totalDespesas],
-          ...m.despesas.map(d => [`   ${d.categoria}`, -d.valor]),
+          ['(-) Despesas pagas', -m.totalDespesas],
+          ...categorias.map(d => [`   ${d.categoria}`, -d.valor]),
         ],
-        totais: ['Lucro operacional', m.lucro],
+        totais: ['Resultado operacional', m.lucro],
       },
-      // Os servicos feitos no periodo vivem no arquivo da DRE, nao na tela (Kawa,
-      // 23/09/2026): por socorrista e por viatura sempre; ate 8 dias, um a um.
-      resumoPor('Serviços por socorrista', m.servicos.porSocorrista),
-      resumoPor('Serviços por viatura', m.servicos.porViatura),
-      ...(m.servicos.detalhado
-        ? [{
-            titulo: 'Serviços prestados, por socorrista',
-            colunas: [
-              { titulo: 'Socorrista', largura: 18 }, { titulo: 'Data', tipo: 'data' as const, largura: 12 },
-              { titulo: 'OS', largura: 16 }, { titulo: 'Especialidade', largura: 16 },
-              { titulo: 'Viatura', largura: 10 }, { titulo: 'OP', largura: 12 }, { titulo: 'Valor', tipo: 'moeda' as const, largura: 14 },
-            ],
-            linhas: [...m.servicos.lista]
-              .map(os => ({ os, quem: curtos.get(os.motorista ?? '') ?? os.motorista ?? 'Sem socorrista' }))
-              .sort((a, b) => Number(a.quem === 'Sem socorrista') - Number(b.quem === 'Sem socorrista')
-                || a.quem.localeCompare(b.quem) || (a.os.dataAtendimento ?? '').localeCompare(b.os.dataAtendimento ?? ''))
-              .map(({ os, quem }) => [quem, os.dataAtendimento, os.numero, os.especialidade, os.viatura ?? 'Sem viatura',
-                os.numeroOp ?? 'Aguardando OP', os.semValor ? 'Sem valor' : valorDaOs(os)]),
-            totais: ['Total', null, `${m.servicos.total} serviços`, null, null, null, m.servicos.valor],
-            vazio: 'Nenhum serviço no período.',
-          }]
-        : []),
+      quadro('Serviços por especialidade', 'Especialidade',
+        [...porEspecialidade].map(([nome, [q, v]]) => [nome, q, v] as [string, number, number])
+          .sort((a, b) => b[2] - a[2] || b[1] - a[1])),
+      quadro('Serviços por socorrista', 'Socorrista',
+        ordenar(m.servicos.porSocorrista).map(l => [l.rotulo, l.quantidade ?? 0, l.valor])),
+      quadro('Serviços por viatura', 'Viatura',
+        ordenar(m.servicos.porViatura).map(l => [l.rotulo, l.quantidade ?? 0, l.valor])),
       {
-        titulo: 'Despesas pagas, gasto por gasto',
+        titulo: 'Conferência', metade: true,
+        colunas: [{ titulo: 'Item', largura: 30 }, { titulo: 'Quantidade', tipo: 'numero', largura: 12 }],
+        linhas: [
+          ['OPs no período', numerosOps.length],
+          ['Serviços com valor', m.servicos.comValor],
+          ['Serviços aguardando OP', m.servicos.semValor],
+          ['Serviços sem viatura', semViatura],
+          ['Serviços sem socorrista', semSocorrista],
+          ['Despesas pagas (lançamentos)', m.despesas.reduce((t, d) => t + d.itens.length, 0)],
+        ],
+      },
+      // So no Excel: o detalhe para conferir linha a linha.
+      {
+        titulo: 'Serviços', aba: 'Serviços',
+        colunas: [
+          { titulo: 'Data', tipo: 'data', largura: 12 }, { titulo: 'OS', largura: 16 },
+          { titulo: 'Especialidade', largura: 22 }, { titulo: 'Socorrista', largura: 18 },
+          { titulo: 'Viatura', largura: 10 }, { titulo: 'OP', largura: 12 }, { titulo: 'Valor', tipo: 'moeda', largura: 14 },
+        ],
+        linhas: m.servicos.lista.map(os => [os.dataAtendimento, os.numero, os.especialidade,
+          curtos.get(os.motorista ?? '') ?? os.motorista ?? 'Sem socorrista', os.viatura ?? 'Sem viatura',
+          os.numeroOp ?? 'Aguardando OP', os.semValor ? 'Sem valor' : valorDaOs(os)]),
+        totais: ['Total', `${m.servicos.total} serviços`, null, null, null, null, m.servicos.valor],
+        vazio: 'Nenhum serviço no período.',
+      },
+      {
+        titulo: 'Despesas', aba: 'Despesas',
         colunas: [
           { titulo: 'Categoria', largura: 22 }, { titulo: 'Data', tipo: 'data', largura: 12 },
           { titulo: 'Descrição', largura: 34 }, { titulo: 'Viatura', largura: 10 }, { titulo: 'Valor', tipo: 'moeda', largura: 14 },
         ],
         linhas: m.despesas.flatMap(d => d.itens.map(l => [d.categoria, l.data, l.descricao, l.veiculo ?? '', l.valor])),
-        totais: ['Total', null, null, null, m.despesas.reduce((t, d) => t + d.valor, 0)],
+        totais: ['Total', null, null, null, m.totalDespesas],
         vazio: 'Nenhuma despesa paga no período.',
       },
     ],
