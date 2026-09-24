@@ -14,6 +14,8 @@ const itens = [
   ['/', 'Visão geral', true, 'financeiro'],
   ['/lancamentos', 'Extrato', true, 'financeiro'],
   ['/turno', 'Turno do dia', false, 'operacao'],
+  // Prova do atendimento colhida no local (Kawa, 24/09/2026).
+  ['/atendimento', 'Atendimento', false, 'operacao'],
   ['/aprovacoes', 'Aprovações', true, 'operacao'],
   ['/despesas', 'Despesas', false, 'operacao'],
   ['/veiculos', 'Viaturas', true, 'operacao'],
@@ -43,7 +45,7 @@ const grupos = { financeiro: 'Financeiro', operacao: 'Operação', equipe: 'Equi
  * aparecer nada pode tirar"); o que o administrador precisa delas esta em
  * Aprovacoes e na ficha de cada socorrista.
  */
-const SO_DO_SOCORRISTA = new Set(['/turno', '/minha-comissao', '/despesas'])
+const SO_DO_SOCORRISTA = new Set(['/turno', '/atendimento', '/minha-comissao', '/despesas'])
 const vePeloPerfil = (rota: string, somenteAdmin: boolean, admin: boolean) =>
   admin ? !SO_DO_SOCORRISTA.has(rota) : !somenteAdmin
 
@@ -52,6 +54,8 @@ const icones: Record<string,string> = {
   '/lancamentos':'M4 8h12M12 4l4 4-4 4M20 16H8M12 12l-4 4 4 4',
   '/contas-receber':'M12 3v9M9 9l3 3 3-3M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3',
   '/dre':'M4 4v16h16M8 16v-5M12 16V7M16 16v-3',
+  '/atendimento':'M9 11l2 2 4-4M7 3h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z',
+  '/porto/atendimentos':'M9 11l2 2 4-4M7 3h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z',
   '/turno':'M12 7v5l3 2M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z',
   '/aprovacoes':'M4 6h10M4 12h10M4 18h7M16 16l2 2 4-4',
   '/despesas':'M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h4',

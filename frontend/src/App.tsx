@@ -13,6 +13,8 @@ const Lancamentos=lazy(()=>import('./financeiro/LancamentosPage'))
 const Despesas=lazy(()=>import('./financeiro/DespesasPage'))
 const Quilometragem=lazy(()=>import('./frota/QuilometragemPage'))
 const Turno=lazy(()=>import('./socorrista/TurnoPage'))
+const Atendimento=lazy(()=>import('./socorrista/AtendimentoPage'))
+const Atendimentos=lazy(()=>import('./porto/AtendimentosPage'))
 const Aprovacoes=lazy(()=>import('./aprovacoes/AprovacoesPage'))
 const Frotas=lazy(()=>import('./frota/FrotasPage'))
 const Manutencao=lazy(()=>import('./frota/ManutencaoPage'))
@@ -82,6 +84,7 @@ export default function App(){
       <Route path="/trocar-senha" element={<TrocarSenha/>}/>
       <Route element={<Layout/>}>
       <Route path="/turno" element={<Turno/>}/>
+      <Route path="/atendimento" element={<Atendimento/>}/>
       <Route path="/despesas" element={<Despesas/>}/>
       <Route path="/minha-comissao" element={<MinhaComissao/>}/>
       <Route element={<RotaAdministrador/>}>
@@ -110,6 +113,7 @@ export default function App(){
         <Route path="/porto/ordens-pagamento" element={<PortoOps/>}/>
         <Route path="/porto/ordens-servico" element={<PortoOss/>}/>
         <Route path="/porto/pendencias" element={<PortoPendenciasOs/>}/>
+        <Route path="/porto/atendimentos" element={<Atendimentos/>}/>
         <Route path="/porto/devolvidos" element={<PortoDevolvidos/>}/>
         <Route path="/porto/relatorios" element={<PortoRelatorios/>}/>
         <Route path="/porto/contestacoes" element={<PortoContestacoes/>}/>

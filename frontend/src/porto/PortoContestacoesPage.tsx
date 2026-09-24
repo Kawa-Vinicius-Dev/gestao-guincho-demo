@@ -11,6 +11,8 @@ import {
   atualizarContestacao, detectarContestacoes, especialidadesVistas, listarContestacoes, resumoDasContestacoes, salvarPreco,
   type Contestacao, type EspecialidadeVista, type SituacaoContestacao,
 } from '../dados/porto/contestacoes'
+import { listarAtendimentos, normalizarNumeroOs, type AtendimentoRegistrado } from '../dados/atendimentos'
+import { ProvaDoAtendimento } from './AtendimentosPage'
 import { data, hojeIso, moeda } from '../utils/formatadores'
 import { nomesCurtos } from '../utils/nomes'
 
@@ -54,6 +56,14 @@ export default function PortoContestacoesPage() {
   const [erro, setErro] = useState('')
   const [aviso, setAviso] = useState('')
   const [acao, setAcao] = useState<Acao | null>(null)
+  // A prova colhida no local, pelo numero da OS: e o que se mostra na contestacao.
+  const [provas, setProvas] = useState<Map<string, AtendimentoRegistrado>>(new Map())
+  const [prova, setProva] = useState<AtendimentoRegistrado | null>(null)
+  useEffect(() => {
+    listarAtendimentos(somarDias(hoje, -150), hoje)
+      .then(l => setProvas(new Map(l.filter(a => !a.arquivosApagados).map(a => [a.numeroNormalizado, a]))))
+      .catch(() => setProvas(new Map()))
+  }, [hoje])
 
   const carregar = useCallback(async (conferir: boolean) => {
     setErro('')
@@ -126,7 +136,11 @@ export default function PortoContestacoesPage() {
               const vencido = aberto && c.prazo !== null && c.prazo < hoje
               return <tr key={c.id}>
                 <td><LinkOs numero={c.os.numero} />
-                  <small className="celula-apoio">{[c.os.data ? data(c.os.data) : null, c.os.especialidade].filter(Boolean).join(' · ')}</small></td>
+                  <small className="celula-apoio">{[c.os.data ? data(c.os.data) : null, c.os.especialidade].filter(Boolean).join(' · ')}</small>
+                  {provas.get(normalizarNumeroOs(c.os.numero))
+                    ? <button type="button" className="link-dado botao-texto prova-atendimento"
+                        onClick={() => setProva(provas.get(normalizarNumeroOs(c.os.numero)) ?? null)}>Ver prova do atendimento</button>
+                    : null}</td>
                 <td><LinkSocorrista id={c.os.motoristaId} nome={c.os.motorista}>{curtos.get(c.os.motorista ?? '') ?? c.os.motorista}</LinkSocorrista>
                   <small className="celula-apoio"><LinkViatura sigla={c.os.viatura} /></small></td>
                 <td>{c.tipo === 'NAO_PAGA' ? 'Não veio na OP'
@@ -160,6 +174,7 @@ export default function PortoContestacoesPage() {
 
     <TabelaDePrecos aoSalvar={() => void carregar(true)} />
 
+    {prova ? <ProvaDoAtendimento atendimento={prova} aoFechar={() => setProva(null)} /> : null}
     {acao ? <AcaoDoCaso acao={acao} hoje={hoje} aoFechar={() => setAcao(null)}
       aoConcluir={async mensagem => { setAcao(null); setAviso(mensagem); await carregar(false) }} /> : null}
   </div>
