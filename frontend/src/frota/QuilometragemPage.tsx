@@ -118,7 +118,7 @@ export default function QuilometragemPage() {
     <section className="panel km-vehicles"><header className="panel-title"><div><span className="eyebrow">Comparativo</span><h2>Eficiência por veículo</h2></div></header>
       {carregando ? <Carregando/> : comparativo.length ? <div className="km-comparison">{comparativo.map(item => {
         const taxa = item.km > 0 ? (item.morto / item.km) * 100 : 0
-        return <article key={item.veiculo} className={taxa > 15 ? 'danger' : ''}><header><strong>{item.veiculo}</strong><strong>{taxa.toFixed(1)}%</strong></header><div className="km-scale"><span style={{ width: `${Math.min(100, taxa)}%` }}/></div><footer><span>{numero(item.morto)} km mortos</span><strong>{moeda(item.custo)}</strong></footer></article>
+        return <article key={item.veiculo} className={taxa > 15 ? 'danger' : ''}><header><strong><LinkViatura sigla={item.veiculo}/></strong><strong>{taxa.toFixed(1)}%</strong></header><div className="km-scale"><span style={{ width: `${Math.min(100, taxa)}%` }}/></div><footer><span>{numero(item.morto)} km mortos</span><strong>{moeda(item.custo)}</strong></footer></article>
       })}</div> : <Vazio titulo="Nenhuma quilometragem" descricao="Não há registros no período selecionado."/>}
     </section>
 

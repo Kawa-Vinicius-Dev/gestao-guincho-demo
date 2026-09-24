@@ -225,7 +225,7 @@ export function ProporcaoKm({remunerado,morto,custoMorto}:
     </div>
     <dl className="proporcao-legenda">
       <div>
-        <dt><i className="marca-pago"/>Remunerado</dt>
+        <dt><i className="marca-pago"/>Em serviço</dt>
         <dd>{numero(remunerado)} km<small>{percentual(fatia(remunerado))} do rodado</small></dd>
       </div>
       <div>
