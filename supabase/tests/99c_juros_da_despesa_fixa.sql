@@ -18,8 +18,8 @@ set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';
 select public.lancar_fixas_vencidas('2026-09-15');
 reset role;
 -- Uma despesa comum, para provar que juros e so de fixa.
-insert into public.despesas (descricao,categoria_id,valor,data_lancamento,criado_por,status,aprovada)
- values ('Almoco',(select id from public.categorias where nome = 'Seguro'),30,'2026-09-12',
+insert into public.despesas (descricao,categoria_id,valor,data_lancamento,data_pagamento,criado_por,status,aprovada)
+ values ('Almoco',(select id from public.categorias where nome = 'Seguro'),30,'2026-09-12','2026-09-12',
          'aaaaaaaa-0000-0000-0000-000000000001','PAGO',true);
 set role authenticated;
 set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';
