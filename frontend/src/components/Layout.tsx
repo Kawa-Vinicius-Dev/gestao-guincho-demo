@@ -234,7 +234,9 @@ export function Layout() {
           </div>
         })}
       </nav>
-      <div className="sidebar-foot"><span>Gestão financeira para guinchos</span><small>Sistema de gestão · ANAIV</small></div>
+      <div className="sidebar-foot"><span>Gestão financeira para guinchos</span>{admin
+        ? <Link className="sidebar-sobre" to="/sobre" onClick={()=>setAberto(false)}>Sobre e suporte · ANAIV</Link>
+        : <small>Sistema de gestão · ANAIV</small>}</div>
     </aside>
     <div className="workspace">
       <header className="topbar">

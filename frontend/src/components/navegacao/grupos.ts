@@ -62,6 +62,11 @@ export const GRUPOS: Grupo[] = [
     { rota: '/porto/contestacoes', rotulo: 'Contestações' },
     { rota: '/porto/relatorios', rotulo: 'Relatórios' },
   ] },
+  // A ANAIV e o suporte, so para o administrador (Kawa, 24/09/2026).
+  { menu: '/configuracoes', titulo: 'Configurações', abas: [
+    { rota: '/configuracoes', rotulo: 'Configurações' },
+    { rota: '/sobre', rotulo: 'Sobre e suporte' },
+  ] },
 ]
 
 const casa = (aba: Aba, caminho: string, busca: string) =>
