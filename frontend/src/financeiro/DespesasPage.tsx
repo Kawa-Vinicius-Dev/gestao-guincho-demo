@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 import { LinkSocorrista, LinkViatura } from '../components/LinksDeDado'
 import './tipoCusto.css'
 import { lancarFixasVencidas } from '../dados/despesasFixas'
@@ -42,12 +42,14 @@ export default function DespesasPage(){
   // Despesa aberta para edicao; nulo e lancamento novo.
   const [editando,setEditando]=useState<Despesa|null>(null)
   const [pedido,setPedido]=useState<PedidoConfirmacao|null>(null)
+  // Comprovante escolhido no formulario do socorrista; sobe depois que a despesa existe.
+  const [comprovante,setComprovante]=useState<File|null>(null)
   useEffect(()=>{if(admin)return
     meuTurnoDoDia().then(setTurno).catch(()=>setTurno(null))},[admin])
   const souEu=turno?.socorrista??null
   const minhaViatura=turno?.turnoAberto??null
   const possoLancar=Boolean(souEu&&minhaViatura)
-  const abrirForm=()=>{setEditando(null);setSocorristaDoForm('');setForm(true)}
+  const abrirForm=()=>{setEditando(null);setSocorristaDoForm('');setComprovante(null);setForm(true)}
   const abrirEdicao=(d:Despesa)=>{setEditando(d);setSocorristaDoForm(d.motoristaId?String(d.motoristaId):'');setForm(true)}
   // Qual despesa esta na janela de confirmacao, e nao um booleano: a janela
   // precisa dizer qual e, com descricao e valor, senao confirmar e um chute.
@@ -140,6 +142,12 @@ export default function DespesasPage(){
   }
   async function criar(body:Parameters<typeof criarDespesa>[0]){
     try{const criada=await criarDespesa(body,admin);setForm(false)
+      // O caminho no Storage leva o id da despesa, que so existe agora. Se o
+      // arquivo nao subir, a despesa fica: o gasto aconteceu, e o socorrista nao
+      // ve a lista para tentar de novo.
+      if(!admin&&comprovante){
+        await anexarComprovante(criada,comprovante).catch(x=>setErro(`A despesa foi enviada, mas o comprovante não foi junto: ${(x as Error).message} Entregue o comprovante ao administrador.`))
+        setComprovante(null)}
       // A mensagem sai do que o banco devolveu, e nao do que a tela pediu:
       // quando a funcao de lancamento em um passo ainda nao foi aplicada, a
       // despesa volta pendente, e dizer "ja esta na Visao geral" seria mentira.
@@ -235,6 +243,7 @@ export default function DespesasPage(){
         {admin&&socorristaDoForm
           ?<label className="porto-divergence field-wide despesa-desconto"><input type="checkbox" name="descontaComissao" defaultChecked={editando?.descontaComissao} aria-label="Descontar da comissão"/><span>Descontar da comissão do socorrista — gasto pessoal que ele pediu para tirar do bolso dele.</span></label>
           :null}
+        {!admin&&!editando?<ComprovanteNaHora arquivo={comprovante} aoEscolher={setComprovante}/>:null}
         <details className="field-wide despesa-mais-detalhes">
           <summary>Mais detalhes</summary>
           <div className="form-grid three-columns">
@@ -294,6 +303,23 @@ function SeletorTipoCusto({lista,tipo,aoMudar}:{lista:Despesa[];tipo:''|'FIXA'|'
 /** Lixeira em SVG: um <img> a mais por linha da tabela so para desenhar isto e
  *  uma requisicao que nao precisa existir, e emoji muda de forma em cada
  *  sistema. `currentColor` deixa o icone seguir o tom do botao nos dois temas. */
+/** Comprovante do socorrista: foto na hora pela camera, ou o arquivo que ja esta
+ *  no celular (nota que chegou por e-mail, PDF). */
+function ComprovanteNaHora({arquivo,aoEscolher}:{arquivo:File|null;aoEscolher:(f:File|null)=>void}){
+  const escolher=(e:ChangeEvent<HTMLInputElement>)=>{const f=e.target.files?.[0];if(f)aoEscolher(f);e.target.value=''}
+  return <div className="field-wide comprovante-na-hora">
+    <span className="socorrista-rotulo">Comprovante <small>opcional</small></span>
+    {arquivo?<p className="comprovante-escolhido"><strong>{arquivo.name}</strong>
+      <button type="button" className="socorrista-trocar-foto" onClick={()=>aoEscolher(null)}>Remover</button></p>:null}
+    <div className="comprovante-botoes">
+      <label className="socorrista-botao-foto">Tirar foto
+        <input type="file" accept="image/*" capture="environment" className="socorrista-arquivo" onChange={escolher}/></label>
+      <label className="socorrista-botao-foto">Anexar arquivo
+        <input type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" className="socorrista-arquivo" onChange={escolher}/></label>
+    </div>
+  </div>
+}
+
 function IconeLixeira(){
   return <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false"
     fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
