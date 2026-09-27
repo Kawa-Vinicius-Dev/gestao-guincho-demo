@@ -20,6 +20,8 @@ export const servidor = setupServer(
   rpcVazia('porto_pendencias_os', []),
   rpcVazia('fila_de_aprovacoes', { itens: [], turnosNaoFechados: [] }),
   rpcVazia('porto_listar_os', { total: 0, valorTotal: 0, itens: [] }),
+  // Aviso no celular: a tela manda e nao espera resposta.
+  http.post(`${URL_SUPABASE}/functions/v1/avisos`, () => HttpResponse.json({ enviados: 0 })),
 )
 
 function rpcVazia(nome: string, corpo: Record<string, unknown> | unknown[]) {

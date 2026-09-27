@@ -2,6 +2,7 @@ import { ApiError } from './erros'
 import type { Despesa } from '../types/modelos'
 import { invalidarCacheFinanceiro } from './dashboard'
 import { ou, supabase, usuarioAtualId } from './cliente'
+import { avisar } from './avisos'
 
 /**
  * Despesas.
@@ -194,6 +195,8 @@ export async function criarDespesa(dados: DadosDespesa, jaAprovada = false): Pro
     }).select(COLUNAS).single(),
     'Não foi possível registrar a despesa.',
   ) as unknown as LinhaDespesa
+  // Nasceu pendente: o administrador precisa saber que tem o que aprovar.
+  avisar({ evento: 'despesa_lancada', id: linha.id })
   return paraModelo(linha)
 }
 
@@ -221,6 +224,7 @@ export async function aprovarDespesa(id: number): Promise<void> {
     await supabase().rpc('aprovar_despesa', { p_despesa_id: id }),
     'Não foi possível aprovar a despesa.',
   )
+  avisar({ evento: 'despesa_aprovada', id })
 }
 
 export async function pagarDespesa(

@@ -101,6 +101,7 @@ test('despesa igual a uma já lançada pede confirmação antes de gravar', asyn
 test('o comprovante escolhido sobe para a despesa que acabou de ser criada', async () => {
   let caminho = ''
   let registrado: Record<string, unknown> | null = null
+  let aviso: Record<string, unknown> | null = null
   // O insert carimba quem lancou a partir da sessao.
   sessionStorage.setItem('fluxo-gestao:sessao:v1', JSON.stringify({
     access_token: 'jwt-de-teste', refresh_token: 'r', token_type: 'bearer',
@@ -118,6 +119,10 @@ test('o comprovante escolhido sobe para a despesa que acabou de ser criada', asy
       caminho = new URL(request.url).pathname
       return HttpResponse.json({ Key: caminho })
     }),
+    http.post(`${SUPA}/functions/v1/avisos`, async ({ request }) => {
+      aviso = await request.json() as Record<string, unknown>
+      return HttpResponse.json({ enviados: 1 })
+    }),
     http.post(`${SUPA}/rest/v1/rpc/registrar_comprovante`, async ({ request }) => {
       registrado = await request.json() as Record<string, unknown>
       return HttpResponse.json({})
@@ -134,4 +139,6 @@ test('o comprovante escolhido sobe para a despesa que acabou de ser criada', asy
   expect(await screen.findByText(/enviada para aprovação/i)).toBeInTheDocument()
   expect(caminho).toMatch(/\/comprovantes\/despesas\/9\/\d+-nota-posto\.pdf$/)
   expect(registrado).toMatchObject({ p_despesa_id: 9, p_nome_original: 'nota-posto.pdf' })
+  // E o administrador fica sabendo que tem o que aprovar.
+  await vi.waitFor(() => expect(aviso).toEqual({ evento: 'despesa_lancada', id: 9 }))
 })
