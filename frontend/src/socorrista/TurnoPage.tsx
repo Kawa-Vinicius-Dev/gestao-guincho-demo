@@ -8,6 +8,7 @@ import {
   FOTOS_DO_CHECKLIST, type ChaveDoChecklist, type MeuTurnoDoDia, type ServicoDoTurno, type TurnoAberto,
   type ViaturaDoTurno,
 } from '../dados/turnos'
+import { AtivarAvisos } from '../components/AtivarAvisos'
 
 /**
  * Turno do dia — a tela que o socorrista abre no celular.
@@ -552,6 +553,7 @@ export default function TurnoPage() {
       <h1>{dados.socorrista ? primeiroNome(dados.socorrista.nome) : 'Turno do dia'}</h1>
       {dados.socorrista?.qra ? <span className="socorrista-qra">QRA {dados.socorrista.qra}</span> : null}
     </header>
+    <AtivarAvisos/>
 
     {devolvido
       ? <section className="socorrista-cartao socorrista-devolvido">

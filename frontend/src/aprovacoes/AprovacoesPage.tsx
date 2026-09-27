@@ -6,6 +6,8 @@ import { Modal } from '../components/Modal'
 import './aprovacoes-foto.css'
 import { CabecalhoPagina, Painel } from '../components/ui/Pagina'
 import { aprovarDespesa, excluirDespesa } from '../dados/despesas'
+import { avisar } from '../dados/avisos'
+import { AtivarAvisos } from '../components/AtivarAvisos'
 import { ConfirmarExclusao } from '../components/ConfirmarExclusao'
 import type { Despesa } from '../types/modelos'
 import {
@@ -294,6 +296,7 @@ function LinhaDespesa({ item, aoResolver }: { item: ItemDaFila; aoResolver: () =
           ]}
           aoConfirmar={async () => {
             await excluirDespesa({ id: item.id, comprovante: item.comprovante ?? undefined } as Despesa)
+            avisar({ evento: 'despesa_recusada', socorristaId: item.socorristaId, descricao: item.descricao ?? 'Despesa', valor: item.valor ?? 0 })
             aoResolver()
           }}
           aoFechar={() => setExcluindo(false)}/>
@@ -354,6 +357,7 @@ export default function AprovacoesPage() {
       descricao="O que os socorristas apontaram e ainda depende de você."
       contexto={`${fila.itens.length} ${fila.itens.length === 1 ? 'item aguardando' : 'itens aguardando'}`}
     />
+    <AtivarAvisos/>
 
     {fila.turnosNaoFechados.length
       ? <Painel titulo="Turnos não fechados" etiqueta="Cobrança">

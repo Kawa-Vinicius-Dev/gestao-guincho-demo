@@ -1,5 +1,6 @@
 import { ApiError } from './erros'
 import { erroDoBanco, ou, supabase } from './cliente'
+import { avisar } from './avisos'
 import { normalizarNumero } from './porto/importacao'
 
 /**
@@ -182,6 +183,7 @@ export async function fecharTurno(dados: {
     }),
     'Não foi possível fechar o turno.',
   )
+  avisar({ evento: 'turno_fechado', id: dados.turnoId })
 }
 
 // ---------------------------------------------------------------------------
@@ -253,6 +255,7 @@ export async function aprovarTurno(
     }),
     'Não foi possível aprovar o turno.',
   )
+  avisar({ evento: 'turno_aprovado', id: turnoId })
 }
 
 export async function devolverTurno(turnoId: number, motivo: string): Promise<void> {
@@ -260,6 +263,7 @@ export async function devolverTurno(turnoId: number, motivo: string): Promise<vo
     await supabase().rpc('devolver_turno', { p_turno_id: turnoId, p_motivo: motivo }),
     'Não foi possível devolver o turno.',
   )
+  avisar({ evento: 'turno_devolvido', id: turnoId })
 }
 
 /**
