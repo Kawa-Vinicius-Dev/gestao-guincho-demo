@@ -81,7 +81,10 @@ function VerFoto({ caminho, rotulo, nomeDoArquivo }: { caminho: string; rotulo: 
                 <IconeBaixar/>
               </button>
             : undefined}>
-          <img src={url} alt={rotulo} className="aprovacoes-foto" />
+          {/* O comprovante pode ser PDF, que <img> nao desenha. */}
+          {/\.pdf$/i.test(caminho)
+            ? <a className="button button-primary" href={url} target="_blank" rel="noreferrer">Abrir o PDF</a>
+            : <img src={url} alt={rotulo} className="aprovacoes-foto" />}
         </Modal>
       : null}
   </>

@@ -345,7 +345,7 @@ window.fetch = (async (entrada: RequestInfo | URL, init?: RequestInit) => {
   }
   if (url.includes('porto_listar_os')) return responder(tela === 'desempenho' ? osDeTresMeses : listaDeOs)
   // Km dos servicos: com turno aberto e dois servicos ja lancados.
-  if (url.includes('meu_turno_do_dia') && tela === 'km-dos-servicos') return responder({ ...turnoDoDia, turnoAberto: {
+  if (url.includes('meu_turno_do_dia') && (tela === 'km-dos-servicos' || tela === 'despesas')) return responder({ ...turnoDoDia, turnoAberto: {
     id: 9, data: '2026-09-17', abertoEm: '2026-09-17T08:02:00Z', veiculoId: 2, veiculo: 'L168',
     hodometroInicial: 148320, temFotoAbertura: true, deDiaAnterior: false, observacoes: null } })
   if (url.includes('servicos_do_turno')) return responder(tela === 'aprovacoes'

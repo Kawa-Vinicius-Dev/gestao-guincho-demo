@@ -94,3 +94,44 @@ test('despesa igual a uma já lançada pede confirmação antes de gravar', asyn
   expect(gravou).toBe(false)
   expect(screen.getByRole('button', { name: /lançar mesmo assim/i })).toBeInTheDocument()
 })
+
+// Kawa, 27/09/2026: o socorrista anexa o comprovante na hora, pela camera ou
+// com um arquivo do celular. O arquivo so sobe depois que a despesa existe,
+// porque o caminho no Storage leva o id dela.
+test('o comprovante escolhido sobe para a despesa que acabou de ser criada', async () => {
+  let caminho = ''
+  let registrado: Record<string, unknown> | null = null
+  // O insert carimba quem lancou a partir da sessao.
+  sessionStorage.setItem('fluxo-gestao:sessao:v1', JSON.stringify({
+    access_token: 'jwt-de-teste', refresh_token: 'r', token_type: 'bearer',
+    expires_at: Math.floor(Date.now() / 1000) + 3600, expires_in: 3600,
+    user: { id: 'uid-do-socorrista', email: 'anderson@teste.local', aud: 'authenticated' },
+  }))
+  servidor.use(http.get(`${SUPA}/rest/v1/perfis`, () => HttpResponse.json({ id: 'uid-do-socorrista',
+    nome: 'ANDERSON JORGE RIBEIRO', email: 'anderson@teste.local', perfil: 'FUNCIONARIO', ativo: true, senha_provisoria: false })))
+  await abrir(turnoAberto)
+  servidor.use(
+    http.get(`${SUPA}/rest/v1/categorias`, () => HttpResponse.json([{ id: 1, nome: 'Alimentação', tipo: 'DESPESA', ativo: true, socorrista_pode: true }])),
+    http.head(`${SUPA}/rest/v1/despesas`, () => new HttpResponse(null, { headers: { 'Content-Range': '*/0' } })),
+    http.post(`${SUPA}/rest/v1/despesas`, () => HttpResponse.json({ id: 9, descricao: 'Alimentação', valor: 40, status: 'PENDENTE' })),
+    http.post(`${SUPA}/storage/v1/object/comprovantes/*`, ({ request }) => {
+      caminho = new URL(request.url).pathname
+      return HttpResponse.json({ Key: caminho })
+    }),
+    http.post(`${SUPA}/rest/v1/rpc/registrar_comprovante`, async ({ request }) => {
+      registrado = await request.json() as Record<string, unknown>
+      return HttpResponse.json({})
+    }),
+  )
+  const user = userEvent.setup({ delay: null })
+  await user.click(await screen.findByRole('button', { name: /registrar um gasto/i }))
+  await user.selectOptions(screen.getByLabelText(/categoria/i), '1')
+  await user.type(screen.getByLabelText(/^valor/i), '4000')
+  await user.upload(screen.getByLabelText(/anexar arquivo/i), new File(['nota'], 'nota-posto.pdf', { type: 'application/pdf' }))
+  expect(screen.getByText('nota-posto.pdf')).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: /salvar despesa/i }))
+
+  expect(await screen.findByText(/enviada para aprovação/i)).toBeInTheDocument()
+  expect(caminho).toMatch(/\/comprovantes\/despesas\/9\/\d+-nota-posto\.pdf$/)
+  expect(registrado).toMatchObject({ p_despesa_id: 9, p_nome_original: 'nota-posto.pdf' })
+})

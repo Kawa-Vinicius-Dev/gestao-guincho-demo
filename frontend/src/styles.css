@@ -1857,6 +1857,15 @@ tbody tr{transition:background-color .14s ease}
 .despesa-do-turno span{display:grid;gap:3px;min-width:0}
 .despesa-do-turno small{color:var(--muted);font-size:12px}
 .despesa-do-turno strong{font-size:14px;overflow-wrap:anywhere}
+/* Comprovante da despesa do socorrista: dois alvos grandes lado a lado. */
+.comprovante-na-hora{display:grid;gap:8px}
+.comprovante-na-hora small{color:var(--muted);font-size:13px;font-weight:500}
+.comprovante-botoes{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.comprovante-botoes label{position:relative;display:grid;place-items:center;text-align:center}
+.comprovante-botoes label:focus-within{outline:3px solid rgba(46,144,250,.32);outline-offset:2px}
+.comprovante-escolhido{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0;padding:10px 12px;border:1.5px solid var(--ok-texto);border-radius:12px;background:var(--ok-fundo)}
+.comprovante-escolhido strong{min-width:0;overflow-wrap:anywhere;color:var(--ok-texto);font-size:14px}
+.comprovante-escolhido .socorrista-trocar-foto{margin:0;flex:none}
 .chamada-turno{margin:0;color:#9fc0e4;font-size:14px;line-height:1.5}
 .chamada-turno strong{color:#eaf2fb}
 
