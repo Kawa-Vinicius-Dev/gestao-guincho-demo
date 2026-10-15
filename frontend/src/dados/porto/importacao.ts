@@ -153,7 +153,7 @@ async function registrosExistentes(tipo: TipoRelatorio, numeros: string[]) {
 interface Cadastro {
   porQra: Map<string, { id: number; nome: string }>
   /** Cadastro pelo nome normalizado; o Auxiliar fica de fora. */
-  pessoas?: { id: number; nome: string; chave: string }[]
+  pessoas?: { id: number; nome: string; chave: string; ativo: boolean }[]
   porEscala: Map<string, { id: number; nome: string }>
   nomes: Map<number, string>
 }
@@ -191,7 +191,9 @@ const ehAuxiliar = (nome?: string | null) => chaveDeNome(nome) === 'AUXILIAR'
  * Nome igual ao do cadastro vale. A Porto corta nomes longos na largura da
  * coluna, entao um nome que e o comeco de um so nome cadastrado tambem vale.
  * Se o comeco servir para duas pessoas (JEFERSON MARTINS DA SIL... pai e filho),
- * ninguem e escolhido: errar a comissao de alguem e pior que deixar para decidir.
+ * vale a unica ativa (Kawa, 15/10/2026: o filho esta desativado, e o servico e do
+ * pai, nunca do Auxiliar). Duas ativas: ninguem e escolhido, errar a comissao de
+ * alguem e pior que deixar para decidir.
  */
 function socorristaPeloNome(nome: string | undefined, cadastro: Cadastro): { id: number; nome: string } | undefined {
   const alvo = chaveDeNome(nome)
@@ -200,7 +202,9 @@ function socorristaPeloNome(nome: string | undefined, cadastro: Cadastro): { id:
   if (exato.length === 1) return exato[0]
   if (exato.length > 1) return undefined
   const pelaParte = cadastro.pessoas.filter(p => p.chave.startsWith(alvo) || alvo.startsWith(p.chave))
-  return pelaParte.length === 1 ? pelaParte[0] : undefined
+  if (pelaParte.length === 1) return pelaParte[0]
+  const ativas = pelaParte.filter(p => p.ativo)
+  return ativas.length === 1 ? ativas[0] : undefined
 }
 
 async function cadastroDeSocorristas(datas: string[]): Promise<Cadastro> {
@@ -208,7 +212,7 @@ async function cadastroDeSocorristas(datas: string[]): Promise<Cadastro> {
   const [motoristas, doDia] = await Promise.all([
     // Ativos e desativados: o painel de meses atras traz quem ja saiu, e o
     // servico antigo e dele, nao do Auxiliar.
-    supabase().from('motoristas').select('id,nome,qra,codigos_porto'),
+    supabase().from('motoristas').select('id,nome,qra,codigos_porto,ativo'),
     dias.length
       ? supabase().from('ordens_servico_porto')
           .select('data_atendimento,sigla_viatura,motorista_id,motoristas(nome)')
@@ -216,7 +220,7 @@ async function cadastroDeSocorristas(datas: string[]): Promise<Cadastro> {
       : Promise.resolve({ data: [], error: null }),
   ])
   const pessoas = ou(motoristas, 'Não foi possível carregar os socorristas.') as
-    { id: number; nome: string; qra: string | null; codigos_porto?: string[] | null }[]
+    { id: number; nome: string; qra: string | null; codigos_porto?: string[] | null; ativo?: boolean | null }[]
   const servicos = ou(doDia, 'Não foi possível carregar a escala do período.') as {
     data_atendimento: string | null
     sigla_viatura: string | null
@@ -226,10 +230,10 @@ async function cadastroDeSocorristas(datas: string[]): Promise<Cadastro> {
 
   const porQra = new Map<string, { id: number; nome: string }>()
   const nomes = new Map<number, string>()
-  const listaDeNomes: { id: number; nome: string; chave: string }[] = []
+  const listaDeNomes: NonNullable<Cadastro['pessoas']> = []
   for (const pessoa of pessoas) {
     nomes.set(pessoa.id, pessoa.nome)
-    if (!ehAuxiliar(pessoa.nome)) listaDeNomes.push({ id: pessoa.id, nome: pessoa.nome, chave: chaveDeNome(pessoa.nome) })
+    if (!ehAuxiliar(pessoa.nome)) listaDeNomes.push({ id: pessoa.id, nome: pessoa.nome, chave: chaveDeNome(pessoa.nome), ativo: pessoa.ativo !== false })
     // O QRA e os codigos que a Porto usa no lugar dele identificam a mesma pessoa.
     // Codigo repetido em duas pessoas nao sugere ninguem.
     for (const codigo of [pessoa.qra, ...(pessoa.codigos_porto ?? [])]) {
