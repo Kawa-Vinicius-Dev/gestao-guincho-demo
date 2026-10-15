@@ -124,7 +124,7 @@ export default function LancamentosPage() {
   }
 
   async function pagar(item:LancamentoFinanceiro){
-    try{await pagarDespesa(item.referenciaId,hoje(),'PIX');setMensagem('Pagamento registrado no caixa real.');await carregar()}
+    try{await pagarDespesa(item.referenciaId,hoje(),'PIX');setMensagem('Pagamento registrado.');await carregar()}
     catch(e){setMensagem((e as Error).message)}
   }
 
@@ -140,7 +140,7 @@ export default function LancamentosPage() {
     </section>
     <section className="panel"><div className="ledger-filters">
       <SeletorPeriodo periodo={periodo} aoMudar={setPeriodo}/>
-      <Selecao rotulo="Veículo" vazio="Todos" value={veiculoFiltro} onChange={e=>setVeiculoFiltro(e.target.value)}
+      <Selecao rotulo="Viatura" vazio="Todos" value={veiculoFiltro} onChange={e=>setVeiculoFiltro(e.target.value)}
         opcoes={veiculos.map(v=>({valor:v.id,texto:v.identificacao}))}/>
       <Campo rotulo="Buscar" className="filter-grow"><input type="search" inputMode="search" autoCorrect="off" autoCapitalize="none" value={pesquisa} onChange={e=>setPesquisa(e.target.value)} placeholder="Descrição, categoria ou protocolo"/></Campo>
     </div>
@@ -151,7 +151,7 @@ export default function LancamentosPage() {
     <TabelaExtrato itens={filtrados} carregando={carregando} hoje={hojeDia} aoPagar={item=>void pagar(item)}
       aoEditarReceita={item=>void editarReceita(item)} aoExcluirReceita={setExcluindoReceita}/>
     </section>
-    {modal?<Modal etiqueta="Persistência real" titulo="Novo lançamento" className="modal-financial"
+    {modal?<Modal etiqueta="Extrato" titulo="Novo lançamento" className="modal-financial"
       aoFechar={()=>setModal(false)}>
       <form onSubmit={salvar} className="form-grid two-columns">
         <Campo rotulo="Descrição" className="field-wide"><input name="descricao" required autoCapitalize="sentences" autoComplete="off"/></Campo><CampoValor rotulo="Valor" name="valor" required/>
@@ -159,7 +159,7 @@ export default function LancamentosPage() {
           opcoes={categoriasDespesa.map(c=>({valor:c.id,texto:c.nome}))}/>
         <Campo rotulo="Data"><input name="data" type="date" defaultValue={hoje()} required/></Campo>
         <Selecao rotulo="Situação" name="status" opcoes={[{valor:'PAGO',texto:'Paga'},{valor:'PENDENTE',texto:'Pendente'}]}/>
-        <Selecao rotulo="Veículo" name="veiculoId" vazio="Não relacionado" opcoes={veiculos.map(v=>({valor:v.id,texto:v.identificacao}))}/>
+        <Selecao rotulo="Viatura" name="veiculoId" vazio="Não relacionado" opcoes={veiculos.map(v=>({valor:v.id,texto:v.identificacao}))}/>
         <Selecao rotulo="Motorista" name="motoristaId" vazio="Não relacionado" opcoes={motoristas.map(m=>({valor:m.id,texto:m.nome}))}/>
         <Selecao rotulo="Forma de pagamento" name="formaPagamento" vazio="Não informada" opcoes={FORMAS_PAGAMENTO}/>
         <Campo rotulo="Observações" className="field-wide"><textarea name="observacoes" rows={3}/></Campo><AcoesModal aoCancelar={()=>setModal(false)}>

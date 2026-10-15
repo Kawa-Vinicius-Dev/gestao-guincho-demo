@@ -37,7 +37,7 @@ export const GRUPOS: Grupo[] = [
     { rota: '/veiculos', rotulo: 'Viaturas' },
     { rota: '/quilometragem', rotulo: 'Quilometragem' },
     // Km de cada turno e de cada servico, com fotos do painel (Kawa, 15/10/2026).
-    { rota: '/km-dos-turnos', rotulo: 'KM dos turnos' },
+    { rota: '/km-dos-turnos', rotulo: 'Km dos turnos' },
     // Troca por km e danos do checklist (Kawa, 24/09/2026).
     { rota: '/manutencao', rotulo: 'Manutenção' },
     // Validade do credenciamento: viaturas e socorristas (Kawa, 24/09/2026).

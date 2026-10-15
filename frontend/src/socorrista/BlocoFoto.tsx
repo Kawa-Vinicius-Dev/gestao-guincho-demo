@@ -61,14 +61,14 @@ export function BotaoFoto({
           <img src={previa} alt="Foto do painel que será enviada"/>
           <div>
             <strong>Foto pronta</strong>
-            <span>Confira se o número do odômetro aparece.</span>
+            <span>Confira se a quilometragem aparece na foto.</span>
             <button type="button" className="socorrista-trocar-foto" onClick={() => entrada.current?.click()}>
               Tirar outra
             </button>
           </div>
         </div>
       : <button type="button" className="socorrista-botao-foto" onClick={() => entrada.current?.click()}>
-          Tirar foto do odômetro
+          Tirar foto do painel
         </button>}
   </div>
 }

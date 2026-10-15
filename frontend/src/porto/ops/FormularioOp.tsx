@@ -34,7 +34,7 @@ export function FormularioOp({ edicao, aoEnviar, aoFechar }: Props) {
       </Campo>
       <CampoValor rotulo="Valor informado" name="valorInformado" defaultValue={edicao?.valorTotal} required
         exigirPositivo={false}/>
-      <Selecao rotulo="Status Porto" name="statusPorto" required
+      <Selecao rotulo="Situação na Porto" name="statusPorto" required
         defaultValue={edicao?.statusPorto ?? undefined}
         vazio={edicao ? undefined : 'Selecione'}
         opcoes={STATUS_PORTO}/>

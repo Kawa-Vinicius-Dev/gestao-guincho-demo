@@ -45,7 +45,7 @@ export async function listarManutencao(): Promise<PlanoManutencao[]> {
 }
 
 export async function kmAtualDasViaturas(): Promise<Map<number, number>> {
-  const linhas = ou(await supabase().rpc('km_atual_das_viaturas'), 'Não foi possível ler o odômetro das viaturas.') as
+  const linhas = ou(await supabase().rpc('km_atual_das_viaturas'), 'Não foi possível ler a quilometragem das viaturas.') as
     { veiculo_id: number; km_atual: string | number | null }[]
   return new Map((linhas ?? []).filter(l => l.km_atual !== null).map(l => [l.veiculo_id, Number(l.km_atual)]))
 }

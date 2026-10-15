@@ -57,7 +57,7 @@ test('abrir exige viatura, odometro e a foto do painel', async () => {
   const user = userEvent.setup({ delay: null })
   await abrir(turno)
 
-  await user.type(await screen.findByLabelText('Odômetro na saída'), '148502')
+  await user.type(await screen.findByLabelText('Quilometragem na saída'), '148502')
   // Kawa, 18/09/2026: foto do painel obrigatoria tambem na abertura.
   expect(screen.getByRole('button', { name: 'Abrir turno' })).toBeDisabled()
   expect(screen.getByText('Tire a foto do painel para abrir o turno.')).toBeInTheDocument()
@@ -110,7 +110,7 @@ test('odometro menor que o ultimo registro da viatura pede conferencia', async (
   const user = userEvent.setup({ delay: null })
   await abrir(turno)
 
-  await user.type(await screen.findByLabelText('Odômetro na saída'), '14832')
+  await user.type(await screen.findByLabelText('Quilometragem na saída'), '14832')
   expect(screen.getByRole('alert')).toHaveTextContent(/menor que o último registro/i)
 })
 
@@ -126,7 +126,7 @@ test('turno aberto sem a foto da saida pede a foto antes de tudo', async () => {
   await abrir(turno)
 
   expect(await screen.findByRole('heading', { name: 'Falta a foto da saída' })).toBeInTheDocument()
-  expect(screen.queryByLabelText('Odômetro na chegada')).not.toBeInTheDocument()
+  expect(screen.queryByLabelText('Quilometragem na chegada')).not.toBeInTheDocument()
   expect(screen.getByRole('button', { name: 'Enviar foto' })).toBeDisabled()
 })
 
@@ -142,7 +142,7 @@ test('com turno aberto, fechar exige a foto do odometro', async () => {
   const user = userEvent.setup({ delay: null })
   await abrir(turno)
 
-  await user.type(await screen.findByLabelText('Odômetro na chegada'), '148502')
+  await user.type(await screen.findByLabelText('Quilometragem na chegada'), '148502')
   // Km rodado e conta do sistema: ninguem digita "rodei 182 km".
   expect(screen.getByText(/Você rodou 182 km neste turno/)).toBeInTheDocument()
   // Sem foto o fechamento nao sai daqui, nem chega ao banco.

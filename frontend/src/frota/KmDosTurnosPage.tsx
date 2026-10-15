@@ -76,11 +76,11 @@ function Turno({ turno }: { turno: TurnoComKm }) {
     </header>
 
     <dl className="aprovacao-numeros">
-      <div><dt>KM inicial do turno</dt><dd>{km(r.kmInicial)}</dd></div>
-      <div><dt>KM final do turno</dt><dd>{km(r.kmFinal)}</dd></div>
-      <div><dt>KM total</dt><dd className="aprovacao-destaque">{km(r.kmTotal)}</dd></div>
-      <div><dt>KM em serviço</dt><dd className="aprovacao-destaque">{km(r.kmEmServico)}</dd></div>
-      <div><dt>KM morto</dt><dd className="aprovacao-destaque">
+      <div><dt>Km inicial do turno</dt><dd>{km(r.kmInicial)}</dd></div>
+      <div><dt>Km final do turno</dt><dd>{km(r.kmFinal)}</dd></div>
+      <div><dt>Km total</dt><dd className="aprovacao-destaque">{km(r.kmTotal)}</dd></div>
+      <div><dt>Km em serviço</dt><dd className="aprovacao-destaque">{km(r.kmEmServico)}</dd></div>
+      <div><dt>Km morto</dt><dd className="aprovacao-destaque">
         {km(r.kmMorto)}{' '}
         {r.inconsistente ? <Etiqueta tom="alerta">Conferir</Etiqueta>
           : r.incompleto ? <Etiqueta tom="atencao">Incompleto</Etiqueta> : null}
@@ -136,8 +136,8 @@ export default function KmDosTurnosPage() {
   return <div className="page-enter">
     <header className="page-heading"><div>
       <span className="eyebrow">Viaturas</span>
-      <h1>KM dos turnos</h1>
-      <p>Quanto a viatura rodou no turno, quanto foi em serviço e o KM morto: a diferença que não ficou registrada em serviço.</p>
+      <h1>Km dos turnos</h1>
+      <p>Quanto a viatura rodou no turno, quanto foi em serviço e o km morto: a diferença que não ficou registrada em serviço.</p>
     </div></header>
 
     <section className="panel painel-filtros"><form className="ledger-filters" onSubmit={e => e.preventDefault()}>
@@ -153,9 +153,9 @@ export default function KmDosTurnosPage() {
       : !turnos.length ? <Vazio titulo="Nenhum turno no período" descricao="Escolha outro período ou tire os filtros."/>
       : <>
           <GradeIndicadores>
-            <Indicador rotulo="KM total" valor={km(totais.total)}/>
-            <Indicador rotulo="KM em serviço" valor={km(totais.emServico)}/>
-            <Indicador rotulo="KM morto" valor={km(totais.morto)} tom={totais.morto < 0 ? 'alerta' : 'neutro'}/>
+            <Indicador rotulo="Km total" valor={km(totais.total)}/>
+            <Indicador rotulo="Km em serviço" valor={km(totais.emServico)}/>
+            <Indicador rotulo="Km morto" valor={km(totais.morto)} tom={totais.morto < 0 ? 'alerta' : 'neutro'}/>
             <Indicador rotulo="Turnos" valor={turnos.length}
               apoio={[totais.incompletos ? `${totais.incompletos} fora da soma (incompletos)` : '',
                 totais.conferir ? `${totais.conferir} para conferir` : ''].filter(Boolean).join(' · ') || 'Todos completos'}

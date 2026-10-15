@@ -73,7 +73,7 @@ export default function PortoRelatoriosPage() {
       <div>
         <span className="eyebrow">Porto Seguro</span>
         <h1>Relatórios Porto</h1>
-        <p>Exportações gerenciais sem expor dados pessoais desnecessários.</p>
+        <p>Relatórios para baixar em PDF ou Excel, sem dados pessoais.</p>
       </div>
     </header>
 
@@ -124,7 +124,7 @@ export default function PortoRelatoriosPage() {
       </article>
       <article>
         <h2>Relatório por OP</h2>
-        <p>Abra uma ordem de pagamento e exporte sua composição individual em sete abas.</p>
+        <p>Em Ordens de pagamento, abra uma OP para baixar o Excel dela, com sete abas.</p>
       </article>
     </section>
 

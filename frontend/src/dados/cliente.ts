@@ -24,7 +24,7 @@ export function supabase(): SupabaseClient {
   const chave = import.meta.env.VITE_SUPABASE_ANON_KEY
   if (!url || !chave) {
     throw new ApiError(
-      'Conexão com o banco não configurada. Avise o administrador.', 500,
+      'O sistema está sem conexão configurada. Avise o administrador.', 500,
     )
   }
   recusarChaveDeServico(chave)
@@ -120,7 +120,7 @@ export function erroDoBanco(erro: ErroSupabase, contexto: string): ApiError {
     if (detalhe.includes('categorias_nome')) return new ApiError('Já existe uma categoria com este nome.', 409)
     if (detalhe.includes('contratantes_nome')) return new ApiError('Já existe um contratante com este nome.', 409)
     if (detalhe.includes('ops_porto_numero')) return new ApiError('Já existe uma OP com este número.', 409)
-    return new ApiError('Este registro já existe.', 409)
+    return new ApiError('Este item já está cadastrado.', 409)
   }
   // 23503 foreign_key_violation — apagar algo que ainda e referido.
   if (codigo === '23503') {
@@ -139,7 +139,7 @@ export function erroDoBanco(erro: ErroSupabase, contexto: string): ApiError {
   if (codigo === '23514') {
     if (detalhe.includes('custo_por_km')) return new ApiError('O custo por km não pode ser negativo.', 400)
     if (detalhe.includes('valor')) return new ApiError('O valor não pode ser negativo.', 400)
-    return new ApiError('Há um campo preenchido fora do formato esperado.', 400)
+    return new ApiError('Algum campo está preenchido errado. Confira e tente de novo.', 400)
   }
   // 42501 e a recusa da policy: a pessoa nao tem permissao para isto.
   if (codigo === '42501') {
@@ -152,7 +152,7 @@ export function erroDoBanco(erro: ErroSupabase, contexto: string): ApiError {
   }
   // PGRST116: o filtro nao encontrou a linha unica esperada.
   if (codigo === 'PGRST116') {
-    return new ApiError('Registro não encontrado.', 404)
+    return new ApiError('Este item não existe mais. Atualize a tela.', 404)
   }
   return new ApiError(detalhe || contexto, 500)
 }

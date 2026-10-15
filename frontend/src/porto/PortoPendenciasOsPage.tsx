@@ -103,7 +103,7 @@ export default function PortoPendenciasOsPage() {
 
   return <div className="page-enter">
     <CabecalhoPagina
-      modulo="Módulo Porto"
+      modulo="Porto Seguro"
       titulo="Pendências"
       descricao="O que segura o fechamento do período: falta de valor, de socorrista ou de viatura, serviço que não veio nesta OP e valor que a OP pagou diferente."
       contexto={<>Período: <strong>{data(inicio)}</strong> → <strong>{data(fim)}</strong></>}

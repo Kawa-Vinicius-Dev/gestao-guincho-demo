@@ -55,7 +55,7 @@ test('registrar a troca recomeça a contagem do odômetro atual', async () => {
 
   const oleo = screen.getByText('Troca de óleo').closest('tr')!
   await user.click(within(oleo).getByRole('button', { name: 'Registrar troca' }))
-  expect(screen.getByLabelText('Odômetro na troca')).toHaveValue('150400')
+  expect(screen.getByLabelText('Quilometragem na troca')).toHaveValue('150400')
   await user.click(screen.getByRole('button', { name: 'Salvar troca' }))
 
   expect(await screen.findByText(/Troca de óleo da L168 registrado com 150\.400 km/)).toBeInTheDocument()

@@ -199,7 +199,7 @@ export default function ConfiguracoesPage(){
           <label className="field"><span>Repita a nova senha</span><EntradaSenha name="confirmacao" autoComplete="new-password" minLength={8} required/></label>
           <button className="button button-primary">Trocar minha senha</button></form></section>
       <section className="panel settings-card"><header><h2>Aparência</h2><p>Vale só neste computador e neste navegador.</p></header><div className="segmented tema-escolha" role="group" aria-label="Tema visual"><button className={tema==='claro'?'active':''} aria-pressed={tema==='claro'} onClick={()=>trocarTema('claro')}>Claro</button><button className={tema==='escuro'?'active':''} aria-pressed={tema==='escuro'} onClick={()=>trocarTema('escuro')}>Escuro</button></div><p className="empty-inline">O sistema não segue o tema do computador: a cor só muda quando você escolhe aqui.</p></section>
-      <section className="panel settings-card"><header><h2>Cópia dos dados</h2><p>O banco não tem backup automático. Baixe de tempos em tempos e guarde fora do sistema.</p></header>
+      <section className="panel settings-card"><header><h2>Cópia dos dados</h2><p>Baixe uma cópia de tempos em tempos e guarde fora do sistema.</p></header>
         <p className="empty-inline">Um arquivo do Excel com ordens de pagamento, ordens de serviço, receitas, despesas, contas a receber, socorristas, veículos, quilometragem, calendário e despesas fixas.</p>
         <button className="button button-primary" disabled={baixando} onClick={()=>void baixarCopia()}>{baixando?'Preparando cópia…':'Baixar cópia de tudo'}</button></section>
       </div>:null}

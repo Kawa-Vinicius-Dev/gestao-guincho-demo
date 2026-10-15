@@ -31,7 +31,7 @@ export default function LoginPage(){
     <section className="login-panel">
       <form onSubmit={entrar}>
         <span className="eyebrow">Acesso seguro</span><h2>Entre na sua conta</h2>
-        <p>{credencialLocal?'Use o acesso administrativo do ambiente local.':'Informe suas credenciais para acessar o sistema.'}</p>
+        <p>{credencialLocal?'Use o acesso administrativo do ambiente local.':'Entre com seu e-mail e sua senha.'}</p>
         {erro?<div className="form-alert" role="alert">{erro}</div>:null}
         <label className="field"><span>E-mail</span><input name="email" type="email" inputMode="email" autoCapitalize="none" autoCorrect="off" autoComplete="username" required defaultValue={credencialLocal?.email}/></label>
         <label className="field"><span>Senha</span><EntradaSenha name="senha" autoComplete="current-password" required defaultValue={credencialLocal?.senha}/></label>
