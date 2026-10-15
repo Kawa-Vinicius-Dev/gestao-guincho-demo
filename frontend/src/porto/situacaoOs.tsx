@@ -14,6 +14,8 @@ export const ETIQUETAS_SITUACAO: Record<SituacaoDaOs, { texto: string; classe: s
   AGUARDANDO_PROXIMA_OP: { texto: 'Aguardando próxima OP', classe: 'status-pendente' },
   CONCILIADA: { texto: 'Conciliada', classe: 'status-recebido' },
   DIVERGENTE: { texto: 'Valor divergente', classe: 'status-erro_leitura' },
+  NAO_PAGA: { texto: 'Não paga', classe: 'status-atrasado' },
+  SEM_OP_NO_SISTEMA: { texto: 'Sem OP no sistema', classe: 'status-processando' },
 }
 
 export function EtiquetaSituacao({ situacao }: { situacao?: SituacaoDaOs }) {
