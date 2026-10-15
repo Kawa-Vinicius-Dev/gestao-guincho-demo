@@ -50,7 +50,7 @@ export default function ContasReceberPage() {
     <CabecalhoPagina
       modulo="Financeiro"
       titulo="Contas a receber"
-      descricao="Serviços atendidos que a Porto ainda não pagou. Saem daqui quando chegam numa OP."
+      descricao="Serviços atendidos que ainda podem vir numa OP da Porto. Saem daqui quando chegam numa OP, ou quando a OP seguinte vem sem eles."
       contexto={<>Período: <strong>{data(inicio)}</strong> → <strong>{data(fim)}</strong></>}
       acoes={<Link className="button button-ghost" to="/porto/importacoes">Importar OP</Link>}/>
 

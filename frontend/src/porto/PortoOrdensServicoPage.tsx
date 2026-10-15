@@ -36,6 +36,8 @@ const SITUACOES = [
   { valor: 'AGUARDANDO_ANALISE', texto: 'Sem valor' },
   { valor: 'VALOR_MANUAL', texto: 'Com valor informado' },
   { valor: 'AGUARDANDO_PROXIMA_OP', texto: 'Aguardando próxima OP' },
+  { valor: 'NAO_PAGA', texto: 'Não paga' },
+  { valor: 'SEM_OP_NO_SISTEMA', texto: 'Sem OP no sistema' },
   { valor: 'CONCILIADA', texto: 'Conciliada com a OP' },
   { valor: 'DIVERGENTE', texto: 'Valor divergente' },
 ]

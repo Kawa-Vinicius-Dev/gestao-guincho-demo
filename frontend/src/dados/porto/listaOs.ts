@@ -10,11 +10,14 @@ import { ou, supabase } from '../cliente'
 /**
  * Situacao financeira da OS.
  *
- * As duas primeiras sao o recorte grosso que a tela ja tinha; as cinco seguintes
- * vem de `porto_os_situacao` e dizem em que pe esta a conciliacao com a OP.
+ * As duas primeiras sao o recorte grosso que a tela ja tinha ("AGUARDANDO" e so
+ * o que ainda pode vir numa OP); as seguintes vem de `porto_os_situacao` e dizem
+ * em que pe esta a conciliacao com a OP. NAO_PAGA e SEM_OP_NO_SISTEMA: ja chegou
+ * OP de quinzena posterior e a OS nao veio (Kawa, 28/09/2026).
  */
 export type SituacaoOs = '' | 'PAGA' | 'AGUARDANDO'
   | 'AGUARDANDO_ANALISE' | 'VALOR_MANUAL' | 'AGUARDANDO_PROXIMA_OP' | 'CONCILIADA' | 'DIVERGENTE'
+  | 'NAO_PAGA' | 'SEM_OP_NO_SISTEMA'
 
 export type SituacaoDaOs = Exclude<SituacaoOs, '' | 'PAGA' | 'AGUARDANDO'>
 
@@ -82,9 +85,10 @@ const numero = (v: unknown) => (v === null || v === undefined ? undefined : Numb
 /**
  * O valor da OS em toda tela: o oficial da OP quando ha; senao o informado a
  * mao; senao zero. Vem pronto do banco (`valorPrevisto`); aqui so nao repete a
- * conta em cada tela.
+ * conta em cada tela. A OS nao paga continua mostrando o valor informado, que
+ * para ela nao e mais previsto.
  */
-export const valorDaOs = (os: LinhaOs) => os.valorPrevisto ?? 0
+export const valorDaOs = (os: LinhaOs) => os.valorPrevisto ?? os.valorManual ?? 0
 
 /**
  * Valor informado a mao para uma OS que ainda nao entrou em OP. Vale como
