@@ -71,7 +71,7 @@ export default function ManutencaoPage() {
 
   return <div className="page-enter">
     <CabecalhoPagina modulo="Viaturas" titulo="Manutenção"
-      descricao="Troca por quilometragem, contada pelo odômetro dos turnos, e os danos vistos nas viaturas."
+      descricao="Troca por quilometragem, contada pelos turnos, e os danos vistos nas viaturas."
       acoes={<>
         <button type="button" className="button button-ghost" onClick={() => setEdicao({ tipo: 'dano' })}>Registrar dano</button>
         <button type="button" className="button button-primary" onClick={() => setEdicao({ tipo: 'plano', plano: null })}>Novo item</button>
@@ -107,7 +107,7 @@ export default function ManutencaoPage() {
                   <td className="celula-uso">
                     <div className={`barra-uso uso-${s.toLowerCase()}`} role="img"
                       aria-label={`${Math.round(uso * 100)}% do intervalo rodado`}><span style={{ width: `${uso * 100}%` }} /></div>
-                    <small className="celula-apoio">{p.kmAtual === null ? 'sem odômetro apontado' : `${km(Math.max(rodado, 0))} · agora ${km(p.kmAtual)}`}</small>
+                    <small className="celula-apoio">{p.kmAtual === null ? 'sem quilometragem registrada' : `${km(Math.max(rodado, 0))} · agora ${km(p.kmAtual)}`}</small>
                   </td>
                   <td className="col-numero"><strong>{p.faltamKm <= 0 ? `passou ${km(-p.faltamKm)}` : km(p.faltamKm)}</strong></td>
                   <td><Etiqueta tom={s === 'VENCIDA' ? 'alerta' : s === 'PROXIMA' ? 'atencao' : 'ok'}>
@@ -226,7 +226,7 @@ function FormPlano({ plano, veiculos, kms, aoFechar, aoSalvar }: {
         <datalist id="itens-de-manutencao">{ITENS_SUGERIDOS.map(i => <option key={i} value={i} />)}</datalist>
       </Campo>
       <Campo rotulo="A cada (km)"><input name="intervalo" inputMode="numeric" required defaultValue={plano?.intervaloKm ?? ''} placeholder="10000" /></Campo>
-      <Campo rotulo="Km da última troca" ajuda={kmAgora !== undefined ? `Odômetro atual desta viatura: ${km(kmAgora)}.` : undefined}>
+      <Campo rotulo="Km da última troca" ajuda={kmAgora !== undefined ? `Quilometragem atual desta viatura: ${km(kmAgora)}.` : undefined}>
         <input name="ultimoKm" inputMode="numeric" required key={plano ? 'fixo' : String(kmAgora ?? '')}
           defaultValue={plano?.ultimoKm ?? kmAgora ?? ''} placeholder="148320" />
       </Campo>
@@ -254,8 +254,8 @@ function FormTroca({ plano, hoje, aoFechar, aoSalvar }: {
   }
   return <Modal etiqueta="Manutenção" titulo={`${plano.item} · ${plano.viatura}`} aoFechar={aoFechar}>
     <form className="form-grid two-columns" onSubmit={salvar}>
-      <p className="painel-apoio field-wide">A contagem recomeça deste odômetro. A próxima troca fica para daqui a {km(plano.intervaloKm)}.</p>
-      <Campo rotulo="Odômetro na troca"><input name="km" inputMode="numeric" required defaultValue={plano.kmAtual ?? plano.ultimoKm} /></Campo>
+      <p className="painel-apoio field-wide">A contagem recomeça desta quilometragem. A próxima troca fica para daqui a {km(plano.intervaloKm)}.</p>
+      <Campo rotulo="Quilometragem na troca"><input name="km" inputMode="numeric" required defaultValue={plano.kmAtual ?? plano.ultimoKm} /></Campo>
       <Campo rotulo="Data"><input name="data" type="date" required defaultValue={hoje} max={hoje} /></Campo>
       {erro ? <div className="form-alert field-wide" role="alert">{erro}</div> : null}
       <AcoesModal aoCancelar={aoFechar}>

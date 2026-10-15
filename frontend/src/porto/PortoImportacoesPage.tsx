@@ -225,7 +225,7 @@ function ImportarOrdemDePagamento(){
   const divergenciaConfirmada=(!temDivergenciaFinanceira&&!temDivergenciasDados)||(confirmarDivergencias&&(!temDivergenciaFinanceira||Boolean(motivoDivergencia&&justificativaDivergencia.trim())))
 
   return <div>
-    <p className="importacao-explica">Envie o arquivo da OP ou cole a ordem de pagamento copiada do portal. Confira a prévia e confirme depois da validação.</p>
+    <p className="importacao-explica">Envie o arquivo da OP ou cole a OP copiada do portal da Porto. Depois, confira a prévia e confirme.</p>
     {carregando?<span role="status">{etapa}</span>:null}{erro?<div className="form-alert" role="alert">{erro}{falhaAoConfirmar&&previa?<button type="button" onClick={()=>void confirmar()}>Tentar novamente</button>:null}</div>:null}{mensagem?<div className="success-notice">{mensagem}</div>:null}{resumo?<ResumoDaImportacao r={resumo.r} numeroOp={resumo.numeroOp}/>:null}{semSocorrista.length?<div className="form-alert" role="alert"><strong>{semSocorrista.length} {semSocorrista.length===1?'ordem de serviço ficou':'ordens de serviço ficaram'} sem socorrista, por terem vindo sem QRA.</strong> Associe o socorrista na tela Ordens de serviço.<NumerosDeOs numeros={semSocorrista}/></div>:null}
     {naoEncontradas.length?<AvisoNaoEncontradas itens={naoEncontradas}/>:null}
     {divergentes.length?<AvisoDivergentes itens={divergentes}/>:null}

@@ -56,7 +56,7 @@ test('cabecalho desconhecido nao vira importacao silenciosa', async () => {
 
 test('CSV sem registros e recusado', async () => {
   await expect(lerCsvPorto('Número da Ordem de Pagamento;Valor Total do Serviço;Nome: Código;Data de Pagamento'))
-    .rejects.toThrow(/não contém registros/)
+    .rejects.toThrow(/nenhuma linha para importar/)
 })
 
 // A linha com erro entra na previa marcada, em vez de derrubar o arquivo

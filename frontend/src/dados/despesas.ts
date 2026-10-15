@@ -370,7 +370,7 @@ export async function valorPagoDaFixa(id: number, valorPago: number): Promise<nu
   invalidarCacheFinanceiro()
   const juros = ou(
     await supabase().rpc('despesa_fixa_valor_pago', { p_despesa_id: id, p_valor: valorPago }),
-    'Não foi possível registrar o juros.',
+    'Não foi possível registrar os juros.',
   )
   return Number(juros ?? 0)
 }

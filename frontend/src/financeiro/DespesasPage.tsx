@@ -157,7 +157,7 @@ export default function DespesasPage(){
         ?'Despesa registrada e paga. Já está na Visão geral.'
         :criada.aprovada
         ?'Despesa registrada e aprovada. Registre o pagamento quando ele sair.'
-        :'Despesa registrada, mas ficou pendente: o banco ainda não tem o lançamento em um passo. Aprove e registre o pagamento para ela entrar nos totais.')
+        :'Despesa registrada, mas ficou pendente. Aprove e registre o pagamento para ela entrar nos totais.')
       await carregar()}catch(x){setErro((x as Error).message)}
   }
   async function alternarDesconto(d:Despesa){setErro('');setMensagem('')
@@ -190,12 +190,12 @@ export default function DespesasPage(){
   const filtradas=lista.filter(d=>!tipoCusto||(tipoCusto==='FIXA')===Boolean(d.despesaRecorrenteId))
   return <div className={`page-enter ${admin?'pagina-despesas':'pagina-socorrista'}`}>
     {admin
-      ? <header className="page-heading"><div><span className="eyebrow">Saídas</span><h1>Despesas</h1><p>Custos da operação vinculados a veículos, motoristas e protocolos.</p></div><button className="button button-primary" onClick={abrirForm}>Registrar despesa</button></header>
+      ? <header className="page-heading"><div><span className="eyebrow">Saídas</span><h1>Despesas</h1><p>Gastos da operação, por viatura e por socorrista.</p></div><button className="button button-primary" onClick={abrirForm}>Registrar despesa</button></header>
       : <header className="cabecalho-socorrista"><h1>Minhas despesas</h1></header>}
     {erro?<div className="form-alert" role="alert">{erro}</div>:null}{carregando?<Carregando/>:null}{mensagem?<div className="success-notice">{mensagem}</div>:null}
     {admin?<section className="panel painel-filtros"><form className="ledger-filters" onSubmit={e=>e.preventDefault()}><SeletorPeriodo periodo={periodo} aoMudar={setPeriodo}/></form></section>:null}
     {admin&&lista.length?<SeletorTipoCusto lista={lista} tipo={tipoCusto} aoMudar={setTipoCusto}/>:null}
-    {admin?<section className="panel">{lista.length&&!filtradas.length?<p className="empty-inline">{tipoCusto==='FIXA'?'Nenhuma despesa fixa neste período.':'Nenhuma despesa variável neste período.'}</p>:lista.length?<div className="table-scroll"><table><thead><tr><th>Descrição</th><th>Categoria</th><th>Data</th><th>Veículo</th><th>Socorrista</th><th>Situação</th><th>Aprovação</th><th>Valor</th><th>Comprovante</th><th/></tr></thead><tbody>
+    {admin?<section className="panel">{lista.length&&!filtradas.length?<p className="empty-inline">{tipoCusto==='FIXA'?'Nenhuma despesa fixa neste período.':'Nenhuma despesa variável neste período.'}</p>:lista.length?<div className="table-scroll"><table><thead><tr><th>Descrição</th><th>Categoria</th><th>Data</th><th>Viatura</th><th>Socorrista</th><th>Situação</th><th>Aprovação</th><th>Valor</th><th>Comprovante</th><th/></tr></thead><tbody>
       {filtradas.map(d=><tr key={d.id}><td><strong>{d.descricao}</strong><small>{d.criadoPor}</small></td><td>{d.categoria}</td><td>{data(d.data)}</td><td><LinkViatura id={d.veiculoId} sigla={d.veiculo}/></td><td><LinkSocorrista id={d.motoristaId} nome={d.motorista}/>{d.motorista&&!d.protocolo?.startsWith('COMISSAO-')
           ?<label className="desconto-na-lista"><input type="checkbox" checked={Boolean(d.descontaComissao)} onChange={()=>setPedido(d.descontaComissao
             ?{titulo:'Parar de descontar da comissão?',efeito:<>{moeda(d.valor)} deixa de sair da comissão de <strong>{d.motorista}</strong>. A comissão é recalculada na hora.</>,resumo:[['Despesa',d.descricao],['Data',data(d.data)],['Valor',moeda(d.valor)]],textoConfirmar:'Parar de descontar',aoConfirmar:()=>alternarDesconto(d)}

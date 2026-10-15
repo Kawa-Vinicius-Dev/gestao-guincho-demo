@@ -207,7 +207,7 @@ function AbrirTurno({
   const digitado = hodometro ? Number(hodometro) : null
   const aviso = avisoDoOdometro(digitado, viatura?.ultimoHodometro)
   const falta = veiculoId === null ? 'Escolha a viatura para abrir o turno.'
-    : !hodometro ? 'Informe o odômetro para abrir o turno.'
+    : !hodometro ? 'Informe a quilometragem para continuar.'
     : !foto ? 'Tire a foto do painel para abrir o turno.'
     : faltaNoChecklist(checklist)
 
@@ -233,11 +233,11 @@ function AbrirTurno({
 
     <Passo numero={2}>
       <CampoOdometro
-        id="odometro-abertura" rotulo="Odômetro na saída" valor={hodometro} aoMudar={setHodometro}
+        id="odometro-abertura" rotulo="Quilometragem na saída" valor={hodometro} aoMudar={setHodometro}
         aviso={aviso}
         apoio={viatura?.ultimoHodometro
           ? `Último registro desta viatura: ${formatarKm(viatura.ultimoHodometro)}.`
-          : 'Digite o número que aparece no painel.'}
+          : 'Informe a quilometragem atual da viatura.'}
       />
     </Passo>
 
@@ -263,10 +263,10 @@ function AbrirTurno({
     {confirmar && veiculoId !== null && foto
       ? <ConfirmarAcao
           titulo="Abrir o turno?"
-          efeito="O turno começa agora nesta viatura. No fim do dia você volta aqui para fechar com o odômetro e a foto."
+          efeito="O turno começa agora nesta viatura. No fim do dia você volta aqui para fechar com a quilometragem e a foto."
           resumo={[
             ['Viatura', viatura?.identificacao ?? '—'],
-            ['Odômetro na saída', formatarKm(Number(hodometro))],
+            ['Quilometragem na saída', formatarKm(Number(hodometro))],
             ['Foto do painel', 'Vai junto'],
             ['Fotos da viatura', checklist.temDano
               ? `8 fotos + ${checklist.danos.length} de dano` : '8 fotos, sem dano'],
@@ -313,7 +313,7 @@ function FecharTurno({
   const avisoServicos = !servicos ? ''
     : semFinalizar ? ` O serviço da OS ${semFinalizar.numeroOs} não foi finalizado e fica fora da soma. Finalize antes em Km dos serviços.`
     : !servicos.length ? ' Você não registrou nenhum serviço neste turno. Se fez algum, registre antes em Km dos serviços.'
-    : rodado !== null && kmServicos > rodado ? ` Os serviços somam ${formatarKm(kmServicos)}, mais do que o caminhão rodou. Confira os km.`
+    : rodado !== null && kmServicos > rodado ? ` Os serviços somam ${formatarKm(kmServicos)}, mais do que a viatura rodou. Confira os números.`
     : ''
 
   return <section className="socorrista-cartao">
@@ -327,20 +327,20 @@ function FecharTurno({
 
     <dl className="socorrista-resumo">
       <div><dt>Viatura</dt><dd>{turno.veiculo}</dd></div>
-      <div><dt>Odômetro na saída</dt><dd>{formatarKm(turno.hodometroInicial)}</dd></div>
+      <div><dt>Quilometragem na saída</dt><dd>{formatarKm(turno.hodometroInicial)}</dd></div>
     </dl>
 
     <CampoOdometro
-      id="odometro-fechamento" rotulo="Odômetro na chegada"
+      id="odometro-fechamento" rotulo="Quilometragem na chegada"
       valor={hodometro} aoMudar={setHodometro}
-      apoio={rodado !== null && rodado >= 0 ? `Você rodou ${formatarKm(rodado)} neste turno.` : 'Digite o número que aparece no painel.'}
+      apoio={rodado !== null && rodado >= 0 ? `Você rodou ${formatarKm(rodado)} neste turno.` : 'Informe a quilometragem atual da viatura.'}
       aviso={rodado !== null && rodado > SALTO_SUSPEITO_KM
         ? `${formatarKm(rodado)} num turno só. Confira se não sobrou um dígito.` : null}
     />
 
     {rodado !== null && rodado < 0
       ? <p className="socorrista-alerta" role="alert">
-          O odômetro de chegada não pode ser menor que o da saída.
+          A quilometragem da chegada não pode ser menor que a da saída.
         </p>
       : null}
 
@@ -355,7 +355,7 @@ function FecharTurno({
       </button>
       {!pronto && !(rodado !== null && rodado < 0)
         ? <p className="socorrista-apoio">
-            {!hodometro ? 'Informe o odômetro de chegada.' : 'Tire a foto do painel para fechar.'}
+            {!hodometro ? 'Informe a quilometragem da chegada.' : 'Tire a foto do painel para fechar.'}
           </p>
         : null}
     </div>
@@ -366,7 +366,7 @@ function FecharTurno({
           efeito={`O turno vai para a administração conferir. O km só entra no sistema depois que for aprovado.${avisoServicos}`}
           resumo={[
             ['Viatura', turno.veiculo],
-            ['Odômetro na chegada', formatarKm(Number(hodometro))],
+            ['Quilometragem na chegada', formatarKm(Number(hodometro))],
             ['Km rodado no turno', formatarKm(rodado)],
             ...(servicos ? [['Km dos serviços', servicos.length
               ? `${servicos.length} ${servicos.length === 1 ? 'serviço' : 'serviços'} · ${formatarKm(kmServicos)}`
@@ -515,7 +515,7 @@ export default function TurnoPage() {
           <h2>Turno devolvido</h2>
           <p className="socorrista-alerta" role="alert">{devolvido.motivo}</p>
           <p className="socorrista-intro">
-            Confira o odômetro e envie de novo com uma foto que mostre o painel.
+            Confira a quilometragem e envie de novo com uma foto que mostre o painel.
           </p>
           <FecharTurno
             turno={{

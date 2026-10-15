@@ -131,7 +131,7 @@ export async function lerCsvPorto(conteudo: string): Promise<Previa> {
   const texto0 = conteudo.replace(/^﻿/, '')
   const sep = separador(texto0.split(/\r?\n/)[0] ?? '')
   const registrosLidos = registros(texto0, sep)
-  if (registrosLidos.length < 2) throw new Error('O CSV não contém registros para importar.')
+  if (registrosLidos.length < 2) throw new Error('O arquivo não tem nenhuma linha para importar.')
 
   const originais = registrosLidos[0]
   const chaves = originais.map(h => {
