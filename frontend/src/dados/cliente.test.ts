@@ -41,5 +41,5 @@ test('sem configuracao, avisa em vez de quebrar em runtime', async () => {
   vi.stubEnv('VITE_SUPABASE_ANON_KEY', '')
   const { supabase, esquecerCliente } = await import('./cliente')
   esquecerCliente()
-  expect(() => supabase()).toThrow(/não configurada/i)
+  expect(() => supabase()).toThrow(/sem conexão configurada/i)
 })
