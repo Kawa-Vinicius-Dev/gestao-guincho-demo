@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { ConfirmarAcao } from '../components/ConfirmarAcao'
 import { BlocoFoto, BotaoFoto } from './BlocoFoto'
