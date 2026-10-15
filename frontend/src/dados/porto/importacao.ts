@@ -37,6 +37,19 @@ const PAGA: TipoRelatorio[] = ['OS_VINCULADAS', 'SERVICOS_GERAIS']
  */
 const NUMERO_OS = /^(?:\[)?(?:\d{1,2}[/-])?(\d{4,})[-/](\d{2})(?:\](?:\([^)]*\))?)?$/
 
+/**
+ * Numero da OS como o app da Porto mostra ao socorrista: `01/4312215-26`.
+ * Ele digita so os numeros; a barra e o hifen entram sozinhos (Kawa, 15/10/2026).
+ */
+export function mascararOs(texto: string) {
+  const d = texto.replace(/\D/g, '').slice(0, 11)
+  if (d.length <= 2) return d
+  if (d.length <= 9) return `${d.slice(0, 2)}/${d.slice(2)}`
+  return `${d.slice(0, 2)}/${d.slice(2, 9)}-${d.slice(9)}`
+}
+
+export const osCompleta = (texto: string) => /^\d{2}\/\d{7}-\d{2}$/.test(texto)
+
 export const normalizarNumero = (valor: string) => {
   const limpo = valor.trim()
   const m = limpo.match(NUMERO_OS)

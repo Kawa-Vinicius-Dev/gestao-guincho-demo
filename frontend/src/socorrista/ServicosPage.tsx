@@ -7,6 +7,7 @@ import {
   emAndamento, enviarFotoInicioServico, finalizarServico, iniciarServico, meuTurnoDoDia, obterLocalizacao,
   removerServico, servicosDoTurno, somaDosKm, type Localizacao, type ServicoDoTurno, type TurnoAberto,
 } from '../dados/turnos'
+import { mascararOs, osCompleta } from '../dados/porto/importacao'
 
 /**
  * Km dos servicos, no celular do socorrista.
@@ -22,11 +23,8 @@ const km = (valor: number) => `${valor.toLocaleString('pt-BR', { maximumFraction
 const hora = (iso?: string | null) => iso
   ? new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''
 
-/** "148.320" ou "148320,5" viram numero; o resto do que nao e numero sai. */
-function lerKm(texto: string) {
-  const limpo = texto.replace(/[^\d,]/g, '').replace(',', '.')
-  return limpo ? Number(limpo) : NaN
-}
+/** Guarda so os digitos; a tela mostra com ponto de milhar, como no turno. */
+const lerKm = (digitos: string) => (digitos ? Number(digitos) : NaN)
 
 const avisoDoLocal = (local: Localizacao) => !('semLocal' in local) ? ''
   : local.semLocal === 'NEGADA'
@@ -37,8 +35,9 @@ function CampoKm({ id, rotulo, valor, aoMudar }: { id: string; rotulo: string; v
   return <div className="socorrista-campo">
     <label htmlFor={id}>{rotulo}</label>
     <div className="socorrista-odometro-caixa">
-      <input id={id} className="socorrista-odometro" type="text" inputMode="decimal" autoComplete="off"
-        value={valor} onChange={e => aoMudar(e.target.value.replace(/[^\d,.]/g, ''))} />
+      <input id={id} className="socorrista-odometro" type="text" inputMode="numeric" autoComplete="off"
+        value={valor ? new Intl.NumberFormat('pt-BR').format(Number(valor)) : ''}
+        onChange={e => aoMudar(e.target.value.replace(/\D/g, '').slice(0, 9))} />
       <span className="socorrista-odometro-unidade" aria-hidden="true">km</span>
     </div>
   </div>
@@ -93,7 +92,7 @@ export default function ServicosPage() {
 
   function iniciar(evento: FormEvent) {
     evento.preventDefault()
-    if (!turno || !numero.trim() || !(valor >= 0) || !foto || ocupado) return
+    if (!turno || !osCompleta(numero) || !(valor >= 0) || !foto || ocupado) return
     void executar(async () => {
       setEtapa('Pegando a localização…')
       const local = await obterLocalizacao()
@@ -178,8 +177,8 @@ export default function ServicosPage() {
             <div className="socorrista-campo">
               <label htmlFor="servico-os">Número da OS</label>
               <input id="servico-os" className="servico-numero" type="text" inputMode="numeric"
-                autoComplete="off" placeholder="Ex.: 1234567-26"
-                value={numero} onChange={e => setNumero(e.target.value)} />
+                autoComplete="off" placeholder="01/4312215-26"
+                value={numero} onChange={e => setNumero(mascararOs(e.target.value))} />
             </div>
             <CampoKm id="servico-km-inicial" rotulo="Quilometragem do painel" valor={kmDigitado} aoMudar={setKmDigitado}/>
             <BotaoFoto id="servico-foto-inicio" rotulo="Foto do painel" arquivo={foto} aoEscolher={setFoto} obrigatoria/>
@@ -187,7 +186,7 @@ export default function ServicosPage() {
             {mensagem ? <p className="socorrista-apoio servicos-lancado" role="status">{mensagem}</p> : null}
             <div className="socorrista-rodape-acao">
               <button type="submit" className="socorrista-acao"
-                disabled={!numero.trim() || !(valor >= 0) || !foto || ocupado}>
+                disabled={!osCompleta(numero) || !(valor >= 0) || !foto || ocupado}>
                 {etapa || 'Iniciar serviço'}
               </button>
             </div>
