@@ -2160,3 +2160,5 @@ input,textarea,select,[contenteditable]:not([contenteditable=false]){caret-color
 .km-turno-servicos{display:grid;gap:8px;margin:0;padding:0;list-style:none}
 .km-turno-servico{display:grid;gap:8px;padding:12px 14px;border-radius:10px;background:var(--superficie)}
 .km-turno-servico>header{display:flex;justify-content:space-between;align-items:center;gap:8px;font-variant-numeric:tabular-nums}
+.socorrista-texto{width:100%;padding:12px 14px;border:1.5px solid var(--controle-borda);border-radius:12px;background:var(--superficie-2);color:var(--ink);font:inherit;font-size:16px;resize:vertical}
+.socorrista-texto:focus{outline:none;border-color:var(--blue-600)}

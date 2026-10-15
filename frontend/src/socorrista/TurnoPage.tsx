@@ -6,7 +6,7 @@ import { Carregando, ErroPagina } from '../components/EstadoPagina'
 import {
   abrirTurno, emAndamento, enviarChecklist, enviarFotoAbertura, fecharTurno, meuTurnoDoDia, servicosDoTurno, somaDosKm,
   FOTOS_DO_CHECKLIST, type ChaveDoChecklist, type MeuTurnoDoDia, type ServicoDoTurno, type TurnoAberto,
-  type ViaturaDoTurno,
+  type TurnoDevolvido, type ViaturaDoTurno, reenviarTurnoDevolvido,
 } from '../dados/turnos'
 import { AtivarAvisos } from '../components/AtivarAvisos'
 
@@ -23,7 +23,7 @@ import { AtivarAvisos } from '../components/AtivarAvisos'
  *   aberto sem foto    -> enviar a foto da saida, que falhou no envio
  *   aberto sem checklist -> enviar as fotos da viatura, que falharam no envio
  *   turno aberto       -> fechar turno (odometro + foto obrigatoria)
- *   turno devolvido    -> corrigir e reenviar, com o motivo do administrador
+ *   turno devolvido    -> no topo, sem travar o dia: corrigir a quilometragem e explicar
  *
  * Nada aqui vira km oficial: o que ele fecha fica aguardando aprovacao.
  */
@@ -92,6 +92,77 @@ function CampoOdometro({
       {aviso ?? apoio ?? ''}
     </p>
   </div>
+}
+
+/**
+ * Turno devolvido (Kawa, 15/10/2026). A devolucao costuma chegar no dia
+ * seguinte, quando nao da mais para fotografar o painel daquele momento: ele
+ * corrige a quilometragem e explica; a foto que ja enviou continua valendo, e
+ * uma nova so se ele tiver. Fica no topo e nao impede o turno do dia.
+ */
+function CorrigirDevolvido({ turno, aoReenviar }: { turno: TurnoDevolvido; aoReenviar: () => void }) {
+  const [hodometro, setHodometro] = useState(turno.hodometroFinal ? String(turno.hodometroFinal) : '')
+  const [explicacao, setExplicacao] = useState('')
+  const [foto, setFoto] = useState<File | null>(null)
+  const [confirmar, setConfirmar] = useState(false)
+  const rodado = hodometro ? Number(hodometro) - turno.hodometroInicial : null
+  const pronto = rodado !== null && rodado >= 0 && explicacao.trim().length > 0
+
+  return <section className="socorrista-cartao socorrista-devolvido">
+    <h2>Turno devolvido</h2>
+    <p className="socorrista-intro">
+      Turno de {new Date(`${turno.data}T12:00`).toLocaleDateString('pt-BR')} na {turno.veiculo}. O administrador escreveu:
+    </p>
+    <p className="socorrista-alerta" role="alert">{turno.motivo}</p>
+
+    <CampoOdometro
+      id="odometro-devolvido" rotulo="Quilometragem na chegada"
+      valor={hodometro} aoMudar={setHodometro}
+      apoio={rodado !== null && rodado >= 0
+        ? `Saída com ${formatarKm(turno.hodometroInicial)}: ${formatarKm(rodado)} no turno.`
+        : 'Corrija a quilometragem, se estiver errada.'}
+    />
+    {rodado !== null && rodado < 0
+      ? <p className="socorrista-alerta" role="alert">A quilometragem da chegada não pode ser menor que a da saída.</p>
+      : null}
+
+    <div className="socorrista-campo">
+      <label htmlFor="explicacao-devolvido">O que aconteceu?</label>
+      <textarea id="explicacao-devolvido" className="socorrista-texto" rows={3}
+        placeholder="Ex.: digitei 10.500, mas o painel marcava 10.120."
+        value={explicacao} onChange={e => setExplicacao(e.target.value)} />
+    </div>
+
+    <BotaoFoto id="foto-devolvido" rotulo="Foto nova do painel" arquivo={foto} aoEscolher={setFoto} />
+    <p className="socorrista-apoio">Sem foto nova, vale a que você já enviou.</p>
+
+    <div className="socorrista-rodape-acao">
+      <button type="button" className="socorrista-acao" disabled={!pronto} onClick={() => setConfirmar(true)}>
+        Reenviar para aprovação
+      </button>
+      {!pronto && !(rodado !== null && rodado < 0)
+        ? <p className="socorrista-apoio">Escreva o que aconteceu para reenviar.</p>
+        : null}
+    </div>
+
+    {confirmar
+      ? <ConfirmarAcao
+          titulo="Reenviar o turno?"
+          efeito="O turno volta para a administração conferir, com a sua explicação."
+          resumo={[
+            ['Quilometragem na chegada', formatarKm(Number(hodometro))],
+            ['Km rodado no turno', formatarKm(rodado)],
+            ['Foto', foto ? 'Nova' : 'A que você já enviou'],
+          ]}
+          textoConfirmar="Reenviar"
+          aoConfirmar={async () => {
+            await reenviarTurnoDevolvido({ turnoId: turno.id, hodometro: Number(hodometro), explicacao, foto })
+            aoReenviar()
+          }}
+          aoFechar={() => setConfirmar(false)}
+        />
+      : null}
+  </section>
 }
 
 /** Um passo numerado: viatura, odometro e foto sao uma sequencia de verdade. */
@@ -510,22 +581,9 @@ export default function TurnoPage() {
     </header>
     <AtivarAvisos/>
 
-    {devolvido
-      ? <section className="socorrista-cartao socorrista-devolvido">
-          <h2>Turno devolvido</h2>
-          <p className="socorrista-alerta" role="alert">{devolvido.motivo}</p>
-          <p className="socorrista-intro">
-            Confira a quilometragem e envie de novo com uma foto que mostre o painel.
-          </p>
-          <FecharTurno
-            turno={{
-              id: devolvido.id, veiculo: devolvido.veiculo, data: devolvido.data,
-              hodometroInicial: devolvido.hodometroInicial, deDiaAnterior: false,
-            }}
-            aoFechar={carregar}
-          />
-        </section>
-      : aberto && !aberto.temFotoAbertura
+    {devolvido ? <CorrigirDevolvido key={devolvido.id} turno={devolvido} aoReenviar={carregar} /> : null}
+
+    {aberto && !aberto.temFotoAbertura
         ? <FaltaFotoAbertura turno={aberto} aoEnviar={carregar} />
       : aberto && aberto.faltaChecklist
         ? <FaltaChecklist turno={aberto} checklist={checklist} aoMudarChecklist={setChecklist} aoEnviar={carregar} />
