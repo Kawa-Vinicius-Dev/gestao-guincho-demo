@@ -27,6 +27,8 @@ const itens = [
   // (Kawa, 23/09/2026: "importar tem por obrigacao ter uma tela so para ela").
   ['/porto/importacoes', 'Importar', true, 'porto'],
   ['/configuracoes', 'Configurações', true, 'sistema'],
+  // O que o socorrista ajusta sozinho: app, avisos, aparencia, senha (Kawa, 15/10/2026).
+  ['/ajustes', 'Configurações', false, 'sistema'],
 ] as const
 /** Mesmo teto do backend (FavoritoMenuController.MAXIMO): o topo do menu tem de continuar curto. */
 const LIMITE_FAVORITOS = 8
@@ -45,7 +47,7 @@ const grupos = { financeiro: 'Financeiro', operacao: 'Operação', equipe: 'Equi
  * aparecer nada pode tirar"); o que o administrador precisa delas esta em
  * Aprovacoes e na ficha de cada socorrista.
  */
-const SO_DO_SOCORRISTA = new Set(['/turno', '/km-dos-servicos', '/minha-comissao', '/despesas'])
+const SO_DO_SOCORRISTA = new Set(['/turno', '/km-dos-servicos', '/minha-comissao', '/despesas', '/ajustes'])
 const vePeloPerfil = (rota: string, somenteAdmin: boolean, admin: boolean) =>
   admin ? !SO_DO_SOCORRISTA.has(rota) : !somenteAdmin
 
@@ -75,6 +77,7 @@ const icones: Record<string,string> = {
   '/porto/devolvidos':'M9 14 4 9l5-5M4 9h11a5 5 0 0 1 0 10H9',
   '/porto/contestacoes':'M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6zM12 8v5M12 16h.01',
   '/porto/relatorios':'M6 3h8l4 4v14H6zM14 3v4h4M9 17v-3M12 17v-6M15 17v-2',
+  '/ajustes':'M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1',
   '/configuracoes':'M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1',
 }
 /** Estrela de fixar: cheia quando o atalho esta na lista, contorno quando nao. */
