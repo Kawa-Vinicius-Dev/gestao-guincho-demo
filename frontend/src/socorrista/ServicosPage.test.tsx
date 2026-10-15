@@ -68,7 +68,7 @@ test('inicia o servico com OS, km e foto; sem localizacao, registra o motivo', a
     }),
     http.post(`${SUPA}/rest/v1/rpc/registrar_foto_inicio_servico`, async ({ request }) => {
       fotoRegistrada = await request.json() as Record<string, unknown>
-      servicos = [...servicos, { id: 2, turno_id: 7, numero_os: '1234567-26', km: null, km_inicial: 148340, km_final: null,
+      servicos = [...servicos, { id: 2, turno_id: 7, numero_os: '01/1234567-26', km: null, km_inicial: 148340, km_final: null,
         iniciado_em: '2026-09-24T10:00:00Z', finalizado_em: null, foto_inicio: 'turnos/7/servico-2-inicio.jpg' }]
       return HttpResponse.json(null)
     }),
@@ -80,15 +80,19 @@ test('inicia o servico com OS, km e foto; sem localizacao, registra o motivo', a
   const iniciar = screen.getByRole('button', { name: 'Iniciar serviço' })
   expect(iniciar).toBeDisabled()
 
-  await user.type(screen.getByLabelText('Número da OS'), '1234567-26')
+  await user.type(screen.getByLabelText('Número da OS'), '0112345672')
+  expect(iniciar).toBeDisabled()
+  await user.type(screen.getByLabelText('Número da OS'), '6')
+  expect(screen.getByLabelText('Número da OS')).toHaveValue('01/1234567-26')
   await user.type(screen.getByLabelText('Quilometragem do painel'), '148340')
+  expect(screen.getByLabelText('Quilometragem do painel')).toHaveValue('148.340')
   expect(iniciar).toBeDisabled()
   await user.upload(screen.getByLabelText(/Foto do painel/), foto())
   await user.click(screen.getByRole('button', { name: 'Iniciar serviço' }))
 
-  expect(await screen.findByText(/Serviço da OS 1234567-26 iniciado\. Sem localização/)).toBeInTheDocument()
+  expect(await screen.findByText(/Serviço da OS 01\/1234567-26 iniciado\. Sem localização/)).toBeInTheDocument()
   expect(iniciado).toEqual({
-    p_numero_os: '1234567-26', p_numero_normalizado: '123456726', p_km_inicial: 148340,
+    p_numero_os: '01/1234567-26', p_numero_normalizado: '123456726', p_km_inicial: 148340,
     p_latitude: null, p_longitude: null, p_precisao_m: null, p_sem_local: 'INDISPONIVEL',
   })
   expect(arquivo).toMatch(/turnos\/7\/servico-2-inicio\.jpg$/)
@@ -100,7 +104,7 @@ test('inicia o servico com OS, km e foto; sem localizacao, registra o motivo', a
 
 test('finaliza o servico em andamento: km do painel e foto', async () => {
   let servicos: Record<string, unknown>[] = [
-    { id: 2, turno_id: 7, numero_os: '1234567-26', km: null, km_inicial: 148340, km_final: null,
+    { id: 2, turno_id: 7, numero_os: '01/1234567-26', km: null, km_inicial: 148340, km_final: null,
       iniciado_em: '2026-09-24T10:00:00Z', finalizado_em: null, foto_inicio: 'turnos/7/servico-2-inicio.jpg' },
   ]
   let finalizado: Record<string, unknown> | null = null
@@ -125,7 +129,7 @@ test('finaliza o servico em andamento: km do painel e foto', async () => {
   await user.upload(screen.getByLabelText(/Foto do painel/), foto())
   await user.click(screen.getByRole('button', { name: 'Finalizar serviço' }))
 
-  expect(await screen.findByText(/Serviço da OS 1234567-26 finalizado: 30 km\./)).toBeInTheDocument()
+  expect(await screen.findByText(/Serviço da OS 01\/1234567-26 finalizado: 30 km\./)).toBeInTheDocument()
   expect(finalizado).toMatchObject({ p_id: 2, p_km_final: 148370, p_foto: 'turnos/7/servico-2-fim.jpg', p_sem_local: 'INDISPONIVEL' })
   expect(await screen.findByRole('button', { name: 'Iniciar serviço' })).toBeInTheDocument()
 })
