@@ -112,7 +112,7 @@ export default function PortoOrdensPagamentoPage() {
     const quinzenaInicio = String(campos.get('quinzenaInicio') ?? '')
     const quinzenaEntrega = String(campos.get('quinzenaEntrega') ?? '')
     if (Boolean(quinzenaInicio) !== Boolean(quinzenaEntrega)) {
-      setErro('Informe a data de início e a data de entrega da OP, ou deixe as duas em branco.')
+      setErro('Informe o início e o fim do período, ou deixe os dois em branco.')
       return
     }
     const mudou = quinzenaInicio !== (editando?.quinzenaInicio ?? '')
@@ -231,16 +231,16 @@ export default function PortoOrdensPagamentoPage() {
     {novaAberta ? <FormularioOp aoEnviar={salvarOp} aoFechar={() => setNovaAberta(false)}/> : null}
     {quinzenaPendente
       ? <ConfirmarAcao
-          titulo="Mudar a quinzena da OP?"
+          titulo="Mudar o período da OP?"
           efeito={quinzenaPendente.quinzenaInicio
-            ? 'O período da OP passa a ser a quinzena informada. A receita, a conta a receber e a comissão desta OP passam a ser lançadas na data de entrega.'
-            : 'A OP volta a ter o período calculado pelas datas dos serviços que ela trouxe.'}
+            ? 'O período da OP passa a ser o informado, no lugar do calculado. A receita, a conta a receber e a comissão desta OP passam a ser lançadas no fim do período.'
+            : 'A OP volta ao período calculado: do dia seguinte à OP anterior até o último serviço dela.'}
           resumo={[
             ['OP', String(quinzenaPendente.corpo.numero)],
-            ['Data início', quinzenaPendente.quinzenaInicio ? data(quinzenaPendente.quinzenaInicio) : 'Calculada pelas OS'],
-            ['Data entrega', quinzenaPendente.quinzenaEntrega ? data(quinzenaPendente.quinzenaEntrega) : 'Calculada pelas OS'],
+            ['Início', quinzenaPendente.quinzenaInicio ? data(quinzenaPendente.quinzenaInicio) : 'Calculado'],
+            ['Fim', quinzenaPendente.quinzenaEntrega ? data(quinzenaPendente.quinzenaEntrega) : 'Calculado'],
           ]}
-          textoConfirmar="Salvar quinzena"
+          textoConfirmar="Salvar período"
           aoConfirmar={() => gravarOp(quinzenaPendente)}
           aoFechar={() => setQuinzenaPendente(null)}/>
       : null}

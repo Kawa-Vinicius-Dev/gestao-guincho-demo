@@ -43,11 +43,14 @@ export function FormularioOp({ edicao, aoEnviar, aoFechar }: Props) {
       {/* A quinzena como a Porto declara na tela da OP. Nao da para deduzir: a OP
           traz servicos atrasados de outros meses, e as datas nao seguem formula
           (01/08 a 14/08, 15/08 a 28/08, 01/09 a 16/09). Em branco, o periodo
-          continua sendo calculado pelas OS. */}
-      <Campo rotulo="Data início (Porto)" ajuda="Como aparece na OP, no site da Porto.">
+          continua sendo calculado pelas OS.
+          Regra dos 15 dias (Kawa, 15/10/2026): as datas da Porto nao valem mais;
+          estes campos viraram a correcao manual, que tem prioridade. */}
+      <Campo rotulo="Início do período (correção manual)"
+        ajuda="Em branco, o sistema calcula: do dia seguinte à OP anterior até o último serviço desta OP.">
         <input name="quinzenaInicio" type="date" defaultValue={edicao?.quinzenaInicio}/>
       </Campo>
-      <Campo rotulo="Data entrega (Porto)">
+      <Campo rotulo="Fim do período (correção manual)">
         <input name="quinzenaEntrega" type="date" defaultValue={edicao?.quinzenaEntrega}/>
       </Campo>
       <Campo rotulo="Observação" className="field-wide">

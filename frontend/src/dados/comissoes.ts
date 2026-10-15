@@ -62,6 +62,20 @@ export async function listarMeusPeriodosComissao(): Promise<PeriodoPorto[]> {
   })))
 }
 
+/** O periodo em aberto do socorrista: do dia seguinte a ultima OP ate hoje (Kawa, 15/10/2026). */
+export interface ServicosEmAberto {
+  inicio: string
+  fim: string
+  servicos: { id: number; numeroOs: string; especialidade: string | null; dataAtendimento: string }[]
+}
+
+export async function meusServicosEmAberto(): Promise<ServicosEmAberto> {
+  return ou(
+    await supabase().rpc('meus_servicos_em_aberto'),
+    'Não foi possível carregar os seus serviços em aberto.',
+  ) as ServicosEmAberto
+}
+
 export async function lerComissaoDaOp(
   ordensPagamento: number[], motoristaId?: number,
 ): Promise<Comissao> {
