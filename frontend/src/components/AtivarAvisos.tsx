@@ -24,7 +24,7 @@ export function AtivarAvisos({ mostrarLigado = false }: { mostrarLigado?: boolea
   if (!suportado) {
     return noIphone
       ? <p className="avisos-ativar-dica">Para receber avisos no iPhone, instale o app: toque em <strong>Compartilhar</strong> e depois em <strong>Adicionar à Tela de Início</strong>.</p>
-      : mostrarLigado ? <p className="avisos-ativar-dica">Este navegador não recebe avisos. Use o Chrome.</p> : null
+      : mostrarLigado ? <p className="avisos-ativar-dica">Este navegador não recebe avisos. Abra o sistema pelo <strong>Chrome</strong> para ligar.</p> : null
   }
   if (estado === 'recem-ligado' || (mostrarLigado && estado === 'ligado')) {
     return <p className="avisos-ativar-dica" role="status">✓ Avisos ligados neste celular.</p>
@@ -66,7 +66,7 @@ export function InstalarApp() {
   }
   if (noAndroid) {
     return <p className="avisos-ativar-dica">
-      No Chrome, toque em <strong>⋮</strong> e depois em <strong>Instalar app</strong>.
+      Abra este endereço no <strong>Chrome</strong>, toque em <strong>⋮</strong> e depois em <strong>Instalar app</strong>.
     </p>
   }
   return <p className="avisos-ativar-dica">Abra este endereço no celular para instalar o app.</p>
