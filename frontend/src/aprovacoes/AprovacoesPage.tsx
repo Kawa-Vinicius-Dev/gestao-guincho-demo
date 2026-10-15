@@ -11,7 +11,7 @@ import { AtivarAvisos } from '../components/AtivarAvisos'
 import { ConfirmarExclusao } from '../components/ConfirmarExclusao'
 import type { Despesa } from '../types/modelos'
 import {
-  apagarFotosDoTurno, aprovarTurno, baixarFoto, checklistsDosTurnos, devolverTurno, filaDeAprovacoes,
+  apagarFotosDoTurno, apagarFotosDosServicos, aprovarTurno, emAndamento, baixarFoto, checklistsDosTurnos, devolverTurno, filaDeAprovacoes,
   servicosDoTurno, somaDosKm, type ServicoDoTurno,
   limparChecklistsAntigos, linkDaFoto, FOTOS_DO_CHECKLIST,
   type Checklist, type FilaDeAprovacoes, type ItemDaFila,
@@ -63,7 +63,7 @@ function IconeFoto() {
  * acoes (recusar e aprovar) ficam a direita, do mesmo tamanho (Kawa, 23/09/2026:
  * "os bottons tao feios").
  */
-function VerFoto({ caminho, rotulo, nomeDoArquivo }: { caminho: string; rotulo: string; nomeDoArquivo?: string }) {
+export function VerFoto({ caminho, rotulo, nomeDoArquivo }: { caminho: string; rotulo: string; nomeDoArquivo?: string }) {
   const [url, setUrl] = useState('')
   const [erro, setErro] = useState('')
   return <>
@@ -137,7 +137,7 @@ function LinhaTurno({ item, checklist, servicos, aoResolver }: {
   item: ItemDaFila; checklist?: Checklist; servicos: ServicoDoTurno[]; aoResolver: () => void
 }) {
   const rodado = item.kmRodado ?? 0
-  // O km produtivo vem da soma do km do GPS que o socorrista lancou em cada
+  // O km produtivo vem da soma do km que o socorrista registrou em cada
   // servico (Kawa, 24/09/2026). Continua editavel: e o administrador que aprova.
   const kmServicos = somaDosKm(servicos)
   const [kmProdutivo, setKmProdutivo] = useState(String(kmServicos).replace('.', ','))
@@ -171,10 +171,15 @@ function LinhaTurno({ item, checklist, servicos, aoResolver }: {
       <label htmlFor={`km-${item.id}`}>{servicos.length ? 'Km produtivo (soma dos serviços)' : 'Km produtivo reconhecido'}</label>
       <input id={`km-${item.id}`} type="text" inputMode="decimal" value={kmProdutivo}
         onChange={e => setKmProdutivo(e.target.value.replace(/[^\d,]/g, ''))} />
+      {servicos.some(emAndamento)
+        ? <p className="aprovacao-apoio" role="alert">
+            Há serviço sem finalizar: ele fica fora da soma. Confira em Viaturas → KM dos turnos.
+          </p>
+        : null}
       {kmServicos > rodado
         ? <p className="aprovacao-apoio" role="alert">
             Os serviços somam <strong>{numero.format(kmServicos)} km</strong>, mais do que o caminhão rodou.
-            Confira no sistema da Porto e ajuste o km produtivo.
+            Confira as fotos do painel e ajuste o km produtivo.
           </p>
         : null}
       <p className="aprovacao-apoio">
@@ -223,6 +228,7 @@ function LinhaTurno({ item, checklist, servicos, aoResolver }: {
           aoConfirmar={async () => {
             await aprovarTurno(item.id, produtivo)
             await apagarFotosDoTurno([item.fotoAbertura, item.fotoFechamento])
+            await apagarFotosDosServicos(item.id)
             await limparChecklistsAntigos()
             aoResolver()
           }}

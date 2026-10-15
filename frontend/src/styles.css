@@ -2154,3 +2154,9 @@ input,textarea,select,[contenteditable]:not([contenteditable=false]){caret-color
 /* Rodape do menu: o administrador chega ao Sobre e suporte da ANAIV. */
 .sidebar-foot .sidebar-sobre{display:block;margin-top:6px;color:#9fb4c8;font-size:12px;text-decoration:none}
 .sidebar-foot .sidebar-sobre:hover{color:#fff;text-decoration:underline}
+
+/* KM dos turnos (Kawa, 15/10/2026) */
+.km-turnos{display:grid;gap:12px}
+.km-turno-servicos{display:grid;gap:8px;margin:0;padding:0;list-style:none}
+.km-turno-servico{display:grid;gap:8px;padding:12px 14px;border-radius:10px;background:var(--superficie)}
+.km-turno-servico>header{display:flex;justify-content:space-between;align-items:center;gap:8px;font-variant-numeric:tabular-nums}
