@@ -175,4 +175,41 @@ test('turno devolvido mostra o motivo escrito pelo administrador', async () => {
 
   expect(await screen.findByRole('heading', { name: 'Turno devolvido' })).toBeInTheDocument()
   expect(screen.getByText('A foto não mostra o odômetro.')).toBeInTheDocument()
+  // A devolucao chega no dia seguinte: ela nao trava o turno do dia.
+  expect(screen.getByRole('heading', { name: 'Abrir turno' })).toBeInTheDocument()
+})
+
+test('turno devolvido volta com a quilometragem corrigida e a explicacao, sem foto nova', async () => {
+  let enviado: Record<string, unknown> | null = null
+  servidor.use(
+    http.post(`${SUPA}/rest/v1/rpc/meu_turno_do_dia`, () => HttpResponse.json({
+      ...turno,
+      turnosDevolvidos: enviado ? [] : [{
+        id: 7, data: '2026-09-16', veiculo: 'L168', hodometroInicial: 148138,
+        hodometroFinal: 148500, motivo: 'A foto mostra 148.320.',
+      }],
+    })),
+    http.post(`${SUPA}/rest/v1/rpc/reenviar_turno_devolvido`, async ({ request }) => {
+      enviado = await request.json() as Record<string, unknown>
+      return HttpResponse.json(null)
+    }),
+    http.post(`${SUPA}/functions/v1/avisos`, () => HttpResponse.json({})),
+  )
+  const user = userEvent.setup({ delay: null })
+  await abrir(turno)
+
+  const campo = await screen.findByLabelText('Quilometragem na chegada')
+  expect(campo).toHaveValue('148.500')
+  await user.clear(campo)
+  await user.type(campo, '148320')
+  expect(screen.getByRole('button', { name: 'Reenviar para aprovação' })).toBeDisabled()
+  await user.type(screen.getByLabelText('O que aconteceu?'), 'Digitei errado')
+  await user.click(screen.getByRole('button', { name: 'Reenviar para aprovação' }))
+  await user.click(await screen.findByRole('button', { name: 'Reenviar' }))
+
+  await vi.waitFor(() => expect(enviado).toEqual({
+    p_turno_id: 7, p_hodometro: 148320, p_explicacao: 'Digitei errado', p_foto: null,
+  }))
+  expect(await screen.findByRole('heading', { name: 'Abrir turno' })).toBeInTheDocument()
+  expect(screen.queryByRole('heading', { name: 'Turno devolvido' })).not.toBeInTheDocument()
 })

@@ -186,6 +186,31 @@ export async function fecharTurno(dados: {
   avisar({ evento: 'turno_fechado', id: dados.turnoId })
 }
 
+/**
+ * Reenvia o turno devolvido (Kawa, 15/10/2026): o administrador costuma
+ * devolver no dia seguinte, quando nao da mais para fotografar o painel. O
+ * socorrista corrige a quilometragem e explica; a foto que ja estava continua
+ * valendo, e uma nova so vai se ele tiver.
+ */
+export async function reenviarTurnoDevolvido(dados: {
+  turnoId: number
+  hodometro: number
+  explicacao: string
+  foto?: File | null
+}): Promise<void> {
+  const caminho = dados.foto ? await subirFoto(dados.turnoId, 'fechamento', dados.foto) : null
+  ou(
+    await supabase().rpc('reenviar_turno_devolvido', {
+      p_turno_id: dados.turnoId,
+      p_hodometro: dados.hodometro,
+      p_explicacao: dados.explicacao.trim(),
+      p_foto: caminho,
+    }),
+    'Não foi possível reenviar o turno.',
+  )
+  avisar({ evento: 'turno_fechado', id: dados.turnoId })
+}
+
 // ---------------------------------------------------------------------------
 // Fila do administrador
 // ---------------------------------------------------------------------------
