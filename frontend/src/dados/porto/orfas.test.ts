@@ -265,7 +265,29 @@ test('socorrista desativado ainda é reconhecido pelo nome na importação', asy
 
   const previa = await criarPreviaConteudoPorto(`AZUL SEGUROS	2662727/26	SOCORRO	L168	SOCORRISTA ANTIGO DA	30/03/2026	06:53	06:53	ACIONADO/FINAL	FINALIZADO	Não`)
 
-  expect(consultaMotoristas).not.toContain('ativo')
+  expect(consultaMotoristas).not.toContain('ativo=')
   expect(previa.orfas).toHaveLength(0)
   expect(previa.linhas[0].dados.motorista_sugerido_id).toBe('12')
+})
+
+// O painel corta "JEFERSON MARTINS DA SILVA" e o "FILHO" na mesma string. Com o
+// filho desativado, o servico e do pai, e nao do Auxiliar.
+test('nome cortado que serve para dois vai para o único ativo', async () => {
+  servidor.use(
+    http.post(`${SUPA}/rest/v1/rpc/porto_registrar_importacao`, () =>
+      HttpResponse.json({ id: 62, status: 'AGUARDANDO_CONFERENCIA' })),
+    http.get(`${SUPA}/rest/v1/registros_importados_porto`, () => HttpResponse.json([])),
+    http.get(`${SUPA}/rest/v1/ordens_servico_porto`, () => HttpResponse.json([])),
+    http.get(`${SUPA}/rest/v1/motoristas`, () => HttpResponse.json([
+      { id: 1, nome: 'JEFERSON MARTINS DA SILVA', qra: null, ativo: true },
+      { id: 5, nome: 'JEFERSON MARTINS DA SILVA FILHO', qra: null, ativo: false },
+      { id: 10, nome: 'AUXILIAR', qra: null, ativo: true },
+    ])),
+  )
+  const { criarPreviaConteudoPorto } = await carregar()
+
+  const previa = await criarPreviaConteudoPorto(`AZUL SEGUROS	2662728/26	SOCORRO	L168	JEFERSON MARTINS DA 	30/09/2026	06:53	06:53	ACIONADO/FINAL	FINALIZADO	Não`)
+
+  expect(previa.orfas).toHaveLength(0)
+  expect(previa.linhas[0].dados.motorista_sugerido_id).toBe('1')
 })
