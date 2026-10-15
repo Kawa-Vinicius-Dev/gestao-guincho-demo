@@ -1,5 +1,5 @@
 import { useEffect,useState } from 'react'
-import { lerComissaoDaOp, listarMeusPeriodosComissao } from '../dados/comissoes'
+import { lerComissaoDaOp, listarMeusPeriodosComissao, meusServicosEmAberto, type ServicosEmAberto } from '../dados/comissoes'
 import type { Comissao } from '../types/modelos'
 import { data } from '../utils/formatadores'
 import { periodoCorrente, rotuloPeriodo, type PeriodoPorto } from '../utils/periodos'
@@ -15,11 +15,17 @@ import { useAoVivo } from '../dados/aoVivo'
  * por periodo, deixa ele ver apenas o registro da op mais recente". O ideal, que
  * ele vai fazer depois, e mostrar as OS do periodo corrente pelos dados do
  * diario; ate la, a tela e a ultima OP, sem escolha.
+ *
+ * Kawa, 15/10/2026 (regra dos 15 dias): em cima, o periodo em aberto — do dia
+ * seguinte a ultima OP ate hoje, com as OS do Diario no nome dele; embaixo, a
+ * ultima OP fechada, como antes.
  */
 export default function MinhaComissaoPage(){
   const [recente,setRecente]=useState<PeriodoPorto|null>(null),[comissao,setComissao]=useState<Comissao|null>(null)
   const [erro,setErro]=useState('')
   const [carregando,setCarregando]=useState(true)
+  const [emAberto,setEmAberto]=useState<ServicosEmAberto|null>(null)
+  useEffect(()=>{meusServicosEmAberto().then(setEmAberto).catch(()=>setEmAberto(null))},[])
   const ids=recente?.ids??[]
   useEffect(()=>{listarMeusPeriodosComissao()
     .then(lista=>{const ultimo=periodoCorrente(lista)??null;setRecente(ultimo);if(!ultimo)setCarregando(false)})
@@ -35,6 +41,16 @@ export default function MinhaComissaoPage(){
       <h1>Meus serviços</h1>
       {recente?<p className="cabecalho-contexto"><i aria-hidden="true"/>{rotuloPeriodo(recente)}</p>:null}
     </header>
+    {emAberto?<section className="bloco-socorrista">
+      <h2>{emAberto.servicos.length} {emAberto.servicos.length===1?'serviço':'serviços'} desde {data(emAberto.inicio)}</h2>
+      <p className="bloco-apoio">De {data(emAberto.inicio)} até hoje, ainda sem OP. Aparecem depois que o administrador importa o Diário da Porto.</p>
+      {emAberto.servicos.length
+        ? <ul className="lista-socorrista">{emAberto.servicos.map(s=><li key={s.id}>
+            <span className="linha-identidade"><strong>{s.numeroOs}</strong><small>{s.especialidade||'Sem especialidade'}</small></span>
+            <span className="linha-apoio">{data(s.dataAtendimento)}</span>
+          </li>)}</ul>
+        : <p className="empty-inline">Nenhum serviço seu no Diário desde {data(emAberto.inicio)}.</p>}
+    </section>:null}
     {erro?<div className="form-alert">{erro}</div>:null}{carregando?<Carregando/>:null}{!carregando&&!recente&&!erro?<p className="empty-inline">Nenhuma OP com serviço seu ainda. Quando a Porto pagar a primeira, ela aparece aqui.</p>:null}
     {comissao?<section className="bloco-socorrista">
       {/* Kawa, 18/09/2026: na tela do socorrista, so a quantidade e os servicos

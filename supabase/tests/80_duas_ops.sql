@@ -32,10 +32,11 @@ insert into public.despesas
  values ('Passou no cartão da viatura',2,100,'2026-09-12',1,true,'PAGO',true,
          'aaaaaaaa-0000-0000-0000-000000000001','2026-09-12');
 
--- Um gasto num dia SEM OS nenhuma, entre as duas OPs. A janela de cada OP vai
--- da primeira a ultima OS dela, entao 11/09 nao pertence a OP alguma e este
--- gasto nao desconta de lugar nenhum. Esta aqui para o comportamento ficar
--- registrado: se um dia virar defeito, o teste mostra onde.
+-- Um gasto num dia SEM OS nenhuma, entre as duas OS. Ate 15/10/2026 a janela
+-- de cada OP ia da primeira a ultima OS dela, e este gasto nao descontava de
+-- lugar nenhum (o teste avisava: "se um dia virar defeito, mostra onde").
+-- Com a regra dos 15 dias as duas OPs dividem o periodo 01/09 a 12/09, todo dia
+-- pertence a uma OP, e ele desconta — uma vez so.
 insert into public.despesas
  (descricao,categoria_id,valor,data_lancamento,motorista_id,desconta_comissao,status,aprovada,criado_por,data_pagamento)
  values ('Gasto em dia sem OS',2,70,'2026-09-11',1,true,'PAGO',true,
@@ -58,10 +59,12 @@ select pg_temp.checar('comissão de 20% sobre as duas',
 \echo '===== O desconto entra uma vez so, nao uma por OP ====='
 -- Era o risco real de ter duas OPs: a mesma janela lida duas vezes descontaria
 -- os R$ 100 duas vezes, e o socorrista perderia R$ 100 sem ninguem notar.
-select pg_temp.checar('o gasto marcado desconta uma vez',
-  (public.comissao_das_ops(array[1,2],1) ->> 'descontos'), '100.00');
-select pg_temp.checar('líquido = 400 − 100',
-  (public.comissao_das_ops(array[1,2],1) ->> 'liquido'), '300.00');
+select pg_temp.checar('cada gasto marcado desconta uma vez (100 + 70)',
+  (public.comissao_das_ops(array[1,2],1) ->> 'descontos'), '170.00');
+select pg_temp.checar('líquido = 400 − 170',
+  (public.comissao_das_ops(array[1,2],1) ->> 'liquido'), '230.00');
+select pg_temp.checar('o desconto nao se repete na outra OP da mesma quinzena',
+  (public.comissao_das_ops(array[2],1) ->> 'descontos'), '0');
 
 \echo '===== Uma OP sozinha continua fechando so a dela ====='
 select pg_temp.checar('a OP do guincho vê só a produção dela',
@@ -75,8 +78,10 @@ select pg_temp.checar('e o gasto marcado aparece na lista dele',
      from jsonb_array_elements(public.detalhe_socorrista_ops(1, array[1,2]) -> 'despesas') e
     where e ->> 'descricao' = 'Passou no cartão da viatura'), 'true');
 
-\echo '===== Dia sem OS fica fora de toda janela ====='
-select pg_temp.checar('gasto em dia sem OS não desconta de nenhuma OP',
-  (public.comissao_das_ops(array[1,2],1) ->> 'descontos'), '100.00');
+\echo '===== Regra dos 15 dias: as duas OPs dividem o periodo ====='
+reset role;
+select pg_temp.checar('as duas OPs da mesma quinzena com o mesmo periodo',
+  (select string_agg(periodo_inicio || ' ' || periodo_fim, ',' order by id) from public.ordens_pagamento_porto),
+  '2026-09-01 2026-09-12,2026-09-01 2026-09-12');
 
 \echo 'TODOS OS TESTES PASSARAM'

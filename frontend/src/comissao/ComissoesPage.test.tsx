@@ -76,6 +76,27 @@ test('socorrista vê só a quantidade e os serviços feitos, sem dinheiro', asyn
   expect(screen.queryByText(/alimentação/i)).not.toBeInTheDocument()
 })
 
+test('em cima, os serviços do período em aberto; embaixo, a última OP', async () => {
+  servidor.use(
+    meusPeriodos(),
+    http.post(`${URL_SUPABASE}/rest/v1/rpc/comissao_das_ops`, () => HttpResponse.json(detalhe)),
+    http.post(`${URL_SUPABASE}/rest/v1/rpc/meus_servicos_em_aberto`, () => HttpResponse.json({
+      inicio: '2026-10-01', fim: '2026-10-15',
+      servicos: [{ id: 9, numeroOs: '01/4312215-26', especialidade: 'SOCORRO', dataAtendimento: '2026-10-14' }],
+    })),
+  )
+  const MinhaComissaoPage = await abrirPagina(() => import('./MinhaComissaoPage'))
+
+  render(<MemoryRouter><MinhaComissaoPage/></MemoryRouter>)
+
+  // Regra dos 15 dias (Kawa, 15/10/2026): do dia seguinte a ultima OP ate hoje.
+  expect(await screen.findByRole('heading', { name: '1 serviço desde 01/10/2026' })).toBeInTheDocument()
+  expect(screen.getByText('01/4312215-26')).toBeInTheDocument()
+  // A ultima OP continua embaixo.
+  expect(await screen.findByRole('heading', { name: '1 serviço feito' })).toBeInTheDocument()
+  expect(screen.queryByText(/R\$/)).not.toBeInTheDocument()
+})
+
 test('administrador filtra resumo e abre o detalhamento que forma a comissão', async () => {
   servidor.use(
     listaDeOps(),
