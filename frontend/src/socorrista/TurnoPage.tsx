@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { ConfirmarAcao } from '../components/ConfirmarAcao'
-import { BlocoFoto } from './BlocoFoto'
+import { BlocoFoto, BotaoFoto } from './BlocoFoto'
 import { Carregando, ErroPagina } from '../components/EstadoPagina'
 import {
-  abrirTurno, enviarChecklist, enviarFotoAbertura, fecharTurno, meuTurnoDoDia, servicosDoTurno, somaDosKm,
+  abrirTurno, emAndamento, enviarChecklist, enviarFotoAbertura, fecharTurno, meuTurnoDoDia, servicosDoTurno, somaDosKm,
   FOTOS_DO_CHECKLIST, type ChaveDoChecklist, type MeuTurnoDoDia, type ServicoDoTurno, type TurnoAberto,
   type ViaturaDoTurno,
 } from '../dados/turnos'
@@ -91,53 +91,6 @@ function CampoOdometro({
       role={aviso ? 'alert' : undefined}>
       {aviso ?? apoio ?? ''}
     </p>
-  </div>
-}
-
-function BotaoFoto({
-  id, rotulo, arquivo, aoEscolher, obrigatoria,
-}: {
-  id: string; rotulo: string; arquivo: File | null
-  aoEscolher: (f: File | null) => void; obrigatoria?: boolean
-}) {
-  const entrada = useRef<HTMLInputElement>(null)
-  // A miniatura existe para ele conferir, ali mesmo, se o odometro saiu legivel:
-  // descobrir que a foto ficou tremida so quando o administrador devolve o turno
-  // custa uma volta inteira.
-  const [previa, setPrevia] = useState('')
-  useEffect(() => {
-    if (!arquivo) { setPrevia(''); return }
-    const url = URL.createObjectURL(arquivo)
-    setPrevia(url)
-    return () => URL.revokeObjectURL(url)
-  }, [arquivo])
-
-  return <div className="socorrista-campo">
-    <label htmlFor={id}>
-      {rotulo} {obrigatoria ? <em className="socorrista-exigido">obrigatória</em> : <span>opcional</span>}
-    </label>
-    <input
-      ref={entrada} id={id} type="file" accept="image/*"
-      // `capture` abre a camera direto, em vez da galeria: a foto e do painel
-      // agora, nao de um arquivo antigo do celular.
-      capture="environment"
-      className="socorrista-arquivo"
-      onChange={e => aoEscolher(e.target.files?.[0] ?? null)}
-    />
-    {previa
-      ? <div className="socorrista-foto-pronta">
-          <img src={previa} alt="Foto do painel que será enviada"/>
-          <div>
-            <strong>Foto pronta</strong>
-            <span>Confira se o número do odômetro aparece.</span>
-            <button type="button" className="socorrista-trocar-foto" onClick={() => entrada.current?.click()}>
-              Tirar outra
-            </button>
-          </div>
-        </div>
-      : <button type="button" className="socorrista-botao-foto" onClick={() => entrada.current?.click()}>
-          Tirar foto do odômetro
-        </button>}
   </div>
 }
 
@@ -356,8 +309,10 @@ function FecharTurno({
   const pronto = hodometro.length > 0 && foto !== null && rodado !== null && rodado >= 0
   const kmServicos = servicos ? somaDosKm(servicos) : 0
   // Pede os servicos, mas deixa fechar: dia sem chamado existe (Kawa, 24/09/2026).
+  const semFinalizar = servicos?.find(emAndamento)
   const avisoServicos = !servicos ? ''
-    : !servicos.length ? ' Você não lançou nenhum serviço neste turno. Se fez algum, lance antes em Km dos serviços.'
+    : semFinalizar ? ` O serviço da OS ${semFinalizar.numeroOs} não foi finalizado e fica fora da soma. Finalize antes em Km dos serviços.`
+    : !servicos.length ? ' Você não registrou nenhum serviço neste turno. Se fez algum, registre antes em Km dos serviços.'
     : rodado !== null && kmServicos > rodado ? ` Os serviços somam ${formatarKm(kmServicos)}, mais do que o caminhão rodou. Confira os km.`
     : ''
 
@@ -415,7 +370,7 @@ function FecharTurno({
             ['Km rodado no turno', formatarKm(rodado)],
             ...(servicos ? [['Km dos serviços', servicos.length
               ? `${servicos.length} ${servicos.length === 1 ? 'serviço' : 'serviços'} · ${formatarKm(kmServicos)}`
-              : 'Nenhum lançado'] as [string, string]] : []),
+              : 'Nenhum registrado'] as [string, string]] : []),
           ]}
           textoConfirmar="Fechar turno"
           aoConfirmar={async () => {
@@ -442,8 +397,8 @@ function TurnoEmAndamento({ turno, aoFechar }: { turno: TurnoAberto; aoFechar: (
     <Link to="/km-dos-servicos" className="socorrista-cartao servicos-atalho">
       <strong>Km dos serviços</strong>
       <span>{servicos?.length
-        ? `${servicos.length} ${servicos.length === 1 ? 'serviço lançado' : 'serviços lançados'} · ${formatarKm(somaDosKm(servicos))}. Toque para lançar mais.`
-        : 'Lance o número da OS e o km do GPS de cada serviço do turno.'}</span>
+        ? `${servicos.length} ${servicos.length === 1 ? 'serviço' : 'serviços'} · ${formatarKm(somaDosKm(servicos))}. Toque para registrar.`
+        : 'Registre o início e o fim de cada serviço do turno.'}</span>
     </Link>
     <FecharTurno turno={turno} aoFechar={aoFechar} servicos={servicos} />
   </>

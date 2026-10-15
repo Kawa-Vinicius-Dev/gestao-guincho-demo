@@ -418,17 +418,146 @@ export interface ServicoDoTurno {
   id: number
   turnoId: number
   numeroOs: string
-  km: number
+  /** Km do servico. Nulo enquanto o servico esta em andamento. */
+  km: number | null
+  /** Odometro do inicio e do fim (Kawa, 15/10/2026). Nulos nos lancamentos antigos pelo GPS. */
+  kmInicial?: number | null
+  kmFinal?: number | null
+  iniciadoEm?: string | null
+  finalizadoEm?: string | null
+  fotoInicio?: string | null
 }
+
+/** Iniciado e ainda nao finalizado: nao entra em soma nenhuma. */
+export const emAndamento = (s: ServicoDoTurno) => s.kmInicial != null && !s.finalizadoEm
+
+const numeroOuNulo = (v: unknown) => (v === null || v === undefined ? null : Number(v))
 
 export async function servicosDoTurno(turnoIds: number[]): Promise<ServicoDoTurno[]> {
   if (!turnoIds.length) return []
   const linhas = ou(
-    await supabase().from('servicos_do_turno').select('id,turno_id,numero_os,km')
+    await supabase().from('servicos_do_turno')
+      .select('id,turno_id,numero_os,km,km_inicial,km_final,iniciado_em,finalizado_em,foto_inicio')
       .in('turno_id', turnoIds).order('criado_em'),
     'Não foi possível carregar os serviços do turno.',
-  ) as { id: number; turno_id: number; numero_os: string; km: number | string }[]
-  return (linhas ?? []).map(l => ({ id: l.id, turnoId: l.turno_id, numeroOs: l.numero_os, km: Number(l.km) }))
+  ) as {
+    id: number; turno_id: number; numero_os: string; km: number | string | null
+    km_inicial: number | string | null; km_final: number | string | null
+    iniciado_em: string | null; finalizado_em: string | null; foto_inicio: string | null
+  }[]
+  return (linhas ?? []).map(l => ({
+    id: l.id, turnoId: l.turno_id, numeroOs: l.numero_os, km: numeroOuNulo(l.km),
+    kmInicial: numeroOuNulo(l.km_inicial), kmFinal: numeroOuNulo(l.km_final),
+    iniciadoEm: l.iniciado_em, finalizadoEm: l.finalizado_em, fotoInicio: l.foto_inicio,
+  }))
+}
+
+// ---------------------------------------------------------------------------
+// Servico pelo odometro: iniciar e finalizar (Kawa, 15/10/2026)
+// ---------------------------------------------------------------------------
+
+/** Onde o socorrista estava, ou por que o celular nao disse. Nunca inventa coordenada. */
+export type Localizacao =
+  | { latitude: number; longitude: number; precisaoM: number | null }
+  | { semLocal: 'NEGADA' | 'INDISPONIVEL' }
+
+/**
+ * Pede a localizacao ao celular. Negou, demorou ou o aparelho nao tem: segue
+ * sem, guardando o motivo — o registro do km nao para por causa do GPS.
+ */
+export function obterLocalizacao(espera = 10_000): Promise<Localizacao> {
+  return new Promise(resolve => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      resolve({ semLocal: 'INDISPONIVEL' }); return
+    }
+    navigator.geolocation.getCurrentPosition(
+      p => resolve({
+        latitude: p.coords.latitude, longitude: p.coords.longitude,
+        precisaoM: Number.isFinite(p.coords.accuracy) ? Math.round(p.coords.accuracy) : null,
+      }),
+      e => resolve({ semLocal: e.code === e.PERMISSION_DENIED ? 'NEGADA' : 'INDISPONIVEL' }),
+      { enableHighAccuracy: true, timeout: espera, maximumAge: 60_000 },
+    )
+  })
+}
+
+const parametrosDoLocal = (local: Localizacao) => 'semLocal' in local
+  ? { p_latitude: null, p_longitude: null, p_precisao_m: null, p_sem_local: local.semLocal }
+  : { p_latitude: local.latitude, p_longitude: local.longitude, p_precisao_m: local.precisaoM, p_sem_local: null }
+
+/**
+ * Sobe a foto do odometro do servico com a mesma compressao das outras fotos do
+ * turno. O nome e fixo por servico e etapa: reenviar depois de uma falha nao
+ * cria um segundo arquivo — se o primeiro ja tinha subido, ele e reaproveitado.
+ */
+async function subirFotoDoServico(turnoId: number, servicoId: number, etapa: 'inicio' | 'fim', arquivo: File) {
+  const caminho = `turnos/${turnoId}/servico-${servicoId}-${etapa}.jpg`
+  const comprimida = await comprimirFoto(arquivo)
+  const { error } = await supabase().storage.from(BUCKET)
+    .upload(caminho, comprimida, { contentType: comprimida.type, upsert: false })
+  const jaExiste = error && /exist|duplicate/i.test(`${error.message} ${(error as { statusCode?: string }).statusCode ?? ''}`)
+  if (error && !jaExiste) throw erroDoBanco({ message: error.message }, 'Não foi possível enviar a foto.')
+  return caminho
+}
+
+/** Envia (ou reenvia) a foto do painel do inicio de um servico ja iniciado. */
+export async function enviarFotoInicioServico(turnoId: number, servicoId: number, foto: File): Promise<void> {
+  try {
+    const caminho = await subirFotoDoServico(turnoId, servicoId, 'inicio', foto)
+    ou(
+      await supabase().rpc('registrar_foto_inicio_servico', { p_id: servicoId, p_caminho: caminho }),
+      'Não foi possível registrar a foto.',
+    )
+  } catch {
+    throw new ApiError('O serviço foi iniciado, mas a foto não foi enviada. Envie a foto de novo.', 400)
+  }
+}
+
+export async function iniciarServico(dados: {
+  turnoId: number; numeroOs: string; kmInicial: number; foto: File; local: Localizacao
+}): Promise<number> {
+  const id = ou(
+    await supabase().rpc('iniciar_servico_do_turno', {
+      p_numero_os: dados.numeroOs.trim(),
+      p_numero_normalizado: normalizarNumero(dados.numeroOs),
+      p_km_inicial: dados.kmInicial,
+      ...parametrosDoLocal(dados.local),
+    }),
+    'Não foi possível iniciar o serviço.',
+  ) as number
+  // Como na saida do turno: a foto so sobe depois que o servico existe (o nome
+  // do arquivo leva o id). Se falhar, a tela avisa e oferece reenviar.
+  await enviarFotoInicioServico(dados.turnoId, id, dados.foto)
+  return id
+}
+
+/** A foto sobe primeiro: o banco so finaliza com o caminho dela. Devolve o km do servico. */
+export async function finalizarServico(dados: {
+  turnoId: number; servicoId: number; kmFinal: number; foto: File; local: Localizacao
+}): Promise<number> {
+  const caminho = await subirFotoDoServico(dados.turnoId, dados.servicoId, 'fim', dados.foto)
+  return Number(ou(
+    await supabase().rpc('finalizar_servico_do_turno', {
+      p_id: dados.servicoId,
+      p_km_final: dados.kmFinal,
+      p_foto: caminho,
+      ...parametrosDoLocal(dados.local),
+    }),
+    'Não foi possível finalizar o serviço.',
+  ))
+}
+
+/**
+ * Fotos dos servicos saem junto com as do turno, na aprovacao: mesma regra,
+ * mesma economia. Lista a pasta do turno para pegar tambem a foto de servico
+ * que foi tirado. Falha aqui nao desfaz a aprovacao.
+ */
+export async function apagarFotosDosServicos(turnoId: number): Promise<void> {
+  try {
+    const { data } = await supabase().storage.from(BUCKET).list(`turnos/${turnoId}`, { limit: 1000, search: 'servico-' })
+    const caminhos = (data ?? []).filter(f => f.name.startsWith('servico-')).map(f => `turnos/${turnoId}/${f.name}`)
+    if (caminhos.length) await supabase().storage.from(BUCKET).remove(caminhos)
+  } catch { /* no pior caso a foto fica; nada se perde */ }
 }
 
 /** Lanca no turno aberto; a mesma OS de novo corrige o km. */
@@ -447,5 +576,6 @@ export async function removerServico(id: number): Promise<void> {
   ou(await supabase().rpc('remover_servico_do_turno', { p_id: id }), 'Não foi possível tirar o serviço.')
 }
 
+/** Soma so o que tem km: o servico em andamento ainda nao conta. */
 export const somaDosKm = (servicos: ServicoDoTurno[]) =>
-  Math.round(servicos.reduce((soma, s) => soma + s.km, 0) * 10) / 10
+  Math.round(servicos.reduce((soma, s) => soma + (s.km ?? 0), 0) * 10) / 10
