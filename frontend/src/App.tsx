@@ -13,6 +13,7 @@ const Lancamentos=lazy(()=>import('./financeiro/LancamentosPage'))
 const Despesas=lazy(()=>import('./financeiro/DespesasPage'))
 const Quilometragem=lazy(()=>import('./frota/QuilometragemPage'))
 const KmDosTurnos=lazy(()=>import('./frota/KmDosTurnosPage'))
+const Multas=lazy(()=>import('./frota/MultasPage'))
 const Turno=lazy(()=>import('./socorrista/TurnoPage'))
 const ConfiguracoesSocorrista=lazy(()=>import('./socorrista/ConfiguracoesSocorristaPage'))
 const KmDosServicos=lazy(()=>import('./socorrista/ServicosPage'))
@@ -100,6 +101,7 @@ export default function App(){
         <Route path="/dre" element={<Dre/>}/>
         <Route path="/quilometragem" element={<Quilometragem/>}/>
         <Route path="/km-dos-turnos" element={<KmDosTurnos/>}/>
+        <Route path="/multas" element={<Multas/>}/>
         <Route path="/veiculos" element={<Frotas/>}/>
         <Route path="/manutencao" element={<Manutencao/>}/>
         <Route path="/documentos" element={<Documentos/>}/>

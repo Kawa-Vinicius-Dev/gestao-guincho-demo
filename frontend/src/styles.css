@@ -2162,3 +2162,7 @@ input,textarea,select,[contenteditable]:not([contenteditable=false]){caret-color
 .km-turno-servico>header{display:flex;justify-content:space-between;align-items:center;gap:8px;font-variant-numeric:tabular-nums}
 .socorrista-texto{width:100%;padding:12px 14px;border:1.5px solid var(--controle-borda);border-radius:12px;background:var(--superficie-2);color:var(--ink);font:inherit;font-size:16px;resize:vertical}
 .socorrista-texto:focus{outline:none;border-color:var(--blue-600)}
+
+/* Multas (Kawa, 15/10/2026) */
+.multa-quem{display:grid;gap:10px;padding:12px 14px;border-radius:10px;background:var(--superficie)}
+.multa-achou{margin:0;font-size:14px}
