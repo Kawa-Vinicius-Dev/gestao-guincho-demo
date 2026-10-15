@@ -126,7 +126,7 @@ test('excluir receita da Porto avisa em vez de fingir que apagou', async () => {
   const { excluirReceita } = await carregar('auth,receitas')
 
   await expect(excluirReceita(5)).rejects.toThrow(
-    'Receitas originadas da Porto ou de importação não podem ser excluídas manualmente.',
+    'Receita que veio da Porto não pode ser excluída por aqui.',
   )
 })
 

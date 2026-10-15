@@ -158,7 +158,7 @@ export async function excluirReceita(id: number): Promise<void> {
   if (!apagadas.length) {
     const { ApiError } = await import('./erros')
     throw new ApiError(
-      'Receitas originadas da Porto ou de importação não podem ser excluídas manualmente.',
+      'Receita que veio da Porto não pode ser excluída por aqui.',
       403,
     )
   }

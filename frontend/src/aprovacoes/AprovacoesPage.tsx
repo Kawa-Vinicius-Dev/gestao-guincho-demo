@@ -159,11 +159,11 @@ function LinhaTurno({ item, checklist, servicos, aoResolver }: {
     <dl className="aprovacao-numeros">
       <div><dt>Início do turno</dt><dd>{hora(item.abertoEm)}</dd></div>
       <div><dt>Fim do turno</dt><dd>{hora(item.fechadoEm)}</dd></div>
-      <div><dt>Odômetro saída</dt><dd>{numero.format(item.hodometroInicial ?? 0)}</dd></div>
-      <div><dt>Odômetro chegada</dt><dd>{numero.format(item.hodometroFinal ?? 0)}</dd></div>
+      <div><dt>Quilometragem na saída</dt><dd>{numero.format(item.hodometroInicial ?? 0)}</dd></div>
+      <div><dt>Quilometragem na chegada</dt><dd>{numero.format(item.hodometroFinal ?? 0)}</dd></div>
       <div><dt>Km rodado</dt><dd className="aprovacao-destaque">{numero.format(rodado)} km</dd></div>
       <div><dt>OS no dia</dt><dd>{item.osNoDia ?? 0}</dd></div>
-      <div><dt>Serviços lançados</dt><dd>{servicos.length
+      <div><dt>Serviços registrados</dt><dd>{servicos.length
         ? `${servicos.length} · ${numero.format(kmServicos)} km` : 'nenhum'}</dd></div>
     </dl>
 
@@ -173,7 +173,7 @@ function LinhaTurno({ item, checklist, servicos, aoResolver }: {
         onChange={e => setKmProdutivo(e.target.value.replace(/[^\d,]/g, ''))} />
       {servicos.some(emAndamento)
         ? <p className="aprovacao-apoio" role="alert">
-            Há serviço sem finalizar: ele fica fora da soma. Confira em Viaturas → KM dos turnos.
+            Há serviço sem finalizar: ele fica fora da soma. Confira em Viaturas → Km dos turnos.
           </p>
         : null}
       {kmServicos > rodado
@@ -223,7 +223,7 @@ function LinhaTurno({ item, checklist, servicos, aoResolver }: {
           avisos={[produtivo === 0 && rodado > 0
             ? 'Sem km produtivo informado, o turno inteiro vira km morto.' : null,
             item.fotoAbertura || item.fotoFechamento
-              ? 'As fotos do odômetro são apagadas depois da aprovação. Se houver divergência, abra a foto e baixe antes.' : null]}
+              ? 'As fotos do painel são apagadas depois da aprovação. Se houver divergência, abra a foto e baixe antes.' : null]}
           textoConfirmar="Aprovar turno"
           aoConfirmar={async () => {
             await aprovarTurno(item.id, produtivo)
@@ -245,7 +245,7 @@ function LinhaTurno({ item, checklist, servicos, aoResolver }: {
           <label className="field">
             <span>Motivo</span>
             <textarea rows={3} value={motivo} onChange={e => setMotivo(e.target.value)}
-              placeholder="Ex.: a foto não mostra o odômetro" />
+              placeholder="Ex.: a foto não mostra a quilometragem" />
           </label>
           <div className="modal-actions">
             <button type="button" className="button button-ghost"

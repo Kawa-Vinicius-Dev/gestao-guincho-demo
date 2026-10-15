@@ -318,7 +318,7 @@ async function classificar(
     somaArquivo += valorDaLinha(linha)
 
     if (absorvidos.has(linha.hashRegistro)) {
-      return { ...linha, acao: 'IGNORAR', mensagem: 'Registro já importado anteriormente.' }
+      return { ...linha, acao: 'IGNORAR', mensagem: 'Já importado antes.' }
     }
 
     // Cancelado nao teve atendimento, entao nao tem comissao para dar dono.
@@ -477,7 +477,7 @@ export async function confirmarImportacaoPorto(
   const reassociacoes = previa.analiseOrdemPagamento?.quantidadeReassociacoes ?? 0
   if (reassociacoes && !dados.confirmarReassociacoes) {
     throw new ApiError(
-      `${reassociacoes} ordem(ns) de serviço mudariam de OP. Confirme a reassociação antes de importar.`,
+      `${reassociacoes} ${reassociacoes === 1 ? 'OS mudaria' : 'OS mudariam'} de OP. Confirme a troca antes de importar.`,
       422)
   }
 

@@ -51,7 +51,7 @@ export default function PortoPendenciasPage() {
       <div>
         <span className="eyebrow">Porto Seguro</span>
         <h1>Pendências financeiras</h1>
-        <p>Tratativas que continuam sendo executadas diretamente no portal da Porto.</p>
+        <p>Casos que você acompanha direto no portal da Porto.</p>
       </div>
       <button className="button button-primary" onClick={() => setAberta(true)}>Nova pendência</button>
     </header>
