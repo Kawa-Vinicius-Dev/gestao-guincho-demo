@@ -7,6 +7,8 @@ import '@fontsource/ibm-plex-sans/latin-600.css'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 
+// Antes de tudo: o Chrome avisa uma vez so que da para instalar o app.
+import './dados/instalacao'
 import App from './App'
 import './styles.css'
 
