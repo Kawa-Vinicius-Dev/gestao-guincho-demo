@@ -83,11 +83,11 @@ export default function ConfiguracoesSocorristaPage() {
       </div>
       {erro ? <p className="socorrista-alerta" role="alert">{erro}</p> : null}
       {mensagem ? <p className="socorrista-apoio servicos-lancado" role="status">{mensagem}</p> : null}
-      <div className="socorrista-rodape-acao">
-        <button type="submit" className="socorrista-acao" disabled={salvando}>
-          {salvando ? 'Salvando…' : 'Trocar senha'}
-        </button>
-      </div>
+      {/* Botao no fim do cartao, e nao grudado no rodape como no turno: aqui ele
+          cobria os campos de senha antes de a pessoa rolar ate eles. */}
+      <button type="submit" className="socorrista-acao" disabled={salvando}>
+        {salvando ? 'Salvando…' : 'Trocar senha'}
+      </button>
     </form>
   </div>
 }
