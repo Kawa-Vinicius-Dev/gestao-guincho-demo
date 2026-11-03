@@ -2166,3 +2166,5 @@ input,textarea,select,[contenteditable]:not([contenteditable=false]){caret-color
 /* Multas (Kawa, 15/10/2026) */
 .multa-quem{display:grid;gap:10px;padding:12px 14px;border-radius:10px;background:var(--superficie)}
 .multa-achou{margin:0;font-size:14px}
+/* Avaliacoes (03/11/2026) */
+.estrelas{display:flex;align-items:center;gap:4px;margin:0 0 18px;padding:0;border:0}.estrelas legend{margin-bottom:6px;font-size:12px;color:var(--muted)}.estrela{padding:0 2px;border:0;background:none;color:var(--muted);font-size:38px;line-height:1;cursor:pointer;opacity:.45}.estrela-acesa{color:#f5a524;opacity:1}.estrela:focus-visible{outline:2px solid var(--blue-500);outline-offset:2px;border-radius:4px}.estrelas-rotulo{margin-left:8px;font-size:13px;color:var(--muted)}.avaliar-obrigado{width:min(380px,100%)}.avaliar-obrigado h2{margin:8px 0;font:600 38px 'Barlow Condensed',sans-serif}.avaliar-obrigado p{color:var(--muted)}.avaliar-link{overflow-wrap:anywhere}

@@ -7,6 +7,8 @@ import { RotaAdministrador, RotaProtegida } from './components/RotasProtegidas'
 import { removerDadosDemoLegados } from './legacyStorage'
 
 const Login=lazy(()=>import('./auth/LoginPage'))
+const Avaliar=lazy(()=>import('./avaliacoes/AvaliarPage'))
+const Avaliacoes=lazy(()=>import('./avaliacoes/AvaliacoesPage'))
 const Dashboard=lazy(()=>import('./DashboardPage'))
 const Contas=lazy(()=>import('./financeiro/ContasReceberPage'))
 const Lancamentos=lazy(()=>import('./financeiro/LancamentosPage'))
@@ -83,6 +85,7 @@ export default function App(){
   useEffect(()=>removerDadosDemoLegados(),[])
   return <BrowserRouter><MedirTransicaoDeRota/><AuthProvider><Suspense fallback={<Carregando/>}><Routes>
     <Route path="/login" element={<Login/>}/>
+    <Route path="/avaliar" element={<Avaliar/>}/>
     <Route element={<RotaProtegida/>}>
       <Route path="/trocar-senha" element={<TrocarSenha/>}/>
       <Route element={<Layout/>}>
@@ -99,6 +102,7 @@ export default function App(){
         <Route path="/receitas" element={<Navigate to="/lancamentos" replace/>}/>
         <Route path="/fluxo-caixa" element={<Navigate to="/lancamentos" replace/>}/>
         <Route path="/dre" element={<Dre/>}/>
+        <Route path="/avaliacoes" element={<Avaliacoes/>}/>
         <Route path="/quilometragem" element={<Quilometragem/>}/>
         <Route path="/km-dos-turnos" element={<KmDosTurnos/>}/>
         <Route path="/multas" element={<Multas/>}/>
