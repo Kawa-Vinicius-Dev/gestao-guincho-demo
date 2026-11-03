@@ -28,6 +28,8 @@ export const GRUPOS: Grupo[] = [
     { rota: '/', rotulo: 'Resumo' },
     { rota: '/dre', rotulo: 'DRE' },
     { rota: '/graficos', rotulo: 'Gráficos' },
+    // Nota dos clientes pelo link publico /avaliar (03/11/2026).
+    { rota: '/avaliacoes', rotulo: 'Avaliações' },
   ] },
   { menu: '/lancamentos', titulo: 'Extrato', abas: [
     { rota: '/lancamentos', rotulo: 'Tudo' },
