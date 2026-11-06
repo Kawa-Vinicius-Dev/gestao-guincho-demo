@@ -88,7 +88,8 @@ set role authenticated;
 set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000002';
 select pg_temp.checar('do dia seguinte a ultima OP ate hoje',
   (select ((x ->> 'inicio')::date = :'inicio_esperado'::date)
-          || ' ' || ((x ->> 'fim')::date = current_date)
+          -- "hoje" da funcao e o de Sao Paulo; current_date do CI e UTC e vira o dia 3h antes.
+          || ' ' || ((x ->> 'fim')::date = (now() at time zone 'America/Sao_Paulo')::date)
           || ' ' || jsonb_array_length(x -> 'servicos') || ' ' || (x -> 'servicos' -> 0 ->> 'numeroOs')
      from (select public.meus_servicos_em_aberto() as x) s),
   'true true 1 H3');
