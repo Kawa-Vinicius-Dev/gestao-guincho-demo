@@ -286,6 +286,15 @@ window.fetch = (async (entrada: RequestInfo | URL, init?: RequestInit) => {
   const responder = (corpo: unknown) =>
     new Response(JSON.stringify(corpo), { headers: { 'Content-Type': 'application/json' } })
 
+  // Fila offline do socorrista: `fila=espera` nao tem sinal; `fila=erro` o banco recusa.
+  if (url.includes('iniciar_servico_do_turno') || url.includes('/storage/v1/')) {
+    const modo = new URLSearchParams(location.search).get('fila')
+    if (modo === 'espera') throw new TypeError('Failed to fetch')
+    if (modo === 'erro') {
+      return new Response(JSON.stringify({ code: 'P0001', message: 'A quilometragem (148300) é menor que a do início do turno (148320). Confira o painel.' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } })
+    }
+  }
   if (url.includes('extrato_financeiro')) return responder(extrato)
   if (url.includes('manutencao_da_frota')) return responder([
     { id: 1, veiculo_id: 1, viatura: 'L168', item: 'Troca de óleo', intervalo_km: 10000, ultimo_km: '140000', ultima_data: '2026-06-10', km_atual: '150400', faltam_km: '-400' },
@@ -474,11 +483,26 @@ const Pagina = tela === 'frota'
         ? (await import('./DashboardPage')).default
         : (await import('./porto/PortoDashboardPage')).default
 
+// `fila=espera|erro`: guarda dois envios de exemplo no celular para ver o aviso do socorrista.
+const modoDaFila = new URLSearchParams(location.search).get('fila')
+const AvisoDaFila = modoDaFila ? (await import('./components/AvisoDaFila')).AvisoDaFila : null
+if (modoDaFila) {
+  sessionStorage.setItem('fluxo-gestao:fila:usuario:v1', 'bancada')
+  const { enfileirar, listarFila } = await import('./dados/filaOffline')
+  if (!(await listarFila('bancada')).length) {
+    const foto = new File([new Uint8Array([1])], 'painel.jpg', { type: 'image/jpeg' })
+    const base = { usuarioId: 'bancada', turnoId: 7, local: { semLocal: 'NEGADA' as const }, foto, ocorridoEm: new Date().toISOString() }
+    const seq = await enfileirar({ ...base, tipo: 'INICIAR', numeroOs: '01/4312215-26', kmInicial: 148300 })
+    await enfileirar({ ...base, tipo: 'FINALIZAR', ref: seq, kmFinal: 148330 })
+  }
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <MemoryRouter initialEntries={[`/${location.search}`]}>
       <AuthProvider>
         <main className="content">
+          {AvisoDaFila ? <AvisoDaFila/> : null}
           <Pagina/>
         </main>
       </AuthProvider>

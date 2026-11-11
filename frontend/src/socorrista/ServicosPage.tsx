@@ -4,9 +4,13 @@ import { ConfirmarAcao } from '../components/ConfirmarAcao'
 import { Carregando, ErroPagina } from '../components/EstadoPagina'
 import { BotaoFoto } from './BlocoFoto'
 import {
-  emAndamento, enviarFotoInicioServico, finalizarServico, iniciarServico, meuTurnoDoDia, obterLocalizacao,
-  removerServico, servicosDoTurno, somaDosKm, type Localizacao, type ServicoDoTurno, type TurnoAberto,
+  enviarFotoInicioServico, meuTurnoDoDia, obterLocalizacao,
+  removerServico, servicosDoTurno, type Localizacao, type ServicoDoTurno, type TurnoAberto,
 } from '../dados/turnos'
+import {
+  combinarComFila, ehSemRede, emAndamentoNaTela, finalizarOuEnfileirar, iniciarOuEnfileirar, type ServicoNaTela,
+} from '../dados/filaOffline'
+import { useFilaOffline } from './useFilaOffline'
 import { mascararOs, osCompleta } from '../dados/porto/importacao'
 
 /**
@@ -43,6 +47,18 @@ function CampoKm({ id, rotulo, valor, aoMudar }: { id: string; rotulo: string; v
   </div>
 }
 
+/**
+ * Ultimo estado que o banco deu. Sem sinal, a tela abre com ele (e com o que esta
+ * na fila) em vez de um erro: o socorrista precisa conseguir registrar o servico
+ * justamente quando nao ha sinal. Fica na aba, como a sessao.
+ */
+const CHAVE_CACHE = 'fluxo-gestao:servicos:v1'
+type Estado = { turno: TurnoAberto | null; servicos: ServicoDoTurno[] }
+const guardarEstado = (e: Estado) => { try { sessionStorage.setItem(CHAVE_CACHE, JSON.stringify(e)) } catch { /* sem cache */ } }
+const lerEstado = (): Estado | null => {
+  try { const t = sessionStorage.getItem(CHAVE_CACHE); return t ? JSON.parse(t) as Estado : null } catch { return null }
+}
+
 export default function ServicosPage() {
   const [turno, setTurno] = useState<TurnoAberto | null | undefined>(undefined)
   const [servicos, setServicos] = useState<ServicoDoTurno[]>([])
@@ -53,25 +69,38 @@ export default function ServicosPage() {
   const [mensagem, setMensagem] = useState('')
   const [falha, setFalha] = useState('')
   const [etapa, setEtapa] = useState('')
-  const [tirando, setTirando] = useState<ServicoDoTurno | null>(null)
+  const [tirando, setTirando] = useState<ServicoNaTela | null>(null)
+  const [semSinal, setSemSinal] = useState(false)
 
   const carregar = useCallback(async () => {
     setErro('')
     try {
       const dados = await meuTurnoDoDia()
+      const lista = dados.turnoAberto ? await servicosDoTurno([dados.turnoAberto.id]) : []
       setTurno(dados.turnoAberto ?? null)
-      setServicos(dados.turnoAberto ? await servicosDoTurno([dados.turnoAberto.id]) : [])
+      setServicos(lista)
+      setSemSinal(false)
+      guardarEstado({ turno: dados.turnoAberto ?? null, servicos: lista })
     } catch (e) {
+      // Sem sinal nao e erro da tela: segue com o ultimo estado conhecido, para
+      // nao jogar fora a foto e o km que a pessoa acabou de preencher.
+      const guardado = ehSemRede(e) ? lerEstado() : null
+      if (guardado) {
+        setTurno(guardado.turno); setServicos(guardado.servicos); setSemSinal(true)
+        return
+      }
       setErro((e as Error).message)
     }
   }, [])
 
   useEffect(() => { void carregar() }, [carregar])
+  const { usuarioId, itens: naFila, enviar } = useFilaOffline(() => void carregar())
 
   if (erro) return <ErroPagina mensagem={erro} tentarNovamente={() => void carregar()} />
   if (turno === undefined) return <Carregando />
 
-  const atual = servicos.find(emAndamento)
+  const lista = combinarComFila(servicos, naFila)
+  const atual = lista.find(emAndamentoNaTela)
   const valor = lerKm(kmDigitado)
   const ocupado = etapa !== ''
   const limpar = () => { setNumero(''); setKmDigitado(''); setFoto(null) }
@@ -92,44 +121,58 @@ export default function ServicosPage() {
 
   function iniciar(evento: FormEvent) {
     evento.preventDefault()
-    if (!turno || !osCompleta(numero) || !(valor >= 0) || inicioMenorQueOUltimo || !foto || ocupado) return
+    if (!turno || !usuarioId || !osCompleta(numero) || !(valor >= 0) || inicioMenorQueOUltimo || !foto || ocupado) return
+    // A hora e a do toque no botao, nao a do fim da espera pelo GPS nem a do envio.
+    const ocorridoEm = new Date().toISOString()
     void executar(async () => {
       setEtapa('Pegando a localização…')
       const local = await obterLocalizacao()
       setEtapa('Enviando…')
-      await iniciarServico({ turnoId: turno.id, numeroOs: numero, kmInicial: valor, foto, local })
-      return `Serviço da OS ${numero.trim()} iniciado.${avisoDoLocal(local)}`
+      const { enfileirado } = await iniciarOuEnfileirar({
+        usuarioId, turnoId: turno.id, numeroOs: numero, kmInicial: valor, foto, local, ocorridoEm,
+      })
+      if (enfileirado) void enviar()
+      return enfileirado
+        ? `Sem sinal. O serviço da OS ${numero.trim()} ficou salvo no celular e vai sozinho quando o sinal voltar.${avisoDoLocal(local)}`
+        : `Serviço da OS ${numero.trim()} iniciado.${avisoDoLocal(local)}`
     })
   }
 
   function finalizar(evento: FormEvent) {
     evento.preventDefault()
-    if (!turno || !atual || !(valor >= 0) || fimMenorQueOInicio || !foto || ocupado) return
+    if (!turno || !usuarioId || !atual || !(valor >= 0) || fimMenorQueOInicio || !foto || ocupado) return
+    const ocorridoEm = new Date().toISOString()
     void executar(async () => {
       setEtapa('Pegando a localização…')
       const local = await obterLocalizacao()
       setEtapa('Enviando…')
-      const rodado = await finalizarServico({ turnoId: turno.id, servicoId: atual.id, kmFinal: valor, foto, local })
-      return `Serviço da OS ${atual.numeroOs} finalizado: ${km(rodado)}.${avisoDoLocal(local)}`
+      const r = await finalizarOuEnfileirar({
+        usuarioId, turnoId: turno.id, servicoId: atual.id, refInicio: atual.seq, kmFinal: valor, foto, local, ocorridoEm,
+      })
+      if (r.enfileirado) void enviar()
+      return r.enfileirado
+        ? `Serviço da OS ${atual.numeroOs} finalizado: ${km(valor - (atual.kmInicial ?? 0))}. Ficou salvo no celular e vai sozinho quando o sinal voltar.${avisoDoLocal(local)}`
+        : `Serviço da OS ${atual.numeroOs} finalizado: ${km(r.rodado ?? 0)}.${avisoDoLocal(local)}`
     })
   }
 
   function reenviarFoto() {
-    if (!turno || !atual || !foto || ocupado) return
+    if (!turno || atual?.id == null || !foto || ocupado) return
+    const servicoId = atual.id
     void executar(async () => {
       setEtapa('Enviando…')
-      await enviarFotoInicioServico(turno.id, atual.id, foto)
+      await enviarFotoInicioServico(turno.id, servicoId, foto)
       return 'Foto enviada.'
     })
   }
 
-  const total = somaDosKm(servicos)
-  const concluidos = servicos.filter(s => s.km != null)
+  const concluidos = lista.filter(s => s.km != null)
+  const total = Math.round(concluidos.reduce((soma, s) => soma + (s.km ?? 0), 0) * 10) / 10
   const previa = atual?.kmInicial != null && valor >= atual.kmInicial ? valor - atual.kmInicial : null
   // O odometro nao volta (o banco recusa): nem para antes do inicio do turno, nem
   // para antes do fim do ultimo servico. A tela avisa na hora, antes de gastar a
   // espera da localizacao e o envio da foto para so entao receber a recusa.
-  const minimoParaIniciar = Math.max(turno?.hodometroInicial ?? 0, ...servicos.map(s => s.kmFinal ?? 0))
+  const minimoParaIniciar = Math.max(turno?.hodometroInicial ?? 0, ...lista.map(s => s.kmFinal ?? 0))
   const inicioMenorQueOUltimo = !atual && valor < minimoParaIniciar
   const fimMenorQueOInicio = atual?.kmInicial != null && valor < atual.kmInicial
 
@@ -138,6 +181,9 @@ export default function ServicosPage() {
       <span className="socorrista-dia">Turno do dia</span>
       <h1>Km dos serviços</h1>
     </header>
+    {semSinal
+      ? <p className="socorrista-apoio" role="status">Sem sinal. Você pode registrar normalmente: o que ficar salvo vai sozinho quando o sinal voltar.</p>
+      : null}
 
     {!turno
       ? <section className="socorrista-cartao">
@@ -211,13 +257,18 @@ export default function ServicosPage() {
     {turno
       ? <section className="socorrista-cartao">
           <h2>Serviços do turno</h2>
-          {servicos.length
+          {lista.length
             ? <>
                 <ul className="socorrista-historico servicos-lista">
-                  {servicos.map(s => <li key={s.id}>
-                    <span className="socorrista-historico-dia">OS {s.numeroOs}</span>
+                  {lista.map(s => <li key={s.chave}>
+                    <span className="socorrista-historico-dia">
+                      OS {s.numeroOs}
+                      {s.pendente ? <small className="servicos-pendente">aguardando envio</small> : null}
+                    </span>
                     <span className="socorrista-historico-km">{s.km != null ? km(s.km) : 'em andamento'}</span>
-                    <button type="button" className="servicos-tirar" onClick={() => setTirando(s)} aria-label={`Remover o serviço da OS ${s.numeroOs}`}>Remover</button>
+                    {s.pendente || s.id == null
+                      ? <span aria-hidden="true"/>
+                      : <button type="button" className="servicos-tirar" onClick={() => setTirando(s)} aria-label={`Remover o serviço da OS ${s.numeroOs}`}>Remover</button>}
                   </li>)}
                 </ul>
                 <p className="servicos-total">
@@ -237,7 +288,7 @@ export default function ServicosPage() {
             : `O serviço da OS ${tirando.numeroOs} é cancelado.`}
           textoConfirmar="Remover"
           aoConfirmar={async () => {
-            await removerServico(tirando.id)
+            await removerServico(tirando.id as number)
             setMensagem('')
             await carregar()
           }}

@@ -1,3 +1,4 @@
+import { AvisoDaFila } from './AvisoDaFila'
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { listarFavoritos, salvarFavoritos } from '../dados/favoritos'
@@ -251,7 +252,7 @@ export function Layout() {
           <button className="logout-button" onClick={()=>setSaindo(true)}>Sair</button>
         </div>
       </header>
-      <main className="content">{admin?<AbasDaTela/>:null}<Outlet/></main>
+      <main className="content">{admin?<AbasDaTela/>:null}{usuario&&!admin?<AvisoDaFila/>:null}<Outlet/></main>
     </div>
     {aberto?<button className="sidebar-scrim" aria-label="Fechar menu" onClick={()=>setAberto(false)}/>:null}
     {saindo?<ConfirmarSaida nome={usuario?.nome} aoCancelar={()=>setSaindo(false)} aoConfirmar={logout}/>:null}

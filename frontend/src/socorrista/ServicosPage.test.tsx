@@ -1,8 +1,10 @@
+import 'fake-indexeddb/auto'
+import { IDBFactory } from 'fake-indexeddb'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { MemoryRouter } from 'react-router-dom'
-import { afterEach, expect, test, vi } from 'vitest'
+import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { servidor } from '../test/servidor'
 
 /**
@@ -26,6 +28,8 @@ const comTurno = {
 }
 
 async function abrir() {
+  // Quem esta logado: a fila de envio e dele. (Num celular real a sessao ja existe.)
+  sessionStorage.setItem('fluxo-gestao:fila:usuario:v1', 'aaaaaaaa-0000-0000-0000-000000000002')
   vi.resetModules()
   vi.stubEnv('VITE_SUPABASE_URL', SUPA)
   vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'chave-anon-de-teste')
@@ -35,6 +39,7 @@ async function abrir() {
   render(<MemoryRouter><Pagina/></MemoryRouter>)
 }
 
+beforeEach(() => { indexedDB = new IDBFactory() })
 afterEach(() => vi.unstubAllEnvs())
 
 test('sem turno aberto, manda abrir o turno primeiro', async () => {
@@ -176,4 +181,54 @@ test('km do fim menor que o do inicio do servico: avisa na hora e nao deixa fina
 
   expect(await screen.findByRole('alert')).toHaveTextContent('Menor que a quilometragem do início deste serviço (148.340 km)')
   expect(screen.getByRole('button', { name: 'Finalizar serviço' })).toBeDisabled()
+})
+
+// Na rua o sinal cai: o toque nao pode se perder, nem a tela virar erro e jogar
+// fora a foto e o km que a pessoa acabou de preencher.
+test('sem sinal: o servico fica guardado no celular e a tela segue de pe', async () => {
+  let abertura = 0
+  servidor.use(
+    http.post(`${SUPA}/rest/v1/rpc/meu_turno_do_dia`, () => (abertura++ === 0 ? HttpResponse.json(comTurno) : HttpResponse.error())),
+    http.get(`${SUPA}/rest/v1/servicos_do_turno`, () => HttpResponse.json([])),
+    http.post(`${SUPA}/rest/v1/rpc/iniciar_servico_do_turno`, () => HttpResponse.error()),
+  )
+  const user = userEvent.setup({ delay: null })
+  await abrir()
+
+  await screen.findByRole('button', { name: 'Iniciar serviço' })
+  await user.type(screen.getByLabelText('Número da OS'), '01123456726')
+  await user.type(screen.getByLabelText('Quilometragem do painel'), '148340')
+  await user.upload(screen.getByLabelText(/Foto do painel/), foto())
+  await user.click(screen.getByRole('button', { name: 'Iniciar serviço' }))
+
+  expect(await screen.findByText(/Sem sinal\. O serviço da OS 01\/1234567-26 ficou salvo no celular/)).toBeInTheDocument()
+  // A tela de "serviço em andamento" aparece mesmo sem o banco ter respondido.
+  expect(await screen.findByRole('heading', { name: 'Serviço em andamento' })).toBeInTheDocument()
+  expect(screen.getByText('aguardando envio')).toBeInTheDocument()
+  expect(screen.getByLabelText('Quilometragem do painel agora')).toBeInTheDocument()
+})
+
+test('sem sinal: finalizar guarda o km e a foto e mostra o servico fechado, aguardando envio', async () => {
+  servidor.use(
+    http.post(`${SUPA}/rest/v1/rpc/meu_turno_do_dia`, () => HttpResponse.json(comTurno)),
+    http.get(`${SUPA}/rest/v1/servicos_do_turno`, () => HttpResponse.json([
+      { id: 2, turno_id: 7, numero_os: '01/1234567-26', km: null, km_inicial: 148340, km_final: null,
+        iniciado_em: '2026-09-24T10:00:00Z', finalizado_em: null, foto_inicio: 'turnos/7/servico-2-inicio.jpg' },
+    ])),
+    http.post(`${SUPA}/storage/v1/object/comprovantes/*`, () => HttpResponse.error()),
+    http.post(`${SUPA}/rest/v1/rpc/finalizar_servico_do_turno`, () => HttpResponse.error()),
+  )
+  const user = userEvent.setup({ delay: null })
+  await abrir()
+
+  await screen.findByRole('heading', { name: 'Serviço em andamento' })
+  await user.type(screen.getByLabelText('Quilometragem do painel agora'), '148355')
+  await user.upload(screen.getByLabelText(/Foto do painel/), foto())
+  await user.click(screen.getByRole('button', { name: 'Finalizar serviço' }))
+
+  expect(await screen.findByText(/finalizado: 15 km\. Ficou salvo no celular/)).toBeInTheDocument()
+  expect(await screen.findByText('aguardando envio')).toBeInTheDocument()
+  expect(screen.getByText('1 serviço finalizado')).toBeInTheDocument()
+  // Pronto para o proximo servico, sem esperar o sinal.
+  expect(screen.getByRole('heading', { name: 'Novo serviço' })).toBeInTheDocument()
 })

@@ -1,3 +1,4 @@
+import { useFilaOffline } from './useFilaOffline'
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { ConfirmarAcao } from '../components/ConfirmarAcao'
@@ -380,6 +381,9 @@ function FecharTurno({
   const kmServicos = servicos ? somaDosKm(servicos) : 0
   // Pede os servicos, mas deixa fechar: dia sem chamado existe (Kawa, 24/09/2026).
   const semFinalizar = servicos?.find(emAndamento)
+  // Serviço feito sem sinal ainda está no celular: fechar agora deixaria o envio sem turno aberto.
+  const { itens: naFila } = useFilaOffline()
+  const comEnvioPendente = naFila.length > 0
   const avisoServicos = !servicos ? ''
     : semFinalizar ? ` O serviço da OS ${semFinalizar.numeroOs} não foi finalizado e fica fora da soma. Finalize antes em Km dos serviços.`
     : !servicos.length ? ' Você não registrou nenhum serviço neste turno. Se fez algum, registre antes em Km dos serviços.'
@@ -419,10 +423,16 @@ function FecharTurno({
 
     <div className="socorrista-rodape-acao">
       <button
-        type="button" className="socorrista-acao" disabled={!pronto}
+        type="button" className="socorrista-acao" disabled={!pronto || comEnvioPendente}
         onClick={() => setConfirmar(true)}>
         Fechar turno
       </button>
+      {comEnvioPendente
+        ? <p className="socorrista-apoio" role="status">
+            Há {naFila.length === 1 ? '1 envio' : `${naFila.length} envios`} de serviço esperando sinal.
+            Espere sair para fechar o turno.
+          </p>
+        : null}
       {!pronto && !(rodado !== null && rodado < 0)
         ? <p className="socorrista-apoio">
             {!hodometro ? 'Informe a quilometragem da chegada.' : 'Tire a foto do painel para fechar.'}
