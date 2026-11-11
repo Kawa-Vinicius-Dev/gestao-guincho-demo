@@ -18,8 +18,10 @@
 --                 media_sem_parciais e a media sem eles (null se todos forem parciais).
 --                 media_mensal continua a media de todos: a escolha de qual usar e do dono.
 --
--- Usa lucro_por_viatura e producao_por_socorrista, entao so administrador chama
--- e as contas sao as mesmas das telas.
+-- Usa as mesmas regras de lucro_por_viatura, producao_por_socorrista e
+-- qualidade_dos_meses (as funcoes *_do_dashboard), entao so administrador chama
+-- (pelo dashboard_financeiro) e as contas sao as mesmas das telas. Calcula o
+-- dashboard uma vez por mes: era a parte cara (~150 ms cada, medido no banco real).
 create or replace function public.base_para_metas(
     p_meses integer default 3,
     p_referencia date default (now() at time zone 'America/Sao_Paulo')::date
@@ -51,22 +53,30 @@ begin
                (date_trunc('month', p_referencia) - make_interval(months => g - 1))::date - 1 as fim
         from generate_series(1, p_meses) g
     ),
-    -- Cada funcao roda uma vez por mes (cada uma executa o dashboard inteiro);
-    -- receita e resultado da viatura saem da mesma chamada.
+    -- O dashboard (a parte cara) roda uma vez por mes; viaturas, socorristas e a
+    -- marca de mes parcial saem do mesmo JSON, pelas funcoes *_do_dashboard.
+    dashboards as materialized (
+        select m.ordem, m.ini, public.dashboard_financeiro(m.ini, m.fim) as j
+        from meses m
+    ),
     viaturas as materialized (
-        select m.ordem, v.veiculo_id, v.veiculo, v.receitas, v.resultado
-        from meses m, lateral public.lucro_por_viatura(m.ini, m.fim) v
+        select d.ordem, v.veiculo_id, v.veiculo, v.receitas, v.resultado
+        from dashboards d, lateral public.lucro_por_viatura_do_dashboard(d.j) v
     ),
     socorristas as materialized (
-        select m.ordem, s.motorista_id, s.socorrista, s.producao
-        from meses m, lateral public.producao_por_socorrista(m.ini, m.fim) s
+        select d.ordem, s.motorista_id, s.socorrista, s.producao
+        from dashboards d, lateral public.producao_por_socorrista_do_dashboard(d.j) s
         where s.servicos > 0
     ),
     parciais as materialized (
-        select m.ordem, q.parcial
-        from meses m
-        join public.qualidade_dos_meses(p_meses, p_referencia) q
-          on q.mes = to_char(m.ini, 'YYYY-MM')
+        select d.ordem, q.parcial
+        from dashboards d
+        join public.marcar_meses_parciais((
+                 select jsonb_agg(jsonb_build_object(
+                            'mes', to_char(x.ini, 'YYYY-MM'),
+                            'n', (x.j->>'servicosDoPeriodo')::integer))
+                 from dashboards x)) q
+          on q.mes = to_char(d.ini, 'YYYY-MM')
     ),
     serie as (
         select 'VIATURA'::text as tipo, v.veiculo_id as id, v.veiculo as nome,

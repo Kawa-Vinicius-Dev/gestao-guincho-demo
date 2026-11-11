@@ -13,10 +13,8 @@
 --   posicao     = 1 para quem mais produziu; empate divide a mesma posicao
 --
 -- So le. Quem pode chamar e decidido pelo dashboard_financeiro (administrador).
-create or replace function public.producao_por_socorrista(
-    p_inicio date,
-    p_fim date,
-    p_por_competencia boolean default true
+create or replace function public.producao_por_socorrista_do_dashboard(
+    p_dashboard jsonb
 ) returns table (
     motorista_id bigint,
     socorrista text,
@@ -35,7 +33,7 @@ stable
 set search_path = ''
 as $$
     with d as (
-        select public.dashboard_financeiro(p_inicio, p_fim, p_por_competencia) as j
+        select p_dashboard as j
     ),
     linhas as (
         select (e->>'motoristaId')::bigint as motorista_id,
@@ -58,6 +56,37 @@ as $$
            rank() over (order by l.producao desc)
     from linhas l cross join media m
     order by l.producao desc, l.socorrista;
+$$;
+
+comment on function public.producao_por_socorrista_do_dashboard(jsonb) is
+    'A comparacao com a media da equipe sobre o JSON de um dashboard_financeiro ja calculado (ver lucro_por_viatura_do_dashboard).';
+revoke execute on function public.producao_por_socorrista_do_dashboard(jsonb) from public;
+revoke execute on function public.producao_por_socorrista_do_dashboard(jsonb) from anon;
+grant execute on function public.producao_por_socorrista_do_dashboard(jsonb) to authenticated;
+
+create or replace function public.producao_por_socorrista(
+    p_inicio date,
+    p_fim date,
+    p_por_competencia boolean default true
+) returns table (
+    motorista_id bigint,
+    socorrista text,
+    servicos bigint,
+    producao numeric,
+    ticket_medio numeric,
+    comissao numeric,
+    despesas numeric,
+    custo_total numeric,
+    media_da_equipe numeric,
+    pct_da_media numeric,
+    posicao bigint
+)
+language sql
+stable
+set search_path = ''
+as $$
+    select * from public.producao_por_socorrista_do_dashboard(
+        public.dashboard_financeiro(p_inicio, p_fim, p_por_competencia));
 $$;
 
 comment on function public.producao_por_socorrista(date, date, boolean) is

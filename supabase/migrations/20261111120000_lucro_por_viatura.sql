@@ -15,10 +15,8 @@
 --
 -- So le. Quem decide quem pode chamar e o proprio dashboard_financeiro, que
 -- exige administrador; esta funcao nao abre nada alem dele.
-create or replace function public.lucro_por_viatura(
-    p_inicio date,
-    p_fim date,
-    p_por_competencia boolean default true
+create or replace function public.lucro_por_viatura_do_dashboard(
+    p_dashboard jsonb
 ) returns table (
     veiculo_id bigint,
     veiculo text,
@@ -36,7 +34,7 @@ stable
 set search_path = ''
 as $$
     with d as (
-        select public.dashboard_financeiro(p_inicio, p_fim, p_por_competencia) as j
+        select p_dashboard as j
     ),
     linhas as (
         select (e->>'veiculoId')::bigint as veiculo_id,
@@ -71,6 +69,36 @@ as $$
            c.km_morto, c.custo_km_morto
     from calculo c
     order by 7 desc, c.veiculo, c.veiculo_id;
+$$;
+
+comment on function public.lucro_por_viatura_do_dashboard(jsonb) is
+    'A regra do rateio sobre o JSON de um dashboard_financeiro ja calculado. Existe para quem precisa de varios meses (base_para_metas) calcular o dashboard uma vez so.';
+revoke execute on function public.lucro_por_viatura_do_dashboard(jsonb) from public;
+revoke execute on function public.lucro_por_viatura_do_dashboard(jsonb) from anon;
+grant execute on function public.lucro_por_viatura_do_dashboard(jsonb) to authenticated;
+
+create or replace function public.lucro_por_viatura(
+    p_inicio date,
+    p_fim date,
+    p_por_competencia boolean default true
+) returns table (
+    veiculo_id bigint,
+    veiculo text,
+    receitas numeric,
+    despesas_proprias numeric,
+    rateio numeric,
+    resultado_direto numeric,
+    resultado numeric,
+    margem numeric,
+    km_morto numeric,
+    custo_km_morto numeric
+)
+language sql
+stable
+set search_path = ''
+as $$
+    select * from public.lucro_por_viatura_do_dashboard(
+        public.dashboard_financeiro(p_inicio, p_fim, p_por_competencia));
 $$;
 
 comment on function public.lucro_por_viatura(date, date, boolean) is
