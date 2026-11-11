@@ -72,15 +72,20 @@ select pg_temp.checar('e a seguinte se cola nela',
   (select periodo_inicio::text from public.ordens_pagamento_porto where id = 4), '2026-10-11');
 
 \echo '===== Meus servicos: o periodo em aberto ====='
--- Datas relativas a hoje: a ultima OP fechou ha 10 dias.
+-- Datas relativas a hoje (de Sao Paulo, o mesmo da funcao): a ultima OP fechou ha 10 dias.
+-- Se esse dia for o 1o do mes, a OP cai na virada de mes e o cenario deixa de ser o
+-- que o teste quer provar; entao anda um dia (o teste nao pode depender do dia em que roda).
+select (now() at time zone 'America/Sao_Paulo')::date as hoje_sp \gset
+select case when extract(day from :'hoje_sp'::date - 10) = 1
+            then :'hoje_sp'::date - 9 else :'hoje_sp'::date - 10 end as dia_op \gset
 delete from public.ordens_servico_porto;
 delete from public.ordens_pagamento_porto;
 insert into public.ordens_pagamento_porto (numero, valor_total) values ('OP-ULTIMA', 0);
 insert into public.ordens_servico_porto (numero, numero_normalizado, ordem_pagamento_id, valor_total, data_atendimento, motorista_id)
-select 'H1', 'H1', id, 100, current_date - 10, 1 from public.ordens_pagamento_porto where numero = 'OP-ULTIMA';
+select 'H1', 'H1', id, 100, :'dia_op'::date, 1 from public.ordens_pagamento_porto where numero = 'OP-ULTIMA';
 insert into public.ordens_servico_porto (numero, numero_normalizado, ordem_pagamento_id, valor_total, data_atendimento, motorista_id) values
- ('H2', 'H2', null, 0, current_date - 12, 1),  -- antes do fim da OP, sem OP: fica de fora
- ('H3', 'H3', null, 0, current_date - 2, 1);   -- periodo em aberto
+ ('H2', 'H2', null, 0, :'dia_op'::date - 2, 1),  -- antes do fim da OP, sem OP: fica de fora
+ ('H3', 'H3', null, 0, :'hoje_sp'::date - 2, 1);   -- periodo em aberto
 select public.porto_recalcular_periodos();
 -- O socorrista nao enxerga a tabela de OPs: o esperado sai antes de trocar de perfil.
 select (periodo_fim + 1)::text as inicio_esperado from public.ordens_pagamento_porto where numero = 'OP-ULTIMA' \gset
@@ -88,8 +93,7 @@ set role authenticated;
 set request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000002';
 select pg_temp.checar('do dia seguinte a ultima OP ate hoje',
   (select ((x ->> 'inicio')::date = :'inicio_esperado'::date)
-          -- "hoje" da funcao e o de Sao Paulo; current_date do CI e UTC e vira o dia 3h antes.
-          || ' ' || ((x ->> 'fim')::date = (now() at time zone 'America/Sao_Paulo')::date)
+          || ' ' || ((x ->> 'fim')::date = :'hoje_sp'::date)
           || ' ' || jsonb_array_length(x -> 'servicos') || ' ' || (x -> 'servicos' -> 0 ->> 'numeroOs')
      from (select public.meus_servicos_em_aberto() as x) s),
   'true true 1 H3');
