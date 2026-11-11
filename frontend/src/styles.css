@@ -2175,3 +2175,16 @@ input,textarea,select,[contenteditable]:not([contenteditable=false]){caret-color
 .multa-achou{margin:0;font-size:14px}
 /* Avaliacoes (03/11/2026) */
 .estrelas{display:flex;align-items:center;gap:4px;margin:0 0 18px;padding:0;border:0}.estrelas legend{margin-bottom:6px;font-size:12px;color:var(--muted)}.estrela{padding:0 2px;border:0;background:none;color:var(--muted);font-size:38px;line-height:1;cursor:pointer;opacity:.45}.estrela-acesa{color:#f5a524;opacity:1}.estrela:focus-visible{outline:2px solid var(--blue-500);outline-offset:2px;border-radius:4px}.estrelas-rotulo{margin-left:8px;font-size:13px;color:var(--muted)}.avaliar-obrigado{width:min(380px,100%)}.avaliar-obrigado h2{margin:8px 0;font:600 38px 'Barlow Condensed',sans-serif}.avaliar-obrigado p{color:var(--muted)}.avaliar-link{overflow-wrap:anywhere}
+
+/* Celular: filtro de periodo mais baixo (revisao de 11/11/2026).
+   Periodo e Mes ocupam a linha toda, mas De e Ate dividem a mesma linha: eram
+   quatro campos empilhados ocupando mais da metade da primeira tela antes de
+   aparecer qualquer numero. So vale onde ha campo de data. */
+@media(max-width:620px){
+  .app-shell :is(.ledger-filters,.dashboard-filters,.destaque-periodo):has(input[type=date]){grid-template-columns:1fr 1fr}
+  .app-shell :is(.ledger-filters,.dashboard-filters,.destaque-periodo):has(input[type=date])>label:has(select),
+  .app-shell :is(.ledger-filters,.dashboard-filters,.destaque-periodo):has(input[type=date])>.modo-do-periodo,
+  .app-shell :is(.ledger-filters,.dashboard-filters,.destaque-periodo):has(input[type=date])>.filter-grow,
+  .app-shell :is(.ledger-filters,.dashboard-filters,.destaque-periodo):has(input[type=date])>.button{grid-column:1/-1}
+  .app-shell :is(.ledger-filters,.dashboard-filters,.destaque-periodo):has(input[type=date]) input[type=date]{min-width:0;padding-inline:10px}
+}
