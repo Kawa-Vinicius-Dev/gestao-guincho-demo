@@ -732,6 +732,8 @@ tbody tr{transition:background-color .14s ease}
   :root{--controle-altura:46px}
   .app-shell .table-action{min-height:40px;padding:0 14px}
   .app-shell .button-sm{min-height:40px}
+  /* "Tirar outra" (foto do painel) e feito com o polegar, em pe, ao lado da viatura. */
+  .socorrista-trocar-foto{min-height:44px;padding:0 16px}
 }
 
 /* ===========================================================================
@@ -1697,7 +1699,7 @@ tbody tr{transition:background-color .14s ease}
 .socorrista-topo{display:grid;gap:3px}
 .socorrista-dia{color:var(--muted);font-size:13px;font-weight:600;letter-spacing:.02em}
 .socorrista-dia:first-letter{text-transform:uppercase}
-.socorrista-topo h1{margin:0;font-size:24px;line-height:1.2}
+.socorrista-topo h1{margin:0;font:600 31px/1.05 'Barlow Condensed',sans-serif;color:var(--ink)}
 .socorrista-qra{color:var(--muted);font-size:13px;font-weight:600}
 
 .socorrista-cartao{display:grid;gap:16px;padding:20px;border:1px solid var(--line);border-radius:14px;background:var(--superficie);box-shadow:var(--shadow)}
@@ -1957,6 +1959,9 @@ tbody tr{transition:background-color .14s ease}
 .categoria-socorrista{display:inline-flex;align-items:center;gap:6px;margin-left:10px;color:var(--muted);font-size:12px;cursor:pointer}
 .categoria-socorrista input{width:16px;height:16px;margin:0;accent-color:var(--blue-600)}
 .settings-card-cabecalho>.button{flex:0 0 auto;white-space:nowrap}
+/* No celular o botao ao lado do titulo espremia o texto numa coluna de ~120px:
+   o botao desce para baixo do texto e ocupa a largura toda (alvo de toque). */
+@media(max-width:560px){.settings-card-cabecalho{flex-direction:column;align-items:stretch;gap:12px}.settings-card-cabecalho>.button{width:100%;min-height:48px}}
 
 
 /* Aprovacoes: fotos como link discreto a esquerda; recusar e aprovar a direita, do mesmo tamanho. */

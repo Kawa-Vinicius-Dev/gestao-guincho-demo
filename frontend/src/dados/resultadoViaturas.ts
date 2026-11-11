@@ -8,6 +8,12 @@ import type { Dashboard } from '../types/modelos'
  * ficava de fora, e o resultado de cada uma parecia maior do que e. Aqui ela e
  * dividida entre as viaturas na proporcao da receita: quem fatura mais carrega
  * mais. Sem receita no periodo, divide igual.
+ *
+ * A mesma regra existe no banco, em `lucro_por_viatura`
+ * (supabase/migrations/20261111120000_lucro_por_viatura.sql, testada em 99p),
+ * para quem consulta por fora da tela. A tela continua usando esta funcao de
+ * proposito: ela parte do dashboard ja carregado, sem outra ida ao banco. Mudou
+ * a regra aqui, mude la (e o contrario).
  */
 
 export interface ResultadoDaViatura {
