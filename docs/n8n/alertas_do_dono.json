@@ -1,0 +1,164 @@
+{
+  "name": "Fluxo de Gestão: alertas do dono",
+  "active": false,
+  "nodes": [
+    {
+      "id": "n1",
+      "name": "Todo dia útil às 8h",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * 1-5"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "n2",
+      "name": "Entrar no Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPABASE_URL }}/auth/v1/token?grant_type=password",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_ANON_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ email: $env.ALERTAS_EMAIL, password: $env.ALERTAS_SENHA }) }}"
+      }
+    },
+    {
+      "id": "n3",
+      "name": "Buscar alertas",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/rpc/alertas_do_dono",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_ANON_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.access_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={}"
+      }
+    },
+    {
+      "id": "n4",
+      "name": "Montar mensagem",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Uma linha por tipo de alerta (vem de public.alertas_do_dono). Em dia sem alerta\n// este no nem chega a rodar: o n8n nao segue adiante sem itens.\nconst alertas = $input.all().map(i => i.json);\nconst icone = g => (g === 'URGENTE' ? '🔴' : '🟡');\nconst reais = v => (v == null ? '' : ' (' + Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) + ')');\nconst data = d => (d ? String(d).slice(0, 10).split('-').reverse().join('/') : '');\nconst exemplo = i => {\n  const nome = i.descricao || i.numero || i.documento || i.socorrista || '';\n  const quem = i.dono || i.contratante || i.viatura || '';\n  const quando = i.vencimento || i.venceEm || i.programado || i.abertoEm || i.data || i.lancadaEm;\n  return '   • ' + [nome, quem, data(quando)].filter(Boolean).join(' · ');\n};\nconst linhas = ['Bom dia! O que precisa de atenção hoje:', ''];\nfor (const a of alertas) {\n  linhas.push(icone(a.gravidade) + ' ' + a.resumo + reais(a.valor_total));\n  for (const i of (a.itens || []).slice(0, 3)) linhas.push(exemplo(i));\n  if (a.quantidade > 3) linhas.push('   … e mais ' + (a.quantidade - 3));\n}\nconst urgentes = alertas.filter(a => a.gravidade === 'URGENTE').length;\nreturn [{ json: {\n  assunto: urgentes ? '🔴 ' + urgentes + ' urgente(s) no Fluxo de Gestão' : '🟡 Atenção no Fluxo de Gestão',\n  texto: linhas.join('\\n'),\n} }];"
+      }
+    },
+    {
+      "id": "n5",
+      "name": "Enviar (troque pelo seu canal)",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        960,
+        0
+      ],
+      "parameters": {
+        "fromEmail": "={{ $env.ALERTAS_ORIGEM }}",
+        "toEmail": "={{ $env.ALERTAS_DESTINO }}",
+        "subject": "={{ $json.assunto }}",
+        "emailFormat": "text",
+        "text": "={{ $json.texto }}",
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Todo dia útil às 8h": {
+      "main": [
+        [
+          {
+            "node": "Entrar no Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Entrar no Supabase": {
+      "main": [
+        [
+          {
+            "node": "Buscar alertas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar alertas": {
+      "main": [
+        [
+          {
+            "node": "Montar mensagem",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Montar mensagem": {
+      "main": [
+        [
+          {
+            "node": "Enviar (troque pelo seu canal)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Sao_Paulo"
+  }
+}
