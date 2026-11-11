@@ -2188,3 +2188,12 @@ input,textarea,select,[contenteditable]:not([contenteditable=false]){caret-color
   .app-shell :is(.ledger-filters,.dashboard-filters,.destaque-periodo):has(input[type=date])>.button{grid-column:1/-1}
   .app-shell :is(.ledger-filters,.dashboard-filters,.destaque-periodo):has(input[type=date]) input[type=date]{min-width:0;padding-inline:10px}
 }
+
+/* Envios guardados no celular (fila offline do socorrista). */
+.fila-aviso{margin:0 0 14px;padding:12px 14px;border-radius:12px;background:var(--info-fundo);color:var(--info-texto);font-size:14px;line-height:1.45}
+.fila-aviso p{margin:0}
+.fila-aviso-erro{background:var(--erro-fundo);color:var(--erro-texto)}
+.fila-aviso-apoio{margin-top:6px!important;font-weight:400}
+.fila-aviso-acoes{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}
+.socorrista-acao-secundaria{min-height:44px;padding:0 16px;border:1px solid currentColor;border-radius:10px;background:transparent;color:inherit;font-size:15px;font-weight:700;cursor:pointer}
+.servicos-pendente{display:block;margin-top:2px;color:var(--muted);font-size:12px;font-weight:500}

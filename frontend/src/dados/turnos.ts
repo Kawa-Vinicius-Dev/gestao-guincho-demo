@@ -525,31 +525,52 @@ async function subirFotoDoServico(turnoId: number, servicoId: number, etapa: 'in
   return caminho
 }
 
+/**
+ * O mesmo envio, sem trocar o erro pela frase generica: a fila offline precisa
+ * saber se foi falta de sinal (tenta de novo depois) ou recusa (avisa).
+ */
+export async function enviarFotoInicioSemEmbrulho(turnoId: number, servicoId: number, foto: File): Promise<void> {
+  const caminho = await subirFotoDoServico(turnoId, servicoId, 'inicio', foto)
+  ou(
+    await supabase().rpc('registrar_foto_inicio_servico', { p_id: servicoId, p_caminho: caminho }),
+    'Não foi possível registrar a foto.',
+  )
+}
+
 /** Envia (ou reenvia) a foto do painel do inicio de um servico ja iniciado. */
 export async function enviarFotoInicioServico(turnoId: number, servicoId: number, foto: File): Promise<void> {
   try {
-    const caminho = await subirFotoDoServico(turnoId, servicoId, 'inicio', foto)
-    ou(
-      await supabase().rpc('registrar_foto_inicio_servico', { p_id: servicoId, p_caminho: caminho }),
-      'Não foi possível registrar a foto.',
-    )
+    await enviarFotoInicioSemEmbrulho(turnoId, servicoId, foto)
   } catch {
     throw new ApiError('O serviço foi iniciado, mas a foto não foi enviada. Envie a foto de novo.', 400)
   }
 }
 
-export async function iniciarServico(dados: {
-  turnoId: number; numeroOs: string; kmInicial: number; foto: File; local: Localizacao
+/**
+ * So o registro do servico, sem a foto. `ocorridoEm` e a hora em que o socorrista
+ * tocou no botao, para o servico que esperou o sinal voltar; sem ele o banco usa
+ * a hora do envio. So vai na chamada quando existe, para as chamadas de sempre
+ * nao dependerem da migration da hora real.
+ */
+export async function criarServicoNoBanco(dados: {
+  numeroOs: string; kmInicial: number; local: Localizacao; ocorridoEm?: string
 }): Promise<number> {
-  const id = ou(
+  return ou(
     await supabase().rpc('iniciar_servico_do_turno', {
       p_numero_os: dados.numeroOs.trim(),
       p_numero_normalizado: normalizarNumero(dados.numeroOs),
       p_km_inicial: dados.kmInicial,
       ...parametrosDoLocal(dados.local),
+      ...(dados.ocorridoEm ? { p_ocorrido_em: dados.ocorridoEm } : {}),
     }),
     'Não foi possível iniciar o serviço.',
   ) as number
+}
+
+export async function iniciarServico(dados: {
+  turnoId: number; numeroOs: string; kmInicial: number; foto: File; local: Localizacao; ocorridoEm?: string
+}): Promise<number> {
+  const id = await criarServicoNoBanco(dados)
   // Como na saida do turno: a foto so sobe depois que o servico existe (o nome
   // do arquivo leva o id). Se falhar, a tela avisa e oferece reenviar.
   await enviarFotoInicioServico(dados.turnoId, id, dados.foto)
@@ -558,7 +579,7 @@ export async function iniciarServico(dados: {
 
 /** A foto sobe primeiro: o banco so finaliza com o caminho dela. Devolve o km do servico. */
 export async function finalizarServico(dados: {
-  turnoId: number; servicoId: number; kmFinal: number; foto: File; local: Localizacao
+  turnoId: number; servicoId: number; kmFinal: number; foto: File; local: Localizacao; ocorridoEm?: string
 }): Promise<number> {
   const caminho = await subirFotoDoServico(dados.turnoId, dados.servicoId, 'fim', dados.foto)
   return Number(ou(
@@ -567,6 +588,7 @@ export async function finalizarServico(dados: {
       p_km_final: dados.kmFinal,
       p_foto: caminho,
       ...parametrosDoLocal(dados.local),
+      ...(dados.ocorridoEm ? { p_ocorrido_em: dados.ocorridoEm } : {}),
     }),
     'Não foi possível finalizar o serviço.',
   ))

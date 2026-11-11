@@ -58,6 +58,7 @@ Validam as migrations num Postgres local, sem depender de um projeto Supabase.
   (o mês em andamento fica de fora), a tendência, a viatura nova que não é punida e as
   colunas de mês parcial.
 - `99s_qualidade_dos_meses.sql` — 9 asserções de que o mês com bem menos serviços que
+- `99t_hora_real_do_servico.sql` — hora real do toque em iniciar/finalizar serviço (fila offline): limites, folga de relógio e assinatura única das funções.
   os outros da janela é marcado como parcial (sinal de OP ainda não importada).
 - `30_financeiro.sql` — 33 asserções sobre as regras que mexem em dinheiro:
   recorte de periodo e suas bordas, atraso derivado do vencimento, despesa nao
