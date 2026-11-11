@@ -2,7 +2,7 @@ import { ApiError } from './erros'
 import type { Usuario } from '../types/modelos'
 import { limparCacheCurto } from './cacheCurto'
 import { invalidarCacheFinanceiro } from './cacheFinanceiro'
-import { erroDoBanco, ou, supabase } from './cliente'
+import { ehFalhaDeRede, erroDoBanco, ou, SEM_REDE, supabase } from './cliente'
 
 /**
  * Sessao.
@@ -81,6 +81,13 @@ export async function entrar(email: string, senha: string): Promise<Usuario> {
     email: emailNormalizado, password: senha,
   })
   if (error) {
+    // Sem sinal ou servidor fora do ar nao e senha errada: dizer "senha
+    // incorreta" levaria a pessoa a pedir troca de senha sem precisar.
+    if (ehFalhaDeRede(error)) throw new ApiError(SEM_REDE, 503)
+    if (error.status === 429) throw new ApiError('Muitas tentativas. Espere um minuto e tente de novo.', 429)
+    if (error.status !== undefined && error.status >= 500) {
+      throw new ApiError('O sistema não respondeu. Tente de novo em instantes.', 503)
+    }
     // O Auth responde "Invalid login credentials" em ingles e de proposito nao
     // diz se o que errou foi o email ou a senha — dizer entregaria a lista de
     // quem tem conta. A frase muda de idioma, a discricao continua.

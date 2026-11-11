@@ -97,7 +97,22 @@ export function esquecerCliente() {
   cliente = null
 }
 
-type ErroSupabase = { message?: string; code?: string; details?: string } | null
+type ErroSupabase = { message?: string; code?: string; details?: string; name?: string; status?: number } | null
+
+export const SEM_REDE = 'Sem conexão com a internet. Confira o sinal e tente de novo.'
+
+/**
+ * A chamada nem chegou ao servidor. O navegador devolve o texto cru
+ * ("Failed to fetch" no Chrome, "Load failed" no Safari do iPhone) e o Auth do
+ * Supabase marca como AuthRetryableFetchError. Para quem esta na rua com sinal
+ * ruim, essa e a falha mais comum: precisa de uma frase que diga o que fazer.
+ */
+export function ehFalhaDeRede(erro: ErroSupabase): boolean {
+  if (!erro) return false
+  // O Auth usa o mesmo nome para rede (status 0) e para 502/503/504; so o primeiro e falta de sinal.
+  if (erro.name === 'AuthRetryableFetchError' && !erro.status) return true
+  return /failed to fetch|load failed|networkerror|network request failed|fetch failed/i.test(erro.message ?? '')
+}
 
 /**
  * Traduz o erro do Postgres para a frase que a tela ja sabe mostrar.
@@ -111,6 +126,23 @@ type ErroSupabase = { message?: string; code?: string; details?: string } | null
 export function erroDoBanco(erro: ErroSupabase, contexto: string): ApiError {
   const codigo = erro?.code ?? ''
   const detalhe = erro?.message ?? ''
+
+  if (ehFalhaDeRede(erro)) return new ApiError(SEM_REDE, 503)
+  // Sessao vencida (PGRST301/303): o texto do PostgREST e "JWT expired".
+  if (codigo === 'PGRST301' || codigo === 'PGRST303' || /jwt expired/i.test(detalhe)) {
+    return new ApiError('Sessão expirada. Entre novamente.', 401)
+  }
+
+  // Storage (envio de foto/comprovante): o texto vem em ingles e sem codigo.
+  if (/exceeded the maximum allowed size|payload too large|entity too large/i.test(detalhe)) {
+    return new ApiError('O arquivo ficou grande demais. Tire a foto de novo ou escolha um arquivo menor.', 413)
+  }
+  if (/mime type|not supported|unsupported media/i.test(detalhe)) {
+    return new ApiError('Esse tipo de arquivo não é aceito. Use uma foto JPG, PNG ou WEBP (ou PDF no comprovante).', 415)
+  }
+  if (/new row violates row-level security/i.test(detalhe) && !codigo) {
+    return new ApiError('Você não tem permissão para esta operação.', 403)
+  }
 
   // 23505 unique_violation — quase sempre um cadastro repetido.
   if (codigo === '23505') {
