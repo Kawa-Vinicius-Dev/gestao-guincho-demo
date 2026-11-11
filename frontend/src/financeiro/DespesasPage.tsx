@@ -224,7 +224,7 @@ export default function DespesasPage(){
       <form onSubmit={salvar} className="form-grid three-columns">
         <CampoValor rotulo={editando?.despesaRecorrenteId?'Valor pago':'Valor'} name="valor" defaultValue={editando?(editando.despesaRecorrenteId?editando.valor+jurosDa(editando):editando.valor):undefined} required/>
         {/* O socorrista so ve o que o administrador liberou (Configuracoes > Categorias). */}
-        <Selecao rotulo="Categoria" name="categoriaId" defaultValue={editando?.categoriaId??''} required
+        <Selecao rotulo="Categoria" name="categoriaId" vazio="Escolha a categoria" defaultValue={editando?.categoriaId??''} required
           opcoes={categorias.filter(x=>x.ativo&&(admin||x.socorristaPode)).map(x=>({valor:x.id,texto:x.nome}))}/>
         <label className="field"><span>Data</span><input name="data" type="date" defaultValue={editando?.data??hoje()} required/></label>
         {admin

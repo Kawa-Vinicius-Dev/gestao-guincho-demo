@@ -371,6 +371,14 @@ window.fetch = (async (entrada: RequestInfo | URL, init?: RequestInit) => {
     { id: 4, identificacao: 'L402', placa: 'QWE5F66', modelo: 'Aumark S 916', custo_por_km: 2.5, sigla_porto: 'L402', ativo: true },
   ])
   if (url.includes('dashboard_resumo')) return responder(visaoGeral)
+  if (url.includes('meus_servicos_em_aberto')) return responder({
+    inicio: '2026-09-17', fim: '2026-09-30',
+    servicos: [
+      { id: 801, numeroOs: '01/5366310-26', especialidade: 'GUINCHO', dataAtendimento: '2026-09-29' },
+      { id: 802, numeroOs: '01/5366188-26', especialidade: 'PANE SECA', dataAtendimento: '2026-09-27' },
+      { id: 803, numeroOs: '01/5365990-26', especialidade: null, dataAtendimento: '2026-09-22' },
+    ],
+  })
   if (url.includes('comissao_das_ops')) return responder(comissao)
   if (url.includes('meus_periodos_de_op')) return responder([
     { id: 19, numero: '06389821', periodo_inicio: '2026-03-30', periodo_fim: '2026-04-29',
