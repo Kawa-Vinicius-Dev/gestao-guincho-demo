@@ -133,3 +133,47 @@ test('finaliza o servico em andamento: km do painel e foto', async () => {
   expect(finalizado).toMatchObject({ p_id: 2, p_km_final: 148370, p_foto: 'turnos/7/servico-2-fim.jpg', p_sem_local: 'INDISPONIVEL' })
   expect(await screen.findByRole('button', { name: 'Iniciar serviço' })).toBeInTheDocument()
 })
+
+test('km menor que o ultimo registro do turno: avisa na hora e nao deixa iniciar', async () => {
+  servidor.use(
+    http.post(`${SUPA}/rest/v1/rpc/meu_turno_do_dia`, () => HttpResponse.json(comTurno)),
+    http.get(`${SUPA}/rest/v1/servicos_do_turno`, () => HttpResponse.json([
+      { id: 1, turno_id: 7, numero_os: '1111111-26', km: 15, km_inicial: 148320, km_final: 148335,
+        iniciado_em: '2026-09-24T09:00:00Z', finalizado_em: '2026-09-24T09:40:00Z', foto_inicio: 'turnos/7/servico-1-inicio.jpg' },
+    ])),
+  )
+  const user = userEvent.setup({ delay: null })
+  await abrir()
+
+  await screen.findByText('OS 1111111-26')
+  await user.type(screen.getByLabelText('Número da OS'), '01123456726')
+  await user.upload(screen.getByLabelText(/Foto do painel/), foto())
+  await user.type(screen.getByLabelText('Quilometragem do painel'), '148330')
+
+  expect(await screen.findByRole('alert')).toHaveTextContent('Menor que o último registro do turno (148.335 km)')
+  expect(screen.getByRole('button', { name: 'Iniciar serviço' })).toBeDisabled()
+
+  await user.clear(screen.getByLabelText('Quilometragem do painel'))
+  await user.type(screen.getByLabelText('Quilometragem do painel'), '148340')
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Iniciar serviço' })).toBeEnabled()
+})
+
+test('km do fim menor que o do inicio do servico: avisa na hora e nao deixa finalizar', async () => {
+  servidor.use(
+    http.post(`${SUPA}/rest/v1/rpc/meu_turno_do_dia`, () => HttpResponse.json(comTurno)),
+    http.get(`${SUPA}/rest/v1/servicos_do_turno`, () => HttpResponse.json([
+      { id: 2, turno_id: 7, numero_os: '01/1234567-26', km: null, km_inicial: 148340, km_final: null,
+        iniciado_em: '2026-09-24T10:00:00Z', finalizado_em: null, foto_inicio: 'turnos/7/servico-2-inicio.jpg' },
+    ])),
+  )
+  const user = userEvent.setup({ delay: null })
+  await abrir()
+
+  await screen.findByRole('heading', { name: 'Serviço em andamento' })
+  await user.upload(screen.getByLabelText(/Foto do painel/), foto())
+  await user.type(screen.getByLabelText('Quilometragem do painel agora'), '148300')
+
+  expect(await screen.findByRole('alert')).toHaveTextContent('Menor que a quilometragem do início deste serviço (148.340 km)')
+  expect(screen.getByRole('button', { name: 'Finalizar serviço' })).toBeDisabled()
+})

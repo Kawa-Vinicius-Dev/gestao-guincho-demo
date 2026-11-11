@@ -92,7 +92,7 @@ export default function ServicosPage() {
 
   function iniciar(evento: FormEvent) {
     evento.preventDefault()
-    if (!turno || !osCompleta(numero) || !(valor >= 0) || !foto || ocupado) return
+    if (!turno || !osCompleta(numero) || !(valor >= 0) || inicioMenorQueOUltimo || !foto || ocupado) return
     void executar(async () => {
       setEtapa('Pegando a localização…')
       const local = await obterLocalizacao()
@@ -104,7 +104,7 @@ export default function ServicosPage() {
 
   function finalizar(evento: FormEvent) {
     evento.preventDefault()
-    if (!turno || !atual || !(valor >= 0) || !foto || ocupado) return
+    if (!turno || !atual || !(valor >= 0) || fimMenorQueOInicio || !foto || ocupado) return
     void executar(async () => {
       setEtapa('Pegando a localização…')
       const local = await obterLocalizacao()
@@ -126,6 +126,12 @@ export default function ServicosPage() {
   const total = somaDosKm(servicos)
   const concluidos = servicos.filter(s => s.km != null)
   const previa = atual?.kmInicial != null && valor >= atual.kmInicial ? valor - atual.kmInicial : null
+  // O odometro nao volta (o banco recusa): nem para antes do inicio do turno, nem
+  // para antes do fim do ultimo servico. A tela avisa na hora, antes de gastar a
+  // espera da localizacao e o envio da foto para so entao receber a recusa.
+  const minimoParaIniciar = Math.max(turno?.hodometroInicial ?? 0, ...servicos.map(s => s.kmFinal ?? 0))
+  const inicioMenorQueOUltimo = !atual && valor < minimoParaIniciar
+  const fimMenorQueOInicio = atual?.kmInicial != null && valor < atual.kmInicial
 
   return <div className="socorrista">
     <header className="socorrista-topo">
@@ -148,11 +154,16 @@ export default function ServicosPage() {
               </p>
               <CampoKm id="servico-km-final" rotulo="Quilometragem do painel agora" valor={kmDigitado} aoMudar={setKmDigitado}/>
               {previa != null ? <p className="socorrista-apoio">Este serviço: <strong>{km(previa)}</strong></p> : null}
+              {fimMenorQueOInicio
+                ? <p className="socorrista-alerta" role="alert">
+                    Menor que a quilometragem do início deste serviço ({km(atual.kmInicial ?? 0)}). Confira o painel.
+                  </p>
+                : null}
               <BotaoFoto id="servico-foto-fim" rotulo="Foto do painel" arquivo={foto} aoEscolher={setFoto} obrigatoria/>
               {falha ? <p className="socorrista-alerta" role="alert">{falha}</p> : null}
               {mensagem ? <p className="socorrista-apoio servicos-lancado" role="status">{mensagem}</p> : null}
               <div className="socorrista-rodape-acao">
-                <button type="submit" className="socorrista-acao" disabled={!(valor >= 0) || !foto || ocupado}>
+                <button type="submit" className="socorrista-acao" disabled={!(valor >= 0) || fimMenorQueOInicio || !foto || ocupado}>
                   {etapa || 'Finalizar serviço'}
                 </button>
               </div>
@@ -181,12 +192,17 @@ export default function ServicosPage() {
                 value={numero} onChange={e => setNumero(mascararOs(e.target.value))} />
             </div>
             <CampoKm id="servico-km-inicial" rotulo="Quilometragem do painel" valor={kmDigitado} aoMudar={setKmDigitado}/>
+            {inicioMenorQueOUltimo
+              ? <p className="socorrista-alerta" role="alert">
+                  Menor que o último registro do turno ({km(minimoParaIniciar)}). Confira o painel.
+                </p>
+              : null}
             <BotaoFoto id="servico-foto-inicio" rotulo="Foto do painel" arquivo={foto} aoEscolher={setFoto} obrigatoria/>
             {falha ? <p className="socorrista-alerta" role="alert">{falha}</p> : null}
             {mensagem ? <p className="socorrista-apoio servicos-lancado" role="status">{mensagem}</p> : null}
             <div className="socorrista-rodape-acao">
               <button type="submit" className="socorrista-acao"
-                disabled={!osCompleta(numero) || !(valor >= 0) || !foto || ocupado}>
+                disabled={!osCompleta(numero) || !(valor >= 0) || inicioMenorQueOUltimo || !foto || ocupado}>
                 {etapa || 'Iniciar serviço'}
               </button>
             </div>
@@ -201,7 +217,7 @@ export default function ServicosPage() {
                   {servicos.map(s => <li key={s.id}>
                     <span className="socorrista-historico-dia">OS {s.numeroOs}</span>
                     <span className="socorrista-historico-km">{s.km != null ? km(s.km) : 'em andamento'}</span>
-                    <button type="button" className="servicos-tirar" onClick={() => setTirando(s)}>Tirar</button>
+                    <button type="button" className="servicos-tirar" onClick={() => setTirando(s)} aria-label={`Remover o serviço da OS ${s.numeroOs}`}>Remover</button>
                   </li>)}
                 </ul>
                 <p className="servicos-total">
@@ -215,11 +231,11 @@ export default function ServicosPage() {
 
     {tirando
       ? <ConfirmarAcao
-          titulo="Tirar o serviço?"
+          titulo="Remover o serviço?"
           efeito={tirando.km != null
             ? `Os ${km(tirando.km)} da OS ${tirando.numeroOs} saem da soma do turno.`
             : `O serviço da OS ${tirando.numeroOs} é cancelado.`}
-          textoConfirmar="Tirar"
+          textoConfirmar="Remover"
           aoConfirmar={async () => {
             await removerServico(tirando.id)
             setMensagem('')

@@ -49,6 +49,16 @@ Validam as migrations num Postgres local, sem depender de um projeto Supabase.
 - `95_copia_dos_dados.sql` — 10 asserções de que a cópia dos dados consegue ler
   todas as colunas que pede. O banco não tem backup automático, então essa cópia
   é a única proteção do dono — e ela ficou quebrada sem ninguém saber.
+- `99p_lucro_por_viatura.sql` — 14 asserções de que o resultado de cada viatura, com
+  as despesas gerais rateadas pela receita, sai do banco igual ao da tela da frota,
+  e de que só o administrador chama.
+- `99q_producao_por_socorrista.sql` — 10 asserções sobre a produção de cada socorrista
+  contra a média da equipe (quem só tem despesa não puxa a média para baixo).
+- `99r_base_para_metas.sql` — 18 asserções sobre a média dos últimos meses completos
+  (o mês em andamento fica de fora), a tendência, a viatura nova que não é punida e as
+  colunas de mês parcial.
+- `99s_qualidade_dos_meses.sql` — 9 asserções de que o mês com bem menos serviços que
+  os outros da janela é marcado como parcial (sinal de OP ainda não importada).
 - `30_financeiro.sql` — 33 asserções sobre as regras que mexem em dinheiro:
   recorte de periodo e suas bordas, atraso derivado do vencimento, despesa nao
   aprovada fora do resultado, custo do km congelado no registro, producao e

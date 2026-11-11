@@ -463,7 +463,11 @@ function TurnoEmAndamento({ turno, aoFechar }: { turno: TurnoAberto; aoFechar: (
     servicosDoTurno([turno.id]).then(setServicos).catch(() => setServicos(undefined))
   }, [turno.id])
 
+  // Quem abre o app no meio do dia precisa ver de cara que o turno esta aberto.
+  const desde = new Date(turno.abertoEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
   return <>
+    {turno.deDiaAnterior ? null
+      : <p className="socorrista-turno-aberto" role="status">Turno aberto às {desde} na {turno.veiculo}</p>}
     <Link to="/km-dos-servicos" className="socorrista-cartao servicos-atalho">
       <strong>Km dos serviços</strong>
       <span>{servicos?.length
@@ -601,7 +605,7 @@ export default function TurnoPage() {
                 <span className="socorrista-historico-km">{formatarKm(t.kmRodado)}</span>
                 <span className={`socorrista-situacao situacao-${t.situacao.toLowerCase()}`}>
                   {t.situacao === 'APROVADO' ? 'Aprovado'
-                    : t.situacao === 'DEVOLVIDO' ? 'Devolvido' : 'Aguardando'}
+                    : t.situacao === 'DEVOLVIDO' ? 'Devolvido' : 'Aguardando aprovação'}
                 </span>
               </li>)}
           </ul>

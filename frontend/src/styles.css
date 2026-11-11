@@ -1697,6 +1697,8 @@ tbody tr{transition:background-color .14s ease}
 
 .socorrista{margin:0 auto;display:grid;gap:14px;max-width:560px;padding:4px 0 40px}
 .socorrista-topo{display:grid;gap:3px}
+.socorrista-turno-aberto{display:flex;align-items:center;gap:10px;margin:0;padding:12px 14px;border-radius:12px;background:var(--ok-fundo);color:var(--ok-texto);font-size:14px;font-weight:600}
+.socorrista-turno-aberto:before{content:'';flex:0 0 10px;height:10px;border-radius:50%;background:currentColor}
 .socorrista-dia{color:var(--muted);font-size:13px;font-weight:600;letter-spacing:.02em}
 .socorrista-dia:first-letter{text-transform:uppercase}
 .socorrista-topo h1{margin:0;font:600 31px/1.05 'Barlow Condensed',sans-serif;color:var(--ink)}
