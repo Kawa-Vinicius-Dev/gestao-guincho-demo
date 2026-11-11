@@ -42,3 +42,13 @@
 .grafico-mes-dica strong{font-size:14px;font-variant-numeric:tabular-nums}
 .grafico-mes-dica small{color:var(--muted)}
 @media(prefers-reduced-motion:reduce){.grafico-mes-area path{transition:none}}
+
+/* Celular: as quatro colunas (rotulo, barra, valor, detalhe) somam mais que a
+   largura da tela e o painel corta o valor. Aqui viram rotulo + valor na
+   primeira linha, a barra embaixo e o detalhe por ultimo. */
+@media(max-width:560px){
+  .desempenho-linha,.desempenho-total{grid-template-columns:minmax(0,1fr) auto;gap:6px 12px}
+  .desempenho-linha .faturamento-grupo-trilho{grid-column:1 / -1;grid-row:2}
+  .desempenho-linha small,.desempenho-total small{grid-column:1 / -1;grid-row:3}
+  .desempenho-total>span:empty{display:none}
+}

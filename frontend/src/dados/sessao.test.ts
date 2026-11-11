@@ -56,6 +56,30 @@ test('credencial errada nao revela se o e-mail existe', async () => {
   await expect(entrar('ana@teste.local', 'errada')).rejects.toThrow('E-mail ou senha incorretos.')
 })
 
+// Sem sinal nao e senha errada: a pessoa nao pode ser levada a trocar a senha.
+test('entrar sem internet diz que falta conexao, nao que a senha esta errada', async () => {
+  servidor.use(http.post(`${URL_SUPABASE}/auth/v1/token`, () => HttpResponse.error()))
+  const { entrar } = await carregar('auth')
+
+  await expect(entrar('ana@teste.local', 'senha')).rejects.toThrow('Sem conexão com a internet')
+})
+
+test('entrar com limite de tentativas pede para esperar', async () => {
+  servidor.use(http.post(`${URL_SUPABASE}/auth/v1/token`, () =>
+    HttpResponse.json({ code: 'over_request_rate_limit', message: 'rate limit' }, { status: 429 })))
+  const { entrar } = await carregar('auth')
+
+  await expect(entrar('ana@teste.local', 'senha')).rejects.toThrow('Muitas tentativas')
+})
+
+test('entrar com o servidor fora do ar nao acusa senha errada', async () => {
+  servidor.use(http.post(`${URL_SUPABASE}/auth/v1/token`, () =>
+    HttpResponse.json({ message: 'boom' }, { status: 503 })))
+  const { entrar } = await carregar('auth')
+
+  await expect(entrar('ana@teste.local', 'senha')).rejects.toThrow('O sistema não respondeu')
+})
+
 // Conta desativada nao pode ficar "logada" numa tela vazia: sem perfil ativo
 // nenhuma policy libera nada.
 test('perfil inativo encerra a sessao em vez de entrar', async () => {

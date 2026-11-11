@@ -33,3 +33,10 @@
 
 /* Onde estao os servicos da DRE: no arquivo exportado. */
 .dre-aviso-servicos{margin:0 0 18px;padding:10px 14px;border-radius:8px;background:var(--info-fundo);color:var(--info-texto);font-size:var(--t-apoio)}
+
+/* Celular: as quatro colunas fixas (130+100+1fr+100) passam da largura da lista
+   e o painel corta o valor. Aqui os campos quebram em linhas. */
+@media(max-width:560px){
+  .sem-valor-os{margin-left:0;padding-left:18px}
+  .sem-valor-os li{display:flex;flex-wrap:wrap;gap:2px 10px}
+}
