@@ -20,6 +20,14 @@ São dois públicos no mesmo sistema:
 - **Uma consulta caiu de 206,9 ms para 1,87 ms** numa tabela de 9.600 linhas, corrigindo como as políticas RLS eram avaliadas.
 - **Regras de dinheiro em funções PostgreSQL** (dashboard, DRE, comissões, conciliação), testadas por mais de 30 suítes SQL que rodam em toda PR.
 
+## Várias empresas no mesmo banco
+
+Desde 14/11/2026 o sistema é multiempresa: cada empresa de guincho só enxerga os
+próprios dados, o gestor administra a equipe dele e a ANAIV tem um painel
+(`/plataforma`) para cadastrar, contar e bloquear empresas, sem ler dado de cliente.
+O isolamento é feito no banco e testado por 91 asserções com duas empresas
+(`supabase/tests/99t_multiempresa.sql`). Detalhes em [docs/multiempresa.md](docs/multiempresa.md).
+
 ## O que o sistema faz
 
 ### Para o dono

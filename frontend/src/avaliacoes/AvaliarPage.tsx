@@ -1,6 +1,6 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { MarcaJms } from '../components/MarcaJms'
-import { avaliar } from '../dados/avaliacoes'
+import { avaliar, empresaDoLink } from '../dados/avaliacoes'
 
 /**
  * Pagina publica, sem login: o cliente do guincho da a nota do atendimento
@@ -14,6 +14,19 @@ export default function AvaliarPage() {
   const [erro, setErro] = useState('')
   const [enviando, setEnviando] = useState(false)
   const [enviada, setEnviada] = useState(false)
+  // Multiempresa: o link diz de qual empresa e a avaliacao (/avaliar?e=codigo).
+  // Sem codigo e o link antigo, do primeiro cliente.
+  const [codigo] = useState(() => new URLSearchParams(window.location.search).get('e')?.trim().toLowerCase() ?? '')
+  const [empresa, setEmpresa] = useState<string | null>(null)
+  const [linkInvalido, setLinkInvalido] = useState(false)
+  useEffect(() => {
+    if (!codigo) return
+    let valeu = true
+    empresaDoLink(codigo)
+      .then(nome => { if (valeu) { setEmpresa(nome); setLinkInvalido(!nome) } })
+      .catch(() => { /* sem rede: o envio avisa */ })
+    return () => { valeu = false }
+  }, [codigo])
 
   async function enviar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault()
@@ -26,6 +39,7 @@ export default function AvaliarPage() {
         nome: String(campos.get('nome') ?? ''),
         placa: String(campos.get('placa') ?? ''),
         comentario: String(campos.get('comentario') ?? ''),
+        ...(codigo ? { empresa: codigo } : {}),
       })
       setEnviada(true)
     } catch (e) { setErro((e as Error).message) }
@@ -34,8 +48,8 @@ export default function AvaliarPage() {
 
   return <main className="login-page">
     <section className="login-brand">
-      <MarcaJms className="login-mark"/>
-      <span className="eyebrow">J M S · guincho</span>
+      {codigo ? null : <MarcaJms className="login-mark"/>}
+      <span className="eyebrow">{codigo ? (empresa ?? 'Guincho') : 'J M S · guincho'}</span>
       <h1>Sua opinião faz a diferença.</h1>
       <p>Sua nota leva menos de um minuto e ajuda a gente a melhorar o socorro na estrada.</p>
     </section>
@@ -49,6 +63,7 @@ export default function AvaliarPage() {
         : <form onSubmit={enviar}>
             <span className="eyebrow">Avaliação</span><h2>Como foi o atendimento?</h2>
             <p>Só a nota é obrigatória.</p>
+            {linkInvalido ? <div className="form-alert" role="alert">Este link de avaliação não é válido. Peça um novo a quem te atendeu.</div> : null}
             {erro ? <div className="form-alert" role="alert">{erro}</div> : null}
             <fieldset className="estrelas">
               <legend>Nota</legend>

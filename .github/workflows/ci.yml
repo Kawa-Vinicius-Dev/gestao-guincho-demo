@@ -67,6 +67,9 @@ jobs:
             for m in migrations/*.sql; do
               $PSQL -d "$banco" -f "$m" > /dev/null
             done
+            # As suites gravam fixtures sem login. Sem usuario, a empresa vem de
+            # app.empresa_id: aqui, a empresa no 1 (o cliente que ja existia).
+            $PSQL -d postgres -c "alter database \"$banco\" set app.empresa_id = '00000000-0000-0000-0000-000000000001'" > /dev/null
             if $PSQL -d "$banco" -f "$suite"; then
               echo "OK   $nome"
             else

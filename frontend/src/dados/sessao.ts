@@ -57,14 +57,50 @@ async function perfilDaSessao(): Promise<Usuario | null> {
     'Não foi possível carregar seu perfil.',
   ) as LinhaPerfil | null
 
-  // Conta existe no Auth mas nao tem perfil, ou foi desativada: sem perfil ativo
-  // nenhuma policy libera nada, e ficar "logado" numa tela vazia e pior do que
-  // nao entrar. Encerra a sessao.
-  if (!linha || !linha.ativo) {
+  // Sem perfil visivel ha tres casos, e o banco diz qual: o desenvolvedor (nao
+  // tem perfil em empresa nenhuma), a empresa bloqueada (a policy esconde o
+  // perfil) e a conta sem acesso.
+  if (!linha) {
+    const situacao = await situacaoDoAcesso()
+    if (situacao === 'DESENVOLVEDOR') {
+      const email = sessao.session.user.email ?? ''
+      return { id: sessao.session.user.id, nome: email.split('@')[0] || 'ANAIV', email, perfil: 'DESENVOLVEDOR', ativo: true }
+    }
+    await supabase().auth.signOut()
+    if (situacao === 'EMPRESA_BLOQUEADA') throw new ApiError(EMPRESA_BLOQUEADA, 403)
+    return null
+  }
+
+  // Conta desativada: sem perfil ativo nenhuma policy libera nada, e ficar
+  // "logado" numa tela vazia e pior do que nao entrar. Encerra a sessao.
+  if (!linha.ativo) {
     await supabase().auth.signOut()
     return null
   }
-  return paraUsuario(linha)
+  return { ...paraUsuario(linha), ...await empresaDaSessao() }
+}
+
+const EMPRESA_BLOQUEADA = 'O acesso da sua empresa está suspenso. Fale com a ANAIV.'
+
+/** Banco ainda sem a migration de multiempresa nao tem a funcao: vale "sem acesso". */
+async function situacaoDoAcesso(): Promise<string> {
+  try {
+    const { data, error } = await supabase().rpc('situacao_do_acesso')
+    return error ? 'SEM_ACESSO' : String(data ?? 'SEM_ACESSO')
+  } catch { return 'SEM_ACESSO' }
+}
+
+/**
+ * Nome e codigo da empresa de quem entrou. A policy de `empresas` devolve so a
+ * propria, entao nao ha filtro aqui. E enfeite de tela (marca do menu, link de
+ * avaliacao): se falhar, o sistema abre do mesmo jeito.
+ */
+async function empresaDaSessao(): Promise<{ empresa?: string; empresaCodigo?: string }> {
+  try {
+    const { data, error } = await supabase().from('empresas').select('nome,codigo').maybeSingle()
+    if (error || !data) return {}
+    return { empresa: String(data.nome), empresaCodigo: String(data.codigo) }
+  } catch { return {} }
 }
 
 export async function usuarioAtual(): Promise<Usuario | null> {

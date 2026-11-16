@@ -1,0 +1,18 @@
+/* Painel da ANAIV: fora do Layout da empresa, entao traz a propria moldura. */
+.plataforma{display:grid;gap:18px;max-width:1280px;margin:0 auto;padding:28px clamp(16px,4vw,40px) 60px}
+.plataforma-quem{color:var(--muted);font-size:12px;align-self:center}
+.plataforma-nova form{display:grid;gap:16px;padding:22px}
+.plataforma-nova h2,.plataforma-senha h2{margin:6px 0 4px;font:600 25px 'Barlow Condensed',sans-serif}
+.plataforma-nova p,.plataforma-senha p{margin:0;color:var(--muted);font-size:13px;line-height:1.5}
+.plataforma-nova .button{justify-self:start}
+.plataforma-senha{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:18px;padding:22px;border-color:var(--blue-100);background:var(--blue-50)}
+.plataforma-senha code{padding:10px 16px;border-radius:7px;background:var(--superficie);font:600 24px 'IBM Plex Mono',monospace;letter-spacing:.06em;user-select:all}
+.plataforma-codigo{display:block;margin-top:3px;color:var(--muted);font-size:11px;font-weight:400}
+.plataforma-bloqueada td{background:var(--superficie-2)}
+.plataforma-detalhe-titulo{padding:20px 20px 0}.plataforma-detalhe-titulo h2{margin:6px 0 0;font:600 25px 'Barlow Condensed',sans-serif}
+.plataforma-gerenciar{display:grid;gap:16px;padding:20px}
+.plataforma-acao{display:flex;flex-wrap:wrap;align-items:end;gap:12px}
+.plataforma-acao .field{flex:1 1 220px}
+.plataforma-acao p{flex:1 1 320px;margin:0;color:var(--muted);font-size:13px}
+.plataforma-gerenciar table{min-width:0;background:var(--superficie);border:1px solid var(--line);border-radius:8px}
+@media(max-width:620px){.plataforma-acao .button{width:100%}.plataforma-senha code{font-size:20px}}

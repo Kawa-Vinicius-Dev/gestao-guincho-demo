@@ -63,6 +63,10 @@ Validam as migrations num Postgres local, sem depender de um projeto Supabase.
   recorte de periodo e suas bordas, atraso derivado do vencimento, despesa nao
   aprovada fora do resultado, custo do km congelado no registro, producao e
   comissao, resumo Porto (previsto x programado x recebido) e periodo vazio.
+- `99t_multiempresa.sql` — 91 asserções com duas empresas no mesmo banco: nenhuma
+  tabela ou função ficou sem o filtro de empresa, o gestor de uma não lê, não altera
+  nem aponta para nada da outra (tabelas, funções, arquivos), a empresa bloqueada
+  perde o acesso inteira, e o desenvolvedor cria e conta sem ler dado de cliente.
 
 ## Rodar
 
@@ -93,3 +97,12 @@ Um `UPDATE` barrado por RLS nao levanta erro: ele nao encontra a linha e afeta
 zero. Um teste que so verificasse "nao lancou excecao" leria isso como permissao
 concedida. Por isso `pg_temp.tentar()` olha o `row_count` — a pergunta e se a
 escrita teve efeito, nao se ela reclamou.
+## Empresa nas fixtures
+
+As suítes gravam as fixtures sem login. Sem usuário, a empresa vem de
+`app.empresa_id`; o CI define essa variável no banco de cada suíte como a empresa
+nº 1. Para rodar à mão, depois de aplicar as migrations:
+
+```sql
+alter database teste set app.empresa_id = '00000000-0000-0000-0000-000000000001';
+```
