@@ -22,6 +22,9 @@ create table auth.users (
     id uuid primary key default gen_random_uuid(),
     email text unique,
     raw_user_meta_data jsonb default '{}'::jsonb,
+    -- So a service_role escreve aqui; e de onde sai a empresa da conta.
+    raw_app_meta_data jsonb default '{}'::jsonb,
+    last_sign_in_at timestamptz,
     created_at timestamptz not null default now(),
     updated_at timestamptz not null default now()
 );

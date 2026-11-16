@@ -3,7 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-route
 import { AuthProvider } from './auth/AuthContext'
 import { Carregando } from './components/EstadoPagina'
 import { Layout } from './components/Layout'
-import { RotaAdministrador, RotaProtegida } from './components/RotasProtegidas'
+import { RotaAdministrador, RotaDesenvolvedor, RotaProtegida } from './components/RotasProtegidas'
 import { removerDadosDemoLegados } from './legacyStorage'
 
 const Login=lazy(()=>import('./auth/LoginPage'))
@@ -41,6 +41,7 @@ const PortoContestacoes=lazy(()=>import('./porto/PortoContestacoesPage'))
 const Configuracoes=lazy(()=>import('./configuracoes/ConfiguracoesPage'))
 const Sobre=lazy(()=>import('./sobre/SobrePage'))
 const TrocarSenha=lazy(()=>import('./configuracoes/TrocarSenhaPage'))
+const Plataforma=lazy(()=>import('./plataforma/PlataformaPage'))
 const NaoEncontrado=lazy(()=>import('./NaoEncontradoPage'))
 
 function MedirTransicaoDeRota(){
@@ -88,6 +89,7 @@ export default function App(){
     <Route path="/avaliar" element={<Avaliar/>}/>
     <Route element={<RotaProtegida/>}>
       <Route path="/trocar-senha" element={<TrocarSenha/>}/>
+      <Route element={<RotaDesenvolvedor/>}><Route path="/plataforma" element={<Plataforma/>}/></Route>
       <Route element={<Layout/>}>
       <Route path="/turno" element={<Turno/>}/>
       <Route path="/ajustes" element={<ConfiguracoesSocorrista/>}/>

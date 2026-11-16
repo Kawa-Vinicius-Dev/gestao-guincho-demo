@@ -188,3 +188,66 @@ test('sair encerra a sessao e apaga os numeros da operacao em cache', async () =
   expect(dashboardEmCache('2026-09-01','2026-09-30')).toBeUndefined()
 })
 
+
+// ---------------------------------------------------------------------------
+// Multiempresa (14/11/2026). Quando a policy nao devolve o perfil, o banco diz
+// por que: desenvolvedor, empresa bloqueada ou sem acesso.
+// ---------------------------------------------------------------------------
+const semLinha = () => HttpResponse.json([])
+
+test('o desenvolvedor entra sem perfil de empresa e so com o papel dele', async () => {
+  sessaoGravada()
+  servidor.use(
+    http.get(`${URL_SUPABASE}/rest/v1/perfis`, semLinha),
+    http.post(`${URL_SUPABASE}/rest/v1/rpc/situacao_do_acesso`, () => HttpResponse.json('DESENVOLVEDOR')),
+  )
+  const { usuarioAtual } = await carregar('auth')
+
+  const usuario = await usuarioAtual()
+
+  expect(usuario?.perfil).toBe('DESENVOLVEDOR')
+  expect(usuario?.empresa).toBeUndefined()
+})
+
+test('empresa bloqueada explica o motivo em vez de dizer que a conta esta inativa', async () => {
+  servidor.use(
+    http.post(`${URL_SUPABASE}/auth/v1/token`, () => HttpResponse.json({
+      access_token: 'jwt', refresh_token: 'r', token_type: 'bearer', expires_in: 3600,
+      user: { id: ID, email: 'ana@teste.local', aud: 'authenticated' },
+    })),
+    http.get(`${URL_SUPABASE}/rest/v1/perfis`, semLinha),
+    http.post(`${URL_SUPABASE}/rest/v1/rpc/situacao_do_acesso`, () => HttpResponse.json('EMPRESA_BLOQUEADA')),
+    http.post(`${URL_SUPABASE}/auth/v1/logout`, () => new HttpResponse(null, { status: 204 })),
+  )
+  const { entrar } = await carregar('auth')
+
+  await expect(entrar('ana@teste.local', 'senha')).rejects.toThrow('O acesso da sua empresa está suspenso')
+})
+
+// Publicar a tela antes de aplicar a migration nao pode trancar ninguem para fora.
+test('banco sem a funcao de situacao: conta sem perfil continua so sem acesso', async () => {
+  sessaoGravada()
+  servidor.use(
+    http.get(`${URL_SUPABASE}/rest/v1/perfis`, semLinha),
+    http.post(`${URL_SUPABASE}/rest/v1/rpc/situacao_do_acesso`, () =>
+      HttpResponse.json({ code: 'PGRST202', message: 'Could not find the function' }, { status: 404 })),
+    http.post(`${URL_SUPABASE}/auth/v1/logout`, () => new HttpResponse(null, { status: 204 })),
+  )
+  const { usuarioAtual } = await carregar('auth')
+
+  expect(await usuarioAtual()).toBeNull()
+})
+
+test('o usuario carrega o nome e o codigo da propria empresa', async () => {
+  sessaoGravada()
+  servidor.use(
+    http.get(`${URL_SUPABASE}/rest/v1/perfis`, () => HttpResponse.json(PERFIL)),
+    http.get(`${URL_SUPABASE}/rest/v1/empresas`, () => HttpResponse.json({ nome: 'Guincho Beta', codigo: 'beta' })),
+  )
+  const { usuarioAtual } = await carregar('auth')
+
+  const usuario = await usuarioAtual()
+
+  expect(usuario?.empresa).toBe('Guincho Beta')
+  expect(usuario?.empresaCodigo).toBe('beta')
+})

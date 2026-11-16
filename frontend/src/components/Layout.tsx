@@ -158,6 +158,8 @@ export function Layout() {
   },[aberto])
   const [saindo,setSaindo]=useState(false)
   const admin=usuario?.perfil==='ADMINISTRADOR'
+  const marca=usuario?.empresa??'JMS'
+  const marcaPropria=!usuario?.empresaCodigo||usuario.empresaCodigo==='jms'
   const contadores=useContadoresDoMenu(admin)
 
   // Qual grupo contem a tela atual. E ele que abre quando nao ha escolha guardada,
@@ -203,9 +205,10 @@ export function Layout() {
     <aside className={`sidebar ${aberto?'sidebar-open':''}`}>
       {/* A marca leva ao inicio: a Visao geral do dono, o turno do socorrista. */}
       <Link className="brand" to={admin?'/':'/turno'} onClick={()=>setAberto(false)}
-        aria-label={admin?'JMS, ir para a Visão geral':'JMS, ir para o início'} title={admin?'Visão geral':'Início'}>
-        <MarcaJms className="brand-mark"/>
-        <span className="brand-texto"><strong>JMS</strong><small>Sistema de gestão</small></span>
+        aria-label={admin?`${marca}, ir para a Visão geral`:`${marca}, ir para o início`} title={admin?'Visão geral':'Início'}>
+        {/* O desenho e do primeiro cliente; as outras empresas entram so com o nome. */}
+        {marcaPropria?<MarcaJms className="brand-mark"/>:null}
+        <span className="brand-texto"><strong>{marca}</strong><small>Sistema de gestão</small></span>
       </Link>
       <nav className="primary-nav" aria-label="Navegação principal">
         {atalhos.length

@@ -52,25 +52,31 @@ Deno.serve(async (req) => {
   const eu = sessao.user.id
 
   const banco = createClient(url, servico, { auth: { persistSession: false } })
-  const { data: perfil } = await banco.from('perfis').select('perfil,ativo').eq('id', eu).maybeSingle()
-  if (!perfil?.ativo) return responder({ detalhe: 'Sessão inválida.' }, 401)
+  // Lido com o JWT de quem chama: empresa bloqueada nao devolve perfil.
+  const { data: perfil } = await comoUsuario.from('perfis')
+    .select('perfil,ativo,empresa_id').eq('id', eu).maybeSingle()
+  if (!perfil?.ativo || !perfil.empresa_id) return responder({ detalhe: 'Sessão inválida.' }, 401)
+  // A service_role ignora RLS: toda consulta abaixo filtra pela empresa de quem
+  // chamou, senao o aviso de uma empresa iria para o gestor de outra.
+  const empresa = perfil.empresa_id as string
   const souAdmin = perfil.perfil === 'ADMINISTRADOR'
 
   const corpo = await req.json().catch(() => ({})) as Record<string, unknown>
   const id = Number(corpo.id)
 
   async function administradores() {
-    const { data } = await banco.from('perfis').select('id').eq('perfil', 'ADMINISTRADOR').eq('ativo', true)
+    const { data } = await banco.from('perfis').select('id')
+      .eq('perfil', 'ADMINISTRADOR').eq('ativo', true).eq('empresa_id', empresa)
     return (data ?? []).map(p => p.id as string)
   }
   async function despesa() {
     const { data } = await banco.from('despesas')
-      .select('descricao,valor,criado_por,aprovada,motoristas(nome)').eq('id', id).maybeSingle()
+      .select('descricao,valor,criado_por,aprovada,motoristas(nome)').eq('id', id).eq('empresa_id', empresa).maybeSingle()
     return data as { descricao: string; valor: number; criado_por: string; aprovada: boolean; motoristas: { nome: string } | null } | null
   }
   async function turno() {
     const { data } = await banco.from('turnos')
-      .select('situacao,devolucao_motivo,data_turno,motoristas(nome,perfil_id),veiculos(identificacao)').eq('id', id).maybeSingle()
+      .select('situacao,devolucao_motivo,data_turno,motoristas(nome,perfil_id),veiculos(identificacao)').eq('id', id).eq('empresa_id', empresa).maybeSingle()
     return data as {
       situacao: string; devolucao_motivo: string | null; data_turno: string
       motoristas: { nome: string; perfil_id: string | null } | null; veiculos: { identificacao: string } | null
@@ -104,7 +110,7 @@ Deno.serve(async (req) => {
     }
     case 'despesa_recusada': {
       if (!souAdmin) break
-      const { data: m } = await banco.from('motoristas').select('perfil_id').eq('id', Number(corpo.socorristaId)).maybeSingle()
+      const { data: m } = await banco.from('motoristas').select('perfil_id').eq('id', Number(corpo.socorristaId)).eq('empresa_id', empresa).maybeSingle()
       if (!m?.perfil_id) break
       aviso = { para: [m.perfil_id], titulo: 'Despesa recusada',
         texto: `${String(corpo.descricao ?? 'Despesa')}: ${dinheiro.format(Number(corpo.valor) || 0)}. Fale com o administrador.`, url: '/despesas' }

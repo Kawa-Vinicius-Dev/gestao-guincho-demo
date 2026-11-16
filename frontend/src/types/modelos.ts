@@ -1,11 +1,14 @@
 import type { SituacaoDaOs } from '../dados/porto/listaOs'
-export type Perfil = 'ADMINISTRADOR' | 'FUNCIONARIO'
+/** DESENVOLVEDOR e a ANAIV: nao pertence a empresa nenhuma e so abre /plataforma. */
+export type Perfil = 'ADMINISTRADOR' | 'FUNCIONARIO' | 'DESENVOLVEDOR'
 /**
  * `id` aceita numero ou texto: no backend antigo era o id da tabela `usuarios`,
  * no Supabase e o uuid de auth.users. Nenhuma tela exibe esse valor — ele so
  * viaja em rota e comparacao —, entao os dois convivem durante a migracao.
  */
-export interface Usuario { id: number | string; nome: string; email: string; perfil: Perfil; ativo?: boolean; senhaProvisoria?: boolean }
+export interface Usuario { id: number | string; nome: string; email: string; perfil: Perfil; ativo?: boolean; senhaProvisoria?: boolean
+  /** Nome e codigo da empresa de quem esta logado (multiempresa). */
+  empresa?: string; empresaCodigo?: string }
 export interface SenhaRedefinida { usuarioId: number | string; nome: string; email: string; senhaProvisoria: string }
 export interface Veiculo { id: number; identificacao: string; placa?: string; modelo?: string; custoPorKm: number; siglaPorto?: string; ativo: boolean }
 export interface Contratante { id: number; nome: string; documento?: string; ativo: boolean }

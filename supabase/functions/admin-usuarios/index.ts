@@ -16,6 +16,16 @@
 //   POST { acao: 'encerrar', perfilId }
 //   POST { acao: 'excluir',  perfilId }
 //   POST { acao: 'reativar', perfilId }
+//
+// Multiempresa: o administrador (gestor) so alcanca contas da PROPRIA empresa.
+// A service_role ignora RLS, entao quem confere isso e esta funcao, a cada acao:
+// a conta alvo e o socorrista tem que ser da mesma empresa de quem chama, e a
+// conta nova nasce com a empresa gravada em app_metadata (que o usuario nao
+// edita), de onde o trigger do banco tira a empresa do perfil.
+//
+// O desenvolvedor (tabela `desenvolvedores`) tem duas chamadas so dele:
+//   POST { acao: 'criar_gestor', empresaId, nome, email }   primeiro gestor de uma empresa
+//   POST { acao: 'redefinir',    perfilId }                 so de gestores, para suporte
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 
@@ -60,26 +70,75 @@ Deno.serve(async (req) => {
   const { data: sessao } = await comoUsuario.auth.getUser()
   if (!sessao?.user) return responder({ detalhe: 'Sessão inválida.' }, 401)
 
+  // Lido com o JWT de quem chama: se a empresa estiver bloqueada, a policy nao
+  // devolve o perfil e a pessoa nao administra nada.
   const { data: perfil } = await comoUsuario
-    .from('perfis').select('perfil,ativo').eq('id', sessao.user.id).maybeSingle()
-  if (!perfil || !perfil.ativo || perfil.perfil !== 'ADMINISTRADOR') {
+    .from('perfis').select('perfil,ativo,empresa_id').eq('id', sessao.user.id).maybeSingle()
+  const souGestor = !!perfil && perfil.ativo && perfil.perfil === 'ADMINISTRADOR' && !!perfil.empresa_id
+  const { data: souDev } = souGestor
+    ? { data: false }
+    : await comoUsuario.rpc('e_desenvolvedor')
+  if (!souGestor && souDev !== true) {
     return responder({ detalhe: 'Acesso restrito ao administrador.' }, 403)
   }
+  const minhaEmpresa = souGestor ? String(perfil!.empresa_id) : null
 
   const admin = createClient(url, servico, { auth: { persistSession: false } })
   const corpo = await req.json().catch(() => ({})) as Record<string, string>
 
+  /** A conta alvo, se quem chama pode mexer nela; senao, nada. */
+  async function alvo(id: string) {
+    const { data } = await admin.from('perfis')
+      .select('id,nome,email,perfil,empresa_id').eq('id', id).maybeSingle()
+    if (!data) return null
+    if (souGestor) return data.empresa_id === minhaEmpresa ? data : null
+    // Desenvolvedor: so gestores, e so para redefinir a senha.
+    return data.perfil === 'ADMINISTRADOR' ? data : null
+  }
+  const NAO_ACHEI = 'Usuário não encontrado.'
+
+  // O desenvolvedor nao administra a equipe de ninguem: cria o primeiro gestor
+  // e redefine senha de gestor. O resto e do gestor da empresa.
+  if (!souGestor && corpo.acao !== 'criar_gestor' && corpo.acao !== 'redefinir') {
+    return responder({ detalhe: 'Essa ação é do gestor da empresa.' }, 403)
+  }
+  if (souGestor && corpo.acao === 'criar_gestor') {
+    return responder({ detalhe: 'Acesso restrito à ANAIV.' }, 403)
+  }
+
   try {
-    if (corpo.acao === 'criar' || corpo.acao === 'acesso') {
+    if (corpo.acao === 'criar' || corpo.acao === 'acesso' || corpo.acao === 'criar_gestor') {
       const email = String(corpo.email ?? '').trim().toLowerCase()
       if (!email) return responder({ detalhe: 'Informe o e-mail.' }, 400)
       const senha = senhaProvisoria()
 
+      let empresa = minhaEmpresa
+      if (corpo.acao === 'criar_gestor') {
+        const { data: e } = await admin.from('empresas')
+          .select('id').eq('id', String(corpo.empresaId ?? '')).maybeSingle()
+        if (!e) return responder({ detalhe: 'Empresa não encontrada.' }, 400)
+        empresa = e.id as string
+      }
+
+      // O socorrista tem que ser da empresa de quem chama ANTES de existir a
+      // conta: conferir depois deixaria uma conta criada para desfazer.
+      if (corpo.acao === 'acesso') {
+        const { data: m } = await admin.from('motoristas')
+          .select('id').eq('id', Number(corpo.motoristaId)).eq('empresa_id', empresa).maybeSingle()
+        if (!m) return responder({ detalhe: 'Socorrista não encontrado.' }, 400)
+      }
+
+      const perfilNovo = corpo.acao === 'criar_gestor' ? 'ADMINISTRADOR'
+        : corpo.acao === 'acesso' ? 'FUNCIONARIO'
+        : (corpo.perfil === 'ADMINISTRADOR' ? 'ADMINISTRADOR' : 'FUNCIONARIO')
+
       const { data: criado, error } = await admin.auth.admin.createUser({
         email, password: senha, email_confirm: true,
+        // app_metadata so a service_role escreve: e dali que o banco tira a
+        // empresa e o perfil da conta. user_metadata o proprio usuario edita.
+        app_metadata: { empresa_id: empresa, perfil: perfilNovo },
         user_metadata: {
           nome: corpo.nome ?? email.split('@')[0],
-          perfil: corpo.acao === 'acesso' ? 'FUNCIONARIO' : (corpo.perfil ?? 'FUNCIONARIO'),
           senha_provisoria: true,
         },
       })
@@ -90,7 +149,8 @@ Deno.serve(async (req) => {
       // quem e — entao a conta e desfeita.
       if (corpo.acao === 'acesso') {
         const { error: vinculo } = await admin.from('motoristas')
-          .update({ perfil_id: criado.user.id }).eq('id', Number(corpo.motoristaId))
+          .update({ perfil_id: criado.user.id })
+          .eq('id', Number(corpo.motoristaId)).eq('empresa_id', empresa)
         if (vinculo) {
           await admin.auth.admin.deleteUser(criado.user.id)
           return responder({ detalhe: 'Não foi possível vincular o socorrista.' }, 400)
@@ -107,6 +167,7 @@ Deno.serve(async (req) => {
     if (corpo.acao === 'redefinir') {
       const id = String(corpo.perfilId ?? '')
       if (!id) return responder({ detalhe: 'Informe o usuário.' }, 400)
+      if (!await alvo(id)) return responder({ detalhe: NAO_ACHEI }, 404)
       const senha = senhaProvisoria()
 
       const { data: alterado, error } = await admin.auth.admin.updateUserById(id, { password: senha })
@@ -138,6 +199,7 @@ Deno.serve(async (req) => {
       if (id === sessao.user.id) {
         return responder({ detalhe: 'Você não pode encerrar o seu próprio acesso.' }, 400)
       }
+      if (!await alvo(id)) return responder({ detalhe: NAO_ACHEI }, 404)
 
       // 100 anos: o painel do Supabase nao aceita "para sempre", e isto e.
       const { error } = await admin.auth.admin.updateUserById(id, { ban_duration: '876000h' })
@@ -167,6 +229,7 @@ Deno.serve(async (req) => {
       if (id === sessao.user.id) {
         return responder({ detalhe: 'Você não pode excluir o seu próprio acesso.' }, 400)
       }
+      if (!await alvo(id)) return responder({ detalhe: NAO_ACHEI }, 404)
 
       const { error } = await admin.auth.admin.deleteUser(id)
       if (error) {
@@ -189,6 +252,7 @@ Deno.serve(async (req) => {
     if (corpo.acao === 'reativar') {
       const id = String(corpo.perfilId ?? '')
       if (!id) return responder({ detalhe: 'Informe o usuário.' }, 400)
+      if (!await alvo(id)) return responder({ detalhe: NAO_ACHEI }, 404)
 
       const { error } = await admin.auth.admin.updateUserById(id, { ban_duration: 'none' })
       if (error) return responder({ detalhe: error.message }, 400)

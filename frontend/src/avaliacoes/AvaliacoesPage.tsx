@@ -3,6 +3,7 @@ import { Carregando, ErroPagina, Vazio } from '../components/EstadoPagina'
 import { Etiqueta, GradeIndicadores, Indicador } from '../components/ui/Pagina'
 import { listarAvaliacoes, type Avaliacao } from '../dados/avaliacoes'
 import { dataHora } from '../utils/formatadores'
+import { useSessaoOpcional } from '../auth/AuthContext'
 
 /**
  * O que os clientes acharam do atendimento (03/11/2026). O link de /avaliar
@@ -15,7 +16,9 @@ export default function AvaliacoesPage() {
   const [avaliacoes, setAvaliacoes] = useState<Avaliacao[] | null>(null)
   const [erro, setErro] = useState('')
   const [copiado, setCopiado] = useState(false)
-  const link = `${window.location.origin}/avaliar`
+  // Cada empresa tem o seu link; o do primeiro cliente continua o de sempre.
+  const codigo = useSessaoOpcional()?.empresaCodigo
+  const link = `${window.location.origin}/avaliar${codigo && codigo !== 'jms' ? `?e=${codigo}` : ''}`
 
   const carregar = useCallback(() => {
     setErro(''); setAvaliacoes(null)
